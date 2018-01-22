@@ -9,5 +9,6 @@ namespace myll
 {
 	public partial class MyLexer : Lexer
 	{
+
 	}
 }
