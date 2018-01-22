@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Antlr4.Runtime;
 
 namespace myll
 {
@@ -15,6 +16,14 @@ namespace myll
 		public Form1()
 		{
 			InitializeComponent();
+
+			AntlrInputStream inputStream = new AntlrInputStream("hello world\n");
+			MyLexer lexer = new MyLexer(inputStream);
+			CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
+			MyParser parser = new MyParser(commonTokenStream);
+			MyParser.ProgContext progContext = parser.prog();
+			MyVisitor visitor = new MyVisitor();
+			visitor.VisitProg(progContext);
 		}
 	}
 }
