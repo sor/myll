@@ -1,4 +1,4 @@
-﻿namespace myll
+﻿namespace Myll
 {
 	partial class Form1
 	{
@@ -46,6 +46,7 @@
 			this.button1.TabIndex = 1;
 			this.button1.Text = "Compile";
 			this.button1.UseVisualStyleBackColor = true;
+			this.button1.Click += new System.EventHandler(this.button1_Click);
 			// 
 			// splitContainer1
 			// 
@@ -74,6 +75,7 @@
 			this.textBox1.Name = "textBox1";
 			this.textBox1.Size = new System.Drawing.Size(184, 280);
 			this.textBox1.TabIndex = 1;
+			this.textBox1.Text = "enum Moep {\r\n A,\r\n B = 3,\r\n C\r\n}";
 			// 
 			// textBox2
 			// 

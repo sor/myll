@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Antlr4.Runtime;
 
-namespace myll
+namespace Myll
 {
 	public partial class MyParser : Parser
 	{

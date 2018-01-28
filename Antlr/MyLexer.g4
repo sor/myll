@@ -168,6 +168,7 @@ ID			: [a-zA-Z_][a-zA-Z0-9_]*;
 FLOAT_LIT	:	(	DIGIT* '.' DIGIT+ ( [eE] [+-]? DIGIT+ )?
 				|	DIGIT+ [eE] [+-]? DIGIT+ 
 				) [lfLF]?;
+HEX_LIT     : '0x' DIGIT+;
 INTEGER_LIT	: DIGIT+;
 fragment DIGIT: [0-9];
 NL			: ('\r'|'\n')+	-> channel(NEWLINES);

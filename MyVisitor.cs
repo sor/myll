@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Antlr4.Runtime.Tree;
 
-namespace myll
+namespace Myll
 {
 	public class MyVisitor : MyParserBaseVisitor<object>
 	{

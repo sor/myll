@@ -34,7 +34,7 @@ comment		:	COMMENT;
 
 id			:	ID;
 anyId		:	ID | AUTOINDEX | USCORE;
-idOrLit		:	ID | INTEGER_LIT | FLOAT_LIT | STRING_LIT | CHAR_LIT | BOOL_LIT | NUL;
+idOrLit		:	ID | INTEGER_LIT | HEX_LIT | FLOAT_LIT | STRING_LIT | CHAR_LIT | BOOL_LIT | NUL;
 
 charType	:	CHAR | CODEPOINT | STRING;
 
@@ -116,7 +116,7 @@ expr		:	expr	SCOPE			expr	# Tier1
 				expr	( assignOP
 						| '?' expr ':')	expr	# Tier15
 			|			'throw'			expr	# Tier16
-			|	expr	','				expr	# Tier17
+			//|	expr	','				expr	# Tier17
 			|	anyId	tt_exp					# Tier100
 			|	idOrLit							# Tier104
 			|	'('		expr	')'				# ParenExpr
@@ -153,7 +153,7 @@ stmtBlk		:	LCURLY	stmt*	RCURLY;
 
 
 classDef	:	(PUB | PRIV | PROT) COLON						# AccessMod
-			|	CTOR	ctorDecl								# CtorDecl
+			|	CTOR	ctorDecl								# ClassCtorDecl
 			|	ALIAS 	ID ASSIGN qualType SEMI					# Alias
 			|	STATIC	LCURLY classExtDef* RCURLY				# StaticDecl
 			|	classExtDef										# ClassExtendedDecl
