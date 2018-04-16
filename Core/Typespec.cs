@@ -58,31 +58,39 @@ namespace Myll.Core
 		public Typespec          ret;
 	}
 
-	// func(int a) // int is type, a is name
+	// func blah(int a) // int is _type_, a is _name_
 	public class Param
 	{
 		public string   name; // opt
 		public Typespec type;
 	}
 
-	// fac(n: 1+2) // n is matching name of param, 1+2 is expr
+	// fac(n: 1+2) // n is matching _name_ of param, 1+2 is _expr_
 	public class Arg
 	{
 		public string   name; // opt
 		//public Expr expr;
 	}
 
+	// nestedType
 	public class TypespecNested : Typespec
 	{
-		public List<TemplatedIdentifier> templatedIdentifiers;
+		public List<IdentifierTpl> identifiers;
 	}
 
-	public class TemplatedIdentifier
+	// idTplArgs
+	public class IdentifierTpl
 	{
 		public string            name;
 		public List<TemplateArg> templateArg; // opt
 	}
 
+	public class TemplateParam
+	{
+		public string name;
+	}
+	
+	// typeSpecOrLit
 	public class TemplateArg // literal or type
 	{
 		public string   literal;

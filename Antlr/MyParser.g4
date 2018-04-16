@@ -58,22 +58,21 @@ basicType	:	AUTO
 
 typeQual	:	qual=( CONST | MUTABLE | VOLATILE | STABLE );
 
-typePtr		:	typeQual*   ( ptr=( AT_BANG | AT_QUEST | AT_PLUS | DBL_AMP | AMP | STAR | PTR_TO_ARY )
-			                | ary=( AT_LBRACK | LBRACK ) expr? RBRACK )
+typePtr		:	typeQual*	( ptr=( AT_BANG | AT_QUEST | AT_PLUS | DBL_AMP | AMP | STAR | PTR_TO_ARY )
+							| ary=( AT_LBRACK | LBRACK ) expr? RBRACK )
 			;
 
-nestedType	:	idTplType (SCOPE idTplType)*;
+nestedType	:	idTplArgs (SCOPE idTplArgs)*;
 
-funcType	:	FUNC tplParams? funcDef (RARROW typeSpec)?;
+funcType	:	FUNC tplArgs? funcDef (RARROW typeSpec)?;
 
 typeSpec	:	typeQual*	( basicType | funcType | nestedType )	typePtr*;
 
-typeSpecOrLit:	typeSpec
-			|	INTEGER_LIT;
+tplArg		:	typeSpec | INTEGER_LIT;
+tplArgs		:	LT tplArg (COMMA tplArg)* GT;
+idTplArgs	:	id tplArgs?;
 
-// reffed before
-tplParams	:	'<' typeSpecOrLit (COMMA typeSpecOrLit)* '>';
-idTplType	:	id tplParams?;
+tplParams	:	LT id (COMMA id)* GT;
 
 // Tier 3
 //cast_MOD:	'c'|'s'|'d'|'r'|;
@@ -83,14 +82,14 @@ sizeofExpr	:	SIZEOF				expr;
 newExpr		:	NEW		typeSpec? ('(' exprs ')')?;
 deleteExpr	:	DELETE	(ary='['']')?	expr;
 
-arg	        :	(ID COLON)? expr;
-args	    :	arg (COMMA arg)*;
-funcCall	:	LPAREN  args?   RPAREN;
-indexCall   :   LBRACK  args    RBRACK;
+arg			:	(ID COLON)? expr;
+args		:	arg (COMMA arg)*;
+funcCall	:	LPAREN	args?	RPAREN;
+indexCall	:	LBRACK	args	RBRACK;
 
 param		:	typeSpec ID?;
 params		:	param (COMMA param)*;
-funcDef     :   LPAREN params? RPAREN;
+funcDef		:	LPAREN params? RPAREN;
 
 expr		:	expr	SCOPE			expr	# Tier1
 			|	expr
@@ -174,23 +173,23 @@ classExtDef	:	FIELDS	LCURLY (typedIdExprs		SEMI)* RCURLY
 initList	:	COLON ID funcCall (COMMA ID funcCall)*;
 ctorDecl	:	funcDef initList?	stmtBlk						# CtorDef;
 
-funcDecl	:	(		idTplType funcDef RARROW typeSpec
-				|		idTplType funcDef
+funcDecl	:	(		id tplParams funcDef RARROW typeSpec
+				|		id tplParams funcDef
 				) (stmtBlk|'=>' expr SEMI)				# FuncMeth;
 
 opDecl		:	(		STRING_LIT funcDef RARROW typeSpec
 				|		STRING_LIT funcDef
 				) (stmtBlk|'=>' expr SEMI)				# OperatorDecl;
 
-topLevel	:	attribBlk															# Attributes
-			|	NS	id (SCOPE id)*	SEMI											# Namespace
-			|	NS	id (SCOPE id)*	LCURLY	topLevel+	RCURLY						# Namespace
-			|	CLASS	idTplType	LCURLY	classDef*	RCURLY						# ClassDecl
-			|	STRUCT	idTplType	LCURLY	classDef*	RCURLY						# StructDecl
-			|	UNION	idTplType	LCURLY	classDef*	RCURLY						# UnionDecl
-			|	ENUM	id			LCURLY	idExpr (COMMA idExpr)* COMMA? RCURLY	# EnumDecl
-			|	FUNC	funcDecl													# FunctionDecl
-			|	expr SEMI															# rest
+topLevel	:	attribBlk																# Attributes
+			|	NS	id (SCOPE id)*		SEMI											# Namespace
+			|	NS	id (SCOPE id)*		LCURLY	topLevel+	RCURLY						# Namespace
+			|	CLASS	id tplParams	LCURLY	classDef*	RCURLY						# ClassDecl
+			|	STRUCT	id tplParams	LCURLY	classDef*	RCURLY						# StructDecl
+			|	UNION	id tplParams	LCURLY	classDef*	RCURLY						# UnionDecl
+			|	ENUM	id				LCURLY	idExpr (COMMA idExpr)* COMMA? RCURLY	# EnumDecl
+			|	FUNC	funcDecl														# FunctionDecl
+			|	expr SEMI																# rest
 			;
 
 prog		:	topLevel+;

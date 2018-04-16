@@ -213,23 +213,29 @@ public interface IMyParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitTypeSpec([NotNull] MyParser.TypeSpecContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyParser.typeSpecOrLit"/>.
+	/// Visit a parse tree produced by <see cref="MyParser.tplArg"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitTypeSpecOrLit([NotNull] MyParser.TypeSpecOrLitContext context);
+	Result VisitTplArg([NotNull] MyParser.TplArgContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyParser.tplArgs"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTplArgs([NotNull] MyParser.TplArgsContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyParser.idTplArgs"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitIdTplArgs([NotNull] MyParser.IdTplArgsContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyParser.tplParams"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitTplParams([NotNull] MyParser.TplParamsContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyParser.idTplType"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitIdTplType([NotNull] MyParser.IdTplTypeContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyParser.preOpExpr"/>.
 	/// </summary>
