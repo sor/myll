@@ -295,16 +295,6 @@ public partial class MyParserBaseVisitor<Result> : AbstractParseTreeVisitor<Resu
 	/// <return>The visitor result.</return>
 	public virtual Result VisitTypeQual([NotNull] MyParser.TypeQualContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyParser.typeQuals"/>.
-	/// <para>
-	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
-	/// on <paramref name="context"/>.
-	/// </para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	public virtual Result VisitTypeQuals([NotNull] MyParser.TypeQualsContext context) { return VisitChildren(context); }
-	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyParser.typePtr"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
@@ -335,7 +325,7 @@ public partial class MyParserBaseVisitor<Result> : AbstractParseTreeVisitor<Resu
 	/// <return>The visitor result.</return>
 	public virtual Result VisitFuncType([NotNull] MyParser.FuncTypeContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyParser.qualType"/>.
+	/// Visit a parse tree produced by <see cref="MyParser.typeSpec"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -343,9 +333,9 @@ public partial class MyParserBaseVisitor<Result> : AbstractParseTreeVisitor<Resu
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitQualType([NotNull] MyParser.QualTypeContext context) { return VisitChildren(context); }
+	public virtual Result VisitTypeSpec([NotNull] MyParser.TypeSpecContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyParser.qualTypeOrLit"/>.
+	/// Visit a parse tree produced by <see cref="MyParser.typeSpecOrLit"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -353,7 +343,7 @@ public partial class MyParserBaseVisitor<Result> : AbstractParseTreeVisitor<Resu
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitQualTypeOrLit([NotNull] MyParser.QualTypeOrLitContext context) { return VisitChildren(context); }
+	public virtual Result VisitTypeSpecOrLit([NotNull] MyParser.TypeSpecOrLitContext context) { return VisitChildren(context); }
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyParser.tplParams"/>.
 	/// <para>
@@ -425,7 +415,7 @@ public partial class MyParserBaseVisitor<Result> : AbstractParseTreeVisitor<Resu
 	/// <return>The visitor result.</return>
 	public virtual Result VisitDeleteExpr([NotNull] MyParser.DeleteExprContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyParser.namedExpr"/>.
+	/// Visit a parse tree produced by <see cref="MyParser.arg"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -433,9 +423,9 @@ public partial class MyParserBaseVisitor<Result> : AbstractParseTreeVisitor<Resu
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitNamedExpr([NotNull] MyParser.NamedExprContext context) { return VisitChildren(context); }
+	public virtual Result VisitArg([NotNull] MyParser.ArgContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyParser.namedExprs"/>.
+	/// Visit a parse tree produced by <see cref="MyParser.args"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -443,7 +433,57 @@ public partial class MyParserBaseVisitor<Result> : AbstractParseTreeVisitor<Resu
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitNamedExprs([NotNull] MyParser.NamedExprsContext context) { return VisitChildren(context); }
+	public virtual Result VisitArgs([NotNull] MyParser.ArgsContext context) { return VisitChildren(context); }
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyParser.funcCall"/>.
+	/// <para>
+	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
+	/// on <paramref name="context"/>.
+	/// </para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	public virtual Result VisitFuncCall([NotNull] MyParser.FuncCallContext context) { return VisitChildren(context); }
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyParser.indexCall"/>.
+	/// <para>
+	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
+	/// on <paramref name="context"/>.
+	/// </para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	public virtual Result VisitIndexCall([NotNull] MyParser.IndexCallContext context) { return VisitChildren(context); }
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyParser.param"/>.
+	/// <para>
+	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
+	/// on <paramref name="context"/>.
+	/// </para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	public virtual Result VisitParam([NotNull] MyParser.ParamContext context) { return VisitChildren(context); }
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyParser.params"/>.
+	/// <para>
+	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
+	/// on <paramref name="context"/>.
+	/// </para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	public virtual Result VisitParams([NotNull] MyParser.ParamsContext context) { return VisitChildren(context); }
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyParser.funcDef"/>.
+	/// <para>
+	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
+	/// on <paramref name="context"/>.
+	/// </para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	public virtual Result VisitFuncDef([NotNull] MyParser.FuncDefContext context) { return VisitChildren(context); }
 	/// <summary>
 	/// Visit a parse tree produced by the <c>Tier2</c>
 	/// labeled alternative in <see cref="MyParser.expr"/>.
@@ -921,16 +961,6 @@ public partial class MyParserBaseVisitor<Result> : AbstractParseTreeVisitor<Resu
 	/// <return>The visitor result.</return>
 	public virtual Result VisitClassExtDef([NotNull] MyParser.ClassExtDefContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyParser.argList"/>.
-	/// <para>
-	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
-	/// on <paramref name="context"/>.
-	/// </para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	public virtual Result VisitArgList([NotNull] MyParser.ArgListContext context) { return VisitChildren(context); }
-	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyParser.initList"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
@@ -940,26 +970,6 @@ public partial class MyParserBaseVisitor<Result> : AbstractParseTreeVisitor<Resu
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	public virtual Result VisitInitList([NotNull] MyParser.InitListContext context) { return VisitChildren(context); }
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyParser.param"/>.
-	/// <para>
-	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
-	/// on <paramref name="context"/>.
-	/// </para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	public virtual Result VisitParam([NotNull] MyParser.ParamContext context) { return VisitChildren(context); }
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyParser.params"/>.
-	/// <para>
-	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
-	/// on <paramref name="context"/>.
-	/// </para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	public virtual Result VisitParams([NotNull] MyParser.ParamsContext context) { return VisitChildren(context); }
 	/// <summary>
 	/// Visit a parse tree produced by the <c>CtorDef</c>
 	/// labeled alternative in <see cref="MyParser.ctorDecl"/>.

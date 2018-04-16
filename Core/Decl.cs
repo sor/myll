@@ -3,12 +3,12 @@ using System.Collections.Generic;
 
 namespace Myll.Core
 {
-	/*
 	public class Decl
 	{
 		public MyIdDef Name;
 		public string  SrcFile;
 		public uint    SrcLine;
+
 		// Symbol
 	}
 
@@ -29,10 +29,9 @@ namespace Myll.Core
 		{
 			// Typespec type
 		}
-		
+
 		public List<Param> paras;
 		// Typespec ret_type
 		// List<Stmt> block
 	}
-	*/
 }

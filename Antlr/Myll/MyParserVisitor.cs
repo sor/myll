@@ -189,12 +189,6 @@ public interface IMyParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitTypeQual([NotNull] MyParser.TypeQualContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyParser.typeQuals"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitTypeQuals([NotNull] MyParser.TypeQualsContext context);
-	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyParser.typePtr"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
@@ -213,17 +207,17 @@ public interface IMyParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitFuncType([NotNull] MyParser.FuncTypeContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyParser.qualType"/>.
+	/// Visit a parse tree produced by <see cref="MyParser.typeSpec"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitQualType([NotNull] MyParser.QualTypeContext context);
+	Result VisitTypeSpec([NotNull] MyParser.TypeSpecContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyParser.qualTypeOrLit"/>.
+	/// Visit a parse tree produced by <see cref="MyParser.typeSpecOrLit"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitQualTypeOrLit([NotNull] MyParser.QualTypeOrLitContext context);
+	Result VisitTypeSpecOrLit([NotNull] MyParser.TypeSpecOrLitContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyParser.tplParams"/>.
 	/// </summary>
@@ -267,17 +261,47 @@ public interface IMyParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitDeleteExpr([NotNull] MyParser.DeleteExprContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyParser.namedExpr"/>.
+	/// Visit a parse tree produced by <see cref="MyParser.arg"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitNamedExpr([NotNull] MyParser.NamedExprContext context);
+	Result VisitArg([NotNull] MyParser.ArgContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyParser.namedExprs"/>.
+	/// Visit a parse tree produced by <see cref="MyParser.args"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitNamedExprs([NotNull] MyParser.NamedExprsContext context);
+	Result VisitArgs([NotNull] MyParser.ArgsContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyParser.funcCall"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitFuncCall([NotNull] MyParser.FuncCallContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyParser.indexCall"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitIndexCall([NotNull] MyParser.IndexCallContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyParser.param"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitParam([NotNull] MyParser.ParamContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyParser.params"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitParams([NotNull] MyParser.ParamsContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyParser.funcDef"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitFuncDef([NotNull] MyParser.FuncDefContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>Tier2</c>
 	/// labeled alternative in <see cref="MyParser.expr"/>.
@@ -579,29 +603,11 @@ public interface IMyParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitClassExtDef([NotNull] MyParser.ClassExtDefContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyParser.argList"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitArgList([NotNull] MyParser.ArgListContext context);
-	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyParser.initList"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitInitList([NotNull] MyParser.InitListContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyParser.param"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitParam([NotNull] MyParser.ParamContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyParser.params"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitParams([NotNull] MyParser.ParamsContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>CtorDef</c>
 	/// labeled alternative in <see cref="MyParser.ctorDecl"/>.

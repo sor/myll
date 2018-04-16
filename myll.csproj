@@ -71,9 +71,11 @@
     <Compile Include="Antlr\Myll\MyParser.cs" />
     <Compile Include="Antlr\Myll\MyParserBaseVisitor.cs" />
     <Compile Include="Antlr\Myll\MyParserVisitor.cs" />
+    <Compile Include="Core\Decl.cs" />
     <Compile Include="Core\MyEnum.cs" />
     <Compile Include="Core\MyExpr.cs" />
     <Compile Include="Core\MyId.cs" />
+    <Compile Include="Core\Typespec.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>
