@@ -55,7 +55,7 @@ namespace Myll.Core
 	{
 		public List<TemplateArg> templateArgs; // opt
 		public List<Param>       paras;
-		public Typespec          ret;
+		public Typespec          retType;
 	}
 
 	// func blah(int a) // int is _type_, a is _name_

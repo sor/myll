@@ -62,34 +62,35 @@ typePtr		:	typeQual*	( ptr=( AT_BANG | AT_QUEST | AT_PLUS | DBL_AMP | AMP | STAR
 							| ary=( AT_LBRACK | LBRACK ) expr? RBRACK )
 			;
 
+idTplArgs	:	id tplArgs?;
 nestedType	:	idTplArgs (SCOPE idTplArgs)*;
 
 funcType	:	FUNC tplArgs? funcDef (RARROW typeSpec)?;
 
 typeSpec	:	typeQual*	( basicType | funcType | nestedType )	typePtr*;
 
+arg			:	(id COLON)? expr;
+funcCall	:	LPAREN	(arg (COMMA arg)*)?	RPAREN;
+indexCall	:	LBRACK	(arg (COMMA arg)*)	RBRACK;
+
+param		:	typeSpec id?;
+funcDef		:	LPAREN (param (COMMA param)*)? RPAREN;
+
 tplArg		:	typeSpec | INTEGER_LIT;
 tplArgs		:	LT tplArg (COMMA tplArg)* GT;
-idTplArgs	:	id tplArgs?;
 
 tplParams	:	LT id (COMMA id)* GT;
 
+exprs		:	expr (COMMA expr)*;
+tt_exp		:	LT exprs GT;
+
 // Tier 3
 //cast_MOD:	'c'|'s'|'d'|'r'|;
-preOpExpr	:	preOP				expr;
-castExpr	:	'(' typeSpec ')'	expr;
-sizeofExpr	:	SIZEOF				expr;
-newExpr		:	NEW		typeSpec? ('(' exprs ')')?;
+preOpExpr	:	preOP					expr;
+castExpr	:	LPAREN typeSpec RPAREN	expr;
+sizeofExpr	:	SIZEOF					expr;
+newExpr		:	NEW		typeSpec?	funcCall?;
 deleteExpr	:	DELETE	(ary='['']')?	expr;
-
-arg			:	(ID COLON)? expr;
-args		:	arg (COMMA arg)*;
-funcCall	:	LPAREN	args?	RPAREN;
-indexCall	:	LBRACK	args	RBRACK;
-
-param		:	typeSpec ID?;
-params		:	param (COMMA param)*;
-funcDef		:	LPAREN params? RPAREN;
 
 expr		:	expr	SCOPE			expr	# Tier1
 			|	expr
@@ -97,7 +98,7 @@ expr		:	expr	SCOPE			expr	# Tier1
 				// func cast
 				|	funcCall
 				|	indexCall
-				|	memOP	ID	)				# Tier2
+				|	memOP	id	)				# Tier2
 			|	<assoc=right>
 				(	preOpExpr
 				|	castExpr
@@ -126,30 +127,27 @@ expr		:	expr	SCOPE			expr	# Tier1
 			|	'('		expr	')'				# ParenExpr
 			|	AUTOINDEX						# Tier200
 			;
-exprs		:	expr (COMMA expr)*;
-tt_exp		:	'<' exprs '>';
 
 idExpr		:	id (ASSIGN expr)?;
 // TODO: Prop - get,set,refget
 typedIdExprs:	typeSpec idExpr (COMMA idExpr)*;
 
 
-attrib		:	ID	(	'=' idOrLit
+attrib		:	id	(	'=' idOrLit
 					|	'(' idOrLit (COMMA idOrLit)* ')'
 					)?;
 attribBlk	:	LBRACK attrib (COMMA attrib)* RBRACK;
 
-
 stmt		:	USING	nestedType (COMMA nestedType)*	SEMI				# Using
 			|	VAR		typedIdExprs SEMI									# VariableDecl
 			|	CONST	typedIdExprs SEMI									# VariableDecl
-			|	IF		LPAREN expr RPAREN stmt ( ELSE stmt )?				# IfStmt
-			|	FOR		LPAREN stmt expr SEMI expr RPAREN stmt ( ELSE stmt )?	# ForStmt
-			|	expr TIMES ID?		stmt									# TimesStmt
-			|	expr '..' expr		stmt									# EachStmt
-			//| (expr	assign_OP)+ expr	SEMI							# AssignmentStmt
 			|	RETURN	expr	SEMI										# ReturnStmt
 			|	BREAK			SEMI										# BreakStmt
+			|	IF	LPAREN expr RPAREN stmt ( ELSE stmt )?					# IfStmt
+			|	FOR	LPAREN stmt expr SEMI expr RPAREN stmt ( ELSE stmt )?	# ForStmt
+			|	expr TIMES id?		stmt									# TimesStmt
+			|	expr '..' expr		stmt									# EachStmt
+			| 	(expr	assignOP)+	expr	SEMI							# AssignmentStmt
 			|	stmtBlk														# BlockStmt
 			|	expr SEMI													# ExpressionStmt
 			;
@@ -158,7 +156,7 @@ stmtBlk		:	LCURLY	stmt*	RCURLY;
 
 classDef	:	(PUB | PRIV | PROT) COLON						# AccessMod
 			|	CTOR	ctorDecl								# ClassCtorDecl
-			|	ALIAS 	ID ASSIGN typeSpec SEMI					# Alias
+			|	ALIAS 	id ASSIGN typeSpec SEMI					# Alias
 			|	STATIC	LCURLY classExtDef* RCURLY				# StaticDecl
 			|	classExtDef										# ClassExtendedDecl
 			;
@@ -170,11 +168,11 @@ classExtDef	:	FIELDS	LCURLY (typedIdExprs		SEMI)* RCURLY
 			|	OPERATOR		opDecl
 			;
 
-initList	:	COLON ID funcCall (COMMA ID funcCall)*;
+initList	:	COLON id funcCall (COMMA id funcCall)*;
 ctorDecl	:	funcDef initList?	stmtBlk						# CtorDef;
 
-funcDecl	:	(		id tplParams funcDef RARROW typeSpec
-				|		id tplParams funcDef
+funcDecl	:	(		id tplParams? funcDef RARROW typeSpec
+				|		id tplParams? funcDef
 				) (stmtBlk|'=>' expr SEMI)				# FuncMeth;
 
 opDecl		:	(		STRING_LIT funcDef RARROW typeSpec
@@ -184,13 +182,12 @@ opDecl		:	(		STRING_LIT funcDef RARROW typeSpec
 topLevel	:	attribBlk																# Attributes
 			|	NS	id (SCOPE id)*		SEMI											# Namespace
 			|	NS	id (SCOPE id)*		LCURLY	topLevel+	RCURLY						# Namespace
-			|	CLASS	id tplParams	LCURLY	classDef*	RCURLY						# ClassDecl
-			|	STRUCT	id tplParams	LCURLY	classDef*	RCURLY						# StructDecl
-			|	UNION	id tplParams	LCURLY	classDef*	RCURLY						# UnionDecl
+			|	CLASS	id tplParams?	LCURLY	classDef*	RCURLY						# ClassDecl
+			|	STRUCT	id tplParams?	LCURLY	classDef*	RCURLY						# StructDecl
+			|	UNION	id tplParams?	LCURLY	classDef*	RCURLY						# UnionDecl
 			|	ENUM	id				LCURLY	idExpr (COMMA idExpr)* COMMA? RCURLY	# EnumDecl
 			|	FUNC	funcDecl														# FunctionDecl
 			|	expr SEMI																# rest
 			;
 
 prog		:	topLevel+;
-

@@ -72,6 +72,7 @@
     <Compile Include="Antlr\Myll\MyParserBaseVisitor.cs" />
     <Compile Include="Antlr\Myll\MyParserVisitor.cs" />
     <Compile Include="Core\Decl.cs" />
+    <Compile Include="Core\Id.cs" />
     <Compile Include="Core\MyEnum.cs" />
     <Compile Include="Core\MyExpr.cs" />
     <Compile Include="Core\MyId.cs" />
