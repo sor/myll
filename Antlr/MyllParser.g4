@@ -1,6 +1,6 @@
-parser grammar MyParser;
+parser grammar MyllParser;
 
-options { tokenVocab = MyLexer; }
+options { tokenVocab = MyllLexer; }
 
 /*
 @parser::members
@@ -32,33 +32,30 @@ equalOP		:	'=='|'!=';
 
 comment		:	COMMENT;
 
+lit			:	INTEGER_LIT | HEX_LIT | FLOAT_LIT | STRING_LIT | CHAR_LIT | BOOL_LIT | NUL;
+wildId		:	AUTOINDEX | USCORE;
 id			:	ID;
-anyId		:	ID | AUTOINDEX | USCORE;
-idOrLit		:	ID | INTEGER_LIT | HEX_LIT | FLOAT_LIT | STRING_LIT | CHAR_LIT | BOOL_LIT | NUL;
+idOrLit		:	id | lit;
 
-charType	:	CHAR | CODEPOINT | STRING;
+// +++ handled
+specialType	:	v=( AUTO | VOID | BOOL );
+charType	:	v=( CHAR | CODEPOINT | STRING );
+floatingType:	v=( FLOAT | F80 | F64 | F32 | F16 );
+binaryType	:	v=( BYTE | B64 | B32 | B16 | B8 );
+signedIntType:	v=( INT  | ISIZE | I64 | I32 | I16 | I8 );
+unsignIntType:  v=( UINT | USIZE | U64 | U32 | U16 | U8 );
 
-floatingType:	FLOAT | F80 | F64 | F32 | F16;
-
-binaryType	:	BYTE | B64 | B32 | B16 | B8;
-
-integerType	:	INT | UINT | ISIZE | USIZE
-			|	I64 | I32 | I16 | I8
-			|	U64 | U32 | U16 | U8
-			;
-
-basicType	:	AUTO
-			|	VOID
-			|	BOOL
+basicType	:	specialType
 			|	charType
 			|	floatingType
 			|	binaryType
-			|	integerType
-			;
+			|	signedIntType
+			|	unsignIntType;
 
 typeQual	:	qual=( CONST | MUTABLE | VOLATILE | STABLE );
+typeQuals	:	typeQual*;
 
-typePtr		:	typeQual*	( ptr=( AT_BANG | AT_QUEST | AT_PLUS | DBL_AMP | AMP | STAR | PTR_TO_ARY )
+typePtr		:	typeQuals	( ptr=( AT_BANG | AT_QUEST | AT_PLUS | DBL_AMP | AMP | STAR | PTR_TO_ARY )
 							| ary=( AT_LBRACK | LBRACK ) expr? RBRACK )
 			;
 
@@ -67,7 +64,8 @@ nestedType	:	idTplArgs (SCOPE idTplArgs)*;
 
 funcType	:	FUNC tplArgs? funcDef (RARROW typeSpec)?;
 
-typeSpec	:	typeQual*	( basicType | funcType | nestedType )	typePtr*;
+typeSpec	:	typeQuals	( basicType | funcType | nestedType )	typePtr*;
+// --- handled
 
 arg			:	(id COLON)? expr;
 funcCall	:	LPAREN	(arg (COMMA arg)*)?	RPAREN;
@@ -76,13 +74,12 @@ indexCall	:	LBRACK	(arg (COMMA arg)*)	RBRACK;
 param		:	typeSpec id?;
 funcDef		:	LPAREN (param (COMMA param)*)? RPAREN;
 
-tplArg		:	typeSpec | INTEGER_LIT;
+// this expr needs to be a constexpr and can be an id (from a surrounding template)
+// TODO evaluate if 'id' is really necessary/beneficial here  
+tplArg		:	typeSpec | id | expr; //INTEGER_LIT | id;
 tplArgs		:	LT tplArg (COMMA tplArg)* GT;
 
 tplParams	:	LT id (COMMA id)* GT;
-
-exprs		:	expr (COMMA expr)*;
-tt_exp		:	LT exprs GT;
 
 // Tier 3
 //cast_MOD:	'c'|'s'|'d'|'r'|;
@@ -122,25 +119,26 @@ expr		:	expr	SCOPE			expr	# Tier1
 						| '?' expr ':')	expr	# Tier15
 			|			'throw'			expr	# Tier16
 			//|	expr	','				expr	# Tier17
-			|	anyId	tt_exp					# Tier100
-			|	idOrLit							# Tier104
 			|	'('		expr	')'				# ParenExpr
-			|	AUTOINDEX						# Tier200
+			|	wildId							# Tier50
+			|	lit								# Tier51
+			|	idTplArgs						# Tier52
 			;
 
 idExpr		:	id (ASSIGN expr)?;
 // TODO: Prop - get,set,refget
 typedIdExprs:	typeSpec idExpr (COMMA idExpr)*;
 
-
 attrib		:	id	(	'=' idOrLit
 					|	'(' idOrLit (COMMA idOrLit)* ')'
 					)?;
 attribBlk	:	LBRACK attrib (COMMA attrib)* RBRACK;
 
-stmt		:	USING	nestedType (COMMA nestedType)*	SEMI				# Using
+stmtDef		:	USING	nestedType (COMMA nestedType)*	SEMI				# Using
 			|	VAR		typedIdExprs SEMI									# VariableDecl
 			|	CONST	typedIdExprs SEMI									# VariableDecl
+			;
+stmt		:	stmtDef														# StmtDecl
 			|	RETURN	expr	SEMI										# ReturnStmt
 			|	BREAK			SEMI										# BreakStmt
 			|	IF	LPAREN expr RPAREN stmt ( ELSE stmt )?					# IfStmt
@@ -161,9 +159,9 @@ classDef	:	(PUB | PRIV | PROT) COLON						# AccessMod
 			|	classExtDef										# ClassExtendedDecl
 			;
 
-classExtDef	:	FIELDS	LCURLY (typedIdExprs		SEMI)* RCURLY
-			|	FIELD			typedIdExprs		SEMI
-			|	PROP			typedIdExprs		SEMI
+classExtDef	:	FIELDS	LCURLY (typedIdExprs	SEMI)* RCURLY
+			|	FIELD			typedIdExprs	SEMI
+			|	PROP			typedIdExprs	SEMI
 			|	METH			funcDecl
 			|	OPERATOR		opDecl
 			;
@@ -171,13 +169,11 @@ classExtDef	:	FIELDS	LCURLY (typedIdExprs		SEMI)* RCURLY
 initList	:	COLON id funcCall (COMMA id funcCall)*;
 ctorDecl	:	funcDef initList?	stmtBlk						# CtorDef;
 
-funcDecl	:	(		id tplParams? funcDef RARROW typeSpec
-				|		id tplParams? funcDef
-				) (stmtBlk|'=>' expr SEMI)				# FuncMeth;
+funcDecl	:	(		id tplParams? funcDef (RARROW typeSpec)?
+				) (stmtBlk|'=>' expr SEMI);
 
-opDecl		:	(		STRING_LIT funcDef RARROW typeSpec
-				|		STRING_LIT funcDef
-				) (stmtBlk|'=>' expr SEMI)				# OperatorDecl;
+opDecl		:	(		STRING_LIT funcDef (RARROW typeSpec)?
+				) (stmtBlk|'=>' expr SEMI);
 
 topLevel	:	attribBlk																# Attributes
 			|	NS	id (SCOPE id)*		SEMI											# Namespace
@@ -187,7 +183,7 @@ topLevel	:	attribBlk																# Attributes
 			|	UNION	id tplParams?	LCURLY	classDef*	RCURLY						# UnionDecl
 			|	ENUM	id				LCURLY	idExpr (COMMA idExpr)* COMMA? RCURLY	# EnumDecl
 			|	FUNC	funcDecl														# FunctionDecl
-			|	expr SEMI																# rest
+			|	stmtDef																	# restStmt
 			;
 
 prog		:	topLevel+;

@@ -24,9 +24,9 @@ namespace Myll
 			MyLexer              lexer             = new MyLexer(inputStream);
 			CommonTokenStream    commonTokenStream = new CommonTokenStream(lexer);
 			MyParser             parser            = new MyParser(commonTokenStream);
-			MyParser.ProgContext progContext       = parser.prog();
+			var 				 context       = parser.typeSpec();
 			MyVisitor            visitor           = new MyVisitor();
-			visitor.VisitProg(progContext);
+			visitor.VisitTypeSpec(context);
 		}
 	}
 }

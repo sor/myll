@@ -1,4 +1,4 @@
-lexer grammar MyLexer;
+lexer grammar MyllLexer;
 
 /*
 tokens

@@ -13,6 +13,16 @@ namespace Myll.Core
 		Stable   = 1 << 3,
 	}
 
+	public class Expr
+	{
+		// TODO
+	}
+
+	public class Stmt
+	{
+		// TODO
+	}
+
 	public class Typespec // QualType
 	{
 		public string        srcFile;
@@ -31,9 +41,11 @@ namespace Myll.Core
 			Void,
 			Bool,
 			Char,
+			String,
 			Float,
 			Binary,
-			Integer
+			Integer,
+			Unsigned,
 		}
 
 		[Flags]
@@ -43,9 +55,10 @@ namespace Myll.Core
 			Signed   = 1 << 0,
 			Unsigned = 1 << 1,
 			Size     = 1 << 2,
+			Unsized  = 1 << 3,
 		}
 
-		public int  size;  // in bytes
+		public int  size;  // in bytes, -1 not yet determined, -2 invalid
 		public int  align; // in bytes
 		public Kind kind;
 	}
@@ -54,16 +67,16 @@ namespace Myll.Core
 	public class TypespecFunc : Typespec
 	{
 		public List<TemplateArg> templateArgs; // opt
-		public List<Param>       paras;
-		public Typespec          retType;
+		public List<Func.Param>  paras;
+		public Typespec          retType; // opt
 	}
 
 	// func blah(int a) // int is _type_, a is _name_
-	public class Param
+	/*public class Param
 	{
 		public string   name; // opt
 		public Typespec type;
-	}
+	}*/
 
 	// fac(n: 1+2) // n is matching _name_ of param, 1+2 is _expr_
 	public class Arg
@@ -82,32 +95,34 @@ namespace Myll.Core
 	public class IdentifierTpl
 	{
 		public string            name;
-		public List<TemplateArg> templateArg; // opt
+		public List<TemplateArg> templateArgs; // opt
+	}
+
+	// typeSpecOrLit
+	public class TemplateArg // name, literal or type
+	{
+		public string   name; // id passed down through template
+		public Expr     expr; // must be a constexpr
+		public Typespec type;
 	}
 
 	public class TemplateParam
 	{
 		public string name;
 	}
-	
-	// typeSpecOrLit
-	public class TemplateArg // literal or type
-	{
-		public string   literal;
-		public Typespec type;
-	}
 
 	public class Pointer
 	{
 		public enum Kind
 		{
-			Raw,
+			RawPtr,
+			PtrToAry,
 			LVRef, // Ref
 			RVRef,
-			RawArray,
 			Unique,
 			Shared,
 			Weak,
+			RawArray,
 			Array, // Future...
 			Vector,
 			Set,
@@ -118,13 +133,13 @@ namespace Myll.Core
 
 		private readonly Dictionary<Kind, string> template = new Dictionary<Kind, string>
 		{
-			{Kind.Raw, "{0} * {1}"},
+			{Kind.RawPtr, "{0} * {1}"},
 			{Kind.LVRef, "{0} & {1}"},
 			{Kind.RVRef, "{0} && {1}"},
-			{Kind.RawArray, "{0}[{2}] {1}"}, // TODO: named types must be embedded
 			{Kind.Unique, "std::unique_ptr<{0}> {1}"},
 			{Kind.Shared, "std::shared_ptr<{0}> {1}"},
 			{Kind.Weak, "std::weak_ptr<{0}> {1}"},
+			{Kind.RawArray, "{0}[{2}] {1}"}, // TODO: named types must be embedded
 			{Kind.Array, "std::array<{0},{2}> {1}"},
 			{Kind.Vector, "std::vector<{0}> {1}"},
 			{Kind.Set, "std::unordered_set<{0}> {1}"},
@@ -139,6 +154,6 @@ namespace Myll.Core
 
 	public class Array : Pointer
 	{
-		//public Expr expr;
+		public Expr expr;
 	}
 }

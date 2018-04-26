@@ -1,6 +1,11 @@
 ﻿namespace Myll.Core
 {
-	public class Id
+	public class IdDef
+	{
+		
+	}
+	
+	public class IdRef
 	{
 		
 	}

@@ -5,33 +5,34 @@ namespace Myll.Core
 {
 	public class Decl
 	{
-		public MyIdDef Name;
-		public string  SrcFile;
-		public uint    SrcLine;
+		public string name;
+		public string srcFile;
+		public uint   srcLine;
 
 		// Symbol
 	}
 
-	public class EnumDecl : Decl // is a scope
+	public class Enum : Decl // is a scope
 	{
 		public class Entry : Decl
 		{
-			public MyExpr Value;
+			public Expr value;
 		}
 
-		public List<Entry> Entries = new List<Entry>();
-		public bool        Flags;
+		public List<Entry> entries = new List<Entry>();
+		public bool        flags;
 	}
 
-	public class FuncDecl : Decl
+	public class Func : Decl
 	{
 		public class Param : Decl
 		{
-			// Typespec type
+			public Typespec type;
 		}
 
-		public List<Param> paras;
-		// Typespec ret_type
-		// List<Stmt> block
+		public List<TemplateParam> templateParams;
+		public List<Param>         paras;
+		public List<Stmt>          block;
+		public Typespec            retType;
 	}
 }
