@@ -63,15 +63,6 @@ namespace Myll
 			return ret;
 		}
 
-		public Expr VisitExpr(ExprContext c)
-		{
-			if (c == null)
-				return null;
-			
-			Expr ex = new Expr();
-			return ex;
-		}
-
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public new string VisitId(IdContext c)
 		{
@@ -112,19 +103,6 @@ namespace Myll
 			return ret;
 		}
 
-		public Stmt VisitStmt(StmtContext c)
-		{
-			Visit(c);
-			// TODO
-			return new Stmt();
-		}
-		
-		public new List<Stmt> VisitStmtBlk(StmtBlkContext context)
-		{
-			List<Stmt> ret = context.stmt().Select(VisitStmt).ToList();
-			return ret;
-		}
-
 		public override object VisitFunctionDecl(FunctionDeclContext c)
 		{
 			FuncDeclContext cc = c.funcDecl();
@@ -135,14 +113,15 @@ namespace Myll
 				paras          = VisitFuncDef(cc.funcDef()),
 				retType        = VisitTypeSpec(cc.typeSpec()),
 			};
+			
 			if (cc.stmtBlk() != null)
 			{
 				ret.block = VisitStmtBlk(cc.stmtBlk());
 			}
 			else if (cc.expr() != null)
 			{
-				// TODO
 				VisitExpr(cc.expr());
+				// TODO
 				ret.block = new List<Stmt>();
 			}
 			return ret;
