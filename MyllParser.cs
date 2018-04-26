@@ -7,7 +7,7 @@ using Antlr4.Runtime;
 
 namespace Myll
 {
-	public partial class MyParser : Parser
+	public partial class MyllParser : Parser
 	{
 	}
 }

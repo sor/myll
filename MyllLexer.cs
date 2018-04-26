@@ -7,7 +7,7 @@ using Antlr4.Runtime;
 
 namespace Myll
 {
-	public partial class MyLexer : Lexer
+	public partial class MyllLexer : Lexer
 	{
 
 	}

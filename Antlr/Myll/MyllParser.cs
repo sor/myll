@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-// Generated from /home/sor/myll/Antlr/MyParser.g4 by ANTLR 4.7
+// Generated from /home/sor/myll/Antlr/MyllParser.g4 by ANTLR 4.7
 
 // Unreachable code detected
 #pragma warning disable 0162
@@ -33,7 +33,7 @@ using DFA = Antlr4.Runtime.Dfa.DFA;
 
 [System.CodeDom.Compiler.GeneratedCode("ANTLR", "4.7")]
 [System.CLSCompliant(false)]
-public partial class MyParser : Parser {
+public partial class MyllParser : Parser {
 	protected static DFA[] decisionToDFA;
 	protected static PredictionContextCache sharedContextCache = new PredictionContextCache();
 	public const int
@@ -136,22 +136,22 @@ public partial class MyParser : Parser {
 		}
 	}
 
-	public override string GrammarFileName { get { return "MyParser.g4"; } }
+	public override string GrammarFileName { get { return "MyllParser.g4"; } }
 
 	public override string[] RuleNames { get { return ruleNames; } }
 
 	public override string SerializedAtn { get { return new string(_serializedATN); } }
 
-	static MyParser() {
+	static MyllParser() {
 		decisionToDFA = new DFA[_ATN.NumberOfDecisions];
 		for (int i = 0; i < _ATN.NumberOfDecisions; i++) {
 			decisionToDFA[i] = new DFA(_ATN.GetDecisionState(i), i);
 		}
 	}
 
-		public MyParser(ITokenStream input) : this(input, Console.Out, Console.Error) { }
+		public MyllParser(ITokenStream input) : this(input, Console.Out, Console.Error) { }
 
-		public MyParser(ITokenStream input, TextWriter output, TextWriter errorOutput)
+		public MyllParser(ITokenStream input, TextWriter output, TextWriter errorOutput)
 		: base(input, output, errorOutput)
 	{
 		Interpreter = new ParserATNSimulator(this, _ATN, decisionToDFA, sharedContextCache);
@@ -163,7 +163,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_postOP; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitPostOP(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -206,7 +206,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_preOP; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitPreOP(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -249,7 +249,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_assignOP; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitAssignOP(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -292,7 +292,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_powOP; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitPowOP(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -327,7 +327,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_multOP; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitMultOP(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -370,7 +370,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_addOP; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitAddOP(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -413,7 +413,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_shiftOP; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitShiftOP(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -462,7 +462,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_bitAndOP; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitBitAndOP(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -496,7 +496,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_bitXorOP; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitBitXorOP(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -530,7 +530,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_bitOrOP; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitBitOrOP(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -564,7 +564,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_andOP; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitAndOP(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -598,7 +598,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_orOP; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitOrOP(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -632,7 +632,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_memOP; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitMemOP(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -675,7 +675,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_memPtrOP; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitMemPtrOP(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -718,7 +718,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_orderOP; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitOrderOP(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -761,7 +761,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_equalOP; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitEqualOP(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -798,14 +798,14 @@ public partial class MyParser : Parser {
 	}
 
 	public partial class CommentContext : ParserRuleContext {
-		public ITerminalNode COMMENT() { return GetToken(MyParser.COMMENT, 0); }
+		public ITerminalNode COMMENT() { return GetToken(MyllParser.COMMENT, 0); }
 		public CommentContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
 		}
 		public override int RuleIndex { get { return RULE_comment; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitComment(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -833,20 +833,20 @@ public partial class MyParser : Parser {
 	}
 
 	public partial class LitContext : ParserRuleContext {
-		public ITerminalNode INTEGER_LIT() { return GetToken(MyParser.INTEGER_LIT, 0); }
-		public ITerminalNode HEX_LIT() { return GetToken(MyParser.HEX_LIT, 0); }
-		public ITerminalNode FLOAT_LIT() { return GetToken(MyParser.FLOAT_LIT, 0); }
-		public ITerminalNode STRING_LIT() { return GetToken(MyParser.STRING_LIT, 0); }
-		public ITerminalNode CHAR_LIT() { return GetToken(MyParser.CHAR_LIT, 0); }
-		public ITerminalNode BOOL_LIT() { return GetToken(MyParser.BOOL_LIT, 0); }
-		public ITerminalNode NUL() { return GetToken(MyParser.NUL, 0); }
+		public ITerminalNode INTEGER_LIT() { return GetToken(MyllParser.INTEGER_LIT, 0); }
+		public ITerminalNode HEX_LIT() { return GetToken(MyllParser.HEX_LIT, 0); }
+		public ITerminalNode FLOAT_LIT() { return GetToken(MyllParser.FLOAT_LIT, 0); }
+		public ITerminalNode STRING_LIT() { return GetToken(MyllParser.STRING_LIT, 0); }
+		public ITerminalNode CHAR_LIT() { return GetToken(MyllParser.CHAR_LIT, 0); }
+		public ITerminalNode BOOL_LIT() { return GetToken(MyllParser.BOOL_LIT, 0); }
+		public ITerminalNode NUL() { return GetToken(MyllParser.NUL, 0); }
 		public LitContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
 		}
 		public override int RuleIndex { get { return RULE_lit; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitLit(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -883,15 +883,15 @@ public partial class MyParser : Parser {
 	}
 
 	public partial class WildIdContext : ParserRuleContext {
-		public ITerminalNode AUTOINDEX() { return GetToken(MyParser.AUTOINDEX, 0); }
-		public ITerminalNode USCORE() { return GetToken(MyParser.USCORE, 0); }
+		public ITerminalNode AUTOINDEX() { return GetToken(MyllParser.AUTOINDEX, 0); }
+		public ITerminalNode USCORE() { return GetToken(MyllParser.USCORE, 0); }
 		public WildIdContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
 		}
 		public override int RuleIndex { get { return RULE_wildId; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitWildId(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -928,14 +928,14 @@ public partial class MyParser : Parser {
 	}
 
 	public partial class IdContext : ParserRuleContext {
-		public ITerminalNode ID() { return GetToken(MyParser.ID, 0); }
+		public ITerminalNode ID() { return GetToken(MyllParser.ID, 0); }
 		public IdContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
 		}
 		public override int RuleIndex { get { return RULE_id; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitId(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -975,7 +975,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_idOrLit; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitIdOrLit(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -1024,16 +1024,16 @@ public partial class MyParser : Parser {
 
 	public partial class SpecialTypeContext : ParserRuleContext {
 		public IToken v;
-		public ITerminalNode AUTO() { return GetToken(MyParser.AUTO, 0); }
-		public ITerminalNode VOID() { return GetToken(MyParser.VOID, 0); }
-		public ITerminalNode BOOL() { return GetToken(MyParser.BOOL, 0); }
+		public ITerminalNode AUTO() { return GetToken(MyllParser.AUTO, 0); }
+		public ITerminalNode VOID() { return GetToken(MyllParser.VOID, 0); }
+		public ITerminalNode BOOL() { return GetToken(MyllParser.BOOL, 0); }
 		public SpecialTypeContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
 		}
 		public override int RuleIndex { get { return RULE_specialType; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitSpecialType(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -1072,16 +1072,16 @@ public partial class MyParser : Parser {
 
 	public partial class CharTypeContext : ParserRuleContext {
 		public IToken v;
-		public ITerminalNode CHAR() { return GetToken(MyParser.CHAR, 0); }
-		public ITerminalNode CODEPOINT() { return GetToken(MyParser.CODEPOINT, 0); }
-		public ITerminalNode STRING() { return GetToken(MyParser.STRING, 0); }
+		public ITerminalNode CHAR() { return GetToken(MyllParser.CHAR, 0); }
+		public ITerminalNode CODEPOINT() { return GetToken(MyllParser.CODEPOINT, 0); }
+		public ITerminalNode STRING() { return GetToken(MyllParser.STRING, 0); }
 		public CharTypeContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
 		}
 		public override int RuleIndex { get { return RULE_charType; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitCharType(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -1120,18 +1120,18 @@ public partial class MyParser : Parser {
 
 	public partial class FloatingTypeContext : ParserRuleContext {
 		public IToken v;
-		public ITerminalNode FLOAT() { return GetToken(MyParser.FLOAT, 0); }
-		public ITerminalNode F80() { return GetToken(MyParser.F80, 0); }
-		public ITerminalNode F64() { return GetToken(MyParser.F64, 0); }
-		public ITerminalNode F32() { return GetToken(MyParser.F32, 0); }
-		public ITerminalNode F16() { return GetToken(MyParser.F16, 0); }
+		public ITerminalNode FLOAT() { return GetToken(MyllParser.FLOAT, 0); }
+		public ITerminalNode F80() { return GetToken(MyllParser.F80, 0); }
+		public ITerminalNode F64() { return GetToken(MyllParser.F64, 0); }
+		public ITerminalNode F32() { return GetToken(MyllParser.F32, 0); }
+		public ITerminalNode F16() { return GetToken(MyllParser.F16, 0); }
 		public FloatingTypeContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
 		}
 		public override int RuleIndex { get { return RULE_floatingType; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitFloatingType(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -1170,18 +1170,18 @@ public partial class MyParser : Parser {
 
 	public partial class BinaryTypeContext : ParserRuleContext {
 		public IToken v;
-		public ITerminalNode BYTE() { return GetToken(MyParser.BYTE, 0); }
-		public ITerminalNode B64() { return GetToken(MyParser.B64, 0); }
-		public ITerminalNode B32() { return GetToken(MyParser.B32, 0); }
-		public ITerminalNode B16() { return GetToken(MyParser.B16, 0); }
-		public ITerminalNode B8() { return GetToken(MyParser.B8, 0); }
+		public ITerminalNode BYTE() { return GetToken(MyllParser.BYTE, 0); }
+		public ITerminalNode B64() { return GetToken(MyllParser.B64, 0); }
+		public ITerminalNode B32() { return GetToken(MyllParser.B32, 0); }
+		public ITerminalNode B16() { return GetToken(MyllParser.B16, 0); }
+		public ITerminalNode B8() { return GetToken(MyllParser.B8, 0); }
 		public BinaryTypeContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
 		}
 		public override int RuleIndex { get { return RULE_binaryType; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitBinaryType(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -1220,19 +1220,19 @@ public partial class MyParser : Parser {
 
 	public partial class SignedIntTypeContext : ParserRuleContext {
 		public IToken v;
-		public ITerminalNode INT() { return GetToken(MyParser.INT, 0); }
-		public ITerminalNode ISIZE() { return GetToken(MyParser.ISIZE, 0); }
-		public ITerminalNode I64() { return GetToken(MyParser.I64, 0); }
-		public ITerminalNode I32() { return GetToken(MyParser.I32, 0); }
-		public ITerminalNode I16() { return GetToken(MyParser.I16, 0); }
-		public ITerminalNode I8() { return GetToken(MyParser.I8, 0); }
+		public ITerminalNode INT() { return GetToken(MyllParser.INT, 0); }
+		public ITerminalNode ISIZE() { return GetToken(MyllParser.ISIZE, 0); }
+		public ITerminalNode I64() { return GetToken(MyllParser.I64, 0); }
+		public ITerminalNode I32() { return GetToken(MyllParser.I32, 0); }
+		public ITerminalNode I16() { return GetToken(MyllParser.I16, 0); }
+		public ITerminalNode I8() { return GetToken(MyllParser.I8, 0); }
 		public SignedIntTypeContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
 		}
 		public override int RuleIndex { get { return RULE_signedIntType; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitSignedIntType(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -1271,19 +1271,19 @@ public partial class MyParser : Parser {
 
 	public partial class UnsignIntTypeContext : ParserRuleContext {
 		public IToken v;
-		public ITerminalNode UINT() { return GetToken(MyParser.UINT, 0); }
-		public ITerminalNode USIZE() { return GetToken(MyParser.USIZE, 0); }
-		public ITerminalNode U64() { return GetToken(MyParser.U64, 0); }
-		public ITerminalNode U32() { return GetToken(MyParser.U32, 0); }
-		public ITerminalNode U16() { return GetToken(MyParser.U16, 0); }
-		public ITerminalNode U8() { return GetToken(MyParser.U8, 0); }
+		public ITerminalNode UINT() { return GetToken(MyllParser.UINT, 0); }
+		public ITerminalNode USIZE() { return GetToken(MyllParser.USIZE, 0); }
+		public ITerminalNode U64() { return GetToken(MyllParser.U64, 0); }
+		public ITerminalNode U32() { return GetToken(MyllParser.U32, 0); }
+		public ITerminalNode U16() { return GetToken(MyllParser.U16, 0); }
+		public ITerminalNode U8() { return GetToken(MyllParser.U8, 0); }
 		public UnsignIntTypeContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
 		}
 		public override int RuleIndex { get { return RULE_unsignIntType; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitUnsignIntType(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -1345,7 +1345,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_basicType; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitBasicType(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -1434,17 +1434,17 @@ public partial class MyParser : Parser {
 
 	public partial class TypeQualContext : ParserRuleContext {
 		public IToken qual;
-		public ITerminalNode CONST() { return GetToken(MyParser.CONST, 0); }
-		public ITerminalNode MUTABLE() { return GetToken(MyParser.MUTABLE, 0); }
-		public ITerminalNode VOLATILE() { return GetToken(MyParser.VOLATILE, 0); }
-		public ITerminalNode STABLE() { return GetToken(MyParser.STABLE, 0); }
+		public ITerminalNode CONST() { return GetToken(MyllParser.CONST, 0); }
+		public ITerminalNode MUTABLE() { return GetToken(MyllParser.MUTABLE, 0); }
+		public ITerminalNode VOLATILE() { return GetToken(MyllParser.VOLATILE, 0); }
+		public ITerminalNode STABLE() { return GetToken(MyllParser.STABLE, 0); }
 		public TypeQualContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
 		}
 		public override int RuleIndex { get { return RULE_typeQual; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTypeQual(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -1494,7 +1494,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_typeQuals; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTypeQuals(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -1540,16 +1540,16 @@ public partial class MyParser : Parser {
 		public TypeQualsContext typeQuals() {
 			return GetRuleContext<TypeQualsContext>(0);
 		}
-		public ITerminalNode RBRACK() { return GetToken(MyParser.RBRACK, 0); }
-		public ITerminalNode AT_BANG() { return GetToken(MyParser.AT_BANG, 0); }
-		public ITerminalNode AT_QUEST() { return GetToken(MyParser.AT_QUEST, 0); }
-		public ITerminalNode AT_PLUS() { return GetToken(MyParser.AT_PLUS, 0); }
-		public ITerminalNode DBL_AMP() { return GetToken(MyParser.DBL_AMP, 0); }
-		public ITerminalNode AMP() { return GetToken(MyParser.AMP, 0); }
-		public ITerminalNode STAR() { return GetToken(MyParser.STAR, 0); }
-		public ITerminalNode PTR_TO_ARY() { return GetToken(MyParser.PTR_TO_ARY, 0); }
-		public ITerminalNode AT_LBRACK() { return GetToken(MyParser.AT_LBRACK, 0); }
-		public ITerminalNode LBRACK() { return GetToken(MyParser.LBRACK, 0); }
+		public ITerminalNode RBRACK() { return GetToken(MyllParser.RBRACK, 0); }
+		public ITerminalNode AT_BANG() { return GetToken(MyllParser.AT_BANG, 0); }
+		public ITerminalNode AT_QUEST() { return GetToken(MyllParser.AT_QUEST, 0); }
+		public ITerminalNode AT_PLUS() { return GetToken(MyllParser.AT_PLUS, 0); }
+		public ITerminalNode DBL_AMP() { return GetToken(MyllParser.DBL_AMP, 0); }
+		public ITerminalNode AMP() { return GetToken(MyllParser.AMP, 0); }
+		public ITerminalNode STAR() { return GetToken(MyllParser.STAR, 0); }
+		public ITerminalNode PTR_TO_ARY() { return GetToken(MyllParser.PTR_TO_ARY, 0); }
+		public ITerminalNode AT_LBRACK() { return GetToken(MyllParser.AT_LBRACK, 0); }
+		public ITerminalNode LBRACK() { return GetToken(MyllParser.LBRACK, 0); }
 		public ExprContext expr() {
 			return GetRuleContext<ExprContext>(0);
 		}
@@ -1559,7 +1559,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_typePtr; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTypePtr(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -1651,7 +1651,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_idTplArgs; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitIdTplArgs(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -1694,9 +1694,9 @@ public partial class MyParser : Parser {
 		public IdTplArgsContext idTplArgs(int i) {
 			return GetRuleContext<IdTplArgsContext>(i);
 		}
-		public ITerminalNode[] SCOPE() { return GetTokens(MyParser.SCOPE); }
+		public ITerminalNode[] SCOPE() { return GetTokens(MyllParser.SCOPE); }
 		public ITerminalNode SCOPE(int i) {
-			return GetToken(MyParser.SCOPE, i);
+			return GetToken(MyllParser.SCOPE, i);
 		}
 		public NestedTypeContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
@@ -1704,7 +1704,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_nestedType; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitNestedType(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -1749,14 +1749,14 @@ public partial class MyParser : Parser {
 	}
 
 	public partial class FuncTypeContext : ParserRuleContext {
-		public ITerminalNode FUNC() { return GetToken(MyParser.FUNC, 0); }
+		public ITerminalNode FUNC() { return GetToken(MyllParser.FUNC, 0); }
 		public FuncDefContext funcDef() {
 			return GetRuleContext<FuncDefContext>(0);
 		}
 		public TplArgsContext tplArgs() {
 			return GetRuleContext<TplArgsContext>(0);
 		}
-		public ITerminalNode RARROW() { return GetToken(MyParser.RARROW, 0); }
+		public ITerminalNode RARROW() { return GetToken(MyllParser.RARROW, 0); }
 		public TypeSpecContext typeSpec() {
 			return GetRuleContext<TypeSpecContext>(0);
 		}
@@ -1766,7 +1766,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_funcType; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitFuncType(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -1839,7 +1839,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_typeSpec; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTypeSpec(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -1937,14 +1937,14 @@ public partial class MyParser : Parser {
 		public IdContext id() {
 			return GetRuleContext<IdContext>(0);
 		}
-		public ITerminalNode COLON() { return GetToken(MyParser.COLON, 0); }
+		public ITerminalNode COLON() { return GetToken(MyllParser.COLON, 0); }
 		public ArgContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
 		}
 		public override int RuleIndex { get { return RULE_arg; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitArg(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -1982,17 +1982,17 @@ public partial class MyParser : Parser {
 	}
 
 	public partial class FuncCallContext : ParserRuleContext {
-		public ITerminalNode LPAREN() { return GetToken(MyParser.LPAREN, 0); }
-		public ITerminalNode RPAREN() { return GetToken(MyParser.RPAREN, 0); }
+		public ITerminalNode LPAREN() { return GetToken(MyllParser.LPAREN, 0); }
+		public ITerminalNode RPAREN() { return GetToken(MyllParser.RPAREN, 0); }
 		public ArgContext[] arg() {
 			return GetRuleContexts<ArgContext>();
 		}
 		public ArgContext arg(int i) {
 			return GetRuleContext<ArgContext>(i);
 		}
-		public ITerminalNode[] COMMA() { return GetTokens(MyParser.COMMA); }
+		public ITerminalNode[] COMMA() { return GetTokens(MyllParser.COMMA); }
 		public ITerminalNode COMMA(int i) {
-			return GetToken(MyParser.COMMA, i);
+			return GetToken(MyllParser.COMMA, i);
 		}
 		public FuncCallContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
@@ -2000,7 +2000,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_funcCall; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitFuncCall(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2053,17 +2053,17 @@ public partial class MyParser : Parser {
 	}
 
 	public partial class IndexCallContext : ParserRuleContext {
-		public ITerminalNode LBRACK() { return GetToken(MyParser.LBRACK, 0); }
-		public ITerminalNode RBRACK() { return GetToken(MyParser.RBRACK, 0); }
+		public ITerminalNode LBRACK() { return GetToken(MyllParser.LBRACK, 0); }
+		public ITerminalNode RBRACK() { return GetToken(MyllParser.RBRACK, 0); }
 		public ArgContext[] arg() {
 			return GetRuleContexts<ArgContext>();
 		}
 		public ArgContext arg(int i) {
 			return GetRuleContext<ArgContext>(i);
 		}
-		public ITerminalNode[] COMMA() { return GetTokens(MyParser.COMMA); }
+		public ITerminalNode[] COMMA() { return GetTokens(MyllParser.COMMA); }
 		public ITerminalNode COMMA(int i) {
-			return GetToken(MyParser.COMMA, i);
+			return GetToken(MyllParser.COMMA, i);
 		}
 		public IndexCallContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
@@ -2071,7 +2071,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_indexCall; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitIndexCall(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2130,7 +2130,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_param; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitParam(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2168,17 +2168,17 @@ public partial class MyParser : Parser {
 	}
 
 	public partial class FuncDefContext : ParserRuleContext {
-		public ITerminalNode LPAREN() { return GetToken(MyParser.LPAREN, 0); }
-		public ITerminalNode RPAREN() { return GetToken(MyParser.RPAREN, 0); }
+		public ITerminalNode LPAREN() { return GetToken(MyllParser.LPAREN, 0); }
+		public ITerminalNode RPAREN() { return GetToken(MyllParser.RPAREN, 0); }
 		public ParamContext[] param() {
 			return GetRuleContexts<ParamContext>();
 		}
 		public ParamContext param(int i) {
 			return GetRuleContext<ParamContext>(i);
 		}
-		public ITerminalNode[] COMMA() { return GetTokens(MyParser.COMMA); }
+		public ITerminalNode[] COMMA() { return GetTokens(MyllParser.COMMA); }
 		public ITerminalNode COMMA(int i) {
-			return GetToken(MyParser.COMMA, i);
+			return GetToken(MyllParser.COMMA, i);
 		}
 		public FuncDefContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
@@ -2186,7 +2186,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_funcDef; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitFuncDef(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2254,7 +2254,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_tplArg; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTplArg(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2300,17 +2300,17 @@ public partial class MyParser : Parser {
 	}
 
 	public partial class TplArgsContext : ParserRuleContext {
-		public ITerminalNode LT() { return GetToken(MyParser.LT, 0); }
+		public ITerminalNode LT() { return GetToken(MyllParser.LT, 0); }
 		public TplArgContext[] tplArg() {
 			return GetRuleContexts<TplArgContext>();
 		}
 		public TplArgContext tplArg(int i) {
 			return GetRuleContext<TplArgContext>(i);
 		}
-		public ITerminalNode GT() { return GetToken(MyParser.GT, 0); }
-		public ITerminalNode[] COMMA() { return GetTokens(MyParser.COMMA); }
+		public ITerminalNode GT() { return GetToken(MyllParser.GT, 0); }
+		public ITerminalNode[] COMMA() { return GetTokens(MyllParser.COMMA); }
 		public ITerminalNode COMMA(int i) {
-			return GetToken(MyParser.COMMA, i);
+			return GetToken(MyllParser.COMMA, i);
 		}
 		public TplArgsContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
@@ -2318,7 +2318,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_tplArgs; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTplArgs(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2363,17 +2363,17 @@ public partial class MyParser : Parser {
 	}
 
 	public partial class TplParamsContext : ParserRuleContext {
-		public ITerminalNode LT() { return GetToken(MyParser.LT, 0); }
+		public ITerminalNode LT() { return GetToken(MyllParser.LT, 0); }
 		public IdContext[] id() {
 			return GetRuleContexts<IdContext>();
 		}
 		public IdContext id(int i) {
 			return GetRuleContext<IdContext>(i);
 		}
-		public ITerminalNode GT() { return GetToken(MyParser.GT, 0); }
-		public ITerminalNode[] COMMA() { return GetTokens(MyParser.COMMA); }
+		public ITerminalNode GT() { return GetToken(MyllParser.GT, 0); }
+		public ITerminalNode[] COMMA() { return GetTokens(MyllParser.COMMA); }
 		public ITerminalNode COMMA(int i) {
-			return GetToken(MyParser.COMMA, i);
+			return GetToken(MyllParser.COMMA, i);
 		}
 		public TplParamsContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
@@ -2381,7 +2381,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_tplParams; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTplParams(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2438,7 +2438,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_preOpExpr; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitPreOpExpr(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2467,11 +2467,11 @@ public partial class MyParser : Parser {
 	}
 
 	public partial class CastExprContext : ParserRuleContext {
-		public ITerminalNode LPAREN() { return GetToken(MyParser.LPAREN, 0); }
+		public ITerminalNode LPAREN() { return GetToken(MyllParser.LPAREN, 0); }
 		public TypeSpecContext typeSpec() {
 			return GetRuleContext<TypeSpecContext>(0);
 		}
-		public ITerminalNode RPAREN() { return GetToken(MyParser.RPAREN, 0); }
+		public ITerminalNode RPAREN() { return GetToken(MyllParser.RPAREN, 0); }
 		public ExprContext expr() {
 			return GetRuleContext<ExprContext>(0);
 		}
@@ -2481,7 +2481,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_castExpr; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitCastExpr(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2512,7 +2512,7 @@ public partial class MyParser : Parser {
 	}
 
 	public partial class SizeofExprContext : ParserRuleContext {
-		public ITerminalNode SIZEOF() { return GetToken(MyParser.SIZEOF, 0); }
+		public ITerminalNode SIZEOF() { return GetToken(MyllParser.SIZEOF, 0); }
 		public ExprContext expr() {
 			return GetRuleContext<ExprContext>(0);
 		}
@@ -2522,7 +2522,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_sizeofExpr; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitSizeofExpr(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2551,7 +2551,7 @@ public partial class MyParser : Parser {
 	}
 
 	public partial class NewExprContext : ParserRuleContext {
-		public ITerminalNode NEW() { return GetToken(MyParser.NEW, 0); }
+		public ITerminalNode NEW() { return GetToken(MyllParser.NEW, 0); }
 		public TypeSpecContext typeSpec() {
 			return GetRuleContext<TypeSpecContext>(0);
 		}
@@ -2564,7 +2564,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_newExpr; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitNewExpr(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2611,7 +2611,7 @@ public partial class MyParser : Parser {
 
 	public partial class DeleteExprContext : ParserRuleContext {
 		public IToken ary;
-		public ITerminalNode DELETE() { return GetToken(MyParser.DELETE, 0); }
+		public ITerminalNode DELETE() { return GetToken(MyllParser.DELETE, 0); }
 		public ExprContext expr() {
 			return GetRuleContext<ExprContext>(0);
 		}
@@ -2621,7 +2621,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_deleteExpr; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitDeleteExpr(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2693,7 +2693,7 @@ public partial class MyParser : Parser {
 		}
 		public Tier2Context(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTier2(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2716,7 +2716,7 @@ public partial class MyParser : Parser {
 		}
 		public Tier3Context(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTier3(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2733,7 +2733,7 @@ public partial class MyParser : Parser {
 		}
 		public Tier4Context(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTier4(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2750,7 +2750,7 @@ public partial class MyParser : Parser {
 		}
 		public Tier5Context(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTier5(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2767,7 +2767,7 @@ public partial class MyParser : Parser {
 		}
 		public Tier6Context(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTier6(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2784,7 +2784,7 @@ public partial class MyParser : Parser {
 		}
 		public Tier7Context(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTier7(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2801,7 +2801,7 @@ public partial class MyParser : Parser {
 		}
 		public Tier8Context(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTier8(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2818,7 +2818,7 @@ public partial class MyParser : Parser {
 		}
 		public Tier9Context(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTier9(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2835,7 +2835,7 @@ public partial class MyParser : Parser {
 		}
 		public Tier15Context(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTier15(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2846,7 +2846,7 @@ public partial class MyParser : Parser {
 		}
 		public Tier16Context(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTier16(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2863,7 +2863,7 @@ public partial class MyParser : Parser {
 		}
 		public Tier13Context(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTier13(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2880,7 +2880,7 @@ public partial class MyParser : Parser {
 		}
 		public Tier14Context(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTier14(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2897,7 +2897,7 @@ public partial class MyParser : Parser {
 		}
 		public Tier11Context(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTier11(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2914,7 +2914,7 @@ public partial class MyParser : Parser {
 		}
 		public Tier12Context(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTier12(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2931,7 +2931,7 @@ public partial class MyParser : Parser {
 		}
 		public Tier10Context(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTier10(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2942,7 +2942,7 @@ public partial class MyParser : Parser {
 		}
 		public Tier51Context(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTier51(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2953,7 +2953,7 @@ public partial class MyParser : Parser {
 		}
 		public Tier52Context(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTier52(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2964,7 +2964,7 @@ public partial class MyParser : Parser {
 		}
 		public Tier50Context(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTier50(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2981,7 +2981,7 @@ public partial class MyParser : Parser {
 		}
 		public Tier4_5Context(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTier4_5(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -2992,7 +2992,7 @@ public partial class MyParser : Parser {
 		}
 		public ParenExprContext(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitParenExpr(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -3004,10 +3004,10 @@ public partial class MyParser : Parser {
 		public ExprContext expr(int i) {
 			return GetRuleContext<ExprContext>(i);
 		}
-		public ITerminalNode SCOPE() { return GetToken(MyParser.SCOPE, 0); }
+		public ITerminalNode SCOPE() { return GetToken(MyllParser.SCOPE, 0); }
 		public Tier1Context(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTier1(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -3364,7 +3364,7 @@ public partial class MyParser : Parser {
 		public IdContext id() {
 			return GetRuleContext<IdContext>(0);
 		}
-		public ITerminalNode ASSIGN() { return GetToken(MyParser.ASSIGN, 0); }
+		public ITerminalNode ASSIGN() { return GetToken(MyllParser.ASSIGN, 0); }
 		public ExprContext expr() {
 			return GetRuleContext<ExprContext>(0);
 		}
@@ -3374,7 +3374,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_idExpr; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitIdExpr(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -3422,9 +3422,9 @@ public partial class MyParser : Parser {
 		public IdExprContext idExpr(int i) {
 			return GetRuleContext<IdExprContext>(i);
 		}
-		public ITerminalNode[] COMMA() { return GetTokens(MyParser.COMMA); }
+		public ITerminalNode[] COMMA() { return GetTokens(MyllParser.COMMA); }
 		public ITerminalNode COMMA(int i) {
-			return GetToken(MyParser.COMMA, i);
+			return GetToken(MyllParser.COMMA, i);
 		}
 		public TypedIdExprsContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
@@ -3432,7 +3432,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_typedIdExprs; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTypedIdExprs(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -3485,9 +3485,9 @@ public partial class MyParser : Parser {
 		public IdOrLitContext idOrLit(int i) {
 			return GetRuleContext<IdOrLitContext>(i);
 		}
-		public ITerminalNode[] COMMA() { return GetTokens(MyParser.COMMA); }
+		public ITerminalNode[] COMMA() { return GetTokens(MyllParser.COMMA); }
 		public ITerminalNode COMMA(int i) {
-			return GetToken(MyParser.COMMA, i);
+			return GetToken(MyllParser.COMMA, i);
 		}
 		public AttribContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
@@ -3495,7 +3495,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_attrib; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitAttrib(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -3560,17 +3560,17 @@ public partial class MyParser : Parser {
 	}
 
 	public partial class AttribBlkContext : ParserRuleContext {
-		public ITerminalNode LBRACK() { return GetToken(MyParser.LBRACK, 0); }
+		public ITerminalNode LBRACK() { return GetToken(MyllParser.LBRACK, 0); }
 		public AttribContext[] attrib() {
 			return GetRuleContexts<AttribContext>();
 		}
 		public AttribContext attrib(int i) {
 			return GetRuleContext<AttribContext>(i);
 		}
-		public ITerminalNode RBRACK() { return GetToken(MyParser.RBRACK, 0); }
-		public ITerminalNode[] COMMA() { return GetTokens(MyParser.COMMA); }
+		public ITerminalNode RBRACK() { return GetToken(MyllParser.RBRACK, 0); }
+		public ITerminalNode[] COMMA() { return GetTokens(MyllParser.COMMA); }
 		public ITerminalNode COMMA(int i) {
-			return GetToken(MyParser.COMMA, i);
+			return GetToken(MyllParser.COMMA, i);
 		}
 		public AttribBlkContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
@@ -3578,7 +3578,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_attribBlk; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitAttribBlk(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -3635,35 +3635,35 @@ public partial class MyParser : Parser {
 		}
 	}
 	public partial class UsingContext : StmtDefContext {
-		public ITerminalNode USING() { return GetToken(MyParser.USING, 0); }
+		public ITerminalNode USING() { return GetToken(MyllParser.USING, 0); }
 		public NestedTypeContext[] nestedType() {
 			return GetRuleContexts<NestedTypeContext>();
 		}
 		public NestedTypeContext nestedType(int i) {
 			return GetRuleContext<NestedTypeContext>(i);
 		}
-		public ITerminalNode SEMI() { return GetToken(MyParser.SEMI, 0); }
-		public ITerminalNode[] COMMA() { return GetTokens(MyParser.COMMA); }
+		public ITerminalNode SEMI() { return GetToken(MyllParser.SEMI, 0); }
+		public ITerminalNode[] COMMA() { return GetTokens(MyllParser.COMMA); }
 		public ITerminalNode COMMA(int i) {
-			return GetToken(MyParser.COMMA, i);
+			return GetToken(MyllParser.COMMA, i);
 		}
 		public UsingContext(StmtDefContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitUsing(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 	public partial class VariableDeclContext : StmtDefContext {
-		public ITerminalNode VAR() { return GetToken(MyParser.VAR, 0); }
+		public ITerminalNode VAR() { return GetToken(MyllParser.VAR, 0); }
 		public TypedIdExprsContext typedIdExprs() {
 			return GetRuleContext<TypedIdExprsContext>(0);
 		}
-		public ITerminalNode SEMI() { return GetToken(MyParser.SEMI, 0); }
-		public ITerminalNode CONST() { return GetToken(MyParser.CONST, 0); }
+		public ITerminalNode SEMI() { return GetToken(MyllParser.SEMI, 0); }
+		public ITerminalNode CONST() { return GetToken(MyllParser.CONST, 0); }
 		public VariableDeclContext(StmtDefContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitVariableDecl(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -3750,7 +3750,7 @@ public partial class MyParser : Parser {
 		public ExprContext expr() {
 			return GetRuleContext<ExprContext>(0);
 		}
-		public ITerminalNode TIMES() { return GetToken(MyParser.TIMES, 0); }
+		public ITerminalNode TIMES() { return GetToken(MyllParser.TIMES, 0); }
 		public StmtContext stmt() {
 			return GetRuleContext<StmtContext>(0);
 		}
@@ -3759,28 +3759,28 @@ public partial class MyParser : Parser {
 		}
 		public TimesStmtContext(StmtContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitTimesStmt(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 	public partial class IfStmtContext : StmtContext {
-		public ITerminalNode IF() { return GetToken(MyParser.IF, 0); }
-		public ITerminalNode LPAREN() { return GetToken(MyParser.LPAREN, 0); }
+		public ITerminalNode IF() { return GetToken(MyllParser.IF, 0); }
+		public ITerminalNode LPAREN() { return GetToken(MyllParser.LPAREN, 0); }
 		public ExprContext expr() {
 			return GetRuleContext<ExprContext>(0);
 		}
-		public ITerminalNode RPAREN() { return GetToken(MyParser.RPAREN, 0); }
+		public ITerminalNode RPAREN() { return GetToken(MyllParser.RPAREN, 0); }
 		public StmtContext[] stmt() {
 			return GetRuleContexts<StmtContext>();
 		}
 		public StmtContext stmt(int i) {
 			return GetRuleContext<StmtContext>(i);
 		}
-		public ITerminalNode ELSE() { return GetToken(MyParser.ELSE, 0); }
+		public ITerminalNode ELSE() { return GetToken(MyllParser.ELSE, 0); }
 		public IfStmtContext(StmtContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitIfStmt(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -3791,17 +3791,17 @@ public partial class MyParser : Parser {
 		}
 		public StmtDeclContext(StmtContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitStmtDecl(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 	public partial class BreakStmtContext : StmtContext {
-		public ITerminalNode BREAK() { return GetToken(MyParser.BREAK, 0); }
-		public ITerminalNode SEMI() { return GetToken(MyParser.SEMI, 0); }
+		public ITerminalNode BREAK() { return GetToken(MyllParser.BREAK, 0); }
+		public ITerminalNode SEMI() { return GetToken(MyllParser.SEMI, 0); }
 		public BreakStmtContext(StmtContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitBreakStmt(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -3818,7 +3818,7 @@ public partial class MyParser : Parser {
 		}
 		public EachStmtContext(StmtContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitEachStmt(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -3829,7 +3829,7 @@ public partial class MyParser : Parser {
 		}
 		public BlockStmtContext(StmtContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitBlockStmt(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -3841,7 +3841,7 @@ public partial class MyParser : Parser {
 		public ExprContext expr(int i) {
 			return GetRuleContext<ExprContext>(i);
 		}
-		public ITerminalNode SEMI() { return GetToken(MyParser.SEMI, 0); }
+		public ITerminalNode SEMI() { return GetToken(MyllParser.SEMI, 0); }
 		public AssignOPContext[] assignOP() {
 			return GetRuleContexts<AssignOPContext>();
 		}
@@ -3850,27 +3850,27 @@ public partial class MyParser : Parser {
 		}
 		public AssignmentStmtContext(StmtContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitAssignmentStmt(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 	public partial class ReturnStmtContext : StmtContext {
-		public ITerminalNode RETURN() { return GetToken(MyParser.RETURN, 0); }
+		public ITerminalNode RETURN() { return GetToken(MyllParser.RETURN, 0); }
 		public ExprContext expr() {
 			return GetRuleContext<ExprContext>(0);
 		}
-		public ITerminalNode SEMI() { return GetToken(MyParser.SEMI, 0); }
+		public ITerminalNode SEMI() { return GetToken(MyllParser.SEMI, 0); }
 		public ReturnStmtContext(StmtContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitReturnStmt(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 	public partial class ForStmtContext : StmtContext {
-		public ITerminalNode FOR() { return GetToken(MyParser.FOR, 0); }
-		public ITerminalNode LPAREN() { return GetToken(MyParser.LPAREN, 0); }
+		public ITerminalNode FOR() { return GetToken(MyllParser.FOR, 0); }
+		public ITerminalNode LPAREN() { return GetToken(MyllParser.LPAREN, 0); }
 		public StmtContext[] stmt() {
 			return GetRuleContexts<StmtContext>();
 		}
@@ -3883,12 +3883,12 @@ public partial class MyParser : Parser {
 		public ExprContext expr(int i) {
 			return GetRuleContext<ExprContext>(i);
 		}
-		public ITerminalNode SEMI() { return GetToken(MyParser.SEMI, 0); }
-		public ITerminalNode RPAREN() { return GetToken(MyParser.RPAREN, 0); }
-		public ITerminalNode ELSE() { return GetToken(MyParser.ELSE, 0); }
+		public ITerminalNode SEMI() { return GetToken(MyllParser.SEMI, 0); }
+		public ITerminalNode RPAREN() { return GetToken(MyllParser.RPAREN, 0); }
+		public ITerminalNode ELSE() { return GetToken(MyllParser.ELSE, 0); }
 		public ForStmtContext(StmtContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitForStmt(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -3897,10 +3897,10 @@ public partial class MyParser : Parser {
 		public ExprContext expr() {
 			return GetRuleContext<ExprContext>(0);
 		}
-		public ITerminalNode SEMI() { return GetToken(MyParser.SEMI, 0); }
+		public ITerminalNode SEMI() { return GetToken(MyllParser.SEMI, 0); }
 		public ExpressionStmtContext(StmtContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitExpressionStmt(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -4069,8 +4069,8 @@ public partial class MyParser : Parser {
 	}
 
 	public partial class StmtBlkContext : ParserRuleContext {
-		public ITerminalNode LCURLY() { return GetToken(MyParser.LCURLY, 0); }
-		public ITerminalNode RCURLY() { return GetToken(MyParser.RCURLY, 0); }
+		public ITerminalNode LCURLY() { return GetToken(MyllParser.LCURLY, 0); }
+		public ITerminalNode RCURLY() { return GetToken(MyllParser.RCURLY, 0); }
 		public StmtContext[] stmt() {
 			return GetRuleContexts<StmtContext>();
 		}
@@ -4083,7 +4083,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_stmtBlk; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitStmtBlk(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -4138,30 +4138,30 @@ public partial class MyParser : Parser {
 		}
 	}
 	public partial class ClassCtorDeclContext : ClassDefContext {
-		public ITerminalNode CTOR() { return GetToken(MyParser.CTOR, 0); }
+		public ITerminalNode CTOR() { return GetToken(MyllParser.CTOR, 0); }
 		public CtorDeclContext ctorDecl() {
 			return GetRuleContext<CtorDeclContext>(0);
 		}
 		public ClassCtorDeclContext(ClassDefContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitClassCtorDecl(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 	public partial class AliasContext : ClassDefContext {
-		public ITerminalNode ALIAS() { return GetToken(MyParser.ALIAS, 0); }
+		public ITerminalNode ALIAS() { return GetToken(MyllParser.ALIAS, 0); }
 		public IdContext id() {
 			return GetRuleContext<IdContext>(0);
 		}
-		public ITerminalNode ASSIGN() { return GetToken(MyParser.ASSIGN, 0); }
+		public ITerminalNode ASSIGN() { return GetToken(MyllParser.ASSIGN, 0); }
 		public TypeSpecContext typeSpec() {
 			return GetRuleContext<TypeSpecContext>(0);
 		}
-		public ITerminalNode SEMI() { return GetToken(MyParser.SEMI, 0); }
+		public ITerminalNode SEMI() { return GetToken(MyllParser.SEMI, 0); }
 		public AliasContext(ClassDefContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitAlias(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -4172,27 +4172,27 @@ public partial class MyParser : Parser {
 		}
 		public ClassExtendedDeclContext(ClassDefContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitClassExtendedDecl(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 	public partial class AccessModContext : ClassDefContext {
-		public ITerminalNode COLON() { return GetToken(MyParser.COLON, 0); }
-		public ITerminalNode PUB() { return GetToken(MyParser.PUB, 0); }
-		public ITerminalNode PRIV() { return GetToken(MyParser.PRIV, 0); }
-		public ITerminalNode PROT() { return GetToken(MyParser.PROT, 0); }
+		public ITerminalNode COLON() { return GetToken(MyllParser.COLON, 0); }
+		public ITerminalNode PUB() { return GetToken(MyllParser.PUB, 0); }
+		public ITerminalNode PRIV() { return GetToken(MyllParser.PRIV, 0); }
+		public ITerminalNode PROT() { return GetToken(MyllParser.PROT, 0); }
 		public AccessModContext(ClassDefContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitAccessMod(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 	public partial class StaticDeclContext : ClassDefContext {
-		public ITerminalNode STATIC() { return GetToken(MyParser.STATIC, 0); }
-		public ITerminalNode LCURLY() { return GetToken(MyParser.LCURLY, 0); }
-		public ITerminalNode RCURLY() { return GetToken(MyParser.RCURLY, 0); }
+		public ITerminalNode STATIC() { return GetToken(MyllParser.STATIC, 0); }
+		public ITerminalNode LCURLY() { return GetToken(MyllParser.LCURLY, 0); }
+		public ITerminalNode RCURLY() { return GetToken(MyllParser.RCURLY, 0); }
 		public ClassExtDefContext[] classExtDef() {
 			return GetRuleContexts<ClassExtDefContext>();
 		}
@@ -4201,7 +4201,7 @@ public partial class MyParser : Parser {
 		}
 		public StaticDeclContext(ClassDefContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitStaticDecl(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -4302,26 +4302,26 @@ public partial class MyParser : Parser {
 	}
 
 	public partial class ClassExtDefContext : ParserRuleContext {
-		public ITerminalNode FIELDS() { return GetToken(MyParser.FIELDS, 0); }
-		public ITerminalNode LCURLY() { return GetToken(MyParser.LCURLY, 0); }
-		public ITerminalNode RCURLY() { return GetToken(MyParser.RCURLY, 0); }
+		public ITerminalNode FIELDS() { return GetToken(MyllParser.FIELDS, 0); }
+		public ITerminalNode LCURLY() { return GetToken(MyllParser.LCURLY, 0); }
+		public ITerminalNode RCURLY() { return GetToken(MyllParser.RCURLY, 0); }
 		public TypedIdExprsContext[] typedIdExprs() {
 			return GetRuleContexts<TypedIdExprsContext>();
 		}
 		public TypedIdExprsContext typedIdExprs(int i) {
 			return GetRuleContext<TypedIdExprsContext>(i);
 		}
-		public ITerminalNode[] SEMI() { return GetTokens(MyParser.SEMI); }
+		public ITerminalNode[] SEMI() { return GetTokens(MyllParser.SEMI); }
 		public ITerminalNode SEMI(int i) {
-			return GetToken(MyParser.SEMI, i);
+			return GetToken(MyllParser.SEMI, i);
 		}
-		public ITerminalNode FIELD() { return GetToken(MyParser.FIELD, 0); }
-		public ITerminalNode PROP() { return GetToken(MyParser.PROP, 0); }
-		public ITerminalNode METH() { return GetToken(MyParser.METH, 0); }
+		public ITerminalNode FIELD() { return GetToken(MyllParser.FIELD, 0); }
+		public ITerminalNode PROP() { return GetToken(MyllParser.PROP, 0); }
+		public ITerminalNode METH() { return GetToken(MyllParser.METH, 0); }
 		public FuncDeclContext funcDecl() {
 			return GetRuleContext<FuncDeclContext>(0);
 		}
-		public ITerminalNode OPERATOR() { return GetToken(MyParser.OPERATOR, 0); }
+		public ITerminalNode OPERATOR() { return GetToken(MyllParser.OPERATOR, 0); }
 		public OpDeclContext opDecl() {
 			return GetRuleContext<OpDeclContext>(0);
 		}
@@ -4331,7 +4331,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_classExtDef; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitClassExtDef(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -4414,7 +4414,7 @@ public partial class MyParser : Parser {
 	}
 
 	public partial class InitListContext : ParserRuleContext {
-		public ITerminalNode COLON() { return GetToken(MyParser.COLON, 0); }
+		public ITerminalNode COLON() { return GetToken(MyllParser.COLON, 0); }
 		public IdContext[] id() {
 			return GetRuleContexts<IdContext>();
 		}
@@ -4427,9 +4427,9 @@ public partial class MyParser : Parser {
 		public FuncCallContext funcCall(int i) {
 			return GetRuleContext<FuncCallContext>(i);
 		}
-		public ITerminalNode[] COMMA() { return GetTokens(MyParser.COMMA); }
+		public ITerminalNode[] COMMA() { return GetTokens(MyllParser.COMMA); }
 		public ITerminalNode COMMA(int i) {
-			return GetToken(MyParser.COMMA, i);
+			return GetToken(MyllParser.COMMA, i);
 		}
 		public InitListContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
@@ -4437,7 +4437,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_initList; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitInitList(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -4506,7 +4506,7 @@ public partial class MyParser : Parser {
 		}
 		public CtorDefContext(CtorDeclContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitCtorDef(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -4558,11 +4558,11 @@ public partial class MyParser : Parser {
 		public ExprContext expr() {
 			return GetRuleContext<ExprContext>(0);
 		}
-		public ITerminalNode SEMI() { return GetToken(MyParser.SEMI, 0); }
+		public ITerminalNode SEMI() { return GetToken(MyllParser.SEMI, 0); }
 		public TplParamsContext tplParams() {
 			return GetRuleContext<TplParamsContext>(0);
 		}
-		public ITerminalNode RARROW() { return GetToken(MyParser.RARROW, 0); }
+		public ITerminalNode RARROW() { return GetToken(MyllParser.RARROW, 0); }
 		public TypeSpecContext typeSpec() {
 			return GetRuleContext<TypeSpecContext>(0);
 		}
@@ -4572,7 +4572,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_funcDecl; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitFuncDecl(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -4641,7 +4641,7 @@ public partial class MyParser : Parser {
 	}
 
 	public partial class OpDeclContext : ParserRuleContext {
-		public ITerminalNode STRING_LIT() { return GetToken(MyParser.STRING_LIT, 0); }
+		public ITerminalNode STRING_LIT() { return GetToken(MyllParser.STRING_LIT, 0); }
 		public FuncDefContext funcDef() {
 			return GetRuleContext<FuncDefContext>(0);
 		}
@@ -4651,8 +4651,8 @@ public partial class MyParser : Parser {
 		public ExprContext expr() {
 			return GetRuleContext<ExprContext>(0);
 		}
-		public ITerminalNode SEMI() { return GetToken(MyParser.SEMI, 0); }
-		public ITerminalNode RARROW() { return GetToken(MyParser.RARROW, 0); }
+		public ITerminalNode SEMI() { return GetToken(MyllParser.SEMI, 0); }
+		public ITerminalNode RARROW() { return GetToken(MyllParser.RARROW, 0); }
 		public TypeSpecContext typeSpec() {
 			return GetRuleContext<TypeSpecContext>(0);
 		}
@@ -4662,7 +4662,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_opDecl; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitOpDecl(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -4734,12 +4734,12 @@ public partial class MyParser : Parser {
 		}
 	}
 	public partial class ClassDeclContext : TopLevelContext {
-		public ITerminalNode CLASS() { return GetToken(MyParser.CLASS, 0); }
+		public ITerminalNode CLASS() { return GetToken(MyllParser.CLASS, 0); }
 		public IdContext id() {
 			return GetRuleContext<IdContext>(0);
 		}
-		public ITerminalNode LCURLY() { return GetToken(MyParser.LCURLY, 0); }
-		public ITerminalNode RCURLY() { return GetToken(MyParser.RCURLY, 0); }
+		public ITerminalNode LCURLY() { return GetToken(MyllParser.LCURLY, 0); }
+		public ITerminalNode RCURLY() { return GetToken(MyllParser.RCURLY, 0); }
 		public TplParamsContext tplParams() {
 			return GetRuleContext<TplParamsContext>(0);
 		}
@@ -4751,7 +4751,7 @@ public partial class MyParser : Parser {
 		}
 		public ClassDeclContext(TopLevelContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitClassDecl(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -4762,18 +4762,18 @@ public partial class MyParser : Parser {
 		}
 		public AttributesContext(TopLevelContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitAttributes(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 	public partial class UnionDeclContext : TopLevelContext {
-		public ITerminalNode UNION() { return GetToken(MyParser.UNION, 0); }
+		public ITerminalNode UNION() { return GetToken(MyllParser.UNION, 0); }
 		public IdContext id() {
 			return GetRuleContext<IdContext>(0);
 		}
-		public ITerminalNode LCURLY() { return GetToken(MyParser.LCURLY, 0); }
-		public ITerminalNode RCURLY() { return GetToken(MyParser.RCURLY, 0); }
+		public ITerminalNode LCURLY() { return GetToken(MyllParser.LCURLY, 0); }
+		public ITerminalNode RCURLY() { return GetToken(MyllParser.RCURLY, 0); }
 		public TplParamsContext tplParams() {
 			return GetRuleContext<TplParamsContext>(0);
 		}
@@ -4785,18 +4785,18 @@ public partial class MyParser : Parser {
 		}
 		public UnionDeclContext(TopLevelContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitUnionDecl(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 	public partial class StructDeclContext : TopLevelContext {
-		public ITerminalNode STRUCT() { return GetToken(MyParser.STRUCT, 0); }
+		public ITerminalNode STRUCT() { return GetToken(MyllParser.STRUCT, 0); }
 		public IdContext id() {
 			return GetRuleContext<IdContext>(0);
 		}
-		public ITerminalNode LCURLY() { return GetToken(MyParser.LCURLY, 0); }
-		public ITerminalNode RCURLY() { return GetToken(MyParser.RCURLY, 0); }
+		public ITerminalNode LCURLY() { return GetToken(MyllParser.LCURLY, 0); }
+		public ITerminalNode RCURLY() { return GetToken(MyllParser.RCURLY, 0); }
 		public TplParamsContext tplParams() {
 			return GetRuleContext<TplParamsContext>(0);
 		}
@@ -4808,50 +4808,50 @@ public partial class MyParser : Parser {
 		}
 		public StructDeclContext(TopLevelContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitStructDecl(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 	public partial class EnumDeclContext : TopLevelContext {
-		public ITerminalNode ENUM() { return GetToken(MyParser.ENUM, 0); }
+		public ITerminalNode ENUM() { return GetToken(MyllParser.ENUM, 0); }
 		public IdContext id() {
 			return GetRuleContext<IdContext>(0);
 		}
-		public ITerminalNode LCURLY() { return GetToken(MyParser.LCURLY, 0); }
+		public ITerminalNode LCURLY() { return GetToken(MyllParser.LCURLY, 0); }
 		public IdExprContext[] idExpr() {
 			return GetRuleContexts<IdExprContext>();
 		}
 		public IdExprContext idExpr(int i) {
 			return GetRuleContext<IdExprContext>(i);
 		}
-		public ITerminalNode RCURLY() { return GetToken(MyParser.RCURLY, 0); }
-		public ITerminalNode[] COMMA() { return GetTokens(MyParser.COMMA); }
+		public ITerminalNode RCURLY() { return GetToken(MyllParser.RCURLY, 0); }
+		public ITerminalNode[] COMMA() { return GetTokens(MyllParser.COMMA); }
 		public ITerminalNode COMMA(int i) {
-			return GetToken(MyParser.COMMA, i);
+			return GetToken(MyllParser.COMMA, i);
 		}
 		public EnumDeclContext(TopLevelContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitEnumDecl(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 	public partial class NamespaceContext : TopLevelContext {
-		public ITerminalNode NS() { return GetToken(MyParser.NS, 0); }
+		public ITerminalNode NS() { return GetToken(MyllParser.NS, 0); }
 		public IdContext[] id() {
 			return GetRuleContexts<IdContext>();
 		}
 		public IdContext id(int i) {
 			return GetRuleContext<IdContext>(i);
 		}
-		public ITerminalNode SEMI() { return GetToken(MyParser.SEMI, 0); }
-		public ITerminalNode[] SCOPE() { return GetTokens(MyParser.SCOPE); }
+		public ITerminalNode SEMI() { return GetToken(MyllParser.SEMI, 0); }
+		public ITerminalNode[] SCOPE() { return GetTokens(MyllParser.SCOPE); }
 		public ITerminalNode SCOPE(int i) {
-			return GetToken(MyParser.SCOPE, i);
+			return GetToken(MyllParser.SCOPE, i);
 		}
-		public ITerminalNode LCURLY() { return GetToken(MyParser.LCURLY, 0); }
-		public ITerminalNode RCURLY() { return GetToken(MyParser.RCURLY, 0); }
+		public ITerminalNode LCURLY() { return GetToken(MyllParser.LCURLY, 0); }
+		public ITerminalNode RCURLY() { return GetToken(MyllParser.RCURLY, 0); }
 		public TopLevelContext[] topLevel() {
 			return GetRuleContexts<TopLevelContext>();
 		}
@@ -4860,7 +4860,7 @@ public partial class MyParser : Parser {
 		}
 		public NamespaceContext(TopLevelContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitNamespace(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -4871,19 +4871,19 @@ public partial class MyParser : Parser {
 		}
 		public RestStmtContext(TopLevelContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitRestStmt(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 	public partial class FunctionDeclContext : TopLevelContext {
-		public ITerminalNode FUNC() { return GetToken(MyParser.FUNC, 0); }
+		public ITerminalNode FUNC() { return GetToken(MyllParser.FUNC, 0); }
 		public FuncDeclContext funcDecl() {
 			return GetRuleContext<FuncDeclContext>(0);
 		}
 		public FunctionDeclContext(TopLevelContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitFunctionDecl(this);
 			else return visitor.VisitChildren(this);
 		}
@@ -5139,7 +5139,7 @@ public partial class MyParser : Parser {
 		}
 		public override int RuleIndex { get { return RULE_prog; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
-			IMyParserVisitor<TResult> typedVisitor = visitor as IMyParserVisitor<TResult>;
+			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
 			if (typedVisitor != null) return typedVisitor.VisitProg(this);
 			else return visitor.VisitChildren(this);
 		}

@@ -20,12 +20,12 @@ namespace Myll
 
 		private void button1_Click(object sender, EventArgs e)
 		{
-			AntlrInputStream     inputStream       = new AntlrInputStream(textBox1.Text);
-			MyLexer              lexer             = new MyLexer(inputStream);
-			CommonTokenStream    commonTokenStream = new CommonTokenStream(lexer);
-			MyParser             parser            = new MyParser(commonTokenStream);
-			var 				 context       = parser.typeSpec();
-			MyVisitor            visitor           = new MyVisitor();
+			AntlrInputStream  inputStream       = new AntlrInputStream(textBox1.Text);
+			MyllLexer         lexer             = new MyllLexer(inputStream);
+			CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
+			MyllParser        parser            = new MyllParser(commonTokenStream);
+			var               context           = parser.typeSpec();
+			MyllVisitor       visitor           = new MyllVisitor();
 			visitor.VisitTypeSpec(context);
 		}
 	}
