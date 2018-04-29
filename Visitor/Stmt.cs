@@ -23,6 +23,9 @@ namespace Myll
 	{
 		public Stmt VisitStmt(StmtContext c)
 		{
+			if (c == null)
+				return null;
+			
 			Visit(c);
 			// TODO
 			return new Stmt();

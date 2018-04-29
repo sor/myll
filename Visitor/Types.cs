@@ -1,15 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml;
 using Antlr4.Runtime;
-using Antlr4.Runtime.Misc;
-using Antlr4.Runtime.Tree;
+
 using Myll.Core;
 
 using Array = Myll.Core.Array;
@@ -35,7 +28,7 @@ namespace Myll
 				{MyllParser.AT_PLUS,	Pointer.Kind.Shared	},
 				{MyllParser.AT_QUEST,	Pointer.Kind.Weak	},
 				{MyllParser.STAR,		Pointer.Kind.RawPtr	},
-				{MyllParser.PTR_TO_ARY,	Pointer.Kind.PtrToAry	},
+				{MyllParser.PTR_TO_ARY,	Pointer.Kind.PtrToAry},
 				{MyllParser.AMP,		Pointer.Kind.LVRef	},
 				{MyllParser.DBL_AMP,	Pointer.Kind.RVRef	},
 				{MyllParser.AT_LBRACK,	Pointer.Kind.Vector	},
@@ -68,7 +61,7 @@ namespace Myll
 				{MyllParser.U16, 2},
 				{MyllParser.U8, 1},
 			};
-		
+
 		public new Typespec VisitTypeSpec(TypeSpecContext c)
 		{
 			Typespec ret;
@@ -103,11 +96,11 @@ namespace Myll
 
 		public new Qualifier VisitTypeQuals(TypeQualsContext c)
 		{
-			Qualifier ret = c.typeQual().Aggregate(Qualifier.None, (a,q) => a | ToQual[0]);
+			Qualifier ret = c.typeQual().Aggregate(Qualifier.None, (a,q) => a | ToQual[q.qual.Type]);
 			return ret;
 		}
 
-		public new Typespec VisitBasicType(MyllParser.BasicTypeContext c)
+		public new Typespec VisitBasicType(BasicTypeContext c)
 		{
 			TypespecBase ret = new TypespecBase
 			{
@@ -179,7 +172,7 @@ namespace Myll
 			return ret;
 		}
 
-		public new Typespec VisitFuncType(MyllParser.FuncTypeContext c)
+		public new Typespec VisitFuncType(FuncTypeContext c)
 		{
 			TypespecFunc ret = new TypespecFunc
 			{
@@ -190,7 +183,7 @@ namespace Myll
 			return ret;
 		}
 
-		public new Typespec VisitNestedType(MyllParser.NestedTypeContext c)
+		public new Typespec VisitNestedType(NestedTypeContext c)
 		{
 			TypespecNested ret = new TypespecNested
 			{

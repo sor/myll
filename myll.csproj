@@ -87,6 +87,7 @@
     <Compile Include="MyllParser.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Visitor\Decl.cs" />
     <Compile Include="Visitor\Expr.cs" />
     <Compile Include="Visitor\Main.cs" />
     <Compile Include="Visitor\Stmt.cs" />
