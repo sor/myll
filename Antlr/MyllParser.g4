@@ -2,18 +2,13 @@ parser grammar MyllParser;
 
 options { tokenVocab = MyllLexer; }
 
-/*
-@parser::members
-{
-	protected const int EOF = Eof;
-}
-*/
+comment		:	COMMENT;
 
 postOP		:	'++' |	'--';
 preOP		:	'++' |	'--' |	'+'  |	'-'  |	'!'  |	'~'  | '*' | '&';
 
-assignOP	:	'='  |	'**='|	'*=' |	'/=' |	'%=' |	'+=' |	'-='
-			|	'<<='| '>>=' |	'&=' |	'^=' |	'|=';
+assignOP	:	'='  |	'**=' |	'*=' |	'/=' |	'%=' |	'+=' |	'-='
+			|	'<<='|  '>>=' |	'&=' |	'^=' |	'|=';
 powOP		:			'*''*';
 multOP		:					'*'  |	'/'  |	'%';
 addOP		:											'+' |	'-';
@@ -29,8 +24,6 @@ memPtrOP	:	'.*' | '->*';
 
 orderOP		:	'<'	|'<='|'>'|'>=';
 equalOP		:	'=='|'!=';
-
-comment		:	COMMENT;
 
 lit			:	INTEGER_LIT | HEX_LIT | FLOAT_LIT | STRING_LIT | CHAR_LIT | BOOL_LIT | NUL;
 wildId		:	AUTOINDEX | USCORE;
@@ -75,7 +68,7 @@ param		:	typeSpec id?;
 funcDef		:	LPAREN (param (COMMA param)*)? RPAREN;
 
 // this expr needs to be a constexpr and can be an id (from a surrounding template)
-// TODO evaluate if 'id' is really necessary/beneficial here  
+// TODO evaluate if 'id' is really necessary/beneficial here or just let expr handle it
 tplArg		:	typeSpec | id | expr; //INTEGER_LIT | id;
 tplArgs		:	LT tplArg (COMMA tplArg)* GT;
 

@@ -13,16 +13,6 @@ namespace Myll.Core
 		Stable   = 1 << 3,
 	}
 
-	public class Expr
-	{
-		// TODO
-	}
-
-	public class Stmt
-	{
-		// TODO
-	}
-
 	public class Typespec // QualType
 	{
 		public string        srcFile;
