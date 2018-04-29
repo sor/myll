@@ -24,6 +24,7 @@ orOP		:									'||';
 memOP		:	'.'  | '->';
 memPtrOP	:	'.*' | '->*';
 
+cmpOp       :   '<=>';
 orderOP		:	'<'	|'<='|'>'|'>=';
 equalOP		:	'=='|'!=';
 
@@ -91,28 +92,25 @@ exprNew     :   expr	SCOPE			expr	# Tier1n
 				|	funcCall
 				|	indexCall
 				|	memOP	id	)				# Tier2n
-			|	<assoc=right>
+			| <assoc=right>
 				(	preOpExpr
 				|	castExpr
 				|	sizeofExpr
 				|	newExpr
 				|	deleteExpr	)				# Tier3n
 			|	expr	memPtrOP		expr	# Tier4n
-			|	<assoc=right>
+			| <assoc=right>
 				expr	powOP			expr	# Tier4_5n
-			|	expr	multOP			expr	# Tier5n
-			|	expr	addOP			expr	# Tier6n
+			|	expr	multOPn			expr	# Tier5n
+			|	expr	addOPn			expr	# Tier6n
 			|	expr	shiftOP			expr	# Tier7n
+			|	expr	cmpOp			expr	# Tier7_5n
 			|	expr	orderOP			expr	# Tier8n
 			|	expr	equalOP			expr	# Tier9n
-			|	expr	bitAndOP		expr	# Tier10n
-			|	expr	bitXorOP		expr	# Tier11n
-			|	expr	bitOrOP			expr	# Tier12n
 			|	expr	andOP			expr	# Tier13n
 			|	expr	orOP			expr	# Tier14n
-			|	<assoc=right>
-				expr	( assignOP
-						| '?' expr ':')	expr	# Tier15n
+			| <assoc=right>
+				expr	'?' expr ':'	expr	# Tier15n
 			|			'throw'			expr	# Tier16n
 			//|	expr	','				expr	# Tier17n
 			|	'('		expr	')'				# ParenExprn

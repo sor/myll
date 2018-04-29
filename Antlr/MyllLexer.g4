@@ -30,6 +30,7 @@ fragment CH_ESC:  '\\' ('\\' | '\'' | 't' | 'n' | 'r');
 ARROW_STAR	: '->*';
 DOT_STAR	: '.*';
 PTR_TO_ARY	: '[*]';
+SPACESHIP	: '<=>';
 TRP_POINT	: '...';
 DBL_POINT	: '..';
 DBL_LBRACK	: '[[';

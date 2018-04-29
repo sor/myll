@@ -135,6 +135,12 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitMemPtrOP([NotNull] MyllParser.MemPtrOPContext context);
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.cmpOp"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitCmpOp([NotNull] MyllParser.CmpOpContext context);
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.orderOP"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
@@ -389,6 +395,13 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitTier7n([NotNull] MyllParser.Tier7nContext context);
 	/// <summary>
+	/// Visit a parse tree produced by the <c>Tier7_5n</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTier7_5n([NotNull] MyllParser.Tier7_5nContext context);
+	/// <summary>
 	/// Visit a parse tree produced by the <c>Tier8n</c>
 	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
 	/// </summary>
@@ -402,27 +415,6 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitTier9n([NotNull] MyllParser.Tier9nContext context);
-	/// <summary>
-	/// Visit a parse tree produced by the <c>Tier10n</c>
-	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitTier10n([NotNull] MyllParser.Tier10nContext context);
-	/// <summary>
-	/// Visit a parse tree produced by the <c>Tier11n</c>
-	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitTier11n([NotNull] MyllParser.Tier11nContext context);
-	/// <summary>
-	/// Visit a parse tree produced by the <c>Tier12n</c>
-	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitTier12n([NotNull] MyllParser.Tier12nContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>Tier13n</c>
 	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
