@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-// Generated from /home/sor/myll/Antlr/MyllLexer.g4 by ANTLR 4.7
+// Generated from D:/documents/code/csharp/myll/Antlr\MyllLexer.g4 by ANTLR 4.7
 
 // Unreachable code detected
 #pragma warning disable 0162

@@ -11,7 +11,9 @@ assignOP	:	'='  |	'**=' |	'*=' |	'/=' |	'%=' |	'+=' |	'-='
 			|	'<<='|  '>>=' |	'&=' |	'^=' |	'|=';
 powOP		:			'*''*';
 multOP		:					'*'  |	'/'  |	'%';
-addOP		:											'+' |	'-';
+multOPn		:					'*'  |	'/'  |	'%' |   '&';
+addOP		:											'+' |   '-';
+addOPn		:											'+' |   '-' |   '|' |   '^';
 shiftOP		: 	'<<' |	'>''>';
 bitAndOP	:					'&';
 bitXorOP	:							'^';
@@ -82,6 +84,43 @@ sizeofExpr	:	SIZEOF					expr;
 newExpr		:	NEW		typeSpec?	funcCall?;
 deleteExpr	:	DELETE	(ary='['']')?	expr;
 
+exprNew     :   expr	SCOPE			expr	# Tier1n
+			|	expr
+				(	postOP
+				// func cast
+				|	funcCall
+				|	indexCall
+				|	memOP	id	)				# Tier2n
+			|	<assoc=right>
+				(	preOpExpr
+				|	castExpr
+				|	sizeofExpr
+				|	newExpr
+				|	deleteExpr	)				# Tier3n
+			|	expr	memPtrOP		expr	# Tier4n
+			|	<assoc=right>
+				expr	powOP			expr	# Tier4_5n
+			|	expr	multOP			expr	# Tier5n
+			|	expr	addOP			expr	# Tier6n
+			|	expr	shiftOP			expr	# Tier7n
+			|	expr	orderOP			expr	# Tier8n
+			|	expr	equalOP			expr	# Tier9n
+			|	expr	bitAndOP		expr	# Tier10n
+			|	expr	bitXorOP		expr	# Tier11n
+			|	expr	bitOrOP			expr	# Tier12n
+			|	expr	andOP			expr	# Tier13n
+			|	expr	orOP			expr	# Tier14n
+			|	<assoc=right>
+				expr	( assignOP
+						| '?' expr ':')	expr	# Tier15n
+			|			'throw'			expr	# Tier16n
+			//|	expr	','				expr	# Tier17n
+			|	'('		expr	')'				# ParenExprn
+			|	wildId							# Tier50n
+			|	lit								# Tier51n
+			|	idTplArgs						# Tier52n
+			;
+
 expr		:	expr	SCOPE			expr	# Tier1
 			|	expr
 				(	postOP
@@ -89,14 +128,15 @@ expr		:	expr	SCOPE			expr	# Tier1
 				|	funcCall
 				|	indexCall
 				|	memOP	id	)				# Tier2
-			|	<assoc=right>
+			| <assoc=right>
 				(	preOpExpr
 				|	castExpr
 				|	sizeofExpr
 				|	newExpr
 				|	deleteExpr	)				# Tier3
 			|	expr	memPtrOP		expr	# Tier4
-			|	expr	powOP			expr	# Tier4_5
+			| <assoc=right>
+				expr	powOP			expr	# Tier4_5
 			|	expr	multOP			expr	# Tier5
 			|	expr	addOP			expr	# Tier6
 			|	expr	shiftOP			expr	# Tier7
@@ -107,7 +147,7 @@ expr		:	expr	SCOPE			expr	# Tier1
 			|	expr	bitOrOP			expr	# Tier12
 			|	expr	andOP			expr	# Tier13
 			|	expr	orOP			expr	# Tier14
-			|	<assoc=right>
+			| <assoc=right>
 				expr	( assignOP
 						| '?' expr ':')	expr	# Tier15
 			|			'throw'			expr	# Tier16

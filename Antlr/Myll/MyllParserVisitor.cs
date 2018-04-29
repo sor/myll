@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-// Generated from /home/sor/myll/Antlr/MyllParser.g4 by ANTLR 4.7
+// Generated from D:/documents/code/csharp/myll/Antlr\MyllParser.g4 by ANTLR 4.7
 
 // Unreachable code detected
 #pragma warning disable 0162
@@ -32,6 +32,12 @@ using IToken = Antlr4.Runtime.IToken;
 [System.CodeDom.Compiler.GeneratedCode("ANTLR", "4.7")]
 [System.CLSCompliant(false)]
 public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.comment"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitComment([NotNull] MyllParser.CommentContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.postOP"/>.
 	/// </summary>
@@ -63,11 +69,23 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitMultOP([NotNull] MyllParser.MultOPContext context);
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.multOPn"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitMultOPn([NotNull] MyllParser.MultOPnContext context);
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.addOP"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitAddOP([NotNull] MyllParser.AddOPContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.addOPn"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitAddOPn([NotNull] MyllParser.AddOPnContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.shiftOP"/>.
 	/// </summary>
@@ -128,12 +146,6 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitEqualOP([NotNull] MyllParser.EqualOPContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.comment"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitComment([NotNull] MyllParser.CommentContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.lit"/>.
 	/// </summary>
@@ -320,6 +332,153 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitDeleteExpr([NotNull] MyllParser.DeleteExprContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>Tier1n</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTier1n([NotNull] MyllParser.Tier1nContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>Tier2n</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTier2n([NotNull] MyllParser.Tier2nContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>Tier3n</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTier3n([NotNull] MyllParser.Tier3nContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>Tier4n</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTier4n([NotNull] MyllParser.Tier4nContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>Tier4_5n</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTier4_5n([NotNull] MyllParser.Tier4_5nContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>Tier5n</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTier5n([NotNull] MyllParser.Tier5nContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>Tier6n</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTier6n([NotNull] MyllParser.Tier6nContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>Tier7n</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTier7n([NotNull] MyllParser.Tier7nContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>Tier8n</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTier8n([NotNull] MyllParser.Tier8nContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>Tier9n</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTier9n([NotNull] MyllParser.Tier9nContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>Tier10n</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTier10n([NotNull] MyllParser.Tier10nContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>Tier11n</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTier11n([NotNull] MyllParser.Tier11nContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>Tier12n</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTier12n([NotNull] MyllParser.Tier12nContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>Tier13n</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTier13n([NotNull] MyllParser.Tier13nContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>Tier14n</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTier14n([NotNull] MyllParser.Tier14nContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>Tier15n</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTier15n([NotNull] MyllParser.Tier15nContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>Tier16n</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTier16n([NotNull] MyllParser.Tier16nContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>ParenExprn</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitParenExprn([NotNull] MyllParser.ParenExprnContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>Tier50n</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTier50n([NotNull] MyllParser.Tier50nContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>Tier51n</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTier51n([NotNull] MyllParser.Tier51nContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>Tier52n</c>
+	/// labeled alternative in <see cref="MyllParser.exprNew"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTier52n([NotNull] MyllParser.Tier52nContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>Tier2</c>
 	/// labeled alternative in <see cref="MyllParser.expr"/>.
