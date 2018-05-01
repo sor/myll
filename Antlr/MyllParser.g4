@@ -85,7 +85,7 @@ sizeofExpr	:	SIZEOF					expr;
 newExpr		:	NEW		typeSpec?	funcCall?;
 deleteExpr	:	DELETE	(ary='['']')?	expr;
 
-exprNew     :   expr	SCOPE			expr	# Tier1n
+expr		:	expr	SCOPE			expr	# Tier1n
 			|	expr
 				(	postOP
 				// func cast
@@ -111,15 +111,13 @@ exprNew     :   expr	SCOPE			expr	# Tier1n
 			|	expr	orOP			expr	# Tier14n
 			| <assoc=right>
 				expr	'?' expr ':'	expr	# Tier15n
-			|			'throw'			expr	# Tier16n
-			//|	expr	','				expr	# Tier17n
-			|	'('		expr	')'				# ParenExprn
+			|	LPAREN	expr	RPAREN			# ParenExprn
 			|	wildId							# Tier50n
 			|	lit								# Tier51n
 			|	idTplArgs						# Tier52n
 			;
 
-expr		:	expr	SCOPE			expr	# Tier1
+exprOld		:	expr	SCOPE			expr	# Tier1
 			|	expr
 				(	postOP
 				// func cast
@@ -171,7 +169,9 @@ stmtDef		:	USING	nestedType (COMMA nestedType)*	SEMI				# Using
 			;
 stmt		:	stmtDef														# StmtDecl
 			|	RETURN	expr	SEMI										# ReturnStmt
+			|	THROW	expr	SEMI										# ThrowStmt
 			|	BREAK			SEMI										# BreakStmt
+			|	FALL			SEMI										# FallStmt
 			|	IF	LPAREN expr RPAREN stmt ( ELSE stmt )?					# IfStmt
 			|	FOR	LPAREN stmt expr SEMI expr RPAREN stmt ( ELSE stmt )?	# ForStmt
 			|	expr TIMES id?		stmt									# TimesStmt

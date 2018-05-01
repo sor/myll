@@ -18,6 +18,7 @@ namespace Myll.Core
 		PostIncr,
 		PostDecr,
 		PostOps_End,
+		
 		PreOps_Begin,
 		PreIncr,
 		PreDecr,
@@ -28,19 +29,51 @@ namespace Myll.Core
 		Dereference,
 		AddressOf,
 		PreOps_End,
+		
 		AssignOps_Begin,
 		Assign,
 		// TODO
 		AssignOps_End,
+		
 		MultOps_Begin,
 		Multiply,
 		Divide,
 		Modulo,
+		BitAnd,
 		MultOps_End,
+		
 		AddOps_Begin,
 		Addition,
 		Subtraction,
+		BitOr,
+		BitXor,
 		AddOps_End,
+		
+		ShiftOps_Begin,
+		LeftShift,
+		RightShift,
+		ShiftOps_End,
+		
+		Comparison,
+		
+		OrderOps_Begin,
+		LessThan,
+		LessEqual,
+		GreaterThan,
+		GreaterEqual,
+		OrderOps_End,
+		
+		EqualOps_Begin,
+		Equal,
+		NotEqual,
+		EqualOps_End,
+
+		BooleanOps_Begin,
+		And,
+		Or,
+		BooleanOps_End,
+		
+		Ternary,
 	}
 
 	public class Expr
@@ -48,16 +81,26 @@ namespace Myll.Core
 		
 	}
 
-	public class UnOp : Expr
+	public class OpExpr : Expr
 	{
-		public Expr    expr;
 		public Operand op;
 	}
 
-	public class BinOp : Expr
+	public class UnOp : OpExpr
 	{
-		public Expr    left;
-		public Expr    right;
-		public Operand op;
+		public Expr expr;
+	}
+
+	public class BinOp : OpExpr
+	{
+		public Expr left;
+		public Expr right;
+	}
+
+	public class TernOp : OpExpr
+	{
+		public Expr ifExpr;
+		public Expr thenExpr;
+		public Expr elseExpr;
 	}
 }

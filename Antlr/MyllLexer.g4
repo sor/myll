@@ -157,6 +157,7 @@ TIMES		: 'times';
 IF			: 'if';
 ELSE		: 'else';
 BREAK		: 'break';
+FALL		: 'fall';
 RETURN		: 'return';
 SIZEOF		: 'sizeof';
 NEW			: 'new';
