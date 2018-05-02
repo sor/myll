@@ -1,5 +1,5 @@
-﻿using System.Reflection.Emit;
-using Antlr4.Runtime.Atn;
+﻿using System;
+using System.Text;
 
 namespace Myll.Core
 {
@@ -78,29 +78,45 @@ namespace Myll.Core
 
 	public class Expr
 	{
-		
+		public override string ToString()
+		{
+			var sb = new StringBuilder();
+			foreach (var info in GetType().GetProperties())
+			{
+				var value = info.GetValue(this, null) ?? "(null)";
+				sb.Append(info.Name + ": " + value.ToString() + ", ");
+			}
+			sb.Length = Math.Max(sb.Length - 2, 0);
+			return "{" + GetType().Name + " "
+			           + sb.ToString() + "}";
+		}
 	}
 
 	public class OpExpr : Expr
 	{
-		public Operand op;
+		public Operand op { get; set; }
 	}
 
 	public class UnOp : OpExpr
 	{
-		public Expr expr;
+		public Expr expr { get; set; }
 	}
 
 	public class BinOp : OpExpr
 	{
-		public Expr left;
-		public Expr right;
+		public Expr left { get; set; }
+		public Expr right { get; set; }
 	}
 
 	public class TernOp : OpExpr
 	{
-		public Expr ifExpr;
-		public Expr thenExpr;
-		public Expr elseExpr;
+		public Expr ifExpr { get; set; }
+		public Expr thenExpr { get; set; }
+		public Expr elseExpr { get; set; }
+	}
+
+	public class Literal : Expr
+	{
+		public string text { get; set; }
 	}
 }

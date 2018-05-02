@@ -32,7 +32,7 @@ namespace Myll.Core
 
 		public List<TemplateParam> templateParams;
 		public List<Param>         paras;
-		public List<Stmt>          block;
+		public Stmt                block;
 		public Typespec            retType;
 	}
 }

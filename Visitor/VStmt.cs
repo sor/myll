@@ -19,44 +19,37 @@ using static Myll.MyllParser;
 
 namespace Myll
 {
-	public class MyllStmtVisitor : MyllParserBaseVisitor<Stmt>
+	public class StmtVisitor : MyllParserBaseVisitor<Stmt>
 	{
-		public Stmt VisitStmt(StmtContext c)
+		public override Stmt Visit(IParseTree c)
 		{
 			if (c == null)
 				return null;
 
-			return Visit(c);
+			return base.Visit(c);
 		}
 		
 		public override Stmt VisitIfStmt(IfStmtContext c)
 		{
 			IfStmt ret = new IfStmt();
-			ret.ifExpr = exprVis.VisitExpr(c.expr());
-			ret.thenBlock = VisitStmt(c.stmt(0));
-			ret.elseBlock = VisitStmt(c.stmt(1));
+			ret.ifExpr = exprVis.Visit(c.expr());
+			ret.thenBlock = Visit(c.stmt(0));
+			ret.elseBlock = Visit(c.stmt(1));
 			return ret;
 		}
-	}
-	
-	public partial class MyllVisitor : MyllParserBaseVisitor<object>
-	{
-		public Stmt VisitStmt(StmtContext c)
+
+		public override Stmt VisitFallStmt(FallStmtContext c)
 		{
-			if (c == null)
-				return null;
-			
-			Visit(c);
-			// TODO
-			return new Stmt();
+			return new FallStmt();
 		}
-		
-		public new List<Stmt> VisitStmtBlk(StmtBlkContext c)
+
+		public override Stmt VisitStmtBlk(StmtBlkContext c)
 		{
-			if (c == null)
-				return new List<Stmt>();
-			
-			List<Stmt> ret = c.stmt().Select(VisitStmt).ToList();
+			Block ret = new Block
+			{
+				statements = c?.stmt().Select(Visit).ToList()
+				             ?? new List<Stmt>()
+			};
 			return ret;
 		}
 	}

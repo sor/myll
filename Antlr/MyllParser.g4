@@ -11,9 +11,9 @@ assignOP	:	'='  |	'**=' |	'*=' |	'/=' |	'%=' |	'+=' |	'-='
 			|	'<<='|  '>>=' |	'&=' |	'^=' |	'|=';
 powOP		:			'*''*';
 multOP		:					'*'  |	'/'  |	'%';
-multOPn		:					'*'  |	'/'  |	'%' |   '&';
+multOPn		:	v=(				'*'  |	'/'  |	'%' |   '&');
 addOP		:											'+' |   '-';
-addOPn		:											'+' |   '-' |   '|' |   '^';
+addOPn		:	v=(										'+' |   '-' |   '|' |   '^');
 shiftOP		: 	'<<' |	'>''>';
 bitAndOP	:					'&';
 bitXorOP	:							'^';
@@ -85,38 +85,40 @@ sizeofExpr	:	SIZEOF					expr;
 newExpr		:	NEW		typeSpec?	funcCall?;
 deleteExpr	:	DELETE	(ary='['']')?	expr;
 
-expr		:	expr	SCOPE			expr	# Tier1n
+expr		:	expr	SCOPE			expr	# ScopeExpr
 			|	expr
 				(	postOP
 				// func cast
 				|	funcCall
 				|	indexCall
-				|	memOP	id	)				# Tier2n
+//null-conditional ?. ?[
+				|	memOP	id	)				# Tier2
 			| <assoc=right>
 				(	preOpExpr
 				|	castExpr
 				|	sizeofExpr
 				|	newExpr
-				|	deleteExpr	)				# Tier3n
-			|	expr	memPtrOP		expr	# Tier4n
+				|	deleteExpr	)				# Tier3
+			|	expr	memPtrOP		expr	# MemPtrExpr
 			| <assoc=right>
-				expr	powOP			expr	# Tier4_5n
-			|	expr	multOPn			expr	# Tier5n
-			|	expr	addOPn			expr	# Tier6n
-			|	expr	shiftOP			expr	# Tier7n
-			|	expr	cmpOp			expr	# Tier7_5n
-			|	expr	orderOP			expr	# Tier8n
-			|	expr	equalOP			expr	# Tier9n
-			|	expr	andOP			expr	# Tier13n
-			|	expr	orOP			expr	# Tier14n
+				expr	powOP			expr	# PowExpr
+			|	expr	multOPn			expr	# MultExpr
+			|	expr	addOPn			expr	# AddExpr
+			|	expr	shiftOP			expr	# ShiftExpr
+			|	expr	cmpOp			expr	# ComparisonExpr
+			|	expr	orderOP			expr	# RelationExpr
+			|	expr	equalOP			expr	# EqualityExpr
+			|	expr	andOP			expr	# AndExpr
+			|	expr	orOP			expr	# OrExpr
+//null-coalescing ??
 			| <assoc=right>
-				expr	'?' expr ':'	expr	# Tier15n
-			|	LPAREN	expr	RPAREN			# ParenExprn
-			|	wildId							# Tier50n
-			|	lit								# Tier51n
-			|	idTplArgs						# Tier52n
+				expr	'?' expr ':'	expr	# ConditionalExpr
+			|	LPAREN	expr	RPAREN			# ParenExpr
+			|	wildId							# WildIdExpr
+			|	lit								# LiteralExpr
+			|	idTplArgs						# IdTplExpr
 			;
-
+/*
 exprOld		:	expr	SCOPE			expr	# Tier1
 			|	expr
 				(	postOP
@@ -153,6 +155,7 @@ exprOld		:	expr	SCOPE			expr	# Tier1
 			|	lit								# Tier51
 			|	idTplArgs						# Tier52
 			;
+*/
 
 idExpr		:	id (ASSIGN expr)?;
 // TODO: Prop - get,set,refget

@@ -12,7 +12,7 @@ using static Myll.MyllParser;
 
 namespace Myll
 {
-	public partial class MyllVisitor : MyllParserBaseVisitor<object>
+	public partial class Visitor : MyllParserBaseVisitor<object>
 	{
 		static readonly Dictionary<int, Qualifier> ToQual =
 			new Dictionary<int, Qualifier> {
@@ -84,7 +84,7 @@ namespace Myll
 			}
 			else if (c.ary != null)
 			{
-				Array a = new Array{ expr = VisitExpr(c.expr()) };
+				Array a = new Array{ expr = exprVis.Visit(c.expr()) };
 				ret = a;
 				ret.kind = ToPtr[c.ary.Type];
 			}

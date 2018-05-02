@@ -4,11 +4,11 @@
 
 	public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Result>, IMyllParserVisitor<Result>
 	{
-		protected MyllVisitor     vis;
-		protected MyllExprVisitor exprVis;
-		protected MyllStmtVisitor stmtVis;
+		protected Visitor     vis;
+		protected ExprVisitor exprVis;
+		protected StmtVisitor stmtVis;
 
-		public void TellVisitors(MyllVisitor vis, MyllExprVisitor exprVis, MyllStmtVisitor stmtVis)
+		public void TellVisitors(Visitor vis, ExprVisitor exprVis, StmtVisitor stmtVis)
 		{
 			this.vis = vis;
 			this.exprVis = exprVis;

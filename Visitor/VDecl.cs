@@ -19,14 +19,14 @@ using static Myll.MyllParser;
 
 namespace Myll
 {
-	public partial class MyllVisitor : MyllParserBaseVisitor<object>
+	public partial class Visitor : MyllParserBaseVisitor<object>
 	{
 		public Enum.Entry VisitEnumEntry(IdExprContext c)
 		{
 			Enum.Entry ret = new Enum.Entry
 			{
 				name  = VisitId(c.id()),
-				value = VisitExpr(c.expr()),
+				value = exprVis.Visit(c.expr()),
 			};
 			return ret;
 		}
@@ -69,13 +69,13 @@ namespace Myll
 			
 			if (cc.stmtBlk() != null)
 			{
-				ret.block = VisitStmtBlk(cc.stmtBlk());
+				ret.block = stmtVis.Visit(cc.stmtBlk());
 			}
 			else if (cc.expr() != null)
 			{
-				VisitExpr(cc.expr());
+				exprVis.Visit(cc.expr());
 				// TODO
-				ret.block = new List<Stmt>();
+				ret.block = new Block();
 			}
 			return ret;
 		}

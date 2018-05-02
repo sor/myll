@@ -19,27 +19,34 @@ using static Myll.MyllParser;
 
 namespace Myll
 {
-	public class MyllExprVisitor : MyllParserBaseVisitor<Expr>
+	public class ExprVisitor : MyllParserBaseVisitor<Expr>
 	{
-		public Expr VisitExpr(ExprContext c)
-		{
-			if (c == null)
-				return null;
-
-			return Visit(c);
-		}
-	}
-
-	public partial class MyllVisitor : MyllParserBaseVisitor<object>
-	{
-		public Expr VisitExpr(ExprContext c)
+		public override Expr Visit(IParseTree c)
 		{
 			if (c == null)
 				return null;
 			
-			Expr ex = new Expr();
-			// TODO
-			return ex;
+			return base.Visit(c);
+		}
+
+		public override Expr VisitAddExpr(AddExprContext c)
+		{
+			BinOp ret = new BinOp
+			{
+				op    = c.addOPn().v.ToOp(),
+				left  = Visit(c.expr(0)),
+				right = Visit(c.expr(1)),
+			};
+			return ret;
+		}
+
+		public override Expr VisitLiteralExpr(LiteralExprContext c)
+		{
+			Literal ret = new Literal
+			{
+				text = c.GetText() // TODO
+			};
+			return ret;
 		}
 	}
 }

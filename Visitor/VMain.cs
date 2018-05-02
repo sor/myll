@@ -19,11 +19,26 @@ using static Myll.MyllParser;
 
 namespace Myll
 {
-	public partial class MyllVisitor : MyllParserBaseVisitor<object>
+	public static class VisitorExtensions
 	{
-		protected MyllExprVisitor exprVis = new MyllExprVisitor();
-		protected MyllStmtVisitor stmtVis = new MyllStmtVisitor();
-		
+		private static readonly Dictionary<int, Operand> ToOperand =
+			new Dictionary<int, Operand>
+			{
+				{MyllParser.PLUS, Operand.Addition},
+				{MyllParser.MINUS, Operand.Subtraction},
+				{MyllParser.STAR, Operand.Multiply},
+				{MyllParser.SLASH, Operand.Divide},
+				{MyllParser.MOD, Operand.Modulo},
+			};
+
+		public static Operand ToOp(this IToken tok)
+		{
+			return ToOperand[tok.Type];
+		}
+	}
+	
+	public partial class Visitor : MyllParserBaseVisitor<object>
+	{
 		public new IdentifierTpl VisitIdTplArgs(IdTplArgsContext c)
 		{
 			IdentifierTpl ret = new IdentifierTpl
@@ -39,7 +54,7 @@ namespace Myll
 			TemplateArg ret;
 			if (c.typeSpec()  != null) ret = new TemplateArg {type = VisitTypeSpec(c.typeSpec())};
 			else if (c.id()   != null) ret = new TemplateArg {name = VisitId(c.id())};
-			else if (c.expr() != null) ret = new TemplateArg {expr = VisitExpr(c.expr())};
+			else if (c.expr() != null) ret = new TemplateArg {expr = exprVis.Visit(c.expr())};
 			else throw new Exception("unknown template arg kind");
 			return ret;
 		}
