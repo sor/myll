@@ -7,7 +7,7 @@ using System.IO;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Tree;
 
-namespace JanSordid.MyLang
+namespace MyLang
 {
 	class Program
 	{
@@ -18,6 +18,11 @@ namespace JanSordid.MyLang
 			CommonTokenStream	tokens		= new CommonTokenStream( lexer );
 			MyLangParser		parser		= new MyLangParser( tokens );
 			IParseTree			tree		= parser.prog();
+			if( parser.NumberOfSyntaxErrors > 0 )
+			{
+				Console.WriteLine( "No. of errors: {0}", parser.NumberOfSyntaxErrors );
+				return;
+			}
 			Console.WriteLine( tree.ToStringTree( parser ).Replace( "(", "(" ) );
 			Console.WriteLine( "-----" );
 			int indent = 0;
@@ -38,8 +43,8 @@ namespace JanSordid.MyLang
 					Console.Write( t );
 			}//*/
 			Console.WriteLine( "-----" );
-			MyLangVisitor		visitor		= new MyLangVisitor();
-			Console.WriteLine( visitor.Visit( tree ) );
+			MyLangVisitor		visitor = new MyLangVisitor();
+			Console.WriteLine(	visitor.Visit( tree ) );
 		}
 
 		static void Main( string[] args )
@@ -48,7 +53,14 @@ namespace JanSordid.MyLang
 			// field myclass b;	ID
 			// field ns<type>::class<type,type OR const>
 
+			Library.Test.DoTest();
+			
+			Console.WriteLine("*****************");
+			
+			Core.MyGlobal.library = new Library.Hierarchic( "" );
+
 			DoIt( File.OpenText( "test.cpp" ).ReadToEnd() );
+
 			while ( true )
 			{
 				Console.WriteLine( "Type expressions and then CTRL+Z" );

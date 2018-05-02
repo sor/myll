@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace JanSordid.MyLang {
-	partial class MyLangVisitor : MyLangBaseVisitor<MyBase> {
+using MyLang.Core;
+
+namespace MyLang {
+	partial class MyLangVisitor : MyLangBaseVisitor<IBase> {
 		public MyType VisitType( MyLangParser.AnyTypeContext context ) {
 			MyType t;
 			if( context.basicType() != null )
@@ -15,7 +17,7 @@ namespace JanSordid.MyLang {
 			{
 				t = (MyAdvancedType)VisitAdvancedType( context.advancedType() );
 			}
-			t.ptr = context.typePtr().Select( q => (MyPointer)VisitTypePtr( q ) );
+			t.ptr = context.typePtr().Select( q => (Pointer)VisitTypePtr( q ) );
 			t.qualifier = VisitTypeQualifiers( context.typeQualifier() );
 			return t;
 		}
@@ -68,7 +70,7 @@ namespace JanSordid.MyLang {
 		}
 	}
 
-	partial class MyLangVisitor : MyLangBaseVisitor<MyBase> {
+	partial class MyLangVisitor : MyLangBaseVisitor<IBase> {
 		public MyExpression VisitExpr( /*Antlr4.Runtime.Tree.IParseTree*/ MyLangParser.ExprContext context ) {
 			if( context == null )
 				return null;
@@ -76,11 +78,11 @@ namespace JanSordid.MyLang {
 			return (MyExpression)Visit( context );
 		}
 
-		public new Backend.MyExpressions VisitExprs( MyLangParser.ExprsContext context ) {
+		public new MyExpressions VisitExprs( MyLangParser.ExprsContext context ) {
 			if( context == null )
-				return new Backend.MyExpressions( 0 );
+				return new MyExpressions( 0 );
 
-			var ret = new Backend.MyExpressions( context.expr().Length );
+			var ret = new MyExpressions( context.expr().Length );
 			foreach( var s in context.expr() )
 			{
 				ret.Add( VisitExpr( s ) );
@@ -88,16 +90,16 @@ namespace JanSordid.MyLang {
 			return ret;
 		}
 
-		public override MyBase VisitPreOpExpr( MyLangParser.PreOpExprContext context ) {
-			return new Backend.MyPreOp( VisitExpr( context.expr() ), context.pre_OP().GetText() );
+		public override IBase VisitPreOpExpr( MyLangParser.PreOpExprContext context ) {
+			return new PreOpExpr( VisitExpr( context.expr() ), context.pre_OP().GetText() );
 		}
 
-		public override MyBase VisitNewExpr( MyLangParser.NewExprContext context ) {
-			return new Backend.MyNew( VisitType( context.anyType() ), VisitExprs( context.exprs() ) );
+		public override IBase VisitNewExpr( MyLangParser.NewExprContext context ) {
+			return new NewExpr( VisitType( context.anyType() ), VisitExprs( context.exprs() ) );
 		}
 
-		public override MyBase VisitDeleteExpr( MyLangParser.DeleteExprContext context ) {
-			return new Backend.MyDelete( VisitExpr( context.expr() ), context.ary != null );
+		public override IBase VisitDeleteExpr( MyLangParser.DeleteExprContext context ) {
+			return new DeleteExpr( VisitExpr( context.expr() ), context.ary != null );
 		}
 	}
 }

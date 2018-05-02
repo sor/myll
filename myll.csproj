@@ -135,6 +135,16 @@
   <ItemGroup>
     <Content Include="Antlr\MyllLexer.g4" />
     <Content Include="Antlr\MyllParser.g4" />
+    <Content Include="Tests\Enum\01_basic.myll" />
+    <Content Include="Tests\Enum\02_basic_comma.myll" />
+    <Content Include="Tests\Enum\03_numbered.myll" />
+    <Content Include="Tests\Enum\04_numbered_comma.myll" />
+    <Content Include="Tests\Enum\05_numbered_partially.myll" />
+    <Content Include="Tests\Enum\21_flags.myll" />
+    <Content Include="Tests\Enum\22_flags_numbered.myll" />
+    <Content Include="Tests\Enum\23_flags_numbered_partially.myll" />
+    <Content Include="Tests\Int\01_basic.myll" />
+    <Content Include="Tests\Int\50_bint_basic.myll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

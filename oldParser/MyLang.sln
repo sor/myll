@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyLangParser", "MyLangParser.csproj", "{488B9D1B-94AA-4DE4-8682-88A9BBB87E5B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyLang", "MyLang.csproj", "{488B9D1B-94AA-4DE4-8682-88A9BBB87E5B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

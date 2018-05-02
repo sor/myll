@@ -32,7 +32,7 @@ namespace Myll.Core
 		
 		AssignOps_Begin,
 		Assign,
-		// TODO
+		// TODO: move to statements
 		AssignOps_End,
 		
 		MultOps_Begin,

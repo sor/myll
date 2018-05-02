@@ -1,0 +1,7 @@
+[flags]
+enum Test {
+	A = 4,
+	B,
+	C
+}
+

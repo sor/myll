@@ -3,46 +3,57 @@ using System.Collections.Generic;
 using System.Linq;
 //using System.Text;
 
-using JanSordid.MyLang.Backend;
+using MyLang.Core;
 
-namespace JanSordid.MyLang
+namespace MyLang
 {
-	partial class MyLangVisitor : MyLangBaseVisitor<MyBase>
+	partial class MyLangVisitor : MyLangBaseVisitor<IBase>
 	{
-		static readonly Dictionary<int, MyQualifier> typeToQual =
-					new Dictionary<int, MyQualifier> {
-			{	MyLangParser.CONST,		MyQualifier.Const		},
-			{	MyLangParser.VOLATILE,	MyQualifier.Volatile	},
-			{	MyLangParser.MUTABLE,	MyQualifier.Mutable		},
+		static readonly Dictionary<int, Qualifier.Type> typeToQual =
+					new Dictionary<int, Qualifier.Type> {
+			{	MyLangParser.CONST,		Qualifier.Type.Const		},
+			{	MyLangParser.VOLATILE,	Qualifier.Type.Volatile	},
+			{	MyLangParser.MUTABLE,	Qualifier.Type.Mutable		},
 		};
 
-		static readonly Dictionary<int, MyPointer.Type> typeToPtr =
-					new Dictionary<int, MyPointer.Type> {
-			{	MyLangParser.STAR,		MyPointer.Type.Raw		},
-			{	MyLangParser.AMP,		MyPointer.Type.LVRef	},
-			{	MyLangParser.DBL_AMP,	MyPointer.Type.RVRef	},
-			{	MyLangParser.AT_BANG,	MyPointer.Type.Unique	},
-			{	MyLangParser.AT_PLUS,	MyPointer.Type.Shared	},
-			{	MyLangParser.AT_QUEST,	MyPointer.Type.Weak		},
+		static readonly Dictionary<int, Pointer.Type> typeToPtr =
+					new Dictionary<int, Pointer.Type> {
+			{	MyLangParser.STAR,		Pointer.Type.RawPtr			},
+			{	MyLangParser.PTR_TO_ARY,Pointer.Type.RawPtrToArray	},
+			{	MyLangParser.AMP,		Pointer.Type.LVRef			},
+			{	MyLangParser.DBL_AMP,	Pointer.Type.RVRef			},
+			{	MyLangParser.AT_BANG,	Pointer.Type.Unique			},
+			{	MyLangParser.AT_PLUS,	Pointer.Type.Shared			},
+			{	MyLangParser.AT_QUEST,	Pointer.Type.Weak				},
 		};
 
+		public MyLangVisitor() {
+			hierarchy.Push( new MyGlobal() );
+		}
+		/*
 		const int indent_mul = 2;
 		protected int indent = 0;
 		protected string I { get { return new String( ' ', indent * indent_mul ); } }
 
 		protected bool is_static = false;
+		*/
 
-		public MyQualifier VisitTypeQualifiers( MyLangParser.TypeQualifierContext[] context )
+		Stack<MyHierarchic> hierarchy = new Stack<MyHierarchic>();
+
+		public Qualifier VisitTypeQualifiers( MyLangParser.TypeQualifierContext[] context )
 		{
-			return context
+			return new Qualifier()
+			{
+				type = context
 					.Select( q => typeToQual[q.qual.Type] )
-					.Aggregate( MyQualifier.None, ( a, q ) => a |= q );
+					.Aggregate( Qualifier.Type.None, (a, q) => a |= q )
+			};
 		}
 
 		// MyPointer -> ToPointer
-		public override MyBase VisitTypePtr( MyLangParser.TypePtrContext context )
+		public override IBase VisitTypePtr( MyLangParser.TypePtrContext context )
 		{
-			var p = new MyPointer();
+			var p = new Pointer();
 
 			if ( context.ptr != null )	// Pointer
 			{
@@ -50,19 +61,19 @@ namespace JanSordid.MyLang
 			}
 			else	// Array
 			{
-				if ( context.content != null )
-					p.content = context.content.Text;
+				if ( context.expr() != null )
+					p.content = VisitExpr( context.expr() ); // TODO: echte behandlung von allem darin
 
 				switch ( context.ary.Type )
 				{
 					case MyLangParser.LBRACK:
-						p.type = MyPointer.Type.RawArray;
+						p.type = Pointer.Type.RawArray;
 						break;
 
 					case MyLangParser.AT_LBRACK:
 						p.type = (p.content != null)
-							? MyPointer.Type.Array
-							: MyPointer.Type.Vector;
+							? Pointer.Type.Array
+							: Pointer.Type.Vector;
 						break;
 				}
 			}
@@ -83,8 +94,6 @@ namespace JanSordid.MyLang
 			return (MyStatement) Visit( tree );
 		}
 
-		
-
 		public MyStatements VisitStmts( MyLangParser.StatementsContext context )
 		{
 			var stmts	= context.statement();
@@ -100,67 +109,76 @@ namespace JanSordid.MyLang
 				|	'('		expr_list?	')'
 				|	mem_OP	ID
 				)						# Tier2*/
-		public override MyBase VisitTier2( MyLangParser.Tier2Context context )
+		public override IBase VisitTier2( MyLangParser.Tier2Context context )
 		{
 			if( context.post_OP() != null )
-				return new Backend.MyPostOp( VisitExpr( context.expr( 0 ) ), context.post_OP().GetText() );
+				return new PostOpExpr( VisitExpr( context.expr( 0 ) ), context.post_OP().GetText() );
 			else if( context.mem_OP() != null )
-				return new Backend.MyBinaryOperator(
+				return new BinOpExpr(
 					context.mem_OP().GetText(),
 					VisitExpr( context.expr( 0 ) ),
 					new MyId( context.ID().Symbol.Text )
 					);
 			else if ( context.expr( 1 ) != null )
-				return new Backend.MySubscript(
+				return new SubscriptExpr(
 					VisitExpr( context.expr( 0 ) ),
 					VisitExpr( context.expr( 1 ) )
 					);
 			else
-				return new Backend.MyFuncMethCall(
+				return new MyFuncMethCall(
 					VisitExpr( context.expr( 0 ) ),
 					VisitExprs( context.exprs() )
 					);
 		}
 
-		public override MyBase VisitTier6( MyLangParser.Tier6Context context )
+		public override IBase VisitTier5( MyLangParser.Tier5Context context ) {
+			return new BinOpExpr(
+				context.mult_OP().GetText(),
+				VisitExpr( context.expr( 0 ) ),
+				VisitExpr( context.expr( 1 ) )
+				);
+		}
+
+		public override IBase VisitTier6( MyLangParser.Tier6Context context )
 		{
-			return new Backend.MyBinaryOperator(
+			return new BinOpExpr(
 				context.add_OP().GetText(),
 				VisitExpr( context.expr( 0 ) ),
 				VisitExpr( context.expr( 1 ) )
 				);
 		}
 
-		public override MyBase VisitTier8( MyLangParser.Tier8Context context )
+		public override IBase VisitTier8( MyLangParser.Tier8Context context )
 		{
-			return new Backend.MyBinaryOperator(
+			return new BinOpExpr(
 				context.order_OP().GetText(),
 				VisitExpr( context.expr( 0 ) ),
 				VisitExpr( context.expr( 1 ) )
 				);
 		}
 
-		public override MyBase VisitTier15( MyLangParser.Tier15Context context )
+		public override IBase VisitTier15( MyLangParser.Tier15Context context )
 		{
 			if( context.assign_OP() != null )
-				return new Backend.MyBinaryOperator(
+				return new BinOpExpr(
 					context.assign_OP().GetText(),
 					VisitExpr( context.expr( 0 ) ),
-					VisitExpr( context.expr( 1 ) )
+					VisitExpr( context.expr( 1 ) ),
+					Assoc.Right
 				);
 			else
-				return new Backend.MyNopExpr();
+				return new NopExpr();
 		}
 
-		public override MyBase VisitTier200( MyLangParser.Tier200Context context ) {
+		public override IBase VisitTier200( MyLangParser.Tier200Context context ) {
 			var ai = context.AUTOINDEX();
 			return new MyId( ai.Symbol.Text );
 		}
 
-		public new Backend.MyParameters VisitParameters( MyLangParser.ParametersContext context )
+		public new MyParameters VisitParameters( MyLangParser.ParametersContext context )
 		{
-			var paras	= context.parameter();
-			var ret = new Backend.MyParameters( paras.Length );
+			var paras = context.parameter();
+			var ret = new MyParameters( paras.Length );
 			foreach ( var p in paras )
 			{
 				ret.Add( (MyNamedType) Visit( p ) );
@@ -221,7 +239,7 @@ namespace JanSordid.MyLang
 		//}
 
 		// MyExpression
-		public override MyBase VisitIdOrLit( MyLangParser.IdOrLitContext context )
+		public override IBase VisitIdOrLit( MyLangParser.IdOrLitContext context )
 		{
 			switch ( context.arg.Type )
 			{
@@ -235,13 +253,13 @@ namespace JanSordid.MyLang
 			}
 		}
 
-		public override MyBase VisitIdOrLitExpr( MyLangParser.IdOrLitExprContext context )
+		public override IBase VisitIdOrLitExpr( MyLangParser.IdOrLitExprContext context )
 		{
 			return Visit( context.idOrLit() );
 		}
 
 		// 'if'		LPAREN expr RPAREN statement ( 'else' statement )?	# IfStmt
-		public override MyBase VisitIfStmt( MyLangParser.IfStmtContext context ) {
+		public override IBase VisitIfStmt( MyLangParser.IfStmtContext context ) {
 			var ifs = new MyIfStmt(
 				VisitExpr( context.expr() ),
 				VisitStmt( context.statement( 0 ) ),
@@ -251,75 +269,92 @@ namespace JanSordid.MyLang
 			return ifs;
 		}
 
-		public override MyBase VisitTimesStmt( MyLangParser.TimesStmtContext context ) {
+		public MyId VisitID( Antlr4.Runtime.Tree.ITerminalNode node ) {
+			if( node == null )
+				return null;
+
+			return new MyId( node.Symbol.Text );
+		}
+
+		public override IBase VisitTimesStmt( MyLangParser.TimesStmtContext context ) {
 			var ts = new MyTimesStmt(
 				VisitExpr( context.expr() ),
-				VisitStmt( context.statement() )
+				VisitStmt( context.statement() ),
+				VisitID( context.ID() )
 				);
 
 			return ts;
 		}
 
-		public override MyBase VisitBlockStmt( MyLangParser.BlockStmtContext context )
+		public override IBase VisitBlockStmt( MyLangParser.BlockStmtContext context )
 		{
 			var block = new MyBlockStatement();
 			block.list = VisitStmts( context.statements() );
 			return block;
 		}
 
-		public override MyBase VisitParenExpr( MyLangParser.ParenExprContext context ) {
-			var paren = new Backend.MyParenExpr( VisitExpr( context.expr() ) );
+		public override IBase VisitParenExpr( MyLangParser.ParenExprContext context ) {
+			var paren = new ParenExpr( VisitExpr( context.expr() ) );
 			return paren;
 		}
 
-		public override MyBase VisitReturnStmt( MyLangParser.ReturnStmtContext context )
+		public override IBase VisitReturnStmt( MyLangParser.ReturnStmtContext context )
 		{
 			var r = new MyReturnStmt();
 			r.expr = VisitExpr( context.expr() );
 			return r;
 		}
 
-		public override MyBase VisitExpressionStmt( MyLangParser.ExpressionStmtContext context )
+		public override IBase VisitExpressionStmt( MyLangParser.ExpressionStmtContext context )
 		{
 			var tmp = new MyExpressionStatement( VisitExpr( context.expr() ) );
 			return tmp;
 		}
+		/*
+		public override IBase VisitAssignmentStmt( MyLangParser.AssignmentStmtContext context ) {
+			AssignmentStmt astmt = new AssignmentStmt();
+			var exprs = context.expr();
+			foreach( var expr in exprs )
+				astmt.exprs.Add( VisitExpr( expr ) );
+			astmt.ops.AddRange( context.assign_OP().Select( q => q.GetText() ) );
 
-		public override MyBase VisitNamespace( MyLangParser.NamespaceContext context )
+			return astmt;
+		}*/
+
+		public override IBase VisitNamespace( MyLangParser.NamespaceContext context )
 		{
-			Backend.MyNamespace ns = null;
+			MyNamespace ns = null;
 			int push_count = 0;
+
 			foreach ( var id in context.ID() )
 			{
-				ns = new Backend.MyNamespace( id.IDToString() );
+				ns = new MyNamespace( id.IDToString(), hierarchy.Peek() );
+
+				hierarchy.Push( ns );
+
 				push_count++;
 
-				Console.WriteLine(
-					I + "namespace " + id + "\n" +
-					I + "{" );
-				++indent;
+				Console.WriteLine( "namespace " + id + "\n" + "{" );
 			}
 
 			var ret = base.VisitNamespace( context );
 
 			if ( context.SEMI() == null )
 			{
-				for ( ; push_count > 0; push_count-- )
+				while( push_count-- > 0 )
 				{
-					ns.ContextUp();
+					hierarchy.Pop();
 
-					--indent;
-					Console.WriteLine(
-						I + "}" );
+					Console.WriteLine( "}" );
 				}
 			}
 
 			return ret;
 		}
 
-		public override MyBase VisitEnumDecl( MyLangParser.EnumDeclContext context )
+		public override IBase VisitEnumDecl( MyLangParser.EnumDeclContext context )
 		{
-			var enm = new Backend.MyEnum( context.ID().IDToString() );
+			var enm = new MyEnum( context.ID().IDToString(), hierarchy.Peek() );
 
 			foreach ( var kv in context.id_opt_value() )
 			{
@@ -330,54 +365,68 @@ namespace JanSordid.MyLang
 			return base.VisitEnumDecl( context );
 		}
 
-		public override MyBase VisitClassDecl( MyLangParser.ClassDeclContext context )
+		public override IBase VisitClassDecl( MyLangParser.ClassDeclContext context )
 		{
+			IBase ret;
 			var seg = (MySegment) Visit( context.idTplType() );
-			var cls = new Backend.MyClass( seg.ToString() );
+			var cls = new MyClass( seg.name, hierarchy.Peek(), seg.template_params );
 
-			Console.WriteLine(
-				I + "class " + context.idTplType().GetText() + "\n" +
-				I + "{" );
-			++indent;
-			var ret = base.VisitClassDecl( context );
-			--indent;
-			Console.WriteLine(
-				I + "};" );
+			hierarchy.Push( cls );
+			{
+				ret = base.VisitClassDecl( context );
 
-			cls.GatherIdentifier();
+				Generator g = new Generator();
+				g.Generate( cls );
+				Console.WriteLine( g.ToString() );
+			}
+			hierarchy.Pop();
 
-			cls.ContextUp();
+			//cls.GatherIdentifier();
 
 			return ret;
 		}
 
-		// MySegment
-		public override MyBase VisitIdTplType( MyLangParser.IdTplTypeContext context )
-		{
-			var t = new MySegment();
-			t.name = context.name.Text;
-			var tpl  = context.tpl;
-			if ( tpl != null )
+		public override IBase VisitAnyTypeOrConsts( MyLangParser.AnyTypeOrConstsContext context ) {
+			MyTemplateArgs list = new MyTemplateArgs( context.anyTypeOrConst().Length );
+			foreach( var atoc in context.anyTypeOrConst() )
 			{
-				t.template_params = tpl.anyTypeOrConst().Select( q => (MyTemplateParam) Visit( q ) );
+				list.Add( (MyTemplateArg)VisitAnyTypeOrConst( atoc ) );
+			}
+			return list;
+		}
+
+		// MySegment
+		public override IBase VisitIdTplType( MyLangParser.IdTplTypeContext context )
+		{
+			var t = new MySegment( context.ID().IDToString() );
+			if( context.anyTypeOrConsts() != null )
+			{
+				t.template_params = (MyTemplateArgs)VisitAnyTypeOrConsts( context.anyTypeOrConsts() );
 			}
 			return t;
 		}
 
 		// MyTemplateParam
-		public override MyBase VisitAnyTypeOrConst( MyLangParser.AnyTypeOrConstContext context )
+		public override IBase VisitAnyTypeOrConst( MyLangParser.AnyTypeOrConstContext context )
 		{
-			var t		= new MyTemplateParam();
+			if( context.INTEGER_LIT() != null )
+				return new MyTemplateArgLiteral() { lit = new MyIntegerLiteral( context.INTEGER_LIT().Symbol.Text ) };
+			else
+				return new MyTemplateArgType() { type = VisitType( context.anyType() ) };
+
+			/*
+			var t		= new MyTemplateArg();
 			var cnst	= context.INTEGER_LIT();
 
 			if ( cnst != null )	t.constant	= cnst.Symbol.Text;
 			else				t.type		= VisitType( context.anyType() );
 
 			return t;
+			*/
 		}
 
 		// MyNamedType
-		public override MyBase VisitParameter( MyLangParser.ParameterContext context )
+		public override IBase VisitParameter( MyLangParser.ParameterContext context )
 		{
 			var t	= new MyNamedType();
 			t.type = VisitType( context.anyType() );
@@ -386,45 +435,121 @@ namespace JanSordid.MyLang
 			return t;
 		}
 
-		public override MyBase VisitVariableDecl( MyLangParser.VariableDeclContext context ) {
-			return new Backend.MyVarDecl(
-							(Backend.MyFields) Visit( context.field_expr() )
-						);
+		public override IBase VisitVariableDecl( MyLangParser.VariableDeclContext context ) {
+			var vd = (MyFields)Visit( context.vars_decl() );
+			// vd[0].lib == null, why?
+			var mvd = new MyVarDecl( vd );
+			foreach( var v in vd.list )
+			{
+				hierarchy.Peek().AddField( v );
+			}
+			return mvd;
 		}
 
-		// anyType ID (COMMA ID)*
-		public override MyBase VisitFieldDecl( MyLangParser.FieldDeclContext context )
-		{
+		public override IBase VisitPropDecl( MyLangParser.PropDeclContext context ) {
 			var t		= VisitType( context.anyType() );
-			var fields	= new Backend.MyFields( context.id_opt_value().Length );
+			var props	= new MyProperties( context.id_opt_value().Length );
 
 			foreach( var kv in context.id_opt_value() )
 			{
-				Backend.MyField mf;
+				MyProperty mp;
 
-				if( kv.expr() == null )	mf = new Backend.MyField( kv.ID().IDToString(), t );
-				else					mf = new Backend.MyField( kv.ID().IDToString(), t, VisitExpr( kv.expr() ) );
-				
-				fields.Add( mf );
+				if( kv.expr() == null )
+					mp = new MyProperty( kv.ID().IDToString(), hierarchy.Peek(), t );
+				else
+					mp = new MyProperty( kv.ID().IDToString(), hierarchy.Peek(), t, VisitExpr( kv.expr() ) );
+
+				props.Add( mp );
 			}
 
-			if( MyHierarchic.current is MyStructural )
+			foreach( var prop in props.list )
 			{
-				foreach( var field in fields.list )
-				{
-					((MyStructural)MyHierarchic.current).AddField( field.name, field );
-				}
+				hierarchy.Peek().AddProperty( prop );
+			}
+
+			return props;
+		}
+
+		public List<KeyValuePair<string,MyExpression>>
+		VisitIOV( MyLangParser.Id_opt_valueContext[] iovs ) {
+			var ret = new List<KeyValuePair<string, MyExpression>>( iovs.Length );
+			foreach( var iov in iovs )
+			{
+				ret.Add( new KeyValuePair<string,MyExpression>(
+								iov.ID().IDToString(),
+								VisitExpr( iov.expr() ) ) );
+			}
+			return ret;
+		}
+
+		// anyType ID (COMMA ID)*
+		// anyType id_opt_value (COMMA id_opt_value)*
+		public override IBase VisitFieldDecl( MyLangParser.FieldDeclContext context )
+		{
+			var t		= VisitType( context.anyType() );
+			var fields	= new MyFields( context.id_opt_value().Length );
+			var parent	= hierarchy.Peek();
+
+			foreach( var mf in VisitIOV( context.id_opt_value() ).Select( q => new MyField( q.Key, parent, t, q.Value ) ) )
+				fields.Add( mf );
+			/*
+			foreach( var iov in context.id_opt_value() )
+			{
+				MyField mf;
+
+				//if( iov.expr() == null )	mf = new MyField( iov.ID().IDToString(), hierarchy.Peek(), t );
+				//else
+				mf = new MyField( iov.ID().IDToString(), hierarchy.Peek(), t, VisitExpr( iov.expr() ) );
+
+				fields.Add( mf );
+			}*/
+
+			foreach( var field in fields.list )
+			{
+				hierarchy.Peek().AddField( field );
 			}
 
 			return fields;
 		}
 
-		public override MyBase VisitCtorDef( MyLangParser.CtorDefContext context )
+		// anyType ID (COMMA ID)*
+		// anyType id_opt_value (COMMA id_opt_value)*
+		public override IBase VisitVarsDecl( MyLangParser.VarsDeclContext context ) {
+			var t		= VisitType( context.anyType() );
+			var fields	= new MyFields( context.id_opt_value().Length );
+			var parent	= hierarchy.Peek();
+
+			foreach( var mf in VisitIOV( context.id_opt_value() )
+								.Select( q => new MyField( q.Key, parent, t, q.Value ) ) )
+				fields.Add( mf );
+			/*
+			foreach( var iov in context.id_opt_value() )
+			{
+				MyField mf;
+
+				//if( iov.expr() == null )	mf = new MyField( iov.ID().IDToString(), hierarchy.Peek(), t );
+				//else
+				mf = new MyField( iov.ID().IDToString(), hierarchy.Peek(), t, VisitExpr( iov.expr() ) );
+
+				fields.Add( mf );
+			}*/
+
+			foreach( var field in fields.list )
+			{
+				parent.AddField( field );
+			}
+
+			return fields;
+		}
+
+		public override IBase VisitCtorDef( MyLangParser.CtorDefContext context )
 		{
-			var paras = VisitParameters( context.parameters() );
-			Backend.MyCtor ctor	= new Backend.MyCtor( "ctor(" + paras.ToTypeString() + ")" );
+			var paras	= VisitParameters( context.parameters() );
+			MyFuncMeth ctor	= new MyFuncMeth( "ctor(" + paras.ToTypeString() + ")", hierarchy.Peek() );
 			ctor.parameters		= paras;
 			ctor.statements		= VisitStmts( context.statements() );
+
+			hierarchy.Peek().AddMethod( "ctor", paras, ctor );
 
 			Console.WriteLine( ctor );
 			return ctor;
@@ -433,24 +558,30 @@ namespace JanSordid.MyLang
 				  |			ID parameterList RARROW anyType
 				  ) LCURLY statements RCURLY
 					  */
-		public override MyBase VisitFuncMeth( MyLangParser.FuncMethContext context )
+		public override IBase VisitFuncMeth( MyLangParser.FuncMethContext context )
 		{
 			var paras				= VisitParameters( context.parameters() );
 			var name				= context.ID().Symbol.Text;
 			var name_with_types		= name + "(" + paras.ToTypeString() + ")";
-			var funcmeth			= new Backend.MyFuncMeth( name_with_types );
-			funcmeth.parameters		= paras;
-			funcmeth.statements		= VisitStmts( context.statements() );
-			funcmeth.return_type	= ( context.anyType() != null )
-				? VisitType( context.anyType() )
-				: new MyBasicType( MyBasicType.Type.Void );
+			var funcmeth			= new MyFuncMeth( name_with_types, hierarchy.Peek() );
 
-			Console.WriteLine( funcmeth.ToString() );
-
-			if( MyHierarchic.current is MyStructural )
+			hierarchy.Push( funcmeth );
 			{
-				((MyStructural)MyHierarchic.current).AddMethod( name, paras, funcmeth );
+				//Generator g = new Generator();
+				//g.Generate( cls );
+				//Console.WriteLine( g.ToString() );
+
+				funcmeth.parameters		= paras;
+				funcmeth.statements		= VisitStmts( context.statements() );
+				funcmeth.return_type	= ( context.anyType() != null )
+					? VisitType( context.anyType() )
+					: new MyBasicType( MyBasicType.Type.Void );
+
+				Console.WriteLine( funcmeth.ToString() );
 			}
+			hierarchy.Pop();
+
+			hierarchy.Peek().AddMethod( name, paras, funcmeth );
 
 			return funcmeth;
 		}
@@ -483,13 +614,13 @@ namespace JanSordid.MyLang
 		"*"		"int *"		"{1} *"
 		"@!"	"int @!"	"std::unique_ptr<{1}>"
 		*/
-		public override MyBase VisitComment( MyLangParser.CommentContext context )
+		public override IBase VisitComment( MyLangParser.CommentContext context )
 		{
-			Console.WriteLine( I + "commi " + context.COMMENT().GetText() );
+			Console.WriteLine( "commi " + context.COMMENT().GetText() );
 			return null;
 		}
 
-		public override MyBase VisitParensExpr( MyLangParser.ParensExprContext context )
+		public override IBase VisitParensExpr( MyLangParser.ParensExprContext context )
 		{
 			return Visit( context.expr() );
 		}

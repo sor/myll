@@ -4,14 +4,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace JanSordid.MyLang
-{
-	abstract public class MyBase { }
-	abstract public class MyStatement : MyBase { }
-	abstract public class MyExpression : MyStatement { }
+using MyLang.Core;
 
-	public class MyStatements : MyBase
-	{
+namespace MyLang.Core
+{
+	public class MyStatements : IBase {
 		public List<MyStatement> list;
 		public MyStatements()				{ list = new List<MyStatement>();			}
 		public MyStatements( int capacity )	{ list = new List<MyStatement>( capacity );	}
@@ -27,11 +24,10 @@ namespace JanSordid.MyLang
 			| LCURLY statement* RCURLY										# BlockStmt
 			;*/
 
-	class MyReturnStmt : MyStatement
-	{
+	class MyReturnStmt : MyStatement {
 		public MyExpression	expr;
 
-		public override string ToString() { return "RETURN: " + expr;  }
+		public override string ToString() { return "return " + expr + ";";  }
 	}
 
 	class MyBreakStmt : MyStatement {}
@@ -47,31 +43,67 @@ namespace JanSordid.MyLang
 			else_statement	= elses;
 		}
 
-		public override string ToString() {
-			return "IF: " + expr + " THEN: " + if_statement + " ELSE " + (else_statement == null ? "NOTHING" : else_statement.ToString());
+		public override IEnumerable<string> ToStringList( string I = "  " ) {
+			var ret = new List<string>();
+			ret.Add(		string.Format( I + "if( {0} )",	expr )	);
+			ret.AddRange(	if_statement.ToStringList( I ).Select( q => I + q )	);
+			if( else_statement != null )
+			{
+				ret.Add(		string.Format( I + "else" )								);
+				ret.AddRange(	else_statement.ToStringList( I ).Select( q => I + q )	);
+			}
+			return ret;
+			//return "IF: " + expr + " THEN: " + if_statement + " ELSE " + (else_statement == null ? "NOTHING" : else_statement.ToString());
 		}
+	}
+
+	class AssignmentStmt : MyStatement {
+		public MyExpressions exprs = new MyExpressions();
+		public List<string> ops = new List<string>();
 	}
 
 	class MyTimesStmt : MyStatement {
 		public MyExpression	expr;
 		public MyStatement	statement;
+		public MyId			identifier;
 
-		public MyTimesStmt( MyExpression ex, MyStatement ts )
-		{
+		public MyTimesStmt( MyExpression ex, MyStatement ts, MyId id ) {
 			expr		= ex;
 			statement	= ts;
+			identifier	= id;
 		}
 
 		public override string ToString() {
-			return "TIMES: " + expr + " DO: " + statement;
+			return "TIMES: " + expr +
+				" ID: " + (identifier == null ? "automatic" : identifier.ToString()) +
+				" DO: " + statement;
+		}
+
+		public override IEnumerable<string> ToStringList( string I = "  " ) {
+			var ret = new List<string>();
+			string var_name;
+			if( identifier != null )
+				var_name = identifier.value;
+			else
+				var_name = "i"; // TODO: get unique name for loop variable
+
+			ret.Add( I + "for( int " + var_name + " = 0; " + var_name + " < " + expr + "; ++" + var_name + " )" );
+			ret.AddRange( statement.ToStringList( I ).Select( q => I + q ) );
+			return ret;
 		}
 	}
 
-	class MyBlockStatement : MyStatement
-	{
+	class MyBlockStatement : MyStatement {
 		public MyStatements list = new MyStatements();
 
 		public override string ToString() { return "BLOCK { " + list + " } "; }
+		public override IEnumerable<string> ToStringList( string I = "  " ) {
+			var ret = new List<string>();
+			ret.Add( "{" );
+			ret.AddRange( list.list.SelectMany( q => q.ToStringList( I ) ) );
+			ret.Add( "}" );
+			return ret;
+		}
 	}
 
 /*  expr: LPAREN 's' anyType RPAREN expr	# StaticCastExpr
@@ -100,82 +132,4 @@ namespace JanSordid.MyLang
 			return expr.ToString() + ";";
 		}
 	}
-
-	// Expressions
-
-	abstract class MyLiteral : MyExpression { }
-
-	class MyStringLiteral : MyLiteral
-	{
-		public string value;
-		
-		public MyStringLiteral( string text )
-		{
-			value = text;
-		}
-
-		public override string ToString()
-		{
-			return "StringLit: " + value;
-		}
-	}
-
-	class MyCharLiteral : MyLiteral
-	{
-		public string /* maybe better than char */	value;
-
-		public MyCharLiteral( string text )
-		{
-			value = text;
-		}
-
-		public override string ToString()
-		{
-			return "CharLit: " + value;
-		}
-	}
-
-	class MyIntegerLiteral : MyLiteral
-	{
-		public System.Numerics.BigInteger value;
-
-		public MyIntegerLiteral( System.Numerics.BigInteger number )
-		{
-			value = number;
-		}
-
-		public MyIntegerLiteral( string text )
-		{
-			value = System.Numerics.BigInteger.Parse( text );
-		}
-
-		public override string ToString()
-		{
-			return "IntLit: " + value;
-		}
-	}
-
-	class MyFloatingLiteral : MyLiteral
-	{
-		public double value;
-
-		public MyFloatingLiteral( double number )
-		{
-			value = number;
-		}
-
-		public MyFloatingLiteral( string text )
-		{
-			value = System.Double.Parse( text );
-		}
-
-		public override string ToString()
-		{
-			return "FloatLit: " + value;
-		}
-	}
-
-	
-
-	
 }

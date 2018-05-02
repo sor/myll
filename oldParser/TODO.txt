@@ -1,0 +1,2 @@
+﻿Library hat anteile die gespeichert werden, quasi ".h" dateien
+und auch anteile die nicht gespeichert werden wie lokale variablen und using namespaces

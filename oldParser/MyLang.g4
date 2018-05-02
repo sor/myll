@@ -25,24 +25,25 @@ post_OP:	'++' |	'--';
 pre_OP:		'++' |	'--' |	'+'  |	'-'  |	'!'  |	'~'  | '*' | '&';
 
 assign_OP:	'='  |	'*=' |	'/=' |	'%=' |	'+=' |	'-=' |	'<<=' | '>>=' |	'&=' |	'^=' |	'|=';
+pow_OP:				'**';
 mult_OP:			'*'  |	'/'  |	'%';
 add_OP:										'+' |	'-';
 shift_OP:													'<<' |	'>''>';
 bitand_OP:																	'&';
 bitxor_OP:																			'^';
 bitor_OP:																					'|';
-
 and_OP:																		'&&';
 or_OP:																						'||';
 
 mem_OP:		'.'  | '->';
-mptr_OP:	'.*' | '->*';
+memptr_OP:	'.*' | '->*';
 
 order_OP:	'<' |'<='|'>'|'>=';
 equal_OP:	'=='|'!=';
 
 //cast_MOD:	'c'|'s'|'d'|'r'|;
 
+// Tier 3
 preOpExpr	:	pre_OP			expr;
 castExpr	:	'(' anyType ')'	expr;
 sizeofExpr	:	'sizeof'		expr
@@ -53,18 +54,18 @@ deleteExpr	:	'delete' (ary='['']')? expr;
 expr
 	:	expr	scope_OP		expr		# Tier1
 	|	expr	(	post_OP
-				|	'['			expr	']'
+				// func cast
 				|	'('			exprs?	')'
-				|	mem_OP	ID
-				)							# Tier2
+				|	'['			expr	']'
+				|	mem_OP	ID			)	# Tier2
 	|	<assoc=right>
 		(	preOpExpr
 		|	castExpr
 		|	sizeofExpr
 		|	newExpr
-		|	deleteExpr
-		)									# Tier3
-	|	expr	mptr_OP			expr		# Tier4
+		|	deleteExpr					)	# Tier3
+	|	expr	memptr_OP		expr		# Tier4
+	|	expr	pow_OP			expr		# Tier4_5
 	|	expr	mult_OP			expr		# Tier5
 	|	expr	add_OP			expr		# Tier6
 	|	expr	shift_OP		expr		# Tier7
@@ -77,7 +78,7 @@ expr
 	|	expr	or_OP			expr		# Tier14
 	|	<assoc=right>
 		expr	( assign_OP
-				| '?' expr ':')	expr		# Tier15
+				| '?' expr ':')	expr		# Tier15	
 	|			'throw'			expr		# Tier16
 	|	expr	','				expr		# Tier17
 	|	ID	tt_exp							# Tier100
@@ -121,11 +122,19 @@ class_expr	: 'static'	LCURLY class_extened_expr* RCURLY	# StaticDecl
 
 class_extened_expr	: FIELDS	LCURLY (field_expr		SEMI)* RCURLY
 					| FIELD				field_expr		SEMI
-					| PROP				field_expr		SEMI
+					| PROP				prop_expr		SEMI
 					| METH				funcmeth_decl
+					| OPERATOR			operator_decl
 					;
 
 field_expr	: anyType id_opt_value (COMMA id_opt_value)*	# FieldDecl
+			;
+
+vars_decl	: anyType id_opt_value (COMMA id_opt_value)*	# VarsDecl
+			;
+
+// TODO: get,refget,set
+prop_expr	: anyType id_opt_value (COMMA id_opt_value)*	# PropDecl
 			;
 
 idOrLit		: arg=(ID|INTEGER_LIT|FLOAT_LIT|STRING_LIT|CHAR_LIT);
@@ -142,14 +151,21 @@ funcmeth_decl	: (	anyType	ID parameters
 				  |			ID parameters
 				  ) LCURLY statements RCURLY								# FuncMeth;
 
+operator_decl	: (	anyType	STRING_LIT parameters?
+				  |			STRING_LIT parameters? RARROW anyType
+				  |			STRING_LIT parameters?
+				  ) LCURLY statements RCURLY								# OperatorDecl;
+
 statements	: statement*;
-statement	: 'return'	expr SEMI											# ReturnStmt
+statement	: RETURN	expr SEMI											# ReturnStmt
 			| 'break'	SEMI												# BreakStmt
-			| IF		LPAREN expr RPAREN statement ( 'else' statement )?	# IfStmt
-			| FOR		LPAREN expr ';' expr ';' expr RPAREN statement ( 'nothing' statement )?	# ForStmt
-			| expr TIMES			statement								# TimesStmt
+			| IF		LPAREN expr RPAREN statement ( ELSE statement )?	# IfStmt
+			| FOR		LPAREN statement expr ';' expr RPAREN statement ( 'nothing' statement )?	# ForStmt
+			| expr TIMES ID?		statement								# TimesStmt
 			| expr '..' expr		statement								# EachStmt
-			| VAR		field_expr SEMI										# VariableDecl
+			| VAR		vars_decl SEMI										# VariableDecl
+			| CONST		vars_decl SEMI										# VariableDecl
+			//| (expr		assign_OP)+ expr	SEMI							# AssignmentStmt
 			| expr SEMI														# ExpressionStmt
 			| LCURLY statements RCURLY										# BlockStmt
 			;
@@ -157,16 +173,16 @@ statement	: 'return'	expr SEMI											# ReturnStmt
 anyType	: typeQualifier*	( basicType | advancedType )	typePtr*;
 
 typePtr	: ptr=( AT_BANG | AT_QUEST | AT_PLUS | DBL_AMP | AMP | STAR )		typeQualifier*
-		| ary=( AT_LBRACK | LBRACK ) content=( ID | INTEGER_LIT )? RBRACK	typeQualifier*
+		| ary=( AT_LBRACK | LBRACK ) expr? RBRACK							typeQualifier*
 		;
 
 typeQualifier	: qual=(CONST  | VOLATILE | MUTABLE);
 signQualifier	: qual=(SIGNED | UNSIGNED);
 
 advancedType	: idTplType (SCOPE idTplType)*;
-idTplType		: name=ID ('<' tpl=anyTypeOrConstCS '>')?;
+idTplType		: ID anyTypeOrConsts?;
 
-anyTypeOrConstCS: anyTypeOrConst (COMMA anyTypeOrConst)*
+anyTypeOrConsts	: '<' anyTypeOrConst (COMMA anyTypeOrConst)* '>'
 				;
 
 anyTypeOrConst	: anyType
@@ -210,7 +226,7 @@ expr_old
 	| expr	op=(STAR|SLASH|MOD)		expr	# MulDivMod
 	| expr	op=(PLUS|MINUS)			expr	# AddSub
 	| expr	op=LSHIFT				expr	# LShift
-	| expr	('>''>' )				expr	# RShift
+	| expr	('>''>')				expr	# RShift
 	| expr	EQ						expr	# Equal
 	| expr	NEQ						expr	# NotEqual
 	| expr	LTEQ					expr	# LessEqualThan
@@ -239,6 +255,7 @@ CHAR_LIT	: '\'' (CH_ESC | ~('\\' | '\'' | '\r' | '\n')) '\'';
 fragment STR_ESC: '\\' ('\\' | '"' | 't' | 'n' | 'r');
 fragment CH_ESC:  '\\' ('\\' | '\'' | 't' | 'n' | 'r');
 
+PTR_TO_ARY	: '[*]';
 TRP_POINT	: '...';
 DBL_POINT	: '..';
 DBL_LBRACK	: '[[';
@@ -311,10 +328,13 @@ ENUM		: 'enum';
 PROP		: 'prop';
 FIELDS		: 'fields';
 FIELD		: 'field';
+OPERATOR	: 'operator';
 VAR			: 'var';
 FOR			: 'for';
 TIMES		: 'times';
 IF			: 'if';
+ELSE		: 'else';
+RETURN		: 'return';
 ID			: [a-zA-Z_][a-zA-Z0-9_]*;
 FLOAT_LIT	:	(	DIGIT* '.' DIGIT+ ( [eE] [+-]? DIGIT+ )?
 				|	DIGIT+ [eE] [+-]? DIGIT+ 

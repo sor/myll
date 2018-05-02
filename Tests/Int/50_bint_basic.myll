@@ -1,0 +1,10 @@
+var bint i = 0x01, j = 0x11;
+i + j; // or, merge
+i * j; // and, mask
+i - j; // diff, select j?
+i / j; // implikation
+i ^ j; // exor
+
+i | j; // or != 0
+i & j; // != 0 and != 0
+

@@ -2,10 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace JanSordid.MyLang.Backend
+namespace MyLang.Core
 {
-	class MyEnum : MyNamed
+	class MyEnum : MyHierarchic
 	{
+		Library.Structural lib;
+		public override Library.Hierarchic LibHier { get { return lib; } }
+
 		public List<KeyValuePair<string, MyExpression>> entries
 		 = new List<KeyValuePair<string, MyExpression>>();
 
@@ -13,9 +16,8 @@ namespace JanSordid.MyLang.Backend
 		private bool	ManualIndexed	= true;
 		private int		LongestKey		= 0;
 
-		public MyEnum( string name )
-			: base( name )
-		{ }
+		public MyEnum( string name, MyHierarchic parent )
+			: base( name, parent ) { }
 
 		// value is string since you can pass more than just numbers
 		public void Add( string k, MyExpression v )
