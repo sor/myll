@@ -32,9 +32,10 @@ namespace Myll
 		public override Stmt VisitIfStmt(IfStmtContext c)
 		{
 			IfStmt ret = new IfStmt();
-			//ret.ifExpr = Visite
+			ret.ifExpr = exprVis.VisitExpr(c.expr());
 			ret.thenBlock = VisitStmt(c.stmt(0));
 			ret.elseBlock = VisitStmt(c.stmt(1));
+			return ret;
 		}
 	}
 	
