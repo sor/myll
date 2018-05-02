@@ -19,6 +19,17 @@ using static Myll.MyllParser;
 
 namespace Myll
 {
+	public class MyllExprVisitor : MyllParserBaseVisitor<Expr>
+	{
+		public Expr VisitExpr(ExprContext c)
+		{
+			if (c == null)
+				return null;
+
+			return Visit(c);
+		}
+	}
+
 	public partial class MyllVisitor : MyllParserBaseVisitor<object>
 	{
 		public Expr VisitExpr(ExprContext c)

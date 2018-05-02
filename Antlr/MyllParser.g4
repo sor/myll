@@ -182,7 +182,6 @@ stmt		:	stmtDef														# StmtDecl
 			;
 stmtBlk		:	LCURLY	stmt*	RCURLY;
 
-
 classDef	:	(PUB | PRIV | PROT) COLON						# AccessMod
 			|	CTOR	ctorDecl								# ClassCtorDecl
 			|	ALIAS 	id ASSIGN typeSpec SEMI					# Alias

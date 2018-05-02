@@ -21,6 +21,9 @@ namespace Myll
 {
 	public partial class MyllVisitor : MyllParserBaseVisitor<object>
 	{
+		protected MyllExprVisitor exprVis = new MyllExprVisitor();
+		protected MyllStmtVisitor stmtVis = new MyllStmtVisitor();
+		
 		public new IdentifierTpl VisitIdTplArgs(IdTplArgsContext c)
 		{
 			IdentifierTpl ret = new IdentifierTpl

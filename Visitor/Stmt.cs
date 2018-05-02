@@ -19,6 +19,25 @@ using static Myll.MyllParser;
 
 namespace Myll
 {
+	public class MyllStmtVisitor : MyllParserBaseVisitor<Stmt>
+	{
+		public Stmt VisitStmt(StmtContext c)
+		{
+			if (c == null)
+				return null;
+
+			return Visit(c);
+		}
+		
+		public override Stmt VisitIfStmt(IfStmtContext c)
+		{
+			IfStmt ret = new IfStmt();
+			//ret.ifExpr = Visite
+			ret.thenBlock = VisitStmt(c.stmt(0));
+			ret.elseBlock = VisitStmt(c.stmt(1));
+		}
+	}
+	
 	public partial class MyllVisitor : MyllParserBaseVisitor<object>
 	{
 		public Stmt VisitStmt(StmtContext c)
@@ -34,7 +53,7 @@ namespace Myll
 		public new List<Stmt> VisitStmtBlk(StmtBlkContext c)
 		{
 			if (c == null)
-				return null;
+				return new List<Stmt>();
 			
 			List<Stmt> ret = c.stmt().Select(VisitStmt).ToList();
 			return ret;
