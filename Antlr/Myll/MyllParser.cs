@@ -61,7 +61,7 @@ public partial class MyllParser : Parser {
 	public const int
 		RULE_comment = 0, RULE_postOP = 1, RULE_preOP = 2, RULE_powOP = 3, RULE_multOP = 4, 
 		RULE_addOP = 5, RULE_shiftOP = 6, RULE_cmpOp = 7, RULE_orderOP = 8, RULE_equalOP = 9, 
-		RULE_andOP = 10, RULE_orOP = 11, RULE_memOP = 12, RULE_memPtrOP = 13, 
+		RULE_andOP = 10, RULE_orOP = 11, RULE_memAccOP = 12, RULE_memAccPtrOP = 13, 
 		RULE_assignOP = 14, RULE_lit = 15, RULE_wildId = 16, RULE_id = 17, RULE_idOrLit = 18, 
 		RULE_specialType = 19, RULE_charType = 20, RULE_floatingType = 21, RULE_binaryType = 22, 
 		RULE_signedIntType = 23, RULE_unsignIntType = 24, RULE_basicType = 25, 
@@ -76,7 +76,7 @@ public partial class MyllParser : Parser {
 		RULE_funcDecl = 58, RULE_opDecl = 59, RULE_topLevel = 60, RULE_prog = 61;
 	public static readonly string[] ruleNames = {
 		"comment", "postOP", "preOP", "powOP", "multOP", "addOP", "shiftOP", "cmpOp", 
-		"orderOP", "equalOP", "andOP", "orOP", "memOP", "memPtrOP", "assignOP", 
+		"orderOP", "equalOP", "andOP", "orOP", "memAccOP", "memAccPtrOP", "assignOP", 
 		"lit", "wildId", "id", "idOrLit", "specialType", "charType", "floatingType", 
 		"binaryType", "signedIntType", "unsignIntType", "basicType", "typeQual", 
 		"typeQuals", "typePtr", "idTplArgs", "nestedType", "funcType", "typeSpec", 
@@ -640,23 +640,23 @@ public partial class MyllParser : Parser {
 		return _localctx;
 	}
 
-	public partial class MemOPContext : ParserRuleContext {
-		public MemOPContext(ParserRuleContext parent, int invokingState)
+	public partial class MemAccOPContext : ParserRuleContext {
+		public MemAccOPContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
 		}
-		public override int RuleIndex { get { return RULE_memOP; } }
+		public override int RuleIndex { get { return RULE_memAccOP; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
 			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
-			if (typedVisitor != null) return typedVisitor.VisitMemOP(this);
+			if (typedVisitor != null) return typedVisitor.VisitMemAccOP(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 
 	[RuleVersion(0)]
-	public MemOPContext memOP() {
-		MemOPContext _localctx = new MemOPContext(Context, State);
-		EnterRule(_localctx, 24, RULE_memOP);
+	public MemAccOPContext memAccOP() {
+		MemAccOPContext _localctx = new MemAccOPContext(Context, State);
+		EnterRule(_localctx, 24, RULE_memAccOP);
 		int _la;
 		try {
 			EnterOuterAlt(_localctx, 1);
@@ -683,23 +683,23 @@ public partial class MyllParser : Parser {
 		return _localctx;
 	}
 
-	public partial class MemPtrOPContext : ParserRuleContext {
-		public MemPtrOPContext(ParserRuleContext parent, int invokingState)
+	public partial class MemAccPtrOPContext : ParserRuleContext {
+		public MemAccPtrOPContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
 		}
-		public override int RuleIndex { get { return RULE_memPtrOP; } }
+		public override int RuleIndex { get { return RULE_memAccPtrOP; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
 			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
-			if (typedVisitor != null) return typedVisitor.VisitMemPtrOP(this);
+			if (typedVisitor != null) return typedVisitor.VisitMemAccPtrOP(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 
 	[RuleVersion(0)]
-	public MemPtrOPContext memPtrOP() {
-		MemPtrOPContext _localctx = new MemPtrOPContext(Context, State);
-		EnterRule(_localctx, 26, RULE_memPtrOP);
+	public MemAccPtrOPContext memAccPtrOP() {
+		MemAccPtrOPContext _localctx = new MemAccPtrOPContext(Context, State);
+		EnterRule(_localctx, 26, RULE_memAccPtrOP);
 		int _la;
 		try {
 			EnterOuterAlt(_localctx, 1);
@@ -2641,8 +2641,8 @@ public partial class MyllParser : Parser {
 		public IndexCallContext indexCall() {
 			return GetRuleContext<IndexCallContext>(0);
 		}
-		public MemOPContext memOP() {
-			return GetRuleContext<MemOPContext>(0);
+		public MemAccOPContext memAccOP() {
+			return GetRuleContext<MemAccOPContext>(0);
 		}
 		public IdContext id() {
 			return GetRuleContext<IdContext>(0);
@@ -2783,8 +2783,8 @@ public partial class MyllParser : Parser {
 		public ExprContext expr(int i) {
 			return GetRuleContext<ExprContext>(i);
 		}
-		public MemPtrOPContext memPtrOP() {
-			return GetRuleContext<MemPtrOPContext>(0);
+		public MemAccPtrOPContext memAccPtrOP() {
+			return GetRuleContext<MemAccPtrOPContext>(0);
 		}
 		public MemPtrExprContext(ExprContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
@@ -3035,7 +3035,7 @@ public partial class MyllParser : Parser {
 						PushNewRecursionContext(_localctx, _startState, RULE_expr);
 						State = 358;
 						if (!(Precpred(Context, 15))) throw new FailedPredicateException(this, "Precpred(Context, 15)");
-						State = 359; memPtrOP();
+						State = 359; memAccPtrOP();
 						State = 360; expr(16);
 						}
 						break;
@@ -3169,7 +3169,7 @@ public partial class MyllParser : Parser {
 						case RARROW:
 						case DOT:
 							{
-							State = 408; memOP();
+							State = 408; memAccOP();
 							State = 409; id();
 							}
 							break;

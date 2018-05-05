@@ -155,7 +155,7 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	/// <return>The visitor result.</return>
 	public virtual Result VisitOrOP([NotNull] MyllParser.OrOPContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.memOP"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.memAccOP"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -163,9 +163,9 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitMemOP([NotNull] MyllParser.MemOPContext context) { return VisitChildren(context); }
+	public virtual Result VisitMemAccOP([NotNull] MyllParser.MemAccOPContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.memPtrOP"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.memAccPtrOP"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -173,7 +173,7 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitMemPtrOP([NotNull] MyllParser.MemPtrOPContext context) { return VisitChildren(context); }
+	public virtual Result VisitMemAccPtrOP([NotNull] MyllParser.MemAccPtrOPContext context) { return VisitChildren(context); }
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.assignOP"/>.
 	/// <para>

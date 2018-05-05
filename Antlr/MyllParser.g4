@@ -23,8 +23,8 @@ equalOP		:	'=='|'!=';
 andOP		:					'&&';
 orOP		:									'||';
 
-memOP		:	'.'  | '->';
-memPtrOP	:	'.*' | '->*';
+memAccOP	:	'.'  | '->';
+memAccPtrOP	:	'.*' | '->*';
 
 assignOP	:	v=(	'='  |	'**=' |	'*=' |	'/=' |	'%=' |	'+=' |	'-='
 				|	'<<='|  '>>=' |	'&=' |	'^=' |	'|=');
@@ -93,14 +93,14 @@ expr		:	expr	SCOPE			expr	# ScopeExpr
 				|	funcCall
 				|	indexCall
 //null-conditional ?. ?[
-				|	memOP	id	)				# Tier2
+				|	memAccOP	id	)			# Tier2
 			| <assoc=right>
 				(	preOpExpr
 				|	castExpr
 				|	sizeofExpr
 				|	newExpr
 				|	deleteExpr	)				# Tier3
-			|	expr	memPtrOP		expr	# MemPtrExpr
+			|	expr	memAccPtrOP		expr	# MemPtrExpr
 			| <assoc=right>
 				expr	powOP			expr	# PowExpr
 			|	expr	multOP			expr	# MultExpr

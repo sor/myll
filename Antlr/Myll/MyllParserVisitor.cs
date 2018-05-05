@@ -105,17 +105,17 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitOrOP([NotNull] MyllParser.OrOPContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.memOP"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.memAccOP"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitMemOP([NotNull] MyllParser.MemOPContext context);
+	Result VisitMemAccOP([NotNull] MyllParser.MemAccOPContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.memPtrOP"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.memAccPtrOP"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitMemPtrOP([NotNull] MyllParser.MemPtrOPContext context);
+	Result VisitMemAccPtrOP([NotNull] MyllParser.MemAccPtrOPContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.assignOP"/>.
 	/// </summary>

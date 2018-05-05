@@ -35,6 +35,11 @@ namespace Myll.Core
 		// TODO: move to statements
 		AssignOps_End,
 		
+		MemberAccess,
+		MemberPtrAccess,
+		MemberAccessPtr,
+		MemberPtrAccessPtr,
+		
 		Pow,
 		
 		MultOps_Begin,
