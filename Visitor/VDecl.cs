@@ -26,20 +26,22 @@ namespace Myll
 			Enum.Entry ret = new Enum.Entry
 			{
 				name  = VisitId(c.id()),
-				value = exprVis.Visit(c.expr()),
+				value = c.expr().Visit(),
 			};
 			return ret;
 		}
 
 		public override object VisitEnumDecl(EnumDeclContext c)
 		{
-			Enum ret = new Enum();
-			ret.name = VisitId(c.id());
 			// add to hierarchy stack
-			ret.entries = c.idExpr().Select(VisitEnumEntry).ToList();
+			Enum ret = new Enum
+			{
+				name    = VisitId(c.id()),
+				entries = c.idExpr().Select(VisitEnumEntry).ToList(),
+			};
 			return ret;
 		}
-		
+
 		public new Func.Param VisitParam(ParamContext c)
 		{
 			Func.Param ret = new Func.Param
@@ -55,25 +57,25 @@ namespace Myll
 			List<Func.Param> ret = c.param().Select(VisitParam).ToList();
 			return ret;
 		}
-		
+
 		public override object VisitFunctionDecl(FunctionDeclContext c)
 		{
-			FuncDeclContext cc  = c.funcDecl();
-			Func            ret = new Func
+			FuncDeclContext cc = c.funcDecl();
+			Func ret = new Func
 			{
 				name           = VisitId(cc.id()),
 				templateParams = VisitTplParams(cc.tplParams()),
 				paras          = VisitFuncDef(cc.funcDef()),
 				retType        = VisitTypeSpec(cc.typeSpec()),
 			};
-			
-			if (cc.stmtBlk() != null)
+
+			if (cc.stmt() != null)
 			{
-				ret.block = stmtVis.Visit(cc.stmtBlk());
+				ret.block = cc.stmt().Visit();
 			}
 			else if (cc.expr() != null)
 			{
-				exprVis.Visit(cc.expr());
+				cc.expr().Visit();
 				// TODO
 				ret.block = new Block();
 			}

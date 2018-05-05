@@ -7,26 +7,27 @@ comment		:	COMMENT;
 postOP		:	'++' |	'--';
 preOP		:	'++' |	'--' |	'+'  |	'-'  |	'!'  |	'~'  | '*' | '&';
 
-assignOP	:	'='  |	'**=' |	'*=' |	'/=' |	'%=' |	'+=' |	'-='
-			|	'<<='|  '>>=' |	'&=' |	'^=' |	'|=';
 powOP		:			'*''*';
-multOP		:					'*'  |	'/'  |	'%';
-multOPn		:	v=(				'*'  |	'/'  |	'%' |   '&');
-addOP		:											'+' |   '-';
-addOPn		:	v=(										'+' |   '-' |   '|' |   '^');
+multOP		:	v=(				'*'  |	'/'  |	'%' |   '&');
+addOP		:	v=(										'+' |   '-' |   '|' |   '^');
 shiftOP		: 	'<<' |	'>''>';
+/*
 bitAndOP	:					'&';
 bitXorOP	:							'^';
 bitOrOP		:									'|';
+*/
+cmpOp       :   '<=>';
+orderOP		:	'<'	|'<='|'>'|'>=';
+equalOP		:	'=='|'!=';
+
 andOP		:					'&&';
 orOP		:									'||';
 
 memOP		:	'.'  | '->';
 memPtrOP	:	'.*' | '->*';
 
-cmpOp       :   '<=>';
-orderOP		:	'<'	|'<='|'>'|'>=';
-equalOP		:	'=='|'!=';
+assignOP	:	v=(	'='  |	'**=' |	'*=' |	'/=' |	'%=' |	'+=' |	'-='
+				|	'<<='|  '>>=' |	'&=' |	'^=' |	'|=');
 
 lit			:	INTEGER_LIT | HEX_LIT | FLOAT_LIT | STRING_LIT | CHAR_LIT | BOOL_LIT | NUL;
 wildId		:	AUTOINDEX | USCORE;
@@ -102,8 +103,8 @@ expr		:	expr	SCOPE			expr	# ScopeExpr
 			|	expr	memPtrOP		expr	# MemPtrExpr
 			| <assoc=right>
 				expr	powOP			expr	# PowExpr
-			|	expr	multOPn			expr	# MultExpr
-			|	expr	addOPn			expr	# AddExpr
+			|	expr	multOP			expr	# MultExpr
+			|	expr	addOP			expr	# AddExpr
 			|	expr	shiftOP			expr	# ShiftExpr
 			|	expr	cmpOp			expr	# ComparisonExpr
 			|	expr	orderOP			expr	# RelationExpr
@@ -202,11 +203,8 @@ classExtDef	:	FIELDS	LCURLY (typedIdExprs	SEMI)* RCURLY
 initList	:	COLON id funcCall (COMMA id funcCall)*;
 ctorDecl	:	funcDef initList?	stmtBlk						# CtorDef;
 
-funcDecl	:	(		id tplParams? funcDef (RARROW typeSpec)?
-				) (stmtBlk|'=>' expr SEMI);
-
-opDecl		:	(		STRING_LIT funcDef (RARROW typeSpec)?
-				) (stmtBlk|'=>' expr SEMI);
+funcDecl	:	id tplParams?	funcDef (RARROW typeSpec)?	(stmt|'=>' expr SEMI);
+opDecl		:	STRING_LIT		funcDef (RARROW typeSpec)?	(stmt|'=>' expr SEMI);
 
 topLevel	:	attribBlk																# Attributes
 			|	NS	id (SCOPE id)*		SEMI											# Namespace

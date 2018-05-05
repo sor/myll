@@ -28,13 +28,15 @@ namespace Myll
 
 			return base.Visit(c);
 		}
-		
+
 		public override Stmt VisitIfStmt(IfStmtContext c)
 		{
-			IfStmt ret = new IfStmt();
-			ret.ifExpr = exprVis.Visit(c.expr());
-			ret.thenBlock = Visit(c.stmt(0));
-			ret.elseBlock = Visit(c.stmt(1));
+			IfStmt ret = new IfStmt
+			{
+				ifExpr    = c.expr().Visit(),
+				thenBlock = c.stmt(0).Visit(),
+				elseBlock = c.stmt(1).Visit(),
+			};
 			return ret;
 		}
 
@@ -47,6 +49,8 @@ namespace Myll
 		{
 			Block ret = new Block
 			{
+				//a?.b ?? c;
+				//(a ? a.b : nullptr) ? (a ? a.b : nullptr) : c; 
 				statements = c?.stmt().Select(Visit).ToList()
 				             ?? new List<Stmt>()
 			};

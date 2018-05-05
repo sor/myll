@@ -35,6 +35,8 @@ namespace Myll.Core
 		// TODO: move to statements
 		AssignOps_End,
 		
+		Pow,
+		
 		MultOps_Begin,
 		Multiply,
 		Divide,
@@ -87,8 +89,9 @@ namespace Myll.Core
 				sb.Append(info.Name + ": " + value.ToString() + ", ");
 			}
 			sb.Length = Math.Max(sb.Length - 2, 0);
-			return "{" + GetType().Name + " "
-			           + sb.ToString() + "}";
+			return "{"
+			       + GetType().Name + " "
+			       + sb.ToString()  + "}";
 		}
 	}
 

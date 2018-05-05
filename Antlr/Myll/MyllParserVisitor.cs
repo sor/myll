@@ -51,12 +51,6 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitPreOP([NotNull] MyllParser.PreOPContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.assignOP"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitAssignOP([NotNull] MyllParser.AssignOPContext context);
-	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.powOP"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
@@ -69,23 +63,11 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitMultOP([NotNull] MyllParser.MultOPContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.multOPn"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitMultOPn([NotNull] MyllParser.MultOPnContext context);
-	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.addOP"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitAddOP([NotNull] MyllParser.AddOPContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.addOPn"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitAddOPn([NotNull] MyllParser.AddOPnContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.shiftOP"/>.
 	/// </summary>
@@ -93,23 +75,23 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitShiftOP([NotNull] MyllParser.ShiftOPContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.bitAndOP"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.cmpOp"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitBitAndOP([NotNull] MyllParser.BitAndOPContext context);
+	Result VisitCmpOp([NotNull] MyllParser.CmpOpContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.bitXorOP"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.orderOP"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitBitXorOP([NotNull] MyllParser.BitXorOPContext context);
+	Result VisitOrderOP([NotNull] MyllParser.OrderOPContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.bitOrOP"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.equalOP"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitBitOrOP([NotNull] MyllParser.BitOrOPContext context);
+	Result VisitEqualOP([NotNull] MyllParser.EqualOPContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.andOP"/>.
 	/// </summary>
@@ -135,23 +117,11 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitMemPtrOP([NotNull] MyllParser.MemPtrOPContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.cmpOp"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.assignOP"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitCmpOp([NotNull] MyllParser.CmpOpContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.orderOP"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitOrderOP([NotNull] MyllParser.OrderOPContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.equalOP"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitEqualOP([NotNull] MyllParser.EqualOPContext context);
+	Result VisitAssignOP([NotNull] MyllParser.AssignOPContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.lit"/>.
 	/// </summary>

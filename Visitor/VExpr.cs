@@ -33,7 +33,7 @@ namespace Myll
 		{
 			BinOp ret = new BinOp
 			{
-				op    = c.addOPn().v.ToOp(),
+				op    = c.addOP().v.ToOp(),
 				left  = Visit(c.expr(0)),
 				right = Visit(c.expr(1)),
 			};

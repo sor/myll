@@ -84,7 +84,7 @@ namespace Myll
 			}
 			else if (c.ary != null)
 			{
-				Array a = new Array{ expr = exprVis.Visit(c.expr()) };
+				Array a = new Array {expr = c.expr().Visit()};
 				ret = a;
 				ret.kind = ToPtr[c.ary.Type];
 			}
@@ -96,7 +96,7 @@ namespace Myll
 
 		public new Qualifier VisitTypeQuals(TypeQualsContext c)
 		{
-			Qualifier ret = c.typeQual().Aggregate(Qualifier.None, (a,q) => a | ToQual[q.qual.Type]);
+			Qualifier ret = c.typeQual().Aggregate(Qualifier.None, (a, q) => a | ToQual[q.qual.Type]);
 			return ret;
 		}
 

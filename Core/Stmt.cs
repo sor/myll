@@ -15,8 +15,9 @@ namespace Myll.Core
 				sb.Append(info.Name + ": " + value.ToString() + ", ");
 			}
 			sb.Length = Math.Max(sb.Length - 2, 0);
-			return "{"             + GetType().Name + " "
-			       + sb.ToString() + "}";
+			return "{"
+			       + GetType().Name + " "
+			       + sb.ToString()  + "}";
 		}
 	}
 
@@ -29,7 +30,7 @@ namespace Myll.Core
 
 	public class FallStmt : Stmt
 	{
-		// This is just the opposite of break in a switch case
+		// This is the opposite of break in a case of a switch
 	}
 
 	public class Block : Stmt
