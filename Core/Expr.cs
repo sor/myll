@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text;
 
 namespace Myll.Core
@@ -80,7 +81,11 @@ namespace Myll.Core
 		Or,
 		BooleanOps_End,
 		
-		Ternary,
+		NullCoalesce,
+		
+		Conditional,
+		
+		Parens,
 	}
 
 	public class Expr
@@ -121,6 +126,12 @@ namespace Myll.Core
 		public Expr ifExpr { get; set; }
 		public Expr thenExpr { get; set; }
 		public Expr elseExpr { get; set; }
+	}
+
+	public class ScopedExpr : Expr
+	{
+		public List<IdentifierTpl> identifiers;
+		public Expr                expr;
 	}
 
 	public class Literal : Expr

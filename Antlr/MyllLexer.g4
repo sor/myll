@@ -170,12 +170,13 @@ THROW		: 'throw';
 NUL			: 'null';
 BOOL_LIT	: 'true'|'false';
 ID			: [a-zA-Z_][a-zA-Z0-9_]*;
+HEX_LIT     : '0x' HEXDIGIT+;
 FLOAT_LIT	:	(	DIGIT* '.' DIGIT+ ( [eE] [+-]? DIGIT+ )?
 				|	DIGIT+ [eE] [+-]? DIGIT+ 
 				) [lfLF]?;
-HEX_LIT     : '0x' DIGIT+;
 INTEGER_LIT	: DIGIT+;
 fragment DIGIT: [0-9];
+fragment HEXDIGIT: [0-9A-Fa-f];
 NL			: ('\r'|'\n')+	-> channel(NEWLINES);
 WS			: (' '|'\t')+	-> skip;// channel(HIDDEN);
 

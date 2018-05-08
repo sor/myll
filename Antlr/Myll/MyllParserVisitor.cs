@@ -105,6 +105,18 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitOrOP([NotNull] MyllParser.OrOPContext context);
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.nulCondIdxOP"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitNulCondIdxOP([NotNull] MyllParser.NulCondIdxOPContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.nulCoalOP"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitNulCoalOP([NotNull] MyllParser.NulCoalOPContext context);
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.memAccOP"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
@@ -316,20 +328,6 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitAndExpr([NotNull] MyllParser.AndExprContext context);
 	/// <summary>
-	/// Visit a parse tree produced by the <c>Tier2</c>
-	/// labeled alternative in <see cref="MyllParser.expr"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitTier2([NotNull] MyllParser.Tier2Context context);
-	/// <summary>
-	/// Visit a parse tree produced by the <c>Tier3</c>
-	/// labeled alternative in <see cref="MyllParser.expr"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitTier3([NotNull] MyllParser.Tier3Context context);
-	/// <summary>
 	/// Visit a parse tree produced by the <c>ComparisonExpr</c>
 	/// labeled alternative in <see cref="MyllParser.expr"/>.
 	/// </summary>
@@ -350,6 +348,13 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitMultExpr([NotNull] MyllParser.MultExprContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>PostExpr</c>
+	/// labeled alternative in <see cref="MyllParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitPostExpr([NotNull] MyllParser.PostExprContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>AddExpr</c>
 	/// labeled alternative in <see cref="MyllParser.expr"/>.
@@ -379,12 +384,12 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitMemPtrExpr([NotNull] MyllParser.MemPtrExprContext context);
 	/// <summary>
-	/// Visit a parse tree produced by the <c>ScopeExpr</c>
+	/// Visit a parse tree produced by the <c>NullCoalesceExpr</c>
 	/// labeled alternative in <see cref="MyllParser.expr"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitScopeExpr([NotNull] MyllParser.ScopeExprContext context);
+	Result VisitNullCoalesceExpr([NotNull] MyllParser.NullCoalesceExprContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>OrExpr</c>
 	/// labeled alternative in <see cref="MyllParser.expr"/>.
@@ -392,6 +397,13 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitOrExpr([NotNull] MyllParser.OrExprContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>PreExpr</c>
+	/// labeled alternative in <see cref="MyllParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitPreExpr([NotNull] MyllParser.PreExprContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>WildIdExpr</c>
 	/// labeled alternative in <see cref="MyllParser.expr"/>.
@@ -413,6 +425,13 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitLiteralExpr([NotNull] MyllParser.LiteralExprContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>ScopedExpr</c>
+	/// labeled alternative in <see cref="MyllParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitScopedExpr([NotNull] MyllParser.ScopedExprContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>ParenExpr</c>
 	/// labeled alternative in <see cref="MyllParser.expr"/>.

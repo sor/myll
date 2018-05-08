@@ -4,8 +4,8 @@ options { tokenVocab = MyllLexer; }
 
 comment		:	COMMENT;
 
-postOP		:	'++' |	'--';
-preOP		:	'++' |	'--' |	'+'  |	'-'  |	'!'  |	'~'  | '*' | '&';
+postOP		:	v=('++' |	'--');
+preOP		:	v=('++' |	'--' |	'+'  |	'-'  |	'!'  |	'~'  | '*' | '&');
 
 powOP		:			'*''*';
 multOP		:	v=(				'*'  |	'/'  |	'%' |   '&');
@@ -17,19 +17,22 @@ bitXorOP	:							'^';
 bitOrOP		:									'|';
 */
 cmpOp       :   '<=>';
-orderOP		:	'<'	|'<='|'>'|'>=';
-equalOP		:	'=='|'!=';
+orderOP		:	v=('<'|'<='|'>'|'>=');
+equalOP		:	v=('=='|'!=');
 
 andOP		:					'&&';
 orOP		:									'||';
+//nulCondMemOP:	'?.';
+nulCondIdxOP:	'?[';
+nulCoalOP	:	'??';
 
-memAccOP	:	'.'  | '->';
-memAccPtrOP	:	'.*' | '->*';
+memAccOP	:	v=('.'  | '?.'|'->');
+memAccPtrOP	:	v=('.*' | '->*');
 
 assignOP	:	v=(	'='  |	'**=' |	'*=' |	'/=' |	'%=' |	'+=' |	'-='
 				|	'<<='|  '>>=' |	'&=' |	'^=' |	'|=');
 
-lit			:	INTEGER_LIT | HEX_LIT | FLOAT_LIT | STRING_LIT | CHAR_LIT | BOOL_LIT | NUL;
+lit			:	HEX_LIT | INTEGER_LIT | FLOAT_LIT | STRING_LIT | CHAR_LIT | BOOL_LIT | NUL;
 wildId		:	AUTOINDEX | USCORE;
 id			:	ID;
 idOrLit		:	id | lit;
@@ -66,7 +69,7 @@ typeSpec	:	typeQuals	( basicType | funcType | nestedType )	typePtr*;
 
 arg			:	(id COLON)? expr;
 funcCall	:	LPAREN	(arg (COMMA arg)*)?	RPAREN;
-indexCall	:	LBRACK	(arg (COMMA arg)*)	RBRACK;
+indexCall	:	ary=( QM_LBRACK | LBRACK)	(arg (COMMA arg)*)	RBRACK;
 
 param		:	typeSpec id?;
 funcDef		:	LPAREN (param (COMMA param)*)? RPAREN;
@@ -86,20 +89,18 @@ sizeofExpr	:	SIZEOF					expr;
 newExpr		:	NEW		typeSpec?	funcCall?;
 deleteExpr	:	DELETE	(ary='['']')?	expr;
 
-expr		:	expr	SCOPE			expr	# ScopeExpr
+expr		:	(idTplArgs	SCOPE)+		expr	# ScopedExpr
 			|	expr
 				(	postOP
-				// func cast
 				|	funcCall
 				|	indexCall
-//null-conditional ?. ?[
-				|	memAccOP	id	)			# Tier2
+				|	memAccOP	idTplArgs)		# PostExpr
 			| <assoc=right>
 				(	preOpExpr
 				|	castExpr
 				|	sizeofExpr
 				|	newExpr
-				|	deleteExpr	)				# Tier3
+				|	deleteExpr	)				# PreExpr
 			|	expr	memAccPtrOP		expr	# MemPtrExpr
 			| <assoc=right>
 				expr	powOP			expr	# PowExpr
@@ -111,7 +112,7 @@ expr		:	expr	SCOPE			expr	# ScopeExpr
 			|	expr	equalOP			expr	# EqualityExpr
 			|	expr	andOP			expr	# AndExpr
 			|	expr	orOP			expr	# OrExpr
-//null-coalescing ??
+			|	expr	nulCoalOP		expr	# NullCoalesceExpr
 			| <assoc=right>
 				expr	'?' expr ':'	expr	# ConditionalExpr
 			|	LPAREN	expr	RPAREN			# ParenExpr

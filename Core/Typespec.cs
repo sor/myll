@@ -13,7 +13,7 @@ namespace Myll.Core
 		Stable   = 1 << 3,
 	}
 
-	public class Typespec // QualType
+	public class Typespec
 	{
 		public string        srcFile;
 		public uint          srcLine;

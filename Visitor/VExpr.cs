@@ -29,13 +29,153 @@ namespace Myll
 			return base.Visit(c);
 		}
 
+		public override Expr VisitScopedExpr(ScopedExprContext c)
+		{
+			ScopedExpr ret = new ScopedExpr {
+				identifiers = c.idTplArgs().Select(AllVis.VisitIdTplArgs).ToList(),
+				expr        = c.expr().Visit(),
+			};
+			return ret;
+		}
+
+		public override Expr VisitPostExpr(PostExprContext c)
+		{
+			Expr left = c.expr().Visit();
+			//Expr right = ;
+			/*ScopedExpr ret = new ScopedExpr {
+				identifiers = c.idTplArgs().Select(AllVis.VisitIdTplArgs).ToList(),
+				expr        = c.expr().Visit(),
+			};
+			return ret;*/
+			return left;
+		}
+
+		public override Expr VisitMemPtrExpr(MemPtrExprContext c)
+		{
+			BinOp ret = new BinOp {
+				op    = c.memAccPtrOP().v.ToOp(),
+				left  = c.expr(0).Visit(),
+				right = c.expr(1).Visit(),
+			};
+			return ret;
+		}
+
+		public override Expr VisitPowExpr(PowExprContext c)
+		{
+			BinOp ret = new BinOp {
+				op    = Operand.Pow,
+				left  = c.expr(0).Visit(),
+				right = c.expr(1).Visit(),
+			};
+			return ret;
+		}
+
+		public override Expr VisitMultExpr(MultExprContext c)
+		{
+			BinOp ret = new BinOp {
+				op    = c.multOP().v.ToOp(),
+				left  = c.expr(0).Visit(),
+				right = c.expr(1).Visit(),
+			};
+			return ret;
+		}
+
 		public override Expr VisitAddExpr(AddExprContext c)
 		{
-			BinOp ret = new BinOp
-			{
+			BinOp ret = new BinOp {
 				op    = c.addOP().v.ToOp(),
-				left  = Visit(c.expr(0)),
-				right = Visit(c.expr(1)),
+				left  = c.expr(0).Visit(),
+				right = c.expr(1).Visit(),
+			};
+			return ret;
+		}
+
+		public override Expr VisitShiftExpr(ShiftExprContext c)
+		{
+			BinOp ret = new BinOp {
+				op    = Operand.LeftShift,	// TODO
+				left  = c.expr(0).Visit(),
+				right = c.expr(1).Visit(),
+			};
+			return ret;
+		}
+
+		public override Expr VisitComparisonExpr(ComparisonExprContext c)
+		{
+			BinOp ret = new BinOp {
+				op    = Operand.Comparison,
+				left  = c.expr(0).Visit(),
+				right = c.expr(1).Visit(),
+			};
+			return ret;
+		}
+
+		public override Expr VisitRelationExpr(RelationExprContext c)
+		{
+			BinOp ret = new BinOp {
+				op    = c.orderOP().v.ToOp(),
+				left  = c.expr(0).Visit(),
+				right = c.expr(1).Visit(),
+			};
+			return ret;
+		}
+
+		public override Expr VisitEqualityExpr(EqualityExprContext c)
+		{
+			BinOp ret = new BinOp {
+				op    = c.equalOP().v.ToOp(),
+				left  = c.expr(0).Visit(),
+				right = c.expr(1).Visit(),
+			};
+			return ret;
+		}
+
+		public override Expr VisitAndExpr(AndExprContext c)
+		{
+			BinOp ret = new BinOp {
+				op    = Operand.And,
+				left  = c.expr(0).Visit(),
+				right = c.expr(1).Visit(),
+			};
+			return ret;
+		}
+
+		public override Expr VisitOrExpr(OrExprContext c)
+		{
+			BinOp ret = new BinOp {
+				op    = Operand.Or,
+				left  = c.expr(0).Visit(),
+				right = c.expr(1).Visit(),
+			};
+			return ret;
+		}
+
+		public override Expr VisitNullCoalesceExpr(NullCoalesceExprContext c)
+		{
+			BinOp ret = new BinOp {
+				op    = Operand.NullCoalesce,
+				left  = c.expr(0).Visit(),
+				right = c.expr(1).Visit(),
+			};
+			return ret;
+		}
+
+		public override Expr VisitConditionalExpr(ConditionalExprContext c)
+		{
+			TernOp ret = new TernOp {
+				op       = Operand.Conditional,
+				ifExpr   = c.expr(0).Visit(),
+				thenExpr = c.expr(1).Visit(),
+				elseExpr = c.expr(2).Visit(),
+			};
+			return ret;
+		}
+
+		public override Expr VisitParenExpr(ParenExprContext c)
+		{
+			UnOp ret = new UnOp {
+				op   = Operand.Parens,
+				expr = c.expr().Visit(),
 			};
 			return ret;
 		}
