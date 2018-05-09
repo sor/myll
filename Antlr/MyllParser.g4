@@ -22,12 +22,11 @@ equalOP		:	v=('=='|'!=');
 
 andOP		:					'&&';
 orOP		:									'||';
-//nulCondMemOP:	'?.';
-nulCondIdxOP:	'?[';
+
 nulCoalOP	:	'??';
 
-memAccOP	:	v=('.'  | '?.'|'->');
-memAccPtrOP	:	v=('.*' | '->*');
+memAccOP	:	v=('.'  | '?.'	| '->'	);
+memAccPtrOP	:	v=('.*' | '?.*'	| '->*'	);
 
 assignOP	:	v=(	'='  |	'**=' |	'*=' |	'/=' |	'%=' |	'+=' |	'-='
 				|	'<<='|  '>>=' |	'&=' |	'^=' |	'|=');
@@ -68,7 +67,7 @@ typeSpec	:	typeQuals	( basicType | funcType | nestedType )	typePtr*;
 // --- handled
 
 arg			:	(id COLON)? expr;
-funcCall	:	LPAREN	(arg (COMMA arg)*)?	RPAREN;
+funcCall	:	ary=( QM_LPAREN | LPAREN)	(arg (COMMA arg)*)?	RPAREN;
 indexCall	:	ary=( QM_LBRACK | LBRACK)	(arg (COMMA arg)*)	RBRACK;
 
 param		:	typeSpec id?;
@@ -83,6 +82,7 @@ tplParams	:	LT id (COMMA id)* GT;
 
 // Tier 3
 //cast_MOD:	'c'|'s'|'d'|'r'|;
+// cast: nothing = static, ? = dynamic, ! = const & reinterpret
 preOpExpr	:	preOP					expr;
 castExpr	:	LPAREN typeSpec RPAREN	expr;
 sizeofExpr	:	SIZEOF					expr;
@@ -120,44 +120,6 @@ expr		:	(idTplArgs	SCOPE)+		expr	# ScopedExpr
 			|	lit								# LiteralExpr
 			|	idTplArgs						# IdTplExpr
 			;
-/*
-exprOld		:	expr	SCOPE			expr	# Tier1
-			|	expr
-				(	postOP
-				// func cast
-				|	funcCall
-				|	indexCall
-				|	memOP	id	)				# Tier2
-			| <assoc=right>
-				(	preOpExpr
-				|	castExpr
-				|	sizeofExpr
-				|	newExpr
-				|	deleteExpr	)				# Tier3
-			|	expr	memPtrOP		expr	# Tier4
-			| <assoc=right>
-				expr	powOP			expr	# Tier4_5
-			|	expr	multOP			expr	# Tier5
-			|	expr	addOP			expr	# Tier6
-			|	expr	shiftOP			expr	# Tier7
-			|	expr	orderOP			expr	# Tier8
-			|	expr	equalOP			expr	# Tier9
-			|	expr	bitAndOP		expr	# Tier10
-			|	expr	bitXorOP		expr	# Tier11
-			|	expr	bitOrOP			expr	# Tier12
-			|	expr	andOP			expr	# Tier13
-			|	expr	orOP			expr	# Tier14
-			| <assoc=right>
-				expr	( assignOP
-						| '?' expr ':')	expr	# Tier15
-			|			'throw'			expr	# Tier16
-			//|	expr	','				expr	# Tier17
-			|	'('		expr	')'				# ParenExpr
-			|	wildId							# Tier50
-			|	lit								# Tier51
-			|	idTplArgs						# Tier52
-			;
-*/
 
 idExpr		:	id (ASSIGN expr)?;
 // TODO: Prop - get,set,refget

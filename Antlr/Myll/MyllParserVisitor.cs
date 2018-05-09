@@ -105,12 +105,6 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitOrOP([NotNull] MyllParser.OrOPContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.nulCondIdxOP"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitNulCondIdxOP([NotNull] MyllParser.NulCondIdxOPContext context);
-	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.nulCoalOP"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>

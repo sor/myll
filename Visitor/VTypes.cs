@@ -64,6 +64,9 @@ namespace Myll
 
 		public new Typespec VisitTypeSpec(TypeSpecContext c)
 		{
+			if (c == null)
+				return null;
+
 			Typespec ret;
 			if (c.basicType()		!= null) ret = VisitBasicType(c.basicType());
 			else if (c.funcType()	!= null) ret = VisitFuncType(c.funcType());

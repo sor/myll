@@ -4,20 +4,18 @@ using System.Text;
 
 namespace Myll.Core
 {
-	/*
-	mul: * / % << >> &
-	add: + - | ...
-	cmp: == <= >= ...
-	and: &&
-	or: ||
-	tern: ?:
-	*/
-	
 	public enum Operand
 	{
 		PostOps_Begin,
 		PostIncr,
 		PostDecr,
+		FuncCall,
+		NCFuncCall,
+		IndexCall,
+		NCIndexCall,
+		MemberAccess,
+		NCMemberAccess,
+		MemberPtrAccess,
 		PostOps_End,
 		
 		PreOps_Begin,
@@ -29,6 +27,14 @@ namespace Myll.Core
 		Complement,
 		Dereference,
 		AddressOf,
+		
+		StaticCast,
+		DynamicCast,
+		AnyCast,
+		SizeOf,
+		New,
+		Delete,
+		DeleteAry,
 		PreOps_End,
 		
 		AssignOps_Begin,
@@ -36,9 +42,8 @@ namespace Myll.Core
 		// TODO: move to statements
 		AssignOps_End,
 		
-		MemberAccess,
-		MemberPtrAccess,
 		MemberAccessPtr,
+		NCMemberAccessPtr,
 		MemberPtrAccessPtr,
 		
 		Pow,
@@ -130,8 +135,44 @@ namespace Myll.Core
 
 	public class ScopedExpr : Expr
 	{
-		public List<IdentifierTpl> identifiers;
+		public List<IdentifierTpl> ids;
 		public Expr                expr;
+	}
+
+	public class IdTplExpr : Expr
+	{
+		public IdentifierTpl id;
+	}
+	
+	public class PostExpr : Expr
+	{
+		public Expr left { get; set; }
+	}
+
+	public class FuncCallExpr : OpExpr
+	{
+		// fac(n: 1+2) // n is matching _name_ of param, 1+2 is _expr_
+		public class Arg
+		{
+			public string name; // opt
+			public Expr   expr;
+		}
+
+		public Expr      left; // name
+		public List<Arg> args;
+		//public List<TemplateArg> templateArgs; // part of expr
+	}
+
+	public class CastExpr : OpExpr
+	{
+		public Typespec type;
+		public Expr     expr;
+	}
+
+	public class NewExpr : OpExpr
+	{
+		public Typespec               type;
+		public List<FuncCallExpr.Arg> args;
 	}
 
 	public class Literal : Expr

@@ -32,22 +32,125 @@ namespace Myll
 		public override Expr VisitScopedExpr(ScopedExprContext c)
 		{
 			ScopedExpr ret = new ScopedExpr {
-				identifiers = c.idTplArgs().Select(AllVis.VisitIdTplArgs).ToList(),
-				expr        = c.expr().Visit(),
+				ids  = c.idTplArgs().Select(AllVis.VisitIdTplArgs).ToList(),
+				expr = c.expr().Visit(),
+			};
+			return ret;
+		}
+
+		public new FuncCallExpr.Arg VisitArg(ArgContext c)
+		{
+			FuncCallExpr.Arg ret = new FuncCallExpr.Arg {
+				name = c.id().GetText(),
+				expr = c.expr().Visit(),
 			};
 			return ret;
 		}
 
 		public override Expr VisitPostExpr(PostExprContext c)
 		{
+			Expr ret;
 			Expr left = c.expr().Visit();
-			//Expr right = ;
-			/*ScopedExpr ret = new ScopedExpr {
-				identifiers = c.idTplArgs().Select(AllVis.VisitIdTplArgs).ToList(),
-				expr        = c.expr().Visit(),
+			if (c.postOP() != null)
+				ret = new UnOp {
+					expr = left,
+					op   = c.postOP().v.ToOp(),
+				};
+			else if (c.funcCall() != null) {
+				ret = new FuncCallExpr {
+					op   = c.funcCall().ary.ToOp(),
+					left = left,
+					args = c.funcCall().arg().Select(VisitArg).ToList(),
+				};
+			}
+			else if (c.indexCall() != null) {
+				ret = new FuncCallExpr {
+					op   = c.indexCall().ary.ToOp(),
+					left = left,
+					args = c.indexCall().arg().Select(VisitArg).ToList(),
+				};
+			}
+			else if (c.memAccOP() != null) {
+				IdTplExpr right = new IdTplExpr {
+					id = AllVis.VisitIdTplArgs(c.idTplArgs()),
+				};
+				ret = new BinOp {
+					op    = c.memAccOP().v.ToOp(),
+					left  = left,
+					right = right,
+				};
+			}
+			else
+				throw new Exception("unknown pre op");
+
+			return ret;
+		}
+
+		public override Expr VisitPreOpExpr(PreOpExprContext c)
+		{
+			Expr ret = new UnOp {
+				op   = c.preOP().v.PreToOp(),
+				expr = c.expr().Visit(),
 			};
-			return ret;*/
-			return left;
+			return ret;
+		}
+
+		public override Expr VisitCastExpr(CastExprContext c)
+		{
+			Expr ret = new CastExpr {
+				op   = Operand.StaticCast,
+				type = AllVis.VisitTypeSpec(c.typeSpec()),
+				expr = c.expr().Visit(),
+			};
+			return ret;
+		}
+
+		public override Expr VisitSizeofExpr(SizeofExprContext c)
+		{
+			Expr ret = new UnOp {
+				op   = Operand.SizeOf,
+				expr = c.expr().Visit(),
+			};
+			return ret;
+		}
+
+		public override Expr VisitNewExpr(NewExprContext c)
+		{
+			Expr ret = new NewExpr {
+				op   = Operand.New,
+				type = AllVis.VisitTypeSpec(c.typeSpec()),
+				args = c.funcCall().arg().Select(VisitArg).ToList(),
+			};
+			return ret;
+		}
+
+		public override Expr VisitDeleteExpr(DeleteExprContext c)
+		{
+			Expr ret = new UnOp {
+				op   = c.ary != null ? Operand.DeleteAry : Operand.Delete,
+				expr = c.expr().Visit(),
+			};
+			return ret;
+		}
+
+		public override Expr VisitPreExpr(PreExprContext c)
+		{
+			//Visit(a??b??c)
+			Expr ret;
+			if (c.preOpExpr() != null)
+				ret = VisitPreOpExpr(c.preOpExpr());
+			else if (c.castExpr() != null)
+				ret = VisitCastExpr(c.castExpr());
+			else if (c.sizeofExpr() != null)
+				ret = VisitSizeofExpr(c.sizeofExpr());
+			else if (c.newExpr() != null)
+				ret = VisitNewExpr(c.newExpr());
+			else if (c.deleteExpr() != null)
+				ret = VisitDeleteExpr(c.deleteExpr());
+			else
+				throw new Exception("unknown pre op");
+			
+			return ret;
 		}
 
 		public override Expr VisitMemPtrExpr(MemPtrExprContext c)
