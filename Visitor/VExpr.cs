@@ -39,25 +39,25 @@ namespace Myll
 			return ret;
 		}
 
-		public new FuncCall VisitIndexCall( IndexCallContext c )
+		public new Func.Call VisitIndexCall( IndexCallContext c )
 		{
-			FuncCall ret = new FuncCall {
+			Func.Call ret = new Func.Call {
 				args = c.arg().Select( VisitArg ).ToList(),
 			};
 			return ret;
 		}
 
-		public new FuncCall VisitFuncCall( FuncCallContext c )
+		public new Func.Call VisitFuncCall( FuncCallContext c )
 		{
-			FuncCall ret = new FuncCall {
+			Func.Call ret = new Func.Call {
 				args = c.arg().Select( VisitArg ).ToList(),
 			};
 			return ret;
 		}
 
-		public new FuncCall.Arg VisitArg( ArgContext c )
+		public new Func.Arg VisitArg( ArgContext c )
 		{
-			FuncCall.Arg ret = new FuncCall.Arg {
+			Func.Arg ret = new Func.Arg {
 				name = c.id().GetText(),
 				expr = c.expr().Visit(),
 			};
@@ -107,7 +107,7 @@ namespace Myll
 		public override Expr VisitPreOpExpr( PreOpExprContext c )
 		{
 			Expr ret = new UnOp {
-				op   = c.preOP().v.PreToOp(),
+				op   = c.preOP().v.ToPreOp(),
 				expr = c.expr().Visit(),
 			};
 			return ret;
@@ -297,11 +297,45 @@ namespace Myll
 			return ret;
 		}
 
+		public override Expr VisitWildIdExpr( WildIdExprContext c )
+		{
+			Expr          ret;
+			WildIdContext cc = c.wildId();
+			if( cc.USCORE() != null ) {
+				ret = new Expr {
+					op = Operand.DiscardId,
+				};
+			}
+			else if( cc.AUTOINDEX() != null ) {
+				IdentifierTpl id = new IdentifierTpl {
+					name         = cc.AUTOINDEX().GetText(),
+					templateArgs = new List<TemplateArg>( 0 ),
+				};
+				ret = new IdExpr {
+					op = Operand.WildId,
+					id = id,
+				};
+			}
+			else
+				throw new Exception( "unknown wildId op" );
+
+			return ret;
+		}
+
 		public override Expr VisitLiteralExpr( LiteralExprContext c )
 		{
 			Literal ret = new Literal {
 				op   = Operand.Literal,
-				text = c.GetText() // TODO
+				text = c.lit().GetText() // TODO
+			};
+			return ret;
+		}
+
+		public override Expr VisitIdTplExpr( IdTplExprContext c )
+		{
+			Expr ret = new IdExpr {
+				op = Operand.Id,
+				id = AllVis.VisitIdTplArgs( c.idTplArgs() ),
 			};
 			return ret;
 		}

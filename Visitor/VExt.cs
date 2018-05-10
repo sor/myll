@@ -48,6 +48,7 @@ namespace Myll
 				{Parser.PLUS,		Operand.Addition},
 				{Parser.MINUS,		Operand.Subtraction},
 				{Parser.AMP,		Operand.BitAnd},
+				{Parser.PIPE,		Operand.BitOr},
 				{Parser.HAT,		Operand.BitXor},
 				{Parser.COMPARE,	Operand.Comparison},
 				{Parser.LT,			Operand.LessThan},
@@ -61,7 +62,7 @@ namespace Myll
 			};
 
 		private static readonly Dictionary<int, Operand>
-			PreToOperand = new Dictionary<int, Operand>
+			ToPreOperand = new Dictionary<int, Operand>
 			{
 				{Parser.DBL_PLUS,	Operand.PreIncr},
 				{Parser.DBL_MINUS,	Operand.PreDecr},
@@ -78,8 +79,8 @@ namespace Myll
 			=> ToOperand[tok.Type];
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static Operand PreToOp(this IToken tok)
-			=> ToOperand[tok.Type];
+		public static Operand ToPreOp(this IToken tok)
+			=> ToPreOperand[tok.Type];
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Expr Visit(this Parser.ExprContext c)

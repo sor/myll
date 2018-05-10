@@ -96,6 +96,8 @@ namespace Myll.Core
 		Parens,
 		
 		Id,
+		WildId,
+		DiscardId,
 		
 		Literal,
 	}
@@ -166,6 +168,7 @@ namespace Myll.Core
 
 	public class Literal : Expr
 	{
+		// TODO
 		public string text { get; set; }
 	}
 }
