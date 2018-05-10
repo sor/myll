@@ -25,9 +25,22 @@ namespace Myll.Core
 
 	public class Func : Decl
 	{
-		public class Param : Decl
+		public class Param
 		{
+			public string   name;
 			public Typespec type;
+		}
+
+		// fac(n: 1+2) // n is matching _name_ of param, 1+2 is _expr_
+		public class Arg
+		{
+			public string name; // opt
+			public Expr   expr;
+		}
+
+		public class Call
+		{
+			public List<Arg> args;
 		}
 
 		public List<TemplateParam> templateParams;

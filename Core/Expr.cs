@@ -147,22 +147,10 @@ namespace Myll.Core
 		public IdentifierTpl id;
 	}
 
-	public class FuncCall
-	{
-		// fac(n: 1+2) // n is matching _name_ of param, 1+2 is _expr_
-		public class Arg
-		{
-			public string name; // opt
-			public Expr   expr;
-		}
-
-		public List<Arg> args;
-	}
-
 	public class FuncCallExpr : Expr
 	{
-		public Expr     left; // name and tpl args in here
-		public FuncCall funcCall;
+		public Expr      left; // name and tpl args in here
+		public Func.Call funcCall;
 	}
 
 	public class CastExpr : UnOp
@@ -172,8 +160,8 @@ namespace Myll.Core
 
 	public class NewExpr : Expr
 	{
-		public Typespec type;
-		public FuncCall funcCall;
+		public Typespec  type;
+		public Func.Call funcCall;
 	}
 
 	public class Literal : Expr
