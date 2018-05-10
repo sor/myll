@@ -21,40 +21,41 @@ namespace Myll
 {
 	public class ExprVisitor : MyllParserBaseVisitor<Expr>
 	{
-		public override Expr Visit(IParseTree c)
+		public override Expr Visit( IParseTree c )
 		{
-			if (c == null)
+			if( c == null )
 				return null;
-			
-			return base.Visit(c);
+
+			return base.Visit( c );
 		}
 
-		public override Expr VisitScopedExpr(ScopedExprContext c)
+		public override Expr VisitScopedExpr( ScopedExprContext c )
 		{
 			ScopedExpr ret = new ScopedExpr {
-				ids  = c.idTplArgs().Select(AllVis.VisitIdTplArgs).ToList(),
+				op   = Operand.Scoped,
+				ids  = c.idTplArgs().Select( AllVis.VisitIdTplArgs ).ToList(),
 				expr = c.expr().Visit(),
 			};
 			return ret;
 		}
 
-		public new FuncCall VisitIndexCall(IndexCallContext c)
+		public new FuncCall VisitIndexCall( IndexCallContext c )
 		{
 			FuncCall ret = new FuncCall {
-				args = c.arg().Select(VisitArg).ToList(),
+				args = c.arg().Select( VisitArg ).ToList(),
 			};
 			return ret;
 		}
 
-		public new FuncCall VisitFuncCall(FuncCallContext c)
+		public new FuncCall VisitFuncCall( FuncCallContext c )
 		{
 			FuncCall ret = new FuncCall {
-				args = c.arg().Select(VisitArg).ToList(),
+				args = c.arg().Select( VisitArg ).ToList(),
 			};
 			return ret;
 		}
 
-		public new FuncCall.Arg VisitArg(ArgContext c)
+		public new FuncCall.Arg VisitArg( ArgContext c )
 		{
 			FuncCall.Arg ret = new FuncCall.Arg {
 				name = c.id().GetText(),
@@ -63,32 +64,33 @@ namespace Myll
 			return ret;
 		}
 
-		public override Expr VisitPostExpr(PostExprContext c)
+		public override Expr VisitPostExpr( PostExprContext c )
 		{
 			Expr ret;
 			Expr left = c.expr().Visit();
-			if (c.postOP() != null)
+			if( c.postOP() != null )
 				ret = new UnOp {
 					expr = left,
 					op   = c.postOP().v.ToOp(),
 				};
-			else if (c.funcCall() != null) {
+			else if( c.funcCall() != null ) {
 				ret = new FuncCallExpr {
 					op       = c.funcCall().ary.ToOp(),
 					left     = left,
-					funcCall = VisitFuncCall(c.funcCall()),
+					funcCall = VisitFuncCall( c.funcCall() ),
 				};
 			}
-			else if (c.indexCall() != null) {
+			else if( c.indexCall() != null ) {
 				ret = new FuncCallExpr {
 					op       = c.indexCall().ary.ToOp(),
 					left     = left,
-					funcCall = VisitIndexCall(c.indexCall()),
+					funcCall = VisitIndexCall( c.indexCall() ),
 				};
 			}
-			else if (c.memAccOP() != null) {
-				IdTplExpr right = new IdTplExpr {
-					id = AllVis.VisitIdTplArgs(c.idTplArgs()),
+			else if( c.memAccOP() != null ) {
+				IdExpr right = new IdExpr {
+					op = Operand.Id,
+					id = AllVis.VisitIdTplArgs( c.idTplArgs() ),
 				};
 				ret = new BinOp {
 					op    = c.memAccOP().v.ToOp(),
@@ -97,12 +99,12 @@ namespace Myll
 				};
 			}
 			else
-				throw new Exception("unknown pre op");
+				throw new Exception( "unknown pre op" );
 
 			return ret;
 		}
 
-		public override Expr VisitPreOpExpr(PreOpExprContext c)
+		public override Expr VisitPreOpExpr( PreOpExprContext c )
 		{
 			Expr ret = new UnOp {
 				op   = c.preOP().v.PreToOp(),
@@ -111,17 +113,17 @@ namespace Myll
 			return ret;
 		}
 
-		public override Expr VisitCastExpr(CastExprContext c)
+		public override Expr VisitCastExpr( CastExprContext c )
 		{
 			Expr ret = new CastExpr {
 				op   = Operand.StaticCast,
-				type = AllVis.VisitTypeSpec(c.typeSpec()),
+				type = AllVis.VisitTypeSpec( c.typeSpec() ),
 				expr = c.expr().Visit(),
 			};
 			return ret;
 		}
 
-		public override Expr VisitSizeofExpr(SizeofExprContext c)
+		public override Expr VisitSizeofExpr( SizeofExprContext c )
 		{
 			Expr ret = new UnOp {
 				op   = Operand.SizeOf,
@@ -130,17 +132,17 @@ namespace Myll
 			return ret;
 		}
 
-		public override Expr VisitNewExpr(NewExprContext c)
+		public override Expr VisitNewExpr( NewExprContext c )
 		{
 			Expr ret = new NewExpr {
 				op       = Operand.New,
-				type     = AllVis.VisitTypeSpec(c.typeSpec()),
-				funcCall = VisitFuncCall(c.funcCall()),
+				type     = AllVis.VisitTypeSpec( c.typeSpec() ),
+				funcCall = VisitFuncCall( c.funcCall() ),
 			};
 			return ret;
 		}
 
-		public override Expr VisitDeleteExpr(DeleteExprContext c)
+		public override Expr VisitDeleteExpr( DeleteExprContext c )
 		{
 			Expr ret = new UnOp {
 				op   = c.ary != null ? Operand.DeleteAry : Operand.Delete,
@@ -149,148 +151,144 @@ namespace Myll
 			return ret;
 		}
 
-		public override Expr VisitPreExpr(PreExprContext c)
+		public override Expr VisitPreExpr( PreExprContext c )
 		{
-			//Visit(a??b??c)
-			Expr ret;
-			if (c.preOpExpr() != null)
-				ret = VisitPreOpExpr(c.preOpExpr());
-			else if (c.castExpr() != null)
-				ret = VisitCastExpr(c.castExpr());
-			else if (c.sizeofExpr() != null)
-				ret = VisitSizeofExpr(c.sizeofExpr());
-			else if (c.newExpr() != null)
-				ret = VisitNewExpr(c.newExpr());
-			else if (c.deleteExpr() != null)
-				ret = VisitDeleteExpr(c.deleteExpr());
-			else
-				throw new Exception("unknown pre op");
-			
+			IParseTree cc = c.preOpExpr()
+			                ?? c.castExpr()
+			                ?? c.sizeofExpr()
+			                ?? c.newExpr()
+			                ?? c.deleteExpr() as IParseTree;
+
+			if( cc == null )
+				throw new Exception( "unknown pre op" );
+
+			Expr ret = Visit( cc );
+
 			return ret;
 		}
 
-		public override Expr VisitMemPtrExpr(MemPtrExprContext c)
+		public override Expr VisitMemPtrExpr( MemPtrExprContext c )
 		{
 			BinOp ret = new BinOp {
 				op    = c.memAccPtrOP().v.ToOp(),
-				left  = c.expr(0).Visit(),
-				right = c.expr(1).Visit(),
+				left  = c.expr( 0 ).Visit(),
+				right = c.expr( 1 ).Visit(),
 			};
 			return ret;
 		}
 
-		public override Expr VisitPowExpr(PowExprContext c)
+		public override Expr VisitPowExpr( PowExprContext c )
 		{
 			BinOp ret = new BinOp {
 				op    = Operand.Pow,
-				left  = c.expr(0).Visit(),
-				right = c.expr(1).Visit(),
+				left  = c.expr( 0 ).Visit(),
+				right = c.expr( 1 ).Visit(),
 			};
 			return ret;
 		}
 
-		public override Expr VisitMultExpr(MultExprContext c)
+		public override Expr VisitMultExpr( MultExprContext c )
 		{
 			BinOp ret = new BinOp {
 				op    = c.multOP().v.ToOp(),
-				left  = c.expr(0).Visit(),
-				right = c.expr(1).Visit(),
+				left  = c.expr( 0 ).Visit(),
+				right = c.expr( 1 ).Visit(),
 			};
 			return ret;
 		}
 
-		public override Expr VisitAddExpr(AddExprContext c)
+		public override Expr VisitAddExpr( AddExprContext c )
 		{
 			BinOp ret = new BinOp {
 				op    = c.addOP().v.ToOp(),
-				left  = c.expr(0).Visit(),
-				right = c.expr(1).Visit(),
+				left  = c.expr( 0 ).Visit(),
+				right = c.expr( 1 ).Visit(),
 			};
 			return ret;
 		}
 
-		public override Expr VisitShiftExpr(ShiftExprContext c)
+		public override Expr VisitShiftExpr( ShiftExprContext c )
 		{
 			BinOp ret = new BinOp {
-				op    = Operand.LeftShift,	// TODO
-				left  = c.expr(0).Visit(),
-				right = c.expr(1).Visit(),
+				op    = Operand.LeftShift, // TODO
+				left  = c.expr( 0 ).Visit(),
+				right = c.expr( 1 ).Visit(),
 			};
 			return ret;
 		}
 
-		public override Expr VisitComparisonExpr(ComparisonExprContext c)
+		public override Expr VisitComparisonExpr( ComparisonExprContext c )
 		{
 			BinOp ret = new BinOp {
 				op    = Operand.Comparison,
-				left  = c.expr(0).Visit(),
-				right = c.expr(1).Visit(),
+				left  = c.expr( 0 ).Visit(),
+				right = c.expr( 1 ).Visit(),
 			};
 			return ret;
 		}
 
-		public override Expr VisitRelationExpr(RelationExprContext c)
+		public override Expr VisitRelationExpr( RelationExprContext c )
 		{
 			BinOp ret = new BinOp {
 				op    = c.orderOP().v.ToOp(),
-				left  = c.expr(0).Visit(),
-				right = c.expr(1).Visit(),
+				left  = c.expr( 0 ).Visit(),
+				right = c.expr( 1 ).Visit(),
 			};
 			return ret;
 		}
 
-		public override Expr VisitEqualityExpr(EqualityExprContext c)
+		public override Expr VisitEqualityExpr( EqualityExprContext c )
 		{
 			BinOp ret = new BinOp {
 				op    = c.equalOP().v.ToOp(),
-				left  = c.expr(0).Visit(),
-				right = c.expr(1).Visit(),
+				left  = c.expr( 0 ).Visit(),
+				right = c.expr( 1 ).Visit(),
 			};
 			return ret;
 		}
 
-		public override Expr VisitAndExpr(AndExprContext c)
+		public override Expr VisitAndExpr( AndExprContext c )
 		{
 			BinOp ret = new BinOp {
 				op    = Operand.And,
-				left  = c.expr(0).Visit(),
-				right = c.expr(1).Visit(),
+				left  = c.expr( 0 ).Visit(),
+				right = c.expr( 1 ).Visit(),
 			};
 			return ret;
 		}
 
-		public override Expr VisitOrExpr(OrExprContext c)
+		public override Expr VisitOrExpr( OrExprContext c )
 		{
 			BinOp ret = new BinOp {
 				op    = Operand.Or,
-				left  = c.expr(0).Visit(),
-				right = c.expr(1).Visit(),
+				left  = c.expr( 0 ).Visit(),
+				right = c.expr( 1 ).Visit(),
 			};
 			return ret;
 		}
 
-		public override Expr VisitNullCoalesceExpr(NullCoalesceExprContext c)
+		public override Expr VisitNullCoalesceExpr( NullCoalesceExprContext c )
 		{
 			BinOp ret = new BinOp {
 				op    = Operand.NullCoalesce,
-				left  = c.expr(0).Visit(),
-				right = c.expr(1).Visit(),
+				left  = c.expr( 0 ).Visit(),
+				right = c.expr( 1 ).Visit(),
 			};
 			return ret;
 		}
 
-		public override Expr VisitConditionalExpr(ConditionalExprContext c)
+		public override Expr VisitConditionalExpr( ConditionalExprContext c )
 		{
 			TernOp ret = new TernOp {
 				op       = Operand.Conditional,
-				ifExpr   = c.expr(0).Visit(),
-				thenExpr = c.expr(1).Visit(),
-				elseExpr = c.expr(2).Visit(),
+				ifExpr   = c.expr( 0 ).Visit(),
+				thenExpr = c.expr( 1 ).Visit(),
+				elseExpr = c.expr( 2 ).Visit(),
 			};
 			return ret;
 		}
 
-		public override Expr VisitParenExpr(ParenExprContext c)
+		public override Expr VisitParenExpr( ParenExprContext c )
 		{
 			UnOp ret = new UnOp {
 				op   = Operand.Parens,
@@ -299,10 +297,10 @@ namespace Myll
 			return ret;
 		}
 
-		public override Expr VisitLiteralExpr(LiteralExprContext c)
+		public override Expr VisitLiteralExpr( LiteralExprContext c )
 		{
-			Literal ret = new Literal
-			{
+			Literal ret = new Literal {
+				op   = Operand.Literal,
 				text = c.GetText() // TODO
 			};
 			return ret;
