@@ -38,9 +38,25 @@ namespace Myll
 			return ret;
 		}
 
-		public new FuncCallExpr.Arg VisitArg(ArgContext c)
+		public new FuncCall VisitIndexCall(IndexCallContext c)
 		{
-			FuncCallExpr.Arg ret = new FuncCallExpr.Arg {
+			FuncCall ret = new FuncCall {
+				args = c.arg().Select(VisitArg).ToList(),
+			};
+			return ret;
+		}
+
+		public new FuncCall VisitFuncCall(FuncCallContext c)
+		{
+			FuncCall ret = new FuncCall {
+				args = c.arg().Select(VisitArg).ToList(),
+			};
+			return ret;
+		}
+
+		public new FuncCall.Arg VisitArg(ArgContext c)
+		{
+			FuncCall.Arg ret = new FuncCall.Arg {
 				name = c.id().GetText(),
 				expr = c.expr().Visit(),
 			};
@@ -58,16 +74,16 @@ namespace Myll
 				};
 			else if (c.funcCall() != null) {
 				ret = new FuncCallExpr {
-					op   = c.funcCall().ary.ToOp(),
-					left = left,
-					args = c.funcCall().arg().Select(VisitArg).ToList(),
+					op       = c.funcCall().ary.ToOp(),
+					left     = left,
+					funcCall = VisitFuncCall(c.funcCall()),
 				};
 			}
 			else if (c.indexCall() != null) {
 				ret = new FuncCallExpr {
-					op   = c.indexCall().ary.ToOp(),
-					left = left,
-					args = c.indexCall().arg().Select(VisitArg).ToList(),
+					op       = c.indexCall().ary.ToOp(),
+					left     = left,
+					funcCall = VisitIndexCall(c.indexCall()),
 				};
 			}
 			else if (c.memAccOP() != null) {
@@ -117,9 +133,9 @@ namespace Myll
 		public override Expr VisitNewExpr(NewExprContext c)
 		{
 			Expr ret = new NewExpr {
-				op   = Operand.New,
-				type = AllVis.VisitTypeSpec(c.typeSpec()),
-				args = c.funcCall().arg().Select(VisitArg).ToList(),
+				op       = Operand.New,
+				type     = AllVis.VisitTypeSpec(c.typeSpec()),
+				funcCall = VisitFuncCall(c.funcCall()),
 			};
 			return ret;
 		}

@@ -148,8 +148,8 @@ namespace Myll.Core
 	{
 		public Expr left { get; set; }
 	}
-
-	public class FuncCallExpr : OpExpr
+	
+	public class FuncCall
 	{
 		// fac(n: 1+2) // n is matching _name_ of param, 1+2 is _expr_
 		public class Arg
@@ -158,21 +158,24 @@ namespace Myll.Core
 			public Expr   expr;
 		}
 
-		public Expr      left; // name
 		public List<Arg> args;
-		//public List<TemplateArg> templateArgs; // part of expr
 	}
 
-	public class CastExpr : OpExpr
+	public class FuncCallExpr : OpExpr
+	{
+		public Expr     left; // name and tpl args in here
+		public FuncCall funcCall;
+	}
+
+	public class CastExpr : UnOp
 	{
 		public Typespec type;
-		public Expr     expr;
 	}
 
 	public class NewExpr : OpExpr
 	{
-		public Typespec               type;
-		public List<FuncCallExpr.Arg> args;
+		public Typespec type;
+		public FuncCall funcCall;
 	}
 
 	public class Literal : Expr
