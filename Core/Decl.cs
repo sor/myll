@@ -8,8 +8,9 @@ namespace Myll.Core
 		public string name;
 		public string srcFile;
 		public uint   srcLine;
+		public uint   srcCol;
 
-		// Symbol
+		// TODO Symbol
 	}
 
 	public class Enum : Decl // is a scope
@@ -27,8 +28,8 @@ namespace Myll.Core
 	{
 		public class Param
 		{
-			public string   name;
 			public Typespec type;
+			public string   name;
 		}
 
 		// fac(n: 1+2) // n is matching _name_ of param, 1+2 is _expr_

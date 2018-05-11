@@ -1,30 +1,18 @@
-using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml;
 using Antlr4.Runtime;
-using Antlr4.Runtime.Misc;
-using Antlr4.Runtime.Tree;
+
 using Myll.Core;
 
-using Array = Myll.Core.Array;
-using Enum = Myll.Core.Enum;
 using Parser = Myll.MyllParser;
-
-//using static Myll.MyllParser;
 
 namespace Myll
 {
 	public static class VisitorExtensions
 	{
-		private	static readonly ExprVisitor exprVis = new ExprVisitor();
-		private	static readonly StmtVisitor stmtVis = new StmtVisitor();
-		public	static readonly Visitor     allVis  = new Visitor();
+		private	static readonly ExprVisitor ExprVis = new ExprVisitor();
+		private	static readonly StmtVisitor StmtVis = new StmtVisitor();
+		public	static readonly Visitor     AllVis  = new Visitor();
 
 		private static readonly Dictionary<int, Operand>
 			ToOperand = new Dictionary<int, Operand>
@@ -35,11 +23,11 @@ namespace Myll
 				{Parser.QM_LPAREN,	Operand.NCFuncCall},
 				{Parser.LBRACK,		Operand.IndexCall},
 				{Parser.QM_LBRACK,	Operand.NCIndexCall},
-				{Parser.DOT,		Operand.MemberAccess},
-				{Parser.QM_DOT,		Operand.NCMemberAccess},
+				{Parser.POINT,		Operand.MemberAccess},
+				{Parser.QM_POINT,	Operand.NCMemberAccess},
 				{Parser.RARROW,		Operand.MemberPtrAccess},
-				{Parser.DOT_STAR,	Operand.MemberAccessPtr},
-				{Parser.QM_DOT_STAR,Operand.NCMemberAccessPtr},
+				{Parser.POINT_STAR,	Operand.MemberAccessPtr},
+				{Parser.QM_POINT_STAR,Operand.NCMemberAccessPtr},
 				{Parser.ARROW_STAR,	Operand.MemberPtrAccessPtr},
 			//	{Parser.DBL_STAR,	Operand.Pow},
 				{Parser.STAR,		Operand.Multiply},
@@ -62,8 +50,7 @@ namespace Myll
 			};
 
 		private static readonly Dictionary<int, Operand>
-			ToPreOperand = new Dictionary<int, Operand>
-			{
+			ToPreOperand = new Dictionary<int, Operand> {
 				{Parser.DBL_PLUS,	Operand.PreIncr},
 				{Parser.DBL_MINUS,	Operand.PreDecr},
 				{Parser.PLUS,		Operand.PrePlus},
@@ -74,30 +61,24 @@ namespace Myll
 				{Parser.AMP,		Operand.AddressOf},
 			};
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static Operand ToOp(this IToken tok)
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static Operand ToOp( this IToken tok )
 			=> ToOperand[tok.Type];
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static Operand ToPreOp(this IToken tok)
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static Operand ToPreOp( this IToken tok )
 			=> ToPreOperand[tok.Type];
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static Expr Visit(this Parser.ExprContext c)
-		{
-			if (c == null)
-				return null;
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static Expr Visit( this Parser.ExprContext c )
+			=> c == null
+				? null
+				: ExprVis.Visit( c );
 
-			return exprVis.Visit(c);
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static Stmt Visit(this Parser.StmtContext c)
-		{
-			if (c == null)
-				return null;
-
-			return stmtVis.Visit(c);
-		}
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static Stmt Visit( this Parser.StmtContext c )
+			=> c == null
+				? null
+				: StmtVis.Visit( c );
 	}
 }

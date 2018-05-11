@@ -93,7 +93,7 @@ expr		:	(idTplArgs	SCOPE)+		expr	# ScopedExpr
 			|	expr
 				(	postOP
 				|	funcCall
-				|	indexCall
+				|		indexCall
 				|	memAccOP	idTplArgs)		# PostExpr
 			| <assoc=right>
 				(	preOpExpr
@@ -130,24 +130,26 @@ attrib		:	id	(	'=' idOrLit
 					)?;
 attribBlk	:	LBRACK attrib (COMMA attrib)* RBRACK;
 
-stmtDef		:	USING	nestedType (COMMA nestedType)*	SEMI				# Using
-			|	VAR		typedIdExprs SEMI									# VariableDecl
-			|	CONST	typedIdExprs SEMI									# VariableDecl
+stmtDef		:	USING	nestedType (COMMA nestedType)*	SEMI	# Using
+			|	VAR		typedIdExprs SEMI			# VariableDecl
+			|	CONST	typedIdExprs SEMI			# VariableDecl
 			;
-stmt		:	stmtDef														# StmtDecl
-			|	RETURN	expr	SEMI										# ReturnStmt
-			|	THROW	expr	SEMI										# ThrowStmt
-			|	BREAK			SEMI										# BreakStmt
-			|	FALL			SEMI										# FallStmt
-			|	IF	LPAREN expr RPAREN stmt ( ELSE stmt )?					# IfStmt
-			|	FOR	LPAREN stmt expr SEMI expr RPAREN stmt ( ELSE stmt )?	# ForStmt
-			|	expr TIMES id?		stmt									# TimesStmt
-			|	expr '..' expr		stmt									# EachStmt
-			| 	(expr	assignOP)+	expr	SEMI							# AssignmentStmt
-			|	stmtBlk														# BlockStmt
-			|	expr SEMI													# ExpressionStmt
+stmt		:	stmtDef								# StmtDecl
+			|	RETURN	expr?	SEMI				# ReturnStmt
+			|	THROW	expr	SEMI				# ThrowStmt
+			|	BREAK			SEMI				# BreakStmt
+			|	FALL			SEMI				# FallStmt
+			|	IF	LPAREN expr RPAREN stmt
+//				( ELSE IF LPAREN expr RPAREN stmt)*
+				( ELSE stmt )?						# IfStmt
+			|	FOR	LPAREN stmtDef expr SEMI expr RPAREN stmt
+				( ELSE stmt )?						# ForStmt
+			|	expr TIMES id?		stmt			# TimesStmt
+			|	expr '..' expr		stmt			# EachStmt
+			| 	(expr	assignOP)+	expr	SEMI	# AssignmentStmt
+			|	LCURLY	stmt*	RCURLY				# BlockStmt
+			|	expr SEMI							# ExpressionStmt
 			;
-stmtBlk		:	LCURLY	stmt*	RCURLY;
 
 classDef	:	(PUB | PRIV | PROT) COLON						# AccessMod
 			|	CTOR	ctorDecl								# ClassCtorDecl
@@ -164,7 +166,7 @@ classExtDef	:	FIELDS	LCURLY (typedIdExprs	SEMI)* RCURLY
 			;
 
 initList	:	COLON id funcCall (COMMA id funcCall)*;
-ctorDecl	:	funcDef initList?	stmtBlk						# CtorDef;
+ctorDecl	:	funcDef initList?	stmt;
 
 funcDecl	:	id tplParams?	funcDef (RARROW typeSpec)?	(stmt|'=>' expr SEMI);
 opDecl		:	STRING_LIT		funcDef (RARROW typeSpec)?	(stmt|'=>' expr SEMI);

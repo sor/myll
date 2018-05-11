@@ -19,38 +19,39 @@ using static Myll.MyllParser;
 
 namespace Myll
 {
+	/**
+	 * Only Visit can receive null and will return null, the
+	 * other Visit... methods do not support null parameters
+	 */
 	public class StmtVisitor : MyllParserBaseVisitor<Stmt>
 	{
-		public override Stmt Visit(IParseTree c)
-		{
-			if (c == null)
-				return null;
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public override Stmt Visit( IParseTree c )
+			=> c == null
+				? null
+				: base.Visit( c );
 
-			return base.Visit(c);
-		}
-
-		public override Stmt VisitIfStmt(IfStmtContext c)
+		public override Stmt VisitIfStmt( IfStmtContext c )
 		{
-			IfStmt ret = new IfStmt
-			{
-				ifExpr    = c.expr().Visit(),
-				thenBlock = c.stmt(0).Visit(),
-				elseBlock = c.stmt(1).Visit(),
+			Stmt ret = new IfStmt {
+				ifExpr   = c.expr().Visit(),
+				thenStmt = c.stmt( 0 ).Visit(),
+				elseStmt = c.stmt( 1 ).Visit(),
 			};
 			return ret;
 		}
 
-		public override Stmt VisitFallStmt(FallStmtContext c)
+		public override Stmt VisitFallStmt( FallStmtContext c )
 		{
 			return new FallStmt();
 		}
 
-		public override Stmt VisitStmtBlk(StmtBlkContext c)
+		public override Stmt VisitBlockStmt( BlockStmtContext c )
 		{
 			Block ret = new Block
 			{
 				//a?.b ?? c;
-				//(a ? a.b : nullptr) ? (a ? a.b : nullptr) : c; 
+				//(a ? a.b : nullptr) ? (a ? a.b : nullptr) : c;
 				statements = c?.stmt().Select(Visit).ToList()
 				             ?? new List<Stmt>()
 			};

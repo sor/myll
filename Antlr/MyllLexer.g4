@@ -28,7 +28,7 @@ fragment STR_ESC: '\\' ('\\' | '"' | 't' | 'n' | 'r');
 fragment CH_ESC:  '\\' ('\\' | '\'' | 't' | 'n' | 'r');
 
 ARROW_STAR	: '->*';
-DOT_STAR	: '.*';
+POINT_STAR	: '.*';
 PTR_TO_ARY	: '[*]';
 COMPARE		: '<=>';
 TRP_POINT	: '...';
@@ -67,10 +67,10 @@ MINUS		: '-';
 SEMI		: ';';
 COLON		: ':';
 COMMA		: ',';
-QM_DOT_STAR	: '?.*';
-QM_DOT		: '?.';
+QM_POINT_STAR: '?.*';
+QM_POINT	: '?.';
 QM_LBRACK	: '?[';
-DOT			: '.';
+POINT		: '.';
 EXCL		: '!';
 TILDE		: '~';
 DBL_PIPE	: '||';
@@ -174,7 +174,7 @@ BOOL_LIT	: 'true'|'false';
 ID			: [a-zA-Z_][a-zA-Z0-9_]*;
 HEX_LIT     : '0x' HEXDIGIT+;
 FLOAT_LIT	:	(	DIGIT* '.' DIGIT+ ( [eE] [+-]? DIGIT+ )?
-				|	DIGIT+ [eE] [+-]? DIGIT+ 
+				|	DIGIT+ [eE] [+-]? DIGIT+
 				) [lfLF]?;
 INTEGER_LIT	: DIGIT+;
 fragment DIGIT: [0-9];

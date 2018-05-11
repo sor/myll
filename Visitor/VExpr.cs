@@ -1,33 +1,25 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml;
-using Antlr4.Runtime;
-using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Tree;
 using Myll.Core;
-
-using Array = Myll.Core.Array;
-using Enum = Myll.Core.Enum;
 
 using static Myll.MyllParser;
 
 namespace Myll
 {
+	/**
+	 * Only Visit can receive null and will return null, the
+	 * other Visit... methods do not support null parameters
+	 */
 	public class ExprVisitor : MyllParserBaseVisitor<Expr>
 	{
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public override Expr Visit( IParseTree c )
-		{
-			if( c == null )
-				return null;
-
-			return base.Visit( c );
-		}
+			=> c == null
+				? null
+				: base.Visit( c );
 
 		public override Expr VisitScopedExpr( ScopedExprContext c )
 		{
@@ -41,6 +33,7 @@ namespace Myll
 
 		public new Func.Call VisitIndexCall( IndexCallContext c )
 		{
+			// TODO ? call
 			Func.Call ret = new Func.Call {
 				args = c.arg().Select( VisitArg ).ToList(),
 			};
@@ -49,6 +42,7 @@ namespace Myll
 
 		public new Func.Call VisitFuncCall( FuncCallContext c )
 		{
+			// TODO ? call
 			Func.Call ret = new Func.Call {
 				args = c.arg().Select( VisitArg ).ToList(),
 			};

@@ -4,6 +4,6 @@
 
 	public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Result>, IMyllParserVisitor<Result>
 	{
-		protected Visitor AllVis => VisitorExtensions.allVis;
+		protected Visitor AllVis => VisitorExtensions.AllVis;
 	}
 }

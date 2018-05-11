@@ -570,12 +570,6 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitExpressionStmt([NotNull] MyllParser.ExpressionStmtContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.stmtBlk"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitStmtBlk([NotNull] MyllParser.StmtBlkContext context);
-	/// <summary>
 	/// Visit a parse tree produced by the <c>AccessMod</c>
 	/// labeled alternative in <see cref="MyllParser.classDef"/>.
 	/// </summary>
@@ -623,12 +617,11 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitInitList([NotNull] MyllParser.InitListContext context);
 	/// <summary>
-	/// Visit a parse tree produced by the <c>CtorDef</c>
-	/// labeled alternative in <see cref="MyllParser.ctorDecl"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.ctorDecl"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitCtorDef([NotNull] MyllParser.CtorDefContext context);
+	Result VisitCtorDecl([NotNull] MyllParser.CtorDeclContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.funcDecl"/>.
 	/// </summary>

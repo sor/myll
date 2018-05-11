@@ -21,16 +21,36 @@ namespace Myll.Core
 		}
 	}
 
+	public class ReturnStmt : Stmt
+	{
+		public Expr expr;
+	}
+
+	public class ThrowStmt : Stmt
+	{
+		public Expr expr;
+	}
+
+	public class BreakStmt : Stmt
+	{}
+
+	public class FallStmt : Stmt
+	{}
+
 	public class IfStmt : Stmt
 	{
 		public Expr ifExpr;
-		public Stmt thenBlock;
-		public Stmt elseBlock;
+		public Stmt thenStmt;
+		public Stmt elseStmt;	// opt
 	}
 
-	public class FallStmt : Stmt
+	public class ForStmt : Stmt
 	{
-		// This is the opposite of break in a case of a switch
+		public Stmt initStmt;
+		public Expr condExpr;
+		public Expr iterExpr;
+		public Stmt loopStmt;
+		public Stmt elseStmt;	// opt
 	}
 
 	public class Block : Stmt
