@@ -169,16 +169,29 @@ NEW			: 'new';
 DELETE		: 'delete';
 THROW		: 'throw';
 
+ID			: ALPHA_ ALNUM_*;
+
 NUL			: 'null';
 BOOL_LIT	: 'true'|'false';
-ID			: [a-zA-Z_][a-zA-Z0-9_]*;
-HEX_LIT     : '0x' HEXDIGIT+;
 FLOAT_LIT	:	(	DIGIT* '.' DIGIT+ ( [eE] [+-]? DIGIT+ )?
 				|	DIGIT+ [eE] [+-]? DIGIT+
 				) [lfLF]?;
-INTEGER_LIT	: DIGIT+;
-fragment DIGIT: [0-9];
-fragment HEXDIGIT: [0-9A-Fa-f];
+HEX_LIT     : '0x' HEXDIGIT HEXDIGIT_*;
+OCT_LIT     : '0o' OCTDIGIT OCTDIGIT_*;
+BIN_LIT     : '0b' BINDIGIT BINDIGIT_*;
+INTEGER_LIT	: DIGITNZ DIGIT_*;
+
+fragment DIGITNZ	: [1-9];
+fragment DIGIT		: [0-9];
+fragment DIGIT_		: [0-9_];
+fragment HEXDIGIT	: [0-9A-Fa-f];
+fragment HEXDIGIT_	: [0-9A-Fa-f_];
+fragment OCTDIGIT	: [0-7];
+fragment OCTDIGIT_	: [0-7_];
+fragment BINDIGIT	: [0-1];
+fragment BINDIGIT_	: [0-1_];
+fragment ALPHA_		: [A-Za-z_];
+fragment ALNUM_		: [0-9A-Za-z_];
+
 NL			: ('\r'|'\n')+	-> channel(NEWLINES);
 WS			: (' '|'\t')+	-> skip;// channel(HIDDEN);
-

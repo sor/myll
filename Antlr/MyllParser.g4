@@ -31,7 +31,7 @@ memAccPtrOP	:	v=('.*' | '?.*'	| '->*'	);
 assignOP	:	v=(	'='  |	'**=' |	'*=' |	'/=' |	'%=' |	'+=' |	'-='
 				|	'<<='|  '>>=' |	'&=' |	'^=' |	'|=');
 
-lit			:	HEX_LIT | INTEGER_LIT | FLOAT_LIT | STRING_LIT | CHAR_LIT | BOOL_LIT | NUL;
+lit			:	HEX_LIT | OCT_LIT | BIN_LIT | INTEGER_LIT | FLOAT_LIT | STRING_LIT | CHAR_LIT | BOOL_LIT | NUL;
 wildId		:	AUTOINDEX | USCORE;
 id			:	ID;
 idOrLit		:	id | lit;
