@@ -39,12 +39,6 @@ namespace Myll.Core
 		DeleteAry,
 		PreOps_End,
 
-		AssignOps_Begin,
-		Assign,
-
-		// TODO: move to statements
-		AssignOps_End,
-
 		MemberAccessPtr,
 		NCMemberAccessPtr,
 		MemberPtrAccessPtr,
@@ -53,14 +47,17 @@ namespace Myll.Core
 
 		MultOps_Begin,
 		Multiply,
-		Divide,
+		EuclideanDivide,
 		Modulo,
 		BitAnd,
+		Dot,
+		Cross,
+		Divide,
 		MultOps_End,
 
 		AddOps_Begin,
-		Addition,
-		Subtraction,
+		Add,
+		Subtract,
 		BitOr,
 		BitXor,
 		AddOps_End,
@@ -94,11 +91,11 @@ namespace Myll.Core
 		Conditional,
 
 		Parens,
-		
+
 		Id,
 		WildId,
 		DiscardId,
-		
+
 		Literal,
 	}
 

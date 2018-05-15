@@ -8,7 +8,7 @@ postOP		:	v=('++' |	'--');
 preOP		:	v=('++' |	'--' |	'+'  |	'-'  |	'!'  |	'~'  | '*' | '&');
 
 powOP		:			'*''*';
-multOP		:	v=(				'*'  |	'/'  |	'%' |   '&');
+multOP		:	v=(				'*'  |	'/'  |	'%' |   '&' | '·' | '×' | '÷');
 addOP		:	v=(										'+' |   '-' |   '|' |   '^');
 shiftOP		: 	'<<' |	'>''>';
 /*
@@ -28,7 +28,8 @@ nulCoalOP	:	'??';
 memAccOP	:	v=('.'  | '?.'	| '->'	);
 memAccPtrOP	:	v=('.*' | '?.*'	| '->*'	);
 
-assignOP	:	v=(	'='  |	'**=' |	'*=' |	'/=' |	'%=' |	'+=' |	'-='
+assignOP	:	'=';
+aggrAssignOP:	v=(			'**=' |	'*=' |	'/=' |	'%=' |	'+=' |	'-='
 				|	'<<='|  '>>=' |	'&=' |	'^=' |	'|=');
 
 lit			:	HEX_LIT | OCT_LIT | BIN_LIT | INTEGER_LIT | FLOAT_LIT | STRING_LIT | CHAR_LIT | BOOL_LIT | NUL;
@@ -130,6 +131,8 @@ attrib		:	id	(	'=' idOrLit
 					)?;
 attribBlk	:	LBRACK attrib (COMMA attrib)* RBRACK;
 
+caseStmt	:	CASE expr (COMMA expr)* ':' stmt+ (FALL SEMI)?;
+
 stmtDef		:	USING	nestedType (COMMA nestedType)*	SEMI	# Using
 			|	VAR		typedIdExprs SEMI			# VariableDecl
 			|	CONST	typedIdExprs SEMI			# VariableDecl
@@ -137,28 +140,33 @@ stmtDef		:	USING	nestedType (COMMA nestedType)*	SEMI	# Using
 stmt		:	stmtDef								# StmtDecl
 			|	RETURN	expr?	SEMI				# ReturnStmt
 			|	THROW	expr	SEMI				# ThrowStmt
-			|	BREAK			SEMI				# BreakStmt
-			|	FALL			SEMI				# FallStmt
+			|	BREAK	INTEGER_LIT	SEMI			# BreakStmt
 			|	IF	LPAREN expr RPAREN stmt
-//				( ELSE IF LPAREN expr RPAREN stmt)*
-				( ELSE stmt )?						# IfStmt
-			|	FOR	LPAREN stmtDef expr SEMI expr RPAREN stmt
-				( ELSE stmt )?						# ForStmt
+					( ELSE stmt )?					# IfStmt
+			|	SWITCH LPAREN expr RPAREN	LCURLY
+				caseStmt+ 	(ELSE stmt+)?	RCURLY	# SwitchStmt
+			|	LOOP	stmt						# LoopStmt
+			|	FOR LPAREN stmtDef expr SEMI expr RPAREN stmt
+					( ELSE stmt )?					# ForStmt
+			|	WHILE LPAREN expr RPAREN stmt
+					( ELSE stmt )?					# WhileStmt
+			|	DO stmt WHILE LPAREN expr RPAREN SEMI?	# DoWhileStmt
 			|	expr TIMES id?		stmt			# TimesStmt
-			|	expr '..' expr		stmt			# EachStmt
-			| 	(expr	assignOP)+	expr	SEMI	# AssignmentStmt
+			|	expr '..' expr id?	stmt			# EachStmt
+			| 	(expr	assignOP)+		expr SEMI	# AssignmentStmt
+			| 	expr	aggrAssignOP	expr SEMI	# AssignmentStmt
 			|	LCURLY	stmt*	RCURLY				# BlockStmt
 			|	expr SEMI							# ExpressionStmt
 			;
 
-classDef	:	(PUB | PRIV | PROT) COLON						# AccessMod
-			|	CTOR	ctorDecl								# ClassCtorDecl
-			|	ALIAS 	id ASSIGN typeSpec SEMI					# Alias
-			|	STATIC	LCURLY classExtDef* RCURLY				# StaticDecl
-			|	classExtDef										# ClassExtendedDecl
+classDef	:	(PUB | PRIV | PROT) COLON			# AccessMod
+			|	CTOR	ctorDecl					# ClassCtorDecl
+			|	ALIAS 	id ASSIGN typeSpec SEMI		# Alias
+			|	STATIC	LCURLY classExtDef* RCURLY	# StaticDecl
+			|	classExtDef							# ClassExtendedDecl
 			;
 
-classExtDef	:	FIELDS	LCURLY (typedIdExprs	SEMI)* RCURLY
+classExtDef	:	FIELD	LCURLY (typedIdExprs	SEMI)* RCURLY
 			|	FIELD			typedIdExprs	SEMI
 			|	PROP			typedIdExprs	SEMI
 			|	METH			funcDecl

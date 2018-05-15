@@ -31,10 +31,13 @@ namespace Myll
 				{Parser.ARROW_STAR,	Operand.MemberPtrAccessPtr},
 			//	{Parser.DBL_STAR,	Operand.Pow},
 				{Parser.STAR,		Operand.Multiply},
-				{Parser.SLASH,		Operand.Divide},
+				{Parser.SLASH,		Operand.EuclideanDivide},
 				{Parser.MOD,		Operand.Modulo},
-				{Parser.PLUS,		Operand.Addition},
-				{Parser.MINUS,		Operand.Subtraction},
+				{Parser.DOT,		Operand.Dot},
+				{Parser.CROSS,		Operand.Cross},
+				{Parser.DIV,		Operand.Divide},
+				{Parser.PLUS,		Operand.Add},
+				{Parser.MINUS,		Operand.Subtract},
 				{Parser.AMP,		Operand.BitAnd},
 				{Parser.PIPE,		Operand.BitOr},
 				{Parser.HAT,		Operand.BitXor},
@@ -61,6 +64,26 @@ namespace Myll
 				{Parser.AMP,		Operand.AddressOf},
 			};
 
+		private static readonly Dictionary<int, Operand>
+			ToAssignOperand = new Dictionary<int, Operand>
+			{
+				{Parser.ASSIGN,		Operand.Equal},
+				{Parser.AS_POW,		Operand.Pow},
+				{Parser.AS_MUL,		Operand.Multiply},
+				{Parser.AS_DIV,		Operand.EuclideanDivide},
+				{Parser.AS_MOD,		Operand.Modulo},
+				{Parser.DOT,		Operand.Dot},
+				{Parser.CROSS,		Operand.Cross},
+			//	{Parser.AS_DIV,		Operand.Divide},
+				{Parser.AS_ADD,		Operand.Add},
+				{Parser.AS_SUB,		Operand.Subtract},
+				{Parser.AS_LSH,		Operand.LeftShift},
+				{Parser.AS_RSH,		Operand.RightShift},
+				{Parser.AS_AND,		Operand.BitAnd},
+				{Parser.AS_OR,		Operand.BitOr},
+				{Parser.AS_XOR,		Operand.BitXor},
+			};
+
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Operand ToOp( this IToken tok )
 			=> ToOperand[tok.Type];
@@ -68,6 +91,10 @@ namespace Myll
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Operand ToPreOp( this IToken tok )
 			=> ToPreOperand[tok.Type];
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static Operand ToAssignOp( this IToken tok )
+			=> ToAssignOperand[tok.Type];
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Expr Visit( this Parser.ExprContext c )
