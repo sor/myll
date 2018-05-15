@@ -31,7 +31,25 @@ namespace Myll
 				? null
 				: base.Visit( c );
 
+		public override Stmt VisitUsing( UsingContext c )
+		{
+			Stmt ret = new UsingStmt {
+				types = c.nestedType()
+					.Select( AllVis.VisitNestedType )
+					.Cast<TypespecNested>()
+					.ToList(),
+			};
+			return ret;
+		}
 
+		public override Stmt VisitVariableDecl( VariableDeclContext c )
+		{
+			Stmt ret = new VarsStmt {
+				vars = AllVis.VisitTypedIdExprs( c.typedIdExprs() ),
+			};
+			// TODO save the constness
+			return base.VisitVariableDecl( c );
+		}
 
 		public override Stmt VisitReturnStmt( ReturnStmtContext c )
 		{

@@ -25,10 +25,9 @@ namespace Myll.Core
 		public List<TypespecNested> types;
 	}
 
-	public class VarDeclStmt : Stmt
+	public class VarsStmt : Stmt
 	{
-		public List<TypespecNested> types;
-		public bool                 isConst;
+		public List<Var> vars;
 	}
 
 	public class ReturnStmt : Stmt

@@ -49,4 +49,11 @@ namespace Myll.Core
 		public Stmt                block;
 		public Typespec            retType;
 	}
+
+	public class Var : Decl
+	{
+		public Typespec type;
+		public Expr     init; // opt
+		public bool     isConst;
+	}
 }

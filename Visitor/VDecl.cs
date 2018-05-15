@@ -21,64 +21,72 @@ namespace Myll
 {
 	public partial class Visitor : MyllParserBaseVisitor<object>
 	{
-		public Enum.Entry VisitEnumEntry(IdExprContext c)
+		public Enum.Entry VisitEnumEntry( IdExprContext c )
 		{
-			Enum.Entry ret = new Enum.Entry
-			{
-				name  = VisitId(c.id()),
+			Enum.Entry ret = new Enum.Entry {
+				name  = VisitId( c.id() ),
 				value = c.expr().Visit(),
 			};
 			return ret;
 		}
 
-		public override object VisitEnumDecl(EnumDeclContext c)
+		public override object VisitEnumDecl( EnumDeclContext c )
 		{
-			// add to hierarchy stack
-			Enum ret = new Enum
-			{
-				name    = VisitId(c.id()),
-				entries = c.idExpr().Select(VisitEnumEntry).ToList(),
+			// TODO add to hierarchy stack
+			Enum ret = new Enum {
+				name    = VisitId( c.id() ),
+				entries = c.idExpr().Select( VisitEnumEntry ).ToList(),
 			};
 			return ret;
 		}
 
-		public new Func.Param VisitParam(ParamContext c)
+		public new Func.Param VisitParam( ParamContext c )
 		{
-			Func.Param ret = new Func.Param
-			{
-				name = VisitId(c.id()),
-				type = VisitTypeSpec(c.typeSpec())
+			Func.Param ret = new Func.Param {
+				name = VisitId( c.id() ),
+				type = VisitTypeSpec( c.typeSpec() )
 			};
 			return ret;
 		}
 
-		public new List<Func.Param> VisitFuncTypeDef(FuncTypeDefContext c)
+		public new List<Func.Param> VisitFuncTypeDef( FuncTypeDefContext c )
 		{
-			List<Func.Param> ret = c.param().Select(VisitParam).ToList();
+			List<Func.Param> ret = c.param().Select( VisitParam ).ToList();
 			return ret;
 		}
 
-		public override object VisitFunctionDecl(FunctionDeclContext c)
+		public override object VisitFunctionDecl( FunctionDeclContext c )
 		{
+			// TODO rework cc's
 			FuncDefContext cc = c.funcDef();
-			Func ret = new Func
-			{
-				name           = VisitId(cc.id()),
-				templateParams = VisitTplParams(cc.tplParams()),
-				paras          = VisitFuncTypeDef(cc.funcTypeDef()),
-				retType        = VisitTypeSpec(cc.typeSpec()),
+			Func ret = new Func {
+				name           = VisitId( cc.id() ),
+				templateParams = VisitTplParams( cc.tplParams() ),
+				paras          = VisitFuncTypeDef( cc.funcTypeDef() ),
+				retType        = VisitTypeSpec( cc.typeSpec() ),
 			};
 
-			if (cc.stmt() != null)
-			{
+			if( cc.stmt() != null ) {
 				ret.block = cc.stmt().Visit();
 			}
-			else if (cc.expr() != null)
-			{
-				cc.expr().Visit();
-				// TODO
-				ret.block = new Block();
+			else if( cc.expr() != null ) {
+				ret.block = new ReturnStmt {
+					expr = cc.expr().Visit(),
+				};
 			}
+			else throw new Exception( "unknown function decl body" );
+			return ret;
+		}
+
+		// list of typed and initialized vars
+		public new List<Var> VisitTypedIdExprs( TypedIdExprsContext c )
+		{
+			Typespec type = VisitTypeSpec( c.typeSpec() );
+			List<Var> ret = c.idExpr().Select( q => new Var {
+				name = q.id().GetText(),
+				type = type,
+				init = q.expr().Visit(),
+			} ).ToList();
 			return ret;
 		}
 	}

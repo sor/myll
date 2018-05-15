@@ -186,11 +186,10 @@ namespace Myll
 			return ret;
 		}
 
-		public new Typespec VisitNestedType(NestedTypeContext c)
+		public new Typespec VisitNestedType( NestedTypeContext c )
 		{
-			TypespecNested ret = new TypespecNested
-			{
-				identifiers = c.idTplArgs().Select(VisitIdTplArgs).ToList()
+			TypespecNested ret = new TypespecNested {
+				identifiers = c.idTplArgs().Select( VisitIdTplArgs ).ToList()
 			};
 			return ret;
 		}
