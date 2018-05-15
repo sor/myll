@@ -52,7 +52,7 @@ namespace Myll
 			return ret;
 		}
 
-		public new List<Func.Param> VisitFuncDef(FuncDefContext c)
+		public new List<Func.Param> VisitFuncTypeDef(FuncTypeDefContext c)
 		{
 			List<Func.Param> ret = c.param().Select(VisitParam).ToList();
 			return ret;
@@ -60,12 +60,12 @@ namespace Myll
 
 		public override object VisitFunctionDecl(FunctionDeclContext c)
 		{
-			FuncDeclContext cc = c.funcDecl();
+			FuncDefContext cc = c.funcDef();
 			Func ret = new Func
 			{
 				name           = VisitId(cc.id()),
 				templateParams = VisitTplParams(cc.tplParams()),
-				paras          = VisitFuncDef(cc.funcDef()),
+				paras          = VisitFuncTypeDef(cc.funcTypeDef()),
 				retType        = VisitTypeSpec(cc.typeSpec()),
 			};
 

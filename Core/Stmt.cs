@@ -20,6 +20,17 @@ namespace Myll.Core
 		}
 	}
 
+	public class UsingStmt : Stmt
+	{
+		public List<TypespecNested> types;
+	}
+
+	public class VarDeclStmt : Stmt
+	{
+		public List<TypespecNested> types;
+		public bool                 isConst;
+	}
+
 	public class ReturnStmt : Stmt
 	{
 		public Expr expr;	// opt
@@ -112,5 +123,10 @@ namespace Myll.Core
 	public class Block : Stmt
 	{
 		public List<Stmt> statements;
+	}
+
+	public class ExprStmt : Stmt
+	{
+		public Expr expr;
 	}
 }

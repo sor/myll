@@ -31,6 +31,8 @@ namespace Myll
 				? null
 				: base.Visit( c );
 
+
+
 		public override Stmt VisitReturnStmt( ReturnStmtContext c )
 		{
 			Stmt ret = new ReturnStmt {
@@ -168,10 +170,16 @@ namespace Myll
 		public override Stmt VisitBlockStmt( BlockStmtContext c )
 		{
 			Block ret = new Block {
-				//a?.b ?? c;
-				//(a ? a.b : nullptr) ? (a ? a.b : nullptr) : c;
 				statements = c.stmt()?.Select( Visit ).ToList()
 				             ?? new List<Stmt>()
+			};
+			return ret;
+		}
+
+		public override Stmt VisitExpressionStmt( ExpressionStmtContext c )
+		{
+			Stmt ret = new ExprStmt {
+				expr = c.expr().Visit(),
 			};
 			return ret;
 		}

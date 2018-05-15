@@ -180,7 +180,7 @@ namespace Myll
 			TypespecFunc ret = new TypespecFunc
 			{
 				templateArgs = VisitTplArgs(c.tplArgs()),
-				paras        = VisitFuncDef(c.funcDef()),
+				paras        = VisitFuncTypeDef(c.funcTypeDef()),
 				retType      = VisitTypeSpec(c.typeSpec()),
 			};
 			return ret;

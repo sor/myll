@@ -267,11 +267,11 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitParam([NotNull] MyllParser.ParamContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.funcDef"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.funcTypeDef"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitFuncDef([NotNull] MyllParser.FuncDefContext context);
+	Result VisitFuncTypeDef([NotNull] MyllParser.FuncTypeDefContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.tplArg"/>.
 	/// </summary>
@@ -604,11 +604,39 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	Result VisitExpressionStmt([NotNull] MyllParser.ExpressionStmtContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>AccessMod</c>
-	/// labeled alternative in <see cref="MyllParser.classDef"/>.
+	/// labeled alternative in <see cref="MyllParser.classExtDef"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitAccessMod([NotNull] MyllParser.AccessModContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>FieldDecl</c>
+	/// labeled alternative in <see cref="MyllParser.classExtDef"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitFieldDecl([NotNull] MyllParser.FieldDeclContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>PropDecl</c>
+	/// labeled alternative in <see cref="MyllParser.classExtDef"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitPropDecl([NotNull] MyllParser.PropDeclContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>MethDecl</c>
+	/// labeled alternative in <see cref="MyllParser.classExtDef"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitMethDecl([NotNull] MyllParser.MethDeclContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>OpDecl</c>
+	/// labeled alternative in <see cref="MyllParser.classExtDef"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitOpDecl([NotNull] MyllParser.OpDeclContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>ClassCtorDecl</c>
 	/// labeled alternative in <see cref="MyllParser.classDef"/>.
@@ -638,12 +666,6 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitClassExtendedDecl([NotNull] MyllParser.ClassExtendedDeclContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.classExtDef"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitClassExtDef([NotNull] MyllParser.ClassExtDefContext context);
-	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.initList"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
@@ -656,17 +678,17 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitCtorDecl([NotNull] MyllParser.CtorDeclContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.funcDecl"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.funcDef"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitFuncDecl([NotNull] MyllParser.FuncDeclContext context);
+	Result VisitFuncDef([NotNull] MyllParser.FuncDefContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.opDecl"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.opDef"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitOpDecl([NotNull] MyllParser.OpDeclContext context);
+	Result VisitOpDef([NotNull] MyllParser.OpDefContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>Attributes</c>
 	/// labeled alternative in <see cref="MyllParser.topLevel"/>.

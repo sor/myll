@@ -62,7 +62,7 @@ typePtr		:	typeQuals	( ptr=( AT_BANG | AT_QUEST | AT_PLUS | DBL_AMP | AMP | STAR
 idTplArgs	:	id tplArgs?;
 nestedType	:	idTplArgs (SCOPE idTplArgs)*;
 
-funcType	:	FUNC tplArgs? funcDef (RARROW typeSpec)?;
+funcType	:	FUNC tplArgs? funcTypeDef (RARROW typeSpec)?;
 
 typeSpec	:	typeQuals	( basicType | funcType | nestedType )	typePtr*;
 // --- handled
@@ -72,7 +72,7 @@ funcCall	:	ary=( QM_LPAREN | LPAREN)	(arg (COMMA arg)*)?	RPAREN;
 indexCall	:	ary=( QM_LBRACK | LBRACK)	(arg (COMMA arg)*)	RBRACK;
 
 param		:	typeSpec id?;
-funcDef		:	LPAREN (param (COMMA param)*)? RPAREN;
+funcTypeDef	:	LPAREN (param (COMMA param)*)? RPAREN;
 
 // this expr needs to be a constexpr and can be an id (from a surrounding template)
 // TODO evaluate if 'id' is really necessary/beneficial here or just let expr handle it
@@ -82,8 +82,7 @@ tplArgs		:	LT tplArg (COMMA tplArg)* GT;
 tplParams	:	LT id (COMMA id)* GT;
 
 // Tier 3
-//cast_MOD:	'c'|'s'|'d'|'r'|;
-// cast: nothing = static, ? = dynamic, ! = const & reinterpret
+//cast: nothing = static, ? = dynamic, ! = const & reinterpret
 preOpExpr	:	preOP					expr;
 castExpr	:	LPAREN typeSpec RPAREN	expr;
 sizeofExpr	:	SIZEOF					expr;
@@ -94,7 +93,7 @@ expr		:	(idTplArgs	SCOPE)+		expr	# ScopedExpr
 			|	expr
 				(	postOP
 				|	funcCall
-				|		indexCall
+				|	indexCall
 				|	memAccOP	idTplArgs)		# PostExpr
 			| <assoc=right>
 				(	preOpExpr
@@ -124,18 +123,18 @@ expr		:	(idTplArgs	SCOPE)+		expr	# ScopedExpr
 
 idExpr		:	id (ASSIGN expr)?;
 // TODO: Prop - get,set,refget
-typedIdExprs:	typeSpec idExpr (COMMA idExpr)*;
+typedIdExprs:	typeSpec idExpr (COMMA idExpr)* SEMI;
 
 attrib		:	id	(	'=' idOrLit
 					|	'(' idOrLit (COMMA idOrLit)* ')'
 					)?;
 attribBlk	:	LBRACK attrib (COMMA attrib)* RBRACK;
 
-caseStmt	:	CASE expr (COMMA expr)* ':' stmt+ (FALL SEMI)?;
+caseStmt	:	CASE expr (COMMA expr)* COLON stmt+ (FALL SEMI)?;
 
 stmtDef		:	USING	nestedType (COMMA nestedType)*	SEMI	# Using
-			|	VAR		typedIdExprs SEMI			# VariableDecl
-			|	CONST	typedIdExprs SEMI			# VariableDecl
+			|	VAR		typedIdExprs				# VariableDecl
+			|	CONST	typedIdExprs				# VariableDecl
 			;
 stmt		:	stmtDef								# StmtDecl
 			|	RETURN	expr?	SEMI				# ReturnStmt
@@ -151,33 +150,33 @@ stmt		:	stmtDef								# StmtDecl
 			|	WHILE LPAREN expr RPAREN stmt
 					( ELSE stmt )?					# WhileStmt
 			|	DO stmt WHILE LPAREN expr RPAREN SEMI?	# DoWhileStmt
-			|	expr TIMES id?		stmt			# TimesStmt
-			|	expr '..' expr id?	stmt			# EachStmt
+			|	expr TIMES			id?	stmt		# TimesStmt
+			|	expr DBL_POINT expr id?	stmt		# EachStmt
 			| 	(expr	assignOP)+		expr SEMI	# AssignmentStmt
 			| 	expr	aggrAssignOP	expr SEMI	# AssignmentStmt
 			|	LCURLY	stmt*	RCURLY				# BlockStmt
 			|	expr SEMI							# ExpressionStmt
 			;
 
-classDef	:	(PUB | PRIV | PROT) COLON			# AccessMod
-			|	CTOR	ctorDecl					# ClassCtorDecl
+classExtDef	:	v=(PUB | PRIV | PROT) COLON			# AccessMod
+			|	FIELD LCURLY typedIdExprs* RCURLY	# FieldDecl
+			|	FIELD		typedIdExprs			# FieldDecl
+			|	PROP		typedIdExprs			# PropDecl
+			|	METH		funcDef					# MethDecl
+			|	OPERATOR	opDef					# OpDecl
+			;
+classDef	:	CTOR	ctorDecl					# ClassCtorDecl
 			|	ALIAS 	id ASSIGN typeSpec SEMI		# Alias
-			|	STATIC	LCURLY classExtDef* RCURLY	# StaticDecl
+			|	STATIC	LCURLY	classExtDef* RCURLY	# StaticDecl
+			|	STATIC			classExtDef			# StaticDecl
 			|	classExtDef							# ClassExtendedDecl
 			;
 
-classExtDef	:	FIELD	LCURLY (typedIdExprs	SEMI)* RCURLY
-			|	FIELD			typedIdExprs	SEMI
-			|	PROP			typedIdExprs	SEMI
-			|	METH			funcDecl
-			|	OPERATOR		opDecl
-			;
-
 initList	:	COLON id funcCall (COMMA id funcCall)*;
-ctorDecl	:	funcDef initList?	stmt;
+ctorDecl	:	funcTypeDef initList?	stmt;
 
-funcDecl	:	id tplParams?	funcDef (RARROW typeSpec)?	(stmt|'=>' expr SEMI);
-opDecl		:	STRING_LIT		funcDef (RARROW typeSpec)?	(stmt|'=>' expr SEMI);
+funcDef		:	id tplParams?	funcTypeDef (RARROW typeSpec)?	(stmt|'=>' expr SEMI);
+opDef		:	STRING_LIT		funcTypeDef (RARROW typeSpec)?	(stmt|'=>' expr SEMI);
 
 topLevel	:	attribBlk																# Attributes
 			|	NS	id (SCOPE id)*		SEMI											# Namespace
@@ -186,7 +185,7 @@ topLevel	:	attribBlk																# Attributes
 			|	STRUCT	id tplParams?	LCURLY	classDef*	RCURLY						# StructDecl
 			|	UNION	id tplParams?	LCURLY	classDef*	RCURLY						# UnionDecl
 			|	ENUM	id				LCURLY	idExpr (COMMA idExpr)* COMMA? RCURLY	# EnumDecl
-			|	FUNC	funcDecl														# FunctionDecl
+			|	FUNC	funcDef															# FunctionDecl
 			|	stmtDef																	# restStmt
 			;
 
