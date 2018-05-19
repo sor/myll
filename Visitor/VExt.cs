@@ -10,9 +10,9 @@ namespace Myll
 {
 	public static class VisitorExtensions
 	{
-		private	static readonly ExprVisitor ExprVis = new ExprVisitor();
-		private	static readonly StmtVisitor StmtVis = new StmtVisitor();
-		public	static readonly Visitor     AllVis  = new Visitor();
+		private static readonly ExprVisitor ExprVis = new ExprVisitor();
+		private static readonly StmtVisitor StmtVis = new StmtVisitor();
+		public static readonly  Visitor     AllVis  = new Visitor();
 
 		private static readonly Dictionary<int, Operand>
 			ToOperand = new Dictionary<int, Operand>
@@ -58,7 +58,7 @@ namespace Myll
 				{Parser.DBL_MINUS,	Operand.PreDecr},
 				{Parser.PLUS,		Operand.PrePlus},
 				{Parser.MINUS,		Operand.PreMinus},
-				{Parser.EXCL,		Operand.Negation},
+				{Parser.EM,			Operand.Negation},
 				{Parser.TILDE,		Operand.Complement},
 				{Parser.STAR,		Operand.Dereference},
 				{Parser.AMP,		Operand.AddressOf},

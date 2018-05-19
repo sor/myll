@@ -15,8 +15,8 @@ namespace Myll.Core
 			}
 			sb.Length = Math.Max( sb.Length - 2, 0 );
 			return "{"
-			       + GetType().Name + " "
-			       + sb.ToString()  + "}";
+				   + GetType().Name + " "
+				   + sb.ToString()  + "}";
 		}
 	}
 
@@ -32,7 +32,7 @@ namespace Myll.Core
 
 	public class ReturnStmt : Stmt
 	{
-		public Expr expr;	// opt
+		public Expr expr; // opt
 	}
 
 	public class ThrowStmt : Stmt

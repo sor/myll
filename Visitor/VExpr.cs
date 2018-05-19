@@ -21,13 +21,9 @@ namespace Myll
 				? null
 				: base.Visit( c );
 
-		public override Expr VisitScopedExpr( ScopedExprContext c )
+		public new List<Func.Arg> VisitArgs( ArgsContext c )
 		{
-			ScopedExpr ret = new ScopedExpr {
-				op   = Operand.Scoped,
-				ids  = c.idTplArgs().Select( AllVis.VisitIdTplArgs ).ToList(),
-				expr = c.expr().Visit(),
-			};
+			List<Func.Arg> ret = c.arg().Select( VisitArg ).ToList();
 			return ret;
 		}
 
@@ -35,7 +31,7 @@ namespace Myll
 		{
 			// TODO ? call
 			Func.Call ret = new Func.Call {
-				args = c.arg().Select( VisitArg ).ToList(),
+				args = VisitArgs( c.args() ),
 			};
 			return ret;
 		}
@@ -44,7 +40,7 @@ namespace Myll
 		{
 			// TODO ? call
 			Func.Call ret = new Func.Call {
-				args = c.arg().Select( VisitArg ).ToList(),
+				args = VisitArgs( c.args() ),
 			};
 			return ret;
 		}
@@ -53,6 +49,16 @@ namespace Myll
 		{
 			Func.Arg ret = new Func.Arg {
 				name = c.id().GetText(),
+				expr = c.expr().Visit(),
+			};
+			return ret;
+		}
+
+		public override Expr VisitScopedExpr( ScopedExprContext c )
+		{
+			ScopedExpr ret = new ScopedExpr {
+				op   = Operand.Scoped,
+				ids  = c.idTplArgs().Select( AllVis.VisitIdTplArgs ).ToList(),
 				expr = c.expr().Visit(),
 			};
 			return ret;
@@ -148,10 +154,10 @@ namespace Myll
 		public override Expr VisitPreExpr( PreExprContext c )
 		{
 			IParseTree cc = c.preOpExpr()
-			                ?? c.castExpr()
-			                ?? c.sizeofExpr()
-			                ?? c.newExpr()
-			                ?? c.deleteExpr() as IParseTree;
+							?? c.castExpr()
+							?? c.sizeofExpr()
+							?? c.newExpr()
+							?? c.deleteExpr() as IParseTree;
 
 			if( cc == null )
 				throw new Exception( "unknown pre op" );

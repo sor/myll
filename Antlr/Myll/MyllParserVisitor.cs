@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-// Generated from /home/sor/myll/Antlr/MyllParser.g4 by ANTLR 4.7
+// Generated from D:/documents/myll/Antlr\MyllParser.g4 by ANTLR 4.7
 
 // Unreachable code detected
 #pragma warning disable 0162
@@ -248,6 +248,12 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitArg([NotNull] MyllParser.ArgContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.args"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitArgs([NotNull] MyllParser.ArgsContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.funcCall"/>.
 	/// </summary>

@@ -7,10 +7,9 @@ namespace Myll.Core
 	{
 		public string name;
 	}
-	
+
 	public class IdRef
 	{
 		public string name;
 	}
-
 }

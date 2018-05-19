@@ -5,6 +5,8 @@ options { tokenVocab = MyllLexer; }
 comment		:	COMMENT;
 
 postOP		:	v=('++' |	'--');
+
+// handled by ToPreOp because of colisions
 preOP		:	v=('++' |	'--' |	'+'  |	'-'  |	'!'  |	'~'  | '*' | '&');
 
 powOP		:			'*''*';
@@ -68,8 +70,9 @@ typeSpec	:	typeQuals	( basicType | funcType | nestedType )	typePtr*;
 // --- handled
 
 arg			:	(id COLON)? expr;
-funcCall	:	ary=( QM_LPAREN | LPAREN)	(arg (COMMA arg)*)?	RPAREN;
-indexCall	:	ary=( QM_LBRACK | LBRACK)	(arg (COMMA arg)*)	RBRACK;
+args		:	(arg (COMMA arg)* COMMA?);
+funcCall	:	ary=( QM_LPAREN | LPAREN )	args?	RPAREN;
+indexCall	:	ary=( QM_LBRACK | LBRACK )	args	RBRACK;
 
 param		:	typeSpec id?;
 funcTypeDef	:	LPAREN (param (COMMA param)*)? RPAREN;
@@ -84,7 +87,7 @@ tplParams	:	LT id (COMMA id)* GT;
 // Tier 3
 //cast: nothing = static, ? = dynamic, ! = const & reinterpret
 preOpExpr	:	preOP					expr;
-castExpr	:	LPAREN typeSpec RPAREN	expr;
+castExpr	:	LPAREN (QM|EM)? typeSpec RPAREN	expr;
 sizeofExpr	:	SIZEOF					expr;
 newExpr		:	NEW		typeSpec?	funcCall?;
 deleteExpr	:	DELETE	(ary='['']')?	expr;

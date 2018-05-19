@@ -114,21 +114,20 @@ namespace Myll.Core
 			OrderedMultiSet,
 		}
 
-		private readonly Dictionary<Kind, string> template = new Dictionary<Kind, string>
-		{
-			{Kind.RawPtr, "{0} * {1}"},
-			{Kind.LVRef, "{0} & {1}"},
-			{Kind.RVRef, "{0} && {1}"},
-			{Kind.Unique, "std::unique_ptr<{0}> {1}"},
-			{Kind.Shared, "std::shared_ptr<{0}> {1}"},
-			{Kind.Weak, "std::weak_ptr<{0}> {1}"},
-			{Kind.RawArray, "{0}[{2}] {1}"}, // TODO: named types must be embedded
-			{Kind.Array, "std::array<{0},{2}> {1}"},
-			{Kind.Vector, "std::vector<{0}> {1}"},
-			{Kind.Set, "std::unordered_set<{0}> {1}"},
-			{Kind.OrderedSet, "std::set<{0}> {1}"},
-			{Kind.MultiSet, "std::unordered_multiset<{0}> {1}"},
-			{Kind.OrderedMultiSet, "std::multiset<{0}> {1}"},
+		private readonly Dictionary<Kind, string> template = new Dictionary<Kind, string> {
+			{ Kind.RawPtr, "{0} * {1}" },
+			{ Kind.LVRef, "{0} & {1}" },
+			{ Kind.RVRef, "{0} && {1}" },
+			{ Kind.Unique, "std::unique_ptr<{0}> {1}" },
+			{ Kind.Shared, "std::shared_ptr<{0}> {1}" },
+			{ Kind.Weak, "std::weak_ptr<{0}> {1}" },
+			{ Kind.RawArray, "{0}[{2}] {1}" }, // TODO: named types must be embedded
+			{ Kind.Array, "std::array<{0},{2}> {1}" },
+			{ Kind.Vector, "std::vector<{0}> {1}" },
+			{ Kind.Set, "std::unordered_set<{0}> {1}" },
+			{ Kind.OrderedSet, "std::set<{0}> {1}" },
+			{ Kind.MultiSet, "std::unordered_multiset<{0}> {1}" },
+			{ Kind.OrderedMultiSet, "std::multiset<{0}> {1}" },
 		};
 
 		public Qualifier qual;

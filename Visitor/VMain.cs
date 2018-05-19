@@ -22,66 +22,64 @@ namespace Myll
 {
 	public partial class Visitor : MyllParserBaseVisitor<object>
 	{
-		public new IdentifierTpl VisitIdTplArgs(IdTplArgsContext c)
+		public new IdentifierTpl VisitIdTplArgs( IdTplArgsContext c )
 		{
-			IdentifierTpl ret = new IdentifierTpl
-			{
-				name         = VisitId(c.id()),
-				templateArgs = VisitTplArgs(c.tplArgs())
+			IdentifierTpl ret = new IdentifierTpl {
+				name         = VisitId( c.id() ),
+				templateArgs = VisitTplArgs( c.tplArgs() )
 			};
 			return ret;
 		}
 
-		public new TemplateArg VisitTplArg(TplArgContext c)
+		public new TemplateArg VisitTplArg( TplArgContext c )
 		{
 			TemplateArg ret;
-			if (c.typeSpec()  != null) ret = new TemplateArg {type = VisitTypeSpec(c.typeSpec())};
-			else if (c.id()   != null) ret = new TemplateArg {name = VisitId(c.id())};
-			else if (c.expr() != null) ret = new TemplateArg {expr = c.expr().Visit()};
-			else throw new Exception("unknown template arg kind");
+			if( c.typeSpec()  != null ) ret = new TemplateArg { type = VisitTypeSpec( c.typeSpec() ) };
+			else if( c.id()   != null ) ret = new TemplateArg { name = VisitId( c.id() ) };
+			else if( c.expr() != null ) ret = new TemplateArg { expr = c.expr().Visit() };
+			else throw new Exception( "unknown template arg kind" );
 			return ret;
 		}
 
-		public new List<TemplateArg> VisitTplArgs(TplArgsContext c)
+		public new List<TemplateArg> VisitTplArgs( TplArgsContext c )
 		{
-			List<TemplateArg> ret = c?.tplArg().Select(VisitTplArg).ToList();
+			List<TemplateArg> ret = c?.tplArg().Select( VisitTplArg ).ToList();
 			return ret;
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public new string VisitId(IdContext c)
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public new string VisitId( IdContext c )
 		{
 			return c.GetText();
 		}
 
-		public TemplateParam VisitTplParam(IdContext c)
+		public TemplateParam VisitTplParam( IdContext c )
 		{
-			TemplateParam tp = new TemplateParam
-			{
-				name = VisitId(c)
+			TemplateParam tp = new TemplateParam {
+				name = VisitId( c )
 			};
 			return tp;
 		}
-		
-		public new List<TemplateParam> VisitTplParams(TplParamsContext c)
+
+		public new List<TemplateParam> VisitTplParams( TplParamsContext c )
 		{
-			List<TemplateParam> ret = c.id().Select(VisitTplParam).ToList();
+			List<TemplateParam> ret = c.id().Select( VisitTplParam ).ToList();
 			return ret;
 		}
 
-		private void Visit(TerminalNodeImpl node)
+		private void Visit( TerminalNodeImpl node )
 		{
-			Console.WriteLine(" Visit Symbol={0}", node.Symbol.Text);
+			Console.WriteLine( " Visit Symbol={0}", node.Symbol.Text );
 		}
-		
-		public override object VisitProg(ProgContext context)
+
+		public override object VisitProg( ProgContext context )
 		{
-			Console.WriteLine("HelloVisitor VisitR");
+			Console.WriteLine( "HelloVisitor VisitR" );
 			context
 				.children
 				.OfType<TerminalNodeImpl>()
 				.ToList()
-				.ForEach(child => Visit(child));
+				.ForEach( child => Visit( child ) );
 			return null;
 		}
 	}

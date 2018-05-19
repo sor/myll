@@ -74,7 +74,7 @@ DOT			: '·';
 CROSS		: '×';
 DIV			: '÷';
 POINT		: '.';
-EXCL		: '!';
+EM			: '!';
 TILDE		: '~';
 DBL_PIPE	: '||';
 PIPE		: '|';

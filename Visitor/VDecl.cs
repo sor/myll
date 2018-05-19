@@ -30,19 +30,10 @@ namespace Myll
 			return ret;
 		}
 
-		public override object VisitEnumDecl( EnumDeclContext c )
-		{
-			// TODO add to hierarchy stack
-			Enum ret = new Enum {
-				name    = VisitId( c.id() ),
-				entries = c.idExprs()
-					.idExpr()
-					.Select( VisitEnumEntry )
-					.ToList(),
-			};
-			return ret;
-		}
+		public List<Enum.Entry> VisitEnumEntrys( IdExprsContext c )
+			=> c.idExpr().Select( VisitEnumEntry ).ToList();
 
+		#region NEW
 		public new Func.Param VisitParam( ParamContext c )
 		{
 			Func.Param ret = new Func.Param {
@@ -53,8 +44,33 @@ namespace Myll
 		}
 
 		public new List<Func.Param> VisitFuncTypeDef( FuncTypeDefContext c )
+			=> c.param().Select( VisitParam ).ToList();
+
+		// list of typed and initialized vars
+		public new List<Var> VisitTypedIdExprs( TypedIdExprsContext c )
 		{
-			List<Func.Param> ret = c.param().Select( VisitParam ).ToList();
+			Typespec type = VisitTypeSpec( c.typeSpec() );
+			List<Var> ret = c.idExprs()
+				.idExpr()
+				.Select( q => new Var {
+					name = q.id().GetText(),
+					type = type,
+					init = q.expr().Visit(),
+				} )
+				.ToList();
+			return ret;
+		}
+		#endregion
+
+		#region OVERRIDES
+		public override object VisitEnumDecl( EnumDeclContext c )
+		{
+			// TODO add to hierarchy stack
+
+			Enum ret = new Enum {
+				name    = VisitId( c.id() ),
+				entries = VisitEnumEntrys( c.idExprs() )
+			};
 			return ret;
 		}
 
@@ -83,20 +99,6 @@ namespace Myll
 		{
 			return c.funcDef().Select( VisitFuncDef ).ToList();
 		}
-
-		// list of typed and initialized vars
-		public new List<Var> VisitTypedIdExprs( TypedIdExprsContext c )
-		{
-			Typespec type = VisitTypeSpec( c.typeSpec() );
-			List<Var> ret = c.idExprs()
-				.idExpr()
-				.Select( q => new Var {
-					name = q.id().GetText(),
-					type = type,
-					init = q.expr().Visit(),
-				} )
-				.ToList();
-			return ret;
-		}
+		#endregion
 	}
 }

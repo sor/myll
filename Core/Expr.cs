@@ -39,9 +39,11 @@ namespace Myll.Core
 		DeleteAry,
 		PreOps_End,
 
+		MemberAccessPtr_Begin,
 		MemberAccessPtr,
 		NCMemberAccessPtr,
 		MemberPtrAccessPtr,
+		MemberAccessPtr_End,
 
 		Pow,
 
@@ -112,8 +114,8 @@ namespace Myll.Core
 			}
 			sb.Length = Math.Max( sb.Length - 2, 0 );
 			return "{"
-			       + GetType().Name + " "
-			       + sb.ToString()  + "}";
+				   + GetType().Name + " "
+				   + sb.ToString()  + "}";
 		}
 	}
 
@@ -124,13 +126,13 @@ namespace Myll.Core
 
 	public class BinOp : Expr
 	{
-		public Expr left { get; set; }
+		public Expr left  { get; set; }
 		public Expr right { get; set; }
 	}
 
 	public class TernOp : Expr
 	{
-		public Expr ifExpr { get; set; }
+		public Expr ifExpr   { get; set; }
 		public Expr thenExpr { get; set; }
 		public Expr elseExpr { get; set; }
 	}
