@@ -35,7 +35,10 @@ namespace Myll
 			// TODO add to hierarchy stack
 			Enum ret = new Enum {
 				name    = VisitId( c.id() ),
-				entries = c.idExpr().Select( VisitEnumEntry ).ToList(),
+				entries = c.idExprs()
+					.idExpr()
+					.Select( VisitEnumEntry )
+					.ToList(),
 			};
 			return ret;
 		}
@@ -55,38 +58,44 @@ namespace Myll
 			return ret;
 		}
 
-		public override object VisitFunctionDecl( FunctionDeclContext c )
+		public override object VisitFuncDef( FuncDefContext c )
 		{
-			// TODO rework cc's
-			FuncDefContext cc = c.funcDef();
 			Func ret = new Func {
-				name           = VisitId( cc.id() ),
-				templateParams = VisitTplParams( cc.tplParams() ),
-				paras          = VisitFuncTypeDef( cc.funcTypeDef() ),
-				retType        = VisitTypeSpec( cc.typeSpec() ),
+				name           = VisitId( c.id() ),
+				templateParams = VisitTplParams( c.tplParams() ),
+				paras          = VisitFuncTypeDef( c.funcTypeDef() ),
+				retType        = VisitTypeSpec( c.typeSpec() ),
 			};
 
-			if( cc.stmt() != null ) {
-				ret.block = cc.stmt().Visit();
+			if( c.levStmt() != null ) {
+				ret.block = c.levStmt().Visit();
 			}
-			else if( cc.expr() != null ) {
+			else if( c.expr() != null ) {
 				ret.block = new ReturnStmt {
-					expr = cc.expr().Visit(),
+					expr = c.expr().Visit(),
 				};
 			}
 			else throw new Exception( "unknown function decl body" );
 			return ret;
 		}
 
+		public override object VisitFunctionDecl( FunctionDeclContext c )
+		{
+			return c.funcDef().Select( VisitFuncDef ).ToList();
+		}
+
 		// list of typed and initialized vars
 		public new List<Var> VisitTypedIdExprs( TypedIdExprsContext c )
 		{
 			Typespec type = VisitTypeSpec( c.typeSpec() );
-			List<Var> ret = c.idExpr().Select( q => new Var {
-				name = q.id().GetText(),
-				type = type,
-				init = q.expr().Visit(),
-			} ).ToList();
+			List<Var> ret = c.idExprs()
+				.idExpr()
+				.Select( q => new Var {
+					name = q.id().GetText(),
+					type = type,
+					init = q.expr().Visit(),
+				} )
+				.ToList();
 			return ret;
 		}
 	}

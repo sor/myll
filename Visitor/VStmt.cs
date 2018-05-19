@@ -45,10 +45,13 @@ namespace Myll
 		public override Stmt VisitVariableDecl( VariableDeclContext c )
 		{
 			Stmt ret = new VarsStmt {
-				vars = AllVis.VisitTypedIdExprs( c.typedIdExprs() ),
+				vars = c.typedIdExprs()
+					.Select( AllVis.VisitTypedIdExprs )
+					.SelectMany( q => q )
+					.ToList(),
 			};
 			// TODO save the constness
-			return base.VisitVariableDecl( c );
+			return ret;
 		}
 
 		public override Stmt VisitReturnStmt( ReturnStmtContext c )
@@ -79,8 +82,8 @@ namespace Myll
 		{
 			Stmt ret = new IfStmt {
 				condExpr = c.expr().Visit(),
-				thenStmt = c.stmt( 0 ).Visit(),
-				elseStmt = c.stmt( 1 ).Visit(),
+				thenStmt = c.levStmt( 0 ).Visit(),
+				elseStmt = c.levStmt( 1 ).Visit(),
 			};
 			return ret;
 		}
@@ -89,7 +92,7 @@ namespace Myll
 		{
 			CaseStmt ret = new CaseStmt {
 				caseExprs = c.expr().Select( q => q.Visit() ).ToList(),
-				bodyStmts = c.stmt().Select( Visit ).ToList(),
+				bodyStmts = c.levStmt().Select( Visit ).ToList(),
 				autoBreak = c.FALL() != null,
 			};
 			return ret;
@@ -100,7 +103,7 @@ namespace Myll
 			Stmt ret = new SwitchStmt {
 				condExpr  = c.expr().Visit(),
 				caseStmts = c.caseStmt().Select( VisitCaseStmt ).ToList(),
-				elseStmts = c.stmt().Select( Visit ).ToList(),
+				elseStmts = c.levStmt().Select( Visit ).ToList(),
 			};
 			return ret;
 		}
@@ -108,7 +111,7 @@ namespace Myll
 		public override Stmt VisitLoopStmt( LoopStmtContext c )
 		{
 			LoopStmt ret = new LoopStmt {
-				bodyStmt = c.stmt().Visit(),
+				bodyStmt = c.levStmt().Visit(),
 			};
 			return ret;
 		}
@@ -116,11 +119,11 @@ namespace Myll
 		public override Stmt VisitForStmt( ForStmtContext c )
 		{
 			LoopStmt ret = new ForStmt {
-				initStmt = Visit( c.stmtDef() ),
+				initStmt = Visit( c.levStmtDef() ),
 				condExpr = c.expr( 0 ).Visit(),
 				iterExpr = c.expr( 1 ).Visit(),
-				bodyStmt = c.stmt( 0 ).Visit(),
-				elseStmt = c.stmt( 1 ).Visit(),
+				bodyStmt = c.levStmt( 0 ).Visit(),
+				elseStmt = c.levStmt( 1 ).Visit(),
 			};
 			return ret;
 		}
@@ -129,8 +132,8 @@ namespace Myll
 		{
 			LoopStmt ret = new WhileStmt {
 				condExpr = c.expr().Visit(),
-				bodyStmt = c.stmt( 0 ).Visit(),
-				elseStmt = c.stmt( 1 ).Visit(),
+				bodyStmt = c.levStmt( 0 ).Visit(),
+				elseStmt = c.levStmt( 1 ).Visit(),
 			};
 			return ret;
 		}
@@ -139,7 +142,7 @@ namespace Myll
 		{
 			LoopStmt ret = new DoWhileStmt {
 				condExpr = c.expr().Visit(),
-				bodyStmt = c.stmt().Visit(),
+				bodyStmt = c.levStmt().Visit(),
 			};
 			return ret;
 		}
@@ -149,7 +152,7 @@ namespace Myll
 			LoopStmt ret = new TimesStmt {
 				countExpr = c.expr().Visit(),
 				name      = c.id().GetText(),
-				bodyStmt  = c.stmt().Visit(),
+				bodyStmt  = c.levStmt().Visit(),
 			};
 			return ret;
 		}
@@ -160,35 +163,34 @@ namespace Myll
 				fromExpr = c.expr( 0 ).Visit(),
 				toExpr   = c.expr( 1 ).Visit(),
 				name     = c.id().GetText(),
-				bodyStmt = c.stmt().Visit(),
+				bodyStmt = c.levStmt().Visit(),
 			};
 			return ret;
 		}
 
-		public override Stmt VisitAssignmentStmt( AssignmentStmtContext c )
+		public override Stmt VisitAggrAssignStmt( AggrAssignStmtContext c )
 		{
-			AssignStmt ret;
-			if( c.aggrAssignOP() != null ) {
-				ret = new AggrAssignStmt {
-					op        = c.aggrAssignOP().v.ToAssignOp(),
-					leftExpr  = c.expr( 0 ).Visit(),
-					rightExpr = c.expr( 1 ).Visit(),
-				};
-			}
-			else if( c.assignOP() != null ) {
-				ret = new MultiAssignStmt {
-					op    = Operand.Equal,
-					exprs = c.expr().Select( q => q.Visit() ).ToList(),
-				};
-			}
-			else throw new Exception( "unknown assign op kind" );
+			AssignStmt ret = new AggrAssignStmt {
+				op        = c.aggrAssignOP().v.ToAssignOp(),
+				leftExpr  = c.expr( 0 ).Visit(),
+				rightExpr = c.expr( 1 ).Visit(),
+			};
+			return ret;
+		}
+
+		public override Stmt VisitMultiAssignStmt( MultiAssignStmtContext c )
+		{
+			AssignStmt ret = new MultiAssignStmt {
+				op    = Operand.Equal,
+				exprs = c.expr().Select( q => q.Visit() ).ToList(),
+			};
 			return ret;
 		}
 
 		public override Stmt VisitBlockStmt( BlockStmtContext c )
 		{
 			Block ret = new Block {
-				statements = c.stmt()?.Select( Visit ).ToList()
+				statements = c.levStmt()?.Select( Visit ).ToList()
 				             ?? new List<Stmt>()
 			};
 			return ret;

@@ -122,20 +122,25 @@ expr		:	(idTplArgs	SCOPE)+		expr	# ScopedExpr
 			;
 
 idExpr		:	id (ASSIGN expr)?;
+idExprs		:	idExpr (COMMA idExpr)* COMMA?;
+
 // TODO: Prop - get,set,refget
-typedIdExprs:	typeSpec idExpr (COMMA idExpr)* SEMI;
+typedIdExprs:	typeSpec idExprs SEMI;
 
 attrib		:	id	(	'=' idOrLit
 					|	'(' idOrLit (COMMA idOrLit)* ')'
 					)?;
-attribBlk	:	LBRACK attrib (COMMA attrib)* RBRACK;
+attribBlk	:	LBRACK	attrib (COMMA attrib)* COMMA? RBRACK;
 
-caseStmt	:	CASE expr (COMMA expr)* COLON stmt+ (FALL SEMI)?;
+caseStmt	:	CASE expr (COMMA expr)* COLON levStmt+ (FALL SEMI)?;
 
-stmtDef		:	USING	nestedType (COMMA nestedType)*	SEMI	# Using
-			|	VAR		typedIdExprs				# VariableDecl
-			|	CONST	typedIdExprs				# VariableDecl
-			;
+initList	:	COLON id funcCall (COMMA id funcCall)* COMMA?;
+ctorDef		:	funcTypeDef	initList?	(levStmt|SEMI);
+
+funcDef		:	id tplParams?	funcTypeDef (RARROW typeSpec)?	(levStmt|'=>' expr SEMI);
+opDef		:	STRING_LIT		funcTypeDef (RARROW typeSpec)?	(levStmt|'=>' expr SEMI);
+
+/*
 stmt		:	stmtDef								# StmtDecl
 			|	RETURN	expr?	SEMI				# ReturnStmt
 			|	THROW	expr	SEMI				# ThrowStmt
@@ -158,6 +163,14 @@ stmt		:	stmtDef								# StmtDecl
 			|	expr SEMI							# ExpressionStmt
 			;
 
+// in and out of class, in static, in stmt
+stmtDef		:	USING	nestedType (COMMA nestedType)*	SEMI	# Using
+			|	VAR		typedIdExprs				# VariableDecl
+			|	CONST	typedIdExprs				# VariableDecl
+			;
+
+// in class and in static
+//inClass
 classExtDef	:	v=(PUB | PRIV | PROT) COLON			# AccessMod
 			|	FIELD LCURLY typedIdExprs* RCURLY	# FieldDecl
 			|	FIELD		typedIdExprs			# FieldDecl
@@ -165,28 +178,102 @@ classExtDef	:	v=(PUB | PRIV | PROT) COLON			# AccessMod
 			|	METH		funcDef					# MethDecl
 			|	OPERATOR	opDef					# OpDecl
 			;
-classDef	:	CTOR	ctorDecl					# ClassCtorDecl
+// in class
+//inUnstaticClass
+classDef	:	CTOR	ctorDef						# CtorDecl
 			|	ALIAS 	id ASSIGN typeSpec SEMI		# Alias
 			|	STATIC	LCURLY	classExtDef* RCURLY	# StaticDecl
 			|	STATIC			classExtDef			# StaticDecl
 			|	classExtDef							# ClassExtendedDecl
+			|	nestedLevel							# ClassNested
 			;
 
-initList	:	COLON id funcCall (COMMA id funcCall)*;
-ctorDecl	:	funcTypeDef initList?	stmt;
-
-funcDef		:	id tplParams?	funcTypeDef (RARROW typeSpec)?	(stmt|'=>' expr SEMI);
-opDef		:	STRING_LIT		funcTypeDef (RARROW typeSpec)?	(stmt|'=>' expr SEMI);
-
-topLevel	:	attribBlk																# Attributes
-			|	NS	id (SCOPE id)*		SEMI											# Namespace
-			|	NS	id (SCOPE id)*		LCURLY	topLevel+	RCURLY						# Namespace
-			|	CLASS	id tplParams?	LCURLY	classDef*	RCURLY						# ClassDecl
-			|	STRUCT	id tplParams?	LCURLY	classDef*	RCURLY						# StructDecl
-			|	UNION	id tplParams?	LCURLY	classDef*	RCURLY						# UnionDecl
-			|	ENUM	id				LCURLY	idExpr (COMMA idExpr)* COMMA? RCURLY	# EnumDecl
-			|	FUNC	funcDef															# FunctionDecl
-			|	stmtDef																	# restStmt
+// in and out of class
+//inAnywhere
+nestedLevel	:	LBRACK	attrib (COMMA attrib)*	RBRACK			# Attributes
+			|	v=(CLASS|STRUCT|UNION)	id tplParams?
+				LCURLY	classDef*	RCURLY						# ClassDecl
+			|	ENUM	id	LCURLY	idExpr (COMMA idExpr)* COMMA? RCURLY	# EnumDecl
+			|	FUNC	funcDef									# FunctionDecl
+			|	stmtDef											# restStmt
+			;
+// out of class
+//inToplevel
+topLevel	:	NS	id (SCOPE id)*	SEMI						# Namespace
+			|	NS	id (SCOPE id)*	LCURLY	topLevel+	RCURLY	# Namespace
+			|	nestedLevel										# NestedDecl
 			;
 
 prog		:	topLevel+;
+*/
+
+prog		:	levTop+;
+
+// only refer to these lev*, not the in*
+levTop		:	attribBlk? ( inAnyStmt | inAnyDecl | inTop );
+levClass	:	attribBlk? ( inAnyStmt | inAnyDecl | inClass | inUnstatic );
+levStatic	:	attribBlk? ( inAnyStmt | inAnyDecl | inClass );
+levStmt		:	attribBlk? ( inAnyStmt | inStmt );
+levStmtDef	:	attribBlk? ( inAnyStmt );
+
+// ns
+inTop		:	NS	id (SCOPE id)*	SEMI					# Namespace
+			|	NS	id (SCOPE id)*	LCURLY	levTop+	RCURLY	# Namespace
+			;
+
+// attrib, using, var, const
+inAnyStmt	:	USING	nestedType (COMMA nestedType)* SEMI	# Using
+			|	VAR		LCURLY	typedIdExprs* RCURLY		# VariableDecl
+			|	VAR				typedIdExprs				# VariableDecl
+			|	CONST	LCURLY	typedIdExprs* RCURLY		# VariableDecl
+			|	CONST			typedIdExprs				# VariableDecl
+			;
+
+// class, enum, func
+inAnyDecl	:	v=(CLASS|STRUCT|UNION) id tplParams?
+						LCURLY	levClass*	RCURLY	# ClassDecl
+			|	ENUM id	LCURLY	idExprs		RCURLY	# EnumDecl
+			|	FUNC	LCURLY	funcDef*	RCURLY	# FunctionDecl
+			|	FUNC			funcDef				# FunctionDecl
+			|	OPERATOR		opDef				# OpDecl
+			;
+
+// ppp, field, prop, meth, op
+inClass		:	v=(PUB | PRIV | PROT) COLON			# AccessMod
+			|	PROP		typedIdExprs			# PropDecl
+		//	|	FIELD LCURLY typedIdExprs* RCURLY	# FieldDecl
+		//	|	FIELD		typedIdExprs			# FieldDecl
+		//	|	METH		funcDef					# MethDecl
+			;
+
+// ctor, alias, static
+inUnstatic	:	CTOR	ctorDef						# CtorDecl
+			|	DTOR	ctorDef						# CtorDecl
+			|	ALIAS 	id ASSIGN typeSpec SEMI		# Alias
+			|	STATIC	LCURLY	levStatic* RCURLY	# StaticDecl
+			|	STATIC			levStatic			# StaticDecl
+			;
+
+inStmt		:	RETURN	expr?	SEMI				# ReturnStmt
+			|	THROW	expr	SEMI				# ThrowStmt
+			|	BREAK	INTEGER_LIT	SEMI			# BreakStmt
+			|	IF	LPAREN expr RPAREN levStmt
+				(ELSE levStmt)?						# IfStmt
+			|	SWITCH LPAREN expr RPAREN	LCURLY
+				caseStmt+ 	(ELSE levStmt+)? RCURLY	# SwitchStmt
+			|	LOOP	levStmt						# LoopStmt
+			|	FOR LPAREN levStmtDef expr SEMI expr RPAREN
+				levStmt
+				(ELSE levStmt)?						# ForStmt
+			|	WHILE LPAREN expr RPAREN
+				levStmt
+				(ELSE levStmt)?						# WhileStmt
+			|	DO levStmt
+				WHILE LPAREN expr RPAREN SEMI?		# DoWhileStmt
+			|	expr TIMES			id?	levStmt		# TimesStmt
+			|	expr DBL_POINT expr id?	levStmt		# EachStmt
+			| 	(expr	assignOP)+		expr SEMI	# MultiAssignStmt
+			| 	expr	aggrAssignOP	expr SEMI	# AggrAssignStmt
+			|	LCURLY	levStmt*	RCURLY			# BlockStmt
+			|	expr SEMI							# ExpressionStmt
+			;

@@ -103,7 +103,7 @@ namespace Myll
 				: ExprVis.Visit( c );
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static Stmt Visit( this Parser.StmtContext c )
+		public static Stmt Visit( this Parser.LevStmtContext c )
 			=> c == null
 				? null
 				: StmtVis.Visit( c );
