@@ -19,8 +19,29 @@ using static Myll.MyllParser;
 
 namespace Myll
 {
-	public partial class Visitor : MyllParserBaseVisitor<object>
+	public class Symbol
 	{
+		public enum Kind
+		{
+			Namespace,
+			Type,
+			Var,
+			Func,
+		}
+
+		public string       name;
+		public Kind         kind;
+		public List<string> tpl;
+		public List<Symbol> children;
+		public List<Symbol> overlays;
+		public Decl         impl; // may be null if not loaded
+	}
+
+	public partial class Visitor
+		: MyllParserBaseVisitor<object>
+	{
+		public Stack<Decl> hierarchyStack;
+
 		public Enum.Entry VisitEnumEntry( IdExprContext c )
 		{
 			Enum.Entry ret = new Enum.Entry {
@@ -81,18 +102,22 @@ namespace Myll
 				templateParams = VisitTplParams( c.tplParams() ),
 				paras          = VisitFuncTypeDef( c.funcTypeDef() ),
 				retType        = VisitTypeSpec( c.typeSpec() ),
+				block          = c.funcBody().Visit(),
 			};
 
-			if( c.levStmt() != null ) {
-				ret.block = c.levStmt().Visit();
-			}
-			else if( c.expr() != null ) {
-				ret.block = new ReturnStmt {
-					expr = c.expr().Visit(),
-				};
-			}
-			else throw new Exception( "unknown function decl body" );
 			return ret;
+		}
+
+		public override object VisitClassDecl( ClassDeclContext c )
+		{
+			string name = c.id().GetText();
+			List<TemplateParam> tplParams = VisitTplParams( c.tplParams() );
+			switch( c.v.Type ) {
+				case CLASS: break;
+				case STRUCT: break;
+				case UNION: break;
+			}
+			return base.VisitClassDecl( c );
 		}
 
 		public override object VisitFunctionDecl( FunctionDeclContext c )

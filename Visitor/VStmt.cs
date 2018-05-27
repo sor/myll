@@ -31,13 +31,30 @@ namespace Myll
 				? null
 				: base.Visit( c );
 
+		public override Stmt VisitFuncBody( FuncBodyContext c )
+		{
+			Stmt ret;
+			if( c.levStmt() != null ) {
+				ret = c.levStmt().Visit();
+			}
+			else if( c.expr() != null ) {
+				ret = new ReturnStmt {
+					expr = c.expr().Visit(),
+				};
+			}
+			else throw new Exception( "unknown function decl body" );
+			return ret;
+		}
+
+		public override Stmt VisitEmptyStmt( EmptyStmtContext c )
+		{
+			return new EmptyStmt();
+		}
+
 		public override Stmt VisitUsing( UsingContext c )
 		{
 			Stmt ret = new UsingStmt {
-				types = c.nestedType()
-					.Select( AllVis.VisitNestedType )
-					.Cast<TypespecNested>()
-					.ToList(),
+				types = AllVis.VisitNestedTypes( c.nestedTypes() ),
 			};
 			return ret;
 		}

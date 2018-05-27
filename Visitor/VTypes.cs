@@ -12,7 +12,8 @@ using static Myll.MyllParser;
 
 namespace Myll
 {
-	public partial class Visitor : MyllParserBaseVisitor<object>
+	public partial class Visitor
+		: MyllParserBaseVisitor<object>
 	{
 		static readonly Dictionary<int, Qualifier>
 			ToQual = new Dictionary<int, Qualifier> {
@@ -101,7 +102,7 @@ namespace Myll
 			return ret;
 		}
 
-		public new Typespec VisitBasicType( BasicTypeContext c )
+		public new TypespecBase VisitBasicType( BasicTypeContext c )
 		{
 			TypespecBase ret = new TypespecBase {
 				align = -1,
@@ -168,7 +169,7 @@ namespace Myll
 			return ret;
 		}
 
-		public new Typespec VisitFuncType( FuncTypeContext c )
+		public new TypespecFunc VisitFuncType( FuncTypeContext c )
 		{
 			TypespecFunc ret = new TypespecFunc {
 				templateArgs = VisitTplArgs( c.tplArgs() ),
@@ -178,12 +179,17 @@ namespace Myll
 			return ret;
 		}
 
-		public new Typespec VisitNestedType( NestedTypeContext c )
+		public new TypespecNested VisitNestedType( NestedTypeContext c )
 		{
 			TypespecNested ret = new TypespecNested {
 				identifiers = c.idTplArgs().Select( VisitIdTplArgs ).ToList()
 			};
 			return ret;
 		}
+
+		public new List<TypespecNested> VisitNestedTypes( NestedTypesContext c )
+			=> c.nestedType()
+				.Select( VisitNestedType )
+				.ToList();
 	}
 }

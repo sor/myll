@@ -63,6 +63,7 @@ typePtr		:	typeQuals	( ptr=( AT_BANG | AT_QUEST | AT_PLUS | DBL_AMP | AMP | STAR
 
 idTplArgs	:	id tplArgs?;
 nestedType	:	idTplArgs (SCOPE idTplArgs)*;
+nestedTypes	:	nestedType (COMMA nestedType)* COMMA?;
 
 funcType	:	FUNC tplArgs? funcTypeDef (RARROW typeSpec)?;
 
@@ -124,11 +125,12 @@ expr		:	(idTplArgs	SCOPE)+		expr	# ScopedExpr
 			|	idTplArgs						# IdTplExpr
 			;
 
-idExpr		:	id (ASSIGN expr)?;
-idExprs		:	idExpr (COMMA idExpr)* COMMA?;
-
-// TODO: Prop - get,set,refget
-typedIdExprs:	typeSpec idExprs SEMI;
+idAccessor	:	id	(LCURLY accessorDef+ RCURLY)?	(ASSIGN expr)?;
+idExpr		:	id									(ASSIGN expr)?;
+idAccessors	:	idAccessor	(COMMA idAccessor)*	COMMA?;
+idExprs		:	idExpr		(COMMA idExpr)*		COMMA?;
+typedIdAcors:	typeSpec 	idAccessors	SEMI;
+typedIdExprs:	typeSpec 	idExprs		SEMI;
 
 attrib		:	id	(	'=' idOrLit
 					|	'(' idOrLit (COMMA idOrLit)* ')'
@@ -138,84 +140,19 @@ attribBlk	:	LBRACK	attrib (COMMA attrib)* COMMA? RBRACK;
 caseStmt	:	CASE expr (COMMA expr)* COLON levStmt+ (FALL SEMI)?;
 
 initList	:	COLON id funcCall (COMMA id funcCall)* COMMA?;
-ctorDef		:	funcTypeDef	initList?	(levStmt|SEMI);
+ctorDef		:	funcTypeDef	initList?	(SEMI | levStmt);
 
-funcDef		:	id tplParams?	funcTypeDef (RARROW typeSpec)?	(levStmt|'=>' expr SEMI);
-opDef		:	STRING_LIT		funcTypeDef (RARROW typeSpec)?	(levStmt|'=>' expr SEMI);
+funcBody	:	('=>' expr SEMI | levStmt);
+accessorDef	:	CONST?			v=(GET | REFGET | SET)			funcBody;
+funcDef		:	id tplParams?	funcTypeDef (RARROW typeSpec)?	funcBody;
+opDef		:	STRING_LIT		funcTypeDef (RARROW typeSpec)?	funcBody;
 
-/*
-stmt		:	stmtDef								# StmtDecl
-			|	RETURN	expr?	SEMI				# ReturnStmt
-			|	THROW	expr	SEMI				# ThrowStmt
-			|	BREAK	INTEGER_LIT	SEMI			# BreakStmt
-			|	IF	LPAREN expr RPAREN stmt
-					( ELSE stmt )?					# IfStmt
-			|	SWITCH LPAREN expr RPAREN	LCURLY
-				caseStmt+ 	(ELSE stmt+)?	RCURLY	# SwitchStmt
-			|	LOOP	stmt						# LoopStmt
-			|	FOR LPAREN stmtDef expr SEMI expr RPAREN stmt
-					( ELSE stmt )?					# ForStmt
-			|	WHILE LPAREN expr RPAREN stmt
-					( ELSE stmt )?					# WhileStmt
-			|	DO stmt WHILE LPAREN expr RPAREN SEMI?	# DoWhileStmt
-			|	expr TIMES			id?	stmt		# TimesStmt
-			|	expr DBL_POINT expr id?	stmt		# EachStmt
-			| 	(expr	assignOP)+		expr SEMI	# AssignmentStmt
-			| 	expr	aggrAssignOP	expr SEMI	# AssignmentStmt
-			|	LCURLY	stmt*	RCURLY				# BlockStmt
-			|	expr SEMI							# ExpressionStmt
-			;
-
-// in and out of class, in static, in stmt
-stmtDef		:	USING	nestedType (COMMA nestedType)*	SEMI	# Using
-			|	VAR		typedIdExprs				# VariableDecl
-			|	CONST	typedIdExprs				# VariableDecl
-			;
-
-// in class and in static
-//inClass
-classExtDef	:	v=(PUB | PRIV | PROT) COLON			# AccessMod
-			|	FIELD LCURLY typedIdExprs* RCURLY	# FieldDecl
-			|	FIELD		typedIdExprs			# FieldDecl
-			|	PROP		typedIdExprs			# PropDecl
-			|	METH		funcDef					# MethDecl
-			|	OPERATOR	opDef					# OpDecl
-			;
-// in class
-//inUnstaticClass
-classDef	:	CTOR	ctorDef						# CtorDecl
-			|	ALIAS 	id ASSIGN typeSpec SEMI		# Alias
-			|	STATIC	LCURLY	classExtDef* RCURLY	# StaticDecl
-			|	STATIC			classExtDef			# StaticDecl
-			|	classExtDef							# ClassExtendedDecl
-			|	nestedLevel							# ClassNested
-			;
-
-// in and out of class
-//inAnywhere
-nestedLevel	:	LBRACK	attrib (COMMA attrib)*	RBRACK			# Attributes
-			|	v=(CLASS|STRUCT|UNION)	id tplParams?
-				LCURLY	classDef*	RCURLY						# ClassDecl
-			|	ENUM	id	LCURLY	idExpr (COMMA idExpr)* COMMA? RCURLY	# EnumDecl
-			|	FUNC	funcDef									# FunctionDecl
-			|	stmtDef											# restStmt
-			;
-// out of class
-//inToplevel
-topLevel	:	NS	id (SCOPE id)*	SEMI						# Namespace
-			|	NS	id (SCOPE id)*	LCURLY	topLevel+	RCURLY	# Namespace
-			|	nestedLevel										# NestedDecl
-			;
-
-prog		:	topLevel+;
-*/
 
 prog		:	levTop+;
 
 // only refer to these lev*, not the in*
 levTop		:	attribBlk? ( inAnyStmt | inAnyDecl | inTop );
-levClass	:	attribBlk? ( inAnyStmt | inAnyDecl | inClass | inUnstatic );
-levStatic	:	attribBlk? ( inAnyStmt | inAnyDecl | inClass );
+levClass	:	attribBlk? ( inAnyStmt | inAnyDecl | inClass );
 levStmt		:	attribBlk? ( inAnyStmt | inStmt );
 levStmtDef	:	attribBlk? ( inAnyStmt );
 
@@ -224,53 +161,48 @@ inTop		:	NS	id (SCOPE id)*	SEMI					# Namespace
 			|	NS	id (SCOPE id)*	LCURLY	levTop+	RCURLY	# Namespace
 			;
 
-// attrib, using, var, const
-inAnyStmt	:	USING	nestedType (COMMA nestedType)* SEMI	# Using
-			|	VAR		LCURLY	typedIdExprs* RCURLY		# VariableDecl
-			|	VAR				typedIdExprs				# VariableDecl
-			|	CONST	LCURLY	typedIdExprs* RCURLY		# VariableDecl
-			|	CONST			typedIdExprs				# VariableDecl
-			;
-
 // class, enum, func
-inAnyDecl	:	v=(CLASS|STRUCT|UNION) id tplParams?
+inAnyDecl	:	v=(CLASS | STRUCT | UNION) id tplParams?
+				(COLON	nestedTypes)?
 						LCURLY	levClass*	RCURLY	# ClassDecl
 			|	ENUM id	LCURLY	idExprs		RCURLY	# EnumDecl
 			|	FUNC	LCURLY	funcDef*	RCURLY	# FunctionDecl
 			|	FUNC			funcDef				# FunctionDecl
+			|	OPERATOR LCURLY	opDef		RCURLY	# OpDecl
 			|	OPERATOR		opDef				# OpDecl
 			;
 
-// ppp, field, prop, meth, op
+// ppp, prop, ctor, alias, static
 inClass		:	v=(PUB | PRIV | PROT) COLON			# AccessMod
-			|	PROP		typedIdExprs			# PropDecl
-		//	|	FIELD LCURLY typedIdExprs* RCURLY	# FieldDecl
-		//	|	FIELD		typedIdExprs			# FieldDecl
-		//	|	METH		funcDef					# MethDecl
-			;
-
-// ctor, alias, static
-inUnstatic	:	CTOR	ctorDef						# CtorDecl
+//			|	PROP	typedIdExprs				# PropDecl
+			|	CTOR	ctorDef						# CtorDecl
 			|	DTOR	ctorDef						# CtorDecl
 			|	ALIAS 	id ASSIGN typeSpec SEMI		# Alias
-			|	STATIC	LCURLY	levStatic* RCURLY	# StaticDecl
-			|	STATIC			levStatic			# StaticDecl
+			|	STATIC	LCURLY	levClass* RCURLY	# StaticDecl
+			|	STATIC			levClass			# StaticDecl
 			;
 
-inStmt		:	RETURN	expr?	SEMI				# ReturnStmt
+// using, var, const
+inAnyStmt	:	USING	nestedTypes	SEMI				# Using
+			|	VAR		LCURLY	typedIdAcors* RCURLY	# VariableDecl
+			|	VAR				typedIdAcors			# VariableDecl
+			|	CONST	LCURLY	typedIdExprs* RCURLY	# VariableDecl
+			|	CONST			typedIdExprs			# VariableDecl
+			;
+
+inStmt		:	SEMI								# EmptyStmt
+			|	RETURN	expr?	SEMI				# ReturnStmt
 			|	THROW	expr	SEMI				# ThrowStmt
 			|	BREAK	INTEGER_LIT	SEMI			# BreakStmt
-			|	IF	LPAREN expr RPAREN levStmt
-				(ELSE levStmt)?						# IfStmt
+			|	IF	LPAREN expr RPAREN
+				levStmt	(ELSE levStmt)?				# IfStmt
 			|	SWITCH LPAREN expr RPAREN	LCURLY
 				caseStmt+ 	(ELSE levStmt+)? RCURLY	# SwitchStmt
 			|	LOOP	levStmt						# LoopStmt
 			|	FOR LPAREN levStmtDef expr SEMI expr RPAREN
-				levStmt
-				(ELSE levStmt)?						# ForStmt
+				levStmt	(ELSE levStmt)?				# ForStmt
 			|	WHILE LPAREN expr RPAREN
-				levStmt
-				(ELSE levStmt)?						# WhileStmt
+				levStmt	(ELSE levStmt)?				# WhileStmt
 			|	DO levStmt
 				WHILE LPAREN expr RPAREN SEMI?		# DoWhileStmt
 			|	expr TIMES			id?	levStmt		# TimesStmt

@@ -107,5 +107,11 @@ namespace Myll
 			=> c == null
 				? null
 				: StmtVis.Visit( c );
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static Stmt Visit( this Parser.FuncBodyContext c )
+			=> c == null
+				? null
+				: StmtVis.VisitFuncBody( c );
 	}
 }
