@@ -19,42 +19,9 @@ using static Myll.MyllParser;
 
 namespace Myll
 {
-	public class Symbol
+	public partial class ExtendedVisitor<Result>
+		: MyllParserBaseVisitor<Result>
 	{
-		public enum Kind
-		{
-			Namespace,
-			Type,
-			Var,
-			Func,
-		}
-
-		public string       name;
-		public Kind         kind;
-		public List<string> tpl;
-		public List<Symbol> children;
-		public List<Symbol> overlays;
-		public Decl         impl; // may be null if not loaded
-	}
-
-	public partial class Visitor
-		: MyllParserBaseVisitor<object>
-	{
-		public Stack<Decl> hierarchyStack;
-
-		public Enum.Entry VisitEnumEntry( IdExprContext c )
-		{
-			Enum.Entry ret = new Enum.Entry {
-				name  = VisitId( c.id() ),
-				value = c.expr().Visit(),
-			};
-			return ret;
-		}
-
-		public List<Enum.Entry> VisitEnumEntrys( IdExprsContext c )
-			=> c.idExpr().Select( VisitEnumEntry ).ToList();
-
-		#region NEW
 		public new Func.Param VisitParam( ParamContext c )
 		{
 			Func.Param ret = new Func.Param {
@@ -68,25 +35,45 @@ namespace Myll
 			=> c.param().Select( VisitParam ).ToList();
 
 		// list of typed and initialized vars
-		public new List<Var> VisitTypedIdExprs( TypedIdExprsContext c )
+		public new List<Var> VisitTypedIdAcors( TypedIdAcorsContext c )
 		{
 			Typespec type = VisitTypeSpec( c.typeSpec() );
-			List<Var> ret = c.idExprs()
-				.idExpr()
+			List<Var> ret = c.idAccessors()
+				.idAccessor()
 				.Select( q => new Var {
 					name = q.id().GetText(),
 					type = type,
 					init = q.expr().Visit(),
+					// TODO: Accessors
 				} )
 				.ToList();
 			return ret;
 		}
-		#endregion
+	}
 
-		#region OVERRIDES
+	public partial class Visitor
+		: ExtendedVisitor<object>
+	{
+		public Stack<Decl> hierarchyStack;
+
+		public Enum.Entry VisitEnumEntry( IdExprContext c )
+		{
+			Console.WriteLine( "HelloVisitor enumentry" );
+
+			Enum.Entry ret = new Enum.Entry {
+				name  = VisitId( c.id() ),
+				value = c.expr().Visit(),
+			};
+			return ret;
+		}
+
+		public List<Enum.Entry> VisitEnumEntrys( IdExprsContext c )
+			=> c.idExpr().Select( VisitEnumEntry ).ToList();
+
 		public override object VisitEnumDecl( EnumDeclContext c )
 		{
 			// TODO add to hierarchy stack
+			Console.WriteLine( "HelloVisitor enum" );
 
 			Enum ret = new Enum {
 				name    = VisitId( c.id() ),
@@ -108,22 +95,23 @@ namespace Myll
 			return ret;
 		}
 
-		public override object VisitClassDecl( ClassDeclContext c )
+		public override object VisitStructDecl( StructDeclContext c )
 		{
-			string name = c.id().GetText();
-			List<TemplateParam> tplParams = VisitTplParams( c.tplParams() );
+			string               name      = VisitId( c.id() );
+			List<TemplateParam>  tplParams = VisitTplParams( c.tplParams() );
+			List<TypespecNested> bases     = VisitNestedTypes( c.bases );
+			List<TypespecNested> reqs      = VisitNestedTypes( c.reqs );
 			switch( c.v.Type ) {
-				case CLASS: break;
 				case STRUCT: break;
-				case UNION: break;
+				case CLASS:  break;
+				case UNION:  break;
 			}
-			return base.VisitClassDecl( c );
+			return base.VisitStructDecl( c );
 		}
 
 		public override object VisitFunctionDecl( FunctionDeclContext c )
 		{
 			return c.funcDef().Select( VisitFuncDef ).ToList();
 		}
-		#endregion
 	}
 }

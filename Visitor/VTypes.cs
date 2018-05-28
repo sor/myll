@@ -12,8 +12,10 @@ using static Myll.MyllParser;
 
 namespace Myll
 {
-	public partial class Visitor
-		: MyllParserBaseVisitor<object>
+	public partial class ExtendedVisitor<Result>
+		: MyllParserBaseVisitor<Result>
+//	public partial class Visitor
+//		: MyllParserBaseVisitor<object>
 	{
 		static readonly Dictionary<int, Qualifier>
 			ToQual = new Dictionary<int, Qualifier> {

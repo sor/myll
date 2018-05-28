@@ -47,9 +47,28 @@ namespace Myll.Core
 
 	public class Var : Decl
 	{
-		public Typespec type;
-		public Expr     init; // opt
-		public bool     isConst;
+		public class Accessor
+		{
+			public enum Kind
+			{
+				Get,
+				RefGet,
+				Set,
+			}
+
+			public Kind kind;
+			public Stmt body;
+			public bool isConst;
+
+			// TODO: maybe Qualifier instead of isConst?
+		}
+
+		public Typespec       type;
+		public List<Accessor> accessor; // opt
+		public Expr           init;     // opt
+		public bool           isConst;
+
+		// TODO: maybe Qualifier instead of isConst?
 	}
 
 	// introduces a scope and has child decls

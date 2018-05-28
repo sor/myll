@@ -496,12 +496,6 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitTypedIdAcors([NotNull] MyllParser.TypedIdAcorsContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.typedIdExprs"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitTypedIdExprs([NotNull] MyllParser.TypedIdExprsContext context);
-	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.attrib"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
@@ -593,12 +587,19 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitNamespace([NotNull] MyllParser.NamespaceContext context);
 	/// <summary>
-	/// Visit a parse tree produced by the <c>ClassDecl</c>
+	/// Visit a parse tree produced by the <c>StructDecl</c>
 	/// labeled alternative in <see cref="MyllParser.inAnyDecl"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitClassDecl([NotNull] MyllParser.ClassDeclContext context);
+	Result VisitStructDecl([NotNull] MyllParser.StructDeclContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>ConceptDecl</c>
+	/// labeled alternative in <see cref="MyllParser.inAnyDecl"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitConceptDecl([NotNull] MyllParser.ConceptDeclContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>EnumDecl</c>
 	/// labeled alternative in <see cref="MyllParser.inAnyDecl"/>.

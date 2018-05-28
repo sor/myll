@@ -23,9 +23,9 @@ namespace Myll
 	 * Only Visit can receive null and will return null, the
 	 * other Visit... methods do not support null parameters
 	 */
-	public class StmtVisitor : MyllParserBaseVisitor<Stmt>
+	public class StmtVisitor
+		: ExtendedVisitor<Stmt>
 	{
-		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public override Stmt Visit( IParseTree c )
 			=> c == null
 				? null
@@ -46,15 +46,10 @@ namespace Myll
 			return ret;
 		}
 
-		public override Stmt VisitEmptyStmt( EmptyStmtContext c )
-		{
-			return new EmptyStmt();
-		}
-
 		public override Stmt VisitUsing( UsingContext c )
 		{
 			Stmt ret = new UsingStmt {
-				types = AllVis.VisitNestedTypes( c.nestedTypes() ),
+				types = VisitNestedTypes( c.nestedTypes() ),
 			};
 			return ret;
 		}
@@ -62,13 +57,18 @@ namespace Myll
 		public override Stmt VisitVariableDecl( VariableDeclContext c )
 		{
 			Stmt ret = new VarsStmt {
-				vars = c.typedIdExprs()
-					.Select( AllVis.VisitTypedIdExprs )
+				vars = c.typedIdAcors()
+					.Select( VisitTypedIdAcors )
 					.SelectMany( q => q )
 					.ToList(),
 			};
 			// TODO save the constness
 			return ret;
+		}
+
+		public override Stmt VisitEmptyStmt( EmptyStmtContext c )
+		{
+			return new EmptyStmt();
 		}
 
 		public override Stmt VisitReturnStmt( ReturnStmtContext c )

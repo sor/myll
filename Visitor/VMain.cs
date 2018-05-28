@@ -20,7 +20,8 @@ using static Myll.MyllParser;	// sadly pulls in all constants
 
 namespace Myll
 {
-	public partial class Visitor : MyllParserBaseVisitor<object>
+	public partial class ExtendedVisitor<Result>
+		: MyllParserBaseVisitor<Result>
 	{
 		public new IdentifierTpl VisitIdTplArgs( IdTplArgsContext c )
 		{
@@ -66,7 +67,11 @@ namespace Myll
 			List<TemplateParam> ret = c.id().Select( VisitTplParam ).ToList();
 			return ret;
 		}
+	}
 
+	public partial class Visitor
+		: ExtendedVisitor<object>
+	{
 		private void Visit( TerminalNodeImpl node )
 		{
 			Console.WriteLine( " Visit Symbol={0}", node.Symbol.Text );
@@ -77,7 +82,7 @@ namespace Myll
 			Console.WriteLine( "HelloVisitor VisitR" );
 			context
 				.children
-				.OfType<TerminalNodeImpl>()
+				//.OfType<TerminalNodeImpl>()
 				.ToList()
 				.ForEach( child => Visit( child ) );
 			return null;

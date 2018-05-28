@@ -130,7 +130,6 @@ idExpr		:	id									(ASSIGN expr)?;
 idAccessors	:	idAccessor	(COMMA idAccessor)*	COMMA?;
 idExprs		:	idExpr		(COMMA idExpr)*		COMMA?;
 typedIdAcors:	typeSpec 	idAccessors	SEMI;
-typedIdExprs:	typeSpec 	idExprs		SEMI;
 
 attrib		:	id	(	'=' idOrLit
 					|	'(' idOrLit (COMMA idOrLit)* ')'
@@ -143,10 +142,13 @@ initList	:	COLON id funcCall (COMMA id funcCall)* COMMA?;
 ctorDef		:	funcTypeDef	initList?	(SEMI | levStmt);
 
 funcBody	:	('=>' expr SEMI | levStmt);
-accessorDef	:	CONST?			v=(GET | REFGET | SET)			funcBody;
-funcDef		:	id tplParams?	funcTypeDef (RARROW typeSpec)?	funcBody;
-opDef		:	STRING_LIT		funcTypeDef (RARROW typeSpec)?	funcBody;
-
+accessorDef	:	CONST?		v=(GET | REFGET | SET)	funcBody;
+funcDef		:	id			tplParams?	funcTypeDef (RARROW typeSpec)?
+				(REQUIRES nestedTypes)?		// TODO
+				funcBody;
+opDef		:	STRING_LIT	tplParams?	funcTypeDef (RARROW typeSpec)?
+				(REQUIRES nestedTypes)?		// TODO
+				funcBody;
 
 prog		:	levTop+;
 
@@ -162,9 +164,13 @@ inTop		:	NS	id (SCOPE id)*	SEMI					# Namespace
 			;
 
 // class, enum, func
-inAnyDecl	:	v=(CLASS | STRUCT | UNION) id tplParams?
+inAnyDecl	:	v=(STRUCT | CLASS | UNION) id tplParams?
+				(COLON		bases=nestedTypes)?
+				(REQUIRES 	reqs=nestedTypes)?		// TODO
+						LCURLY	levClass*	RCURLY	# StructDecl
+			|	CONCEPT	id tplParams?		// TODO
 				(COLON	nestedTypes)?
-						LCURLY	levClass*	RCURLY	# ClassDecl
+            			LCURLY	levClass*	RCURLY	# ConceptDecl
 			|	ENUM id	LCURLY	idExprs		RCURLY	# EnumDecl
 			|	FUNC	LCURLY	funcDef*	RCURLY	# FunctionDecl
 			|	FUNC			funcDef				# FunctionDecl
@@ -183,11 +189,11 @@ inClass		:	v=(PUB | PRIV | PROT) COLON			# AccessMod
 			;
 
 // using, var, const
-inAnyStmt	:	USING	nestedTypes	SEMI				# Using
-			|	VAR		LCURLY	typedIdAcors* RCURLY	# VariableDecl
+inAnyStmt	:	USING			nestedTypes		SEMI	# Using
+			|	VAR		LCURLY	typedIdAcors*	RCURLY	# VariableDecl
 			|	VAR				typedIdAcors			# VariableDecl
-			|	CONST	LCURLY	typedIdExprs* RCURLY	# VariableDecl
-			|	CONST			typedIdExprs			# VariableDecl
+			|	CONST	LCURLY	typedIdAcors*	RCURLY	# VariableDecl
+			|	CONST			typedIdAcors			# VariableDecl
 			;
 
 inStmt		:	SEMI								# EmptyStmt

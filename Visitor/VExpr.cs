@@ -9,18 +9,9 @@ using static Myll.MyllParser;
 
 namespace Myll
 {
-	/**
-	 * Only Visit can receive null and will return null, the
-	 * other Visit... methods do not support null parameters
-	 */
-	public class ExprVisitor : MyllParserBaseVisitor<Expr>
+	public partial class ExtendedVisitor<Result>
+		: MyllParserBaseVisitor<Result>
 	{
-		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public override Expr Visit( IParseTree c )
-			=> c == null
-				? null
-				: base.Visit( c );
-
 		public new List<Func.Arg> VisitArgs( ArgsContext c )
 		{
 			List<Func.Arg> ret = c.arg().Select( VisitArg ).ToList();
@@ -29,7 +20,7 @@ namespace Myll
 
 		public new Func.Call VisitIndexCall( IndexCallContext c )
 		{
-			// TODO ? call
+			// TODO ?[] call
 			Func.Call ret = new Func.Call {
 				args = VisitArgs( c.args() ),
 			};
@@ -38,7 +29,7 @@ namespace Myll
 
 		public new Func.Call VisitFuncCall( FuncCallContext c )
 		{
-			// TODO ? call
+			// TODO ?() call
 			Func.Call ret = new Func.Call {
 				args = VisitArgs( c.args() ),
 			};
@@ -53,12 +44,26 @@ namespace Myll
 			};
 			return ret;
 		}
+	}
+
+	/**
+	 * Only Visit can receive null and will return null, the
+	 * other Visit... methods do not support null parameters
+	 */
+	public class ExprVisitor
+		: ExtendedVisitor<Expr>
+	{
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public override Expr Visit( IParseTree c )
+			=> c == null
+				? null
+				: base.Visit( c );
 
 		public override Expr VisitScopedExpr( ScopedExprContext c )
 		{
 			ScopedExpr ret = new ScopedExpr {
 				op   = Operand.Scoped,
-				ids  = c.idTplArgs().Select( AllVis.VisitIdTplArgs ).ToList(),
+				ids  = c.idTplArgs().Select( VisitIdTplArgs ).ToList(),
 				expr = c.expr().Visit(),
 			};
 			return ret;
@@ -90,7 +95,7 @@ namespace Myll
 			else if( c.memAccOP() != null ) {
 				IdExpr right = new IdExpr {
 					op = Operand.Id,
-					id = AllVis.VisitIdTplArgs( c.idTplArgs() ),
+					id = VisitIdTplArgs( c.idTplArgs() ),
 				};
 				ret = new BinOp {
 					op    = c.memAccOP().v.ToOp(),
@@ -117,7 +122,7 @@ namespace Myll
 		{
 			Expr ret = new CastExpr {
 				op   = Operand.StaticCast,
-				type = AllVis.VisitTypeSpec( c.typeSpec() ),
+				type = VisitTypeSpec( c.typeSpec() ),
 				expr = c.expr().Visit(),
 			};
 			return ret;
@@ -136,7 +141,7 @@ namespace Myll
 		{
 			Expr ret = new NewExpr {
 				op       = Operand.New,
-				type     = AllVis.VisitTypeSpec( c.typeSpec() ),
+				type     = VisitTypeSpec( c.typeSpec() ),
 				funcCall = VisitFuncCall( c.funcCall() ),
 			};
 			return ret;
@@ -335,7 +340,7 @@ namespace Myll
 		{
 			Expr ret = new IdExpr {
 				op = Operand.Id,
-				id = AllVis.VisitIdTplArgs( c.idTplArgs() ),
+				id = VisitIdTplArgs( c.idTplArgs() ),
 			};
 			return ret;
 		}
