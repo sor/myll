@@ -35,7 +35,7 @@ namespace Myll
 		public new TemplateArg VisitTplArg( TplArgContext c )
 		{
 			TemplateArg ret;
-			if( c.typeSpec()  != null ) ret = new TemplateArg { type = VisitTypeSpec( c.typeSpec() ) };
+			if( c.typespec()  != null ) ret = new TemplateArg { type = VisitTypespec( c.typespec() ) };
 			else if( c.id()   != null ) ret = new TemplateArg { name = VisitId( c.id() ) };
 			else if( c.expr() != null ) ret = new TemplateArg { expr = c.expr().Visit() };
 			else throw new Exception( "unknown template arg kind" );

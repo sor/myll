@@ -26,7 +26,7 @@ namespace Myll
 		{
 			Func.Param ret = new Func.Param {
 				name = VisitId( c.id() ),
-				type = VisitTypeSpec( c.typeSpec() )
+				type = VisitTypespec( c.typespec() )
 			};
 			return ret;
 		}
@@ -37,7 +37,7 @@ namespace Myll
 		// list of typed and initialized vars
 		public new List<Var> VisitTypedIdAcors( TypedIdAcorsContext c )
 		{
-			Typespec type = VisitTypeSpec( c.typeSpec() );
+			Typespec type = VisitTypespec( c.typespec() );
 			List<Var> ret = c.idAccessors()
 				.idAccessor()
 				.Select( q => new Var {
@@ -88,7 +88,7 @@ namespace Myll
 				name           = VisitId( c.id() ),
 				templateParams = VisitTplParams( c.tplParams() ),
 				paras          = VisitFuncTypeDef( c.funcTypeDef() ),
-				retType        = VisitTypeSpec( c.typeSpec() ),
+				retType        = VisitTypespec( c.typespec() ),
 				block          = c.funcBody().Visit(),
 			};
 

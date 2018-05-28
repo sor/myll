@@ -64,7 +64,7 @@ namespace Myll
 				{ MyllParser.U8, 1 },
 			};
 
-		public new Typespec VisitTypeSpec( TypeSpecContext c )
+		public new Typespec VisitTypespec( TypespecContext c )
 		{
 			if( c == null )
 				return null;
@@ -176,7 +176,7 @@ namespace Myll
 			TypespecFunc ret = new TypespecFunc {
 				templateArgs = VisitTplArgs( c.tplArgs() ),
 				paras        = VisitFuncTypeDef( c.funcTypeDef() ),
-				retType      = VisitTypeSpec( c.typeSpec() ),
+				retType      = VisitTypespec( c.typespec() ),
 			};
 			return ret;
 		}

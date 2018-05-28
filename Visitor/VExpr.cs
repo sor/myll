@@ -122,7 +122,7 @@ namespace Myll
 		{
 			Expr ret = new CastExpr {
 				op   = Operand.StaticCast,
-				type = VisitTypeSpec( c.typeSpec() ),
+				type = VisitTypespec( c.typespec() ),
 				expr = c.expr().Visit(),
 			};
 			return ret;
@@ -141,7 +141,7 @@ namespace Myll
 		{
 			Expr ret = new NewExpr {
 				op       = Operand.New,
-				type     = VisitTypeSpec( c.typeSpec() ),
+				type     = VisitTypespec( c.typespec() ),
 				funcCall = VisitFuncCall( c.funcCall() ),
 			};
 			return ret;

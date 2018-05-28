@@ -47,13 +47,6 @@ binaryType	:	v=( BYTE | B64 | B32 | B16 | B8 );
 signedIntType:	v=( INT  | ISIZE | I64 | I32 | I16 | I8 );
 unsignIntType:  v=( UINT | USIZE | U64 | U32 | U16 | U8 );
 
-typespecBasic:	specialType
-			|	charType
-			|	floatingType
-			|	binaryType
-			|	signedIntType
-			|	unsignIntType;
-
 typeQual	:	qual=( CONST | MUTABLE | VOLATILE | STABLE );
 typeQuals	:	typeQual*;
 
@@ -63,12 +56,21 @@ typePtr		:	typeQuals	( ptr=( AT_BANG | AT_QUEST | AT_PLUS | DBL_AMP | AMP | STAR
 
 idTplArgs	:	id tplArgs?;
 
+typespec		:	typeQuals	( typespecBasic | typespecFunc | typespecNested )	typePtr*;
+
+typespecBasic	:	specialType
+				|	charType
+				|	floatingType
+				|	binaryType
+				|	signedIntType
+				|	unsignIntType
+				;
+
+typespecFunc	:	FUNC tplArgs? funcTypeDef (RARROW typespec)?;
+
 typespecNested	:	idTplArgs (SCOPE idTplArgs)*;
 typespecsNested	:	typespecNested (COMMA typespecNested)* COMMA?;
 
-typespecFunc	:	FUNC tplArgs? funcTypeDef (RARROW typeSpec)?;
-
-typeSpec	:	typeQuals	( typespecBasic | typespecFunc | typespecNested )	typePtr*;
 // --- handled
 
 arg			:	(id COLON)? expr;
@@ -76,12 +78,12 @@ args		:	(arg (COMMA arg)* COMMA?);
 funcCall	:	ary=( QM_LPAREN | LPAREN )	args?	RPAREN;
 indexCall	:	ary=( QM_LBRACK | LBRACK )	args	RBRACK;
 
-param		:	typeSpec id?;
+param		:	typespec id?;
 funcTypeDef	:	LPAREN (param (COMMA param)*)? RPAREN;
 
 // this expr needs to be a constexpr and can be an id (from a surrounding template)
 // TODO evaluate if 'id' is really necessary/beneficial here or just let expr handle it
-tplArg		:	typeSpec | id | expr; //INTEGER_LIT | id;
+tplArg		:	typespec | id | expr; //INTEGER_LIT | id;
 tplArgs		:	LT tplArg (COMMA tplArg)* GT;
 
 tplParams	:	LT id (COMMA id)* GT;
@@ -89,9 +91,9 @@ tplParams	:	LT id (COMMA id)* GT;
 // Tier 3
 //cast: nothing = static, ? = dynamic, ! = const & reinterpret
 preOpExpr	:	preOP					expr;
-castExpr	:	LPAREN (QM|EM)? typeSpec RPAREN	expr;
+castExpr	:	LPAREN (QM|EM)? typespec RPAREN	expr;
 sizeofExpr	:	SIZEOF					expr;
-newExpr		:	NEW		typeSpec?	funcCall?;
+newExpr		:	NEW		typespec?	funcCall?;
 deleteExpr	:	DELETE	(ary='['']')?	expr;
 
 expr		:	(idTplArgs	SCOPE)+		expr	# ScopedExpr
@@ -130,7 +132,7 @@ idAccessor	:	id	(LCURLY accessorDef+ RCURLY)?	(ASSIGN expr)?;
 idExpr		:	id									(ASSIGN expr)?;
 idAccessors	:	idAccessor	(COMMA idAccessor)*	COMMA?;
 idExprs		:	idExpr		(COMMA idExpr)*		COMMA?;
-typedIdAcors:	typeSpec 	idAccessors	SEMI;
+typedIdAcors:	typespec 	idAccessors	SEMI;
 
 attrib		:	id	(	'=' idOrLit
 					|	'(' idOrLit (COMMA idOrLit)* ')'
@@ -144,10 +146,10 @@ ctorDef		:	funcTypeDef	initList?	(SEMI | levStmt);
 
 funcBody	:	('=>' expr SEMI | levStmt);
 accessorDef	:	CONST?		v=(GET | REFGET | SET)	funcBody;
-funcDef		:	id			tplParams?	funcTypeDef (RARROW typeSpec)?
+funcDef		:	id			tplParams?	funcTypeDef (RARROW typespec)?
 				(REQUIRES typespecsNested)?		// TODO
 				funcBody;
-opDef		:	STRING_LIT	tplParams?	funcTypeDef (RARROW typeSpec)?
+opDef		:	STRING_LIT	tplParams?	funcTypeDef (RARROW typespec)?
 				(REQUIRES typespecsNested)?		// TODO
 				funcBody;
 
@@ -184,7 +186,7 @@ inClass		:	v=(PUB | PRIV | PROT) COLON			# AccessMod
 //			|	PROP	typedIdExprs				# PropDecl
 			|	CTOR	ctorDef						# CtorDecl
 			|	DTOR	ctorDef						# CtorDecl
-			|	ALIAS 	id ASSIGN typeSpec SEMI		# Alias
+			|	ALIAS 	id ASSIGN typespec SEMI		# Alias
 			|	STATIC	LCURLY	levClass* RCURLY	# StaticDecl
 			|	STATIC			levClass			# StaticDecl
 			;
