@@ -195,11 +195,11 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitUnsignIntType([NotNull] MyllParser.UnsignIntTypeContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.basicType"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.typespecBasic"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitBasicType([NotNull] MyllParser.BasicTypeContext context);
+	Result VisitTypespecBasic([NotNull] MyllParser.TypespecBasicContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.typeQual"/>.
 	/// </summary>
@@ -225,23 +225,23 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitIdTplArgs([NotNull] MyllParser.IdTplArgsContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.nestedType"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.typespecNested"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitNestedType([NotNull] MyllParser.NestedTypeContext context);
+	Result VisitTypespecNested([NotNull] MyllParser.TypespecNestedContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.nestedTypes"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.typespecsNested"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitNestedTypes([NotNull] MyllParser.NestedTypesContext context);
+	Result VisitTypespecsNested([NotNull] MyllParser.TypespecsNestedContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.funcType"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.typespecFunc"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitFuncType([NotNull] MyllParser.FuncTypeContext context);
+	Result VisitTypespecFunc([NotNull] MyllParser.TypespecFuncContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.typeSpec"/>.
 	/// </summary>

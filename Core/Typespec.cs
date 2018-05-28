@@ -23,7 +23,7 @@ namespace Myll.Core
 		// Type resolvedType;
 	}
 
-	public class TypespecBase : Typespec
+	public class TypespecBasic : Typespec
 	{
 		public enum Kind
 		{
@@ -68,7 +68,7 @@ namespace Myll.Core
 		public Typespec type;
 	}*/
 
-	// nestedType
+	// was nestedType
 	public class TypespecNested : Typespec
 	{
 		public List<IdentifierTpl> identifiers;

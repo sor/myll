@@ -99,8 +99,8 @@ namespace Myll
 		{
 			string               name      = VisitId( c.id() );
 			List<TemplateParam>  tplParams = VisitTplParams( c.tplParams() );
-			List<TypespecNested> bases     = VisitNestedTypes( c.bases );
-			List<TypespecNested> reqs      = VisitNestedTypes( c.reqs );
+			List<TypespecNested> bases     = VisitTypespecsNested( c.bases );
+			List<TypespecNested> reqs      = VisitTypespecsNested( c.reqs );
 			switch( c.v.Type ) {
 				case STRUCT: break;
 				case CLASS:  break;

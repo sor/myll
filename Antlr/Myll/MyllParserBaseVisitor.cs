@@ -305,7 +305,7 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	/// <return>The visitor result.</return>
 	public virtual Result VisitUnsignIntType([NotNull] MyllParser.UnsignIntTypeContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.basicType"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.typespecBasic"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -313,7 +313,7 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitBasicType([NotNull] MyllParser.BasicTypeContext context) { return VisitChildren(context); }
+	public virtual Result VisitTypespecBasic([NotNull] MyllParser.TypespecBasicContext context) { return VisitChildren(context); }
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.typeQual"/>.
 	/// <para>
@@ -355,7 +355,7 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	/// <return>The visitor result.</return>
 	public virtual Result VisitIdTplArgs([NotNull] MyllParser.IdTplArgsContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.nestedType"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.typespecNested"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -363,9 +363,9 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitNestedType([NotNull] MyllParser.NestedTypeContext context) { return VisitChildren(context); }
+	public virtual Result VisitTypespecNested([NotNull] MyllParser.TypespecNestedContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.nestedTypes"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.typespecsNested"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -373,9 +373,9 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitNestedTypes([NotNull] MyllParser.NestedTypesContext context) { return VisitChildren(context); }
+	public virtual Result VisitTypespecsNested([NotNull] MyllParser.TypespecsNestedContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.funcType"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.typespecFunc"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -383,7 +383,7 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitFuncType([NotNull] MyllParser.FuncTypeContext context) { return VisitChildren(context); }
+	public virtual Result VisitTypespecFunc([NotNull] MyllParser.TypespecFuncContext context) { return VisitChildren(context); }
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.typeSpec"/>.
 	/// <para>

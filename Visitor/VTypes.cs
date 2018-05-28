@@ -70,9 +70,9 @@ namespace Myll
 				return null;
 
 			Typespec ret;
-			if( c.basicType()       != null ) ret = VisitBasicType( c.basicType() );
-			else if( c.funcType()   != null ) ret = VisitFuncType( c.funcType() );
-			else if( c.nestedType() != null ) ret = VisitNestedType( c.nestedType() );
+			if( c.typespecBasic()       != null ) ret = VisitTypespecBasic( c.typespecBasic() );
+			else if( c.typespecFunc()   != null ) ret = VisitTypespecFunc( c.typespecFunc() );
+			else if( c.typespecNested() != null ) ret = VisitTypespecNested( c.typespecNested() );
 			else throw new Exception( "unknown typespec" );
 			ret.qual = VisitTypeQuals( c.typeQuals() );
 			ret.ptrs = c.typePtr().Select( VisitTypePtr ).ToList();
@@ -104,9 +104,9 @@ namespace Myll
 			return ret;
 		}
 
-		public new TypespecBase VisitBasicType( BasicTypeContext c )
+		public new TypespecBasic VisitTypespecBasic( TypespecBasicContext c )
 		{
-			TypespecBase ret = new TypespecBase {
+			TypespecBasic ret = new TypespecBasic {
 				align = -1,
 				size  = -1
 			};
@@ -116,14 +116,14 @@ namespace Myll
 					var t = c.specialType().v.Type;
 					switch( t ) {
 						case MyllParser.AUTO:
-							ret.kind = TypespecBase.Kind.Auto;
+							ret.kind = TypespecBasic.Kind.Auto;
 							break;
 						case MyllParser.VOID:
-							ret.kind = TypespecBase.Kind.Void;
+							ret.kind = TypespecBasic.Kind.Void;
 							ret.size = -2;
 							break;
 						case MyllParser.BOOL:
-							ret.kind = TypespecBase.Kind.Bool;
+							ret.kind = TypespecBasic.Kind.Bool;
 							ret.size = 1;
 							break;
 						default: throw new Exception( "unknown typespec" );
@@ -133,35 +133,35 @@ namespace Myll
 				case RULE_charType: {
 					var tc = c.charType();
 					if( tc.STRING() != null ) {
-						ret.kind = TypespecBase.Kind.Char;
+						ret.kind = TypespecBasic.Kind.Char;
 						ret.size = (tc.CHAR() != null) ? 1 : 4;
 					}
 					else {
-						ret.kind = TypespecBase.Kind.String;
+						ret.kind = TypespecBasic.Kind.String;
 					}
 					break;
 				}
 				case RULE_floatingType: {
 					var t = c.floatingType().v.Type;
-					ret.kind = TypespecBase.Kind.Float;
+					ret.kind = TypespecBasic.Kind.Float;
 					ret.size = ToSize[t];
 					break;
 				}
 				case RULE_binaryType: {
 					var t = c.binaryType().v.Type;
-					ret.kind = TypespecBase.Kind.Binary;
+					ret.kind = TypespecBasic.Kind.Binary;
 					ret.size = ToSize[t];
 					break;
 				}
 				case RULE_signedIntType: {
 					var t = c.signedIntType().v.Type;
-					ret.kind = TypespecBase.Kind.Integer;
+					ret.kind = TypespecBasic.Kind.Integer;
 					ret.size = ToSize[t];
 					break;
 				}
 				case RULE_unsignIntType: {
 					var t = c.unsignIntType().v.Type;
-					ret.kind = TypespecBase.Kind.Unsigned;
+					ret.kind = TypespecBasic.Kind.Unsigned;
 					ret.size = ToSize[t];
 					break;
 				}
@@ -171,7 +171,7 @@ namespace Myll
 			return ret;
 		}
 
-		public new TypespecFunc VisitFuncType( FuncTypeContext c )
+		public new TypespecFunc VisitTypespecFunc( TypespecFuncContext c )
 		{
 			TypespecFunc ret = new TypespecFunc {
 				templateArgs = VisitTplArgs( c.tplArgs() ),
@@ -181,7 +181,7 @@ namespace Myll
 			return ret;
 		}
 
-		public new TypespecNested VisitNestedType( NestedTypeContext c )
+		public new TypespecNested VisitTypespecNested( TypespecNestedContext c )
 		{
 			TypespecNested ret = new TypespecNested {
 				identifiers = c.idTplArgs().Select( VisitIdTplArgs ).ToList()
@@ -189,9 +189,9 @@ namespace Myll
 			return ret;
 		}
 
-		public new List<TypespecNested> VisitNestedTypes( NestedTypesContext c )
-			=> c.nestedType()
-				.Select( VisitNestedType )
+		public new List<TypespecNested> VisitTypespecsNested( TypespecsNestedContext c )
+			=> c.typespecNested()
+				.Select( VisitTypespecNested )
 				.ToList();
 	}
 }

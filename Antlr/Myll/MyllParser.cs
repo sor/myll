@@ -66,32 +66,32 @@ public partial class MyllParser : Parser {
 		RULE_memAccPtrOP = 14, RULE_assignOP = 15, RULE_aggrAssignOP = 16, RULE_lit = 17, 
 		RULE_wildId = 18, RULE_id = 19, RULE_idOrLit = 20, RULE_specialType = 21, 
 		RULE_charType = 22, RULE_floatingType = 23, RULE_binaryType = 24, RULE_signedIntType = 25, 
-		RULE_unsignIntType = 26, RULE_basicType = 27, RULE_typeQual = 28, RULE_typeQuals = 29, 
-		RULE_typePtr = 30, RULE_idTplArgs = 31, RULE_nestedType = 32, RULE_nestedTypes = 33, 
-		RULE_funcType = 34, RULE_typeSpec = 35, RULE_arg = 36, RULE_args = 37, 
-		RULE_funcCall = 38, RULE_indexCall = 39, RULE_param = 40, RULE_funcTypeDef = 41, 
-		RULE_tplArg = 42, RULE_tplArgs = 43, RULE_tplParams = 44, RULE_preOpExpr = 45, 
-		RULE_castExpr = 46, RULE_sizeofExpr = 47, RULE_newExpr = 48, RULE_deleteExpr = 49, 
-		RULE_expr = 50, RULE_idAccessor = 51, RULE_idExpr = 52, RULE_idAccessors = 53, 
-		RULE_idExprs = 54, RULE_typedIdAcors = 55, RULE_attrib = 56, RULE_attribBlk = 57, 
-		RULE_caseStmt = 58, RULE_initList = 59, RULE_ctorDef = 60, RULE_funcBody = 61, 
-		RULE_accessorDef = 62, RULE_funcDef = 63, RULE_opDef = 64, RULE_prog = 65, 
-		RULE_levTop = 66, RULE_levClass = 67, RULE_levStmt = 68, RULE_levStmtDef = 69, 
-		RULE_inTop = 70, RULE_inAnyDecl = 71, RULE_inClass = 72, RULE_inAnyStmt = 73, 
-		RULE_inStmt = 74;
+		RULE_unsignIntType = 26, RULE_typespecBasic = 27, RULE_typeQual = 28, 
+		RULE_typeQuals = 29, RULE_typePtr = 30, RULE_idTplArgs = 31, RULE_typespecNested = 32, 
+		RULE_typespecsNested = 33, RULE_typespecFunc = 34, RULE_typeSpec = 35, 
+		RULE_arg = 36, RULE_args = 37, RULE_funcCall = 38, RULE_indexCall = 39, 
+		RULE_param = 40, RULE_funcTypeDef = 41, RULE_tplArg = 42, RULE_tplArgs = 43, 
+		RULE_tplParams = 44, RULE_preOpExpr = 45, RULE_castExpr = 46, RULE_sizeofExpr = 47, 
+		RULE_newExpr = 48, RULE_deleteExpr = 49, RULE_expr = 50, RULE_idAccessor = 51, 
+		RULE_idExpr = 52, RULE_idAccessors = 53, RULE_idExprs = 54, RULE_typedIdAcors = 55, 
+		RULE_attrib = 56, RULE_attribBlk = 57, RULE_caseStmt = 58, RULE_initList = 59, 
+		RULE_ctorDef = 60, RULE_funcBody = 61, RULE_accessorDef = 62, RULE_funcDef = 63, 
+		RULE_opDef = 64, RULE_prog = 65, RULE_levTop = 66, RULE_levClass = 67, 
+		RULE_levStmt = 68, RULE_levStmtDef = 69, RULE_inTop = 70, RULE_inAnyDecl = 71, 
+		RULE_inClass = 72, RULE_inAnyStmt = 73, RULE_inStmt = 74;
 	public static readonly string[] ruleNames = {
 		"comment", "postOP", "preOP", "powOP", "multOP", "addOP", "shiftOP", "cmpOp", 
 		"orderOP", "equalOP", "andOP", "orOP", "nulCoalOP", "memAccOP", "memAccPtrOP", 
 		"assignOP", "aggrAssignOP", "lit", "wildId", "id", "idOrLit", "specialType", 
 		"charType", "floatingType", "binaryType", "signedIntType", "unsignIntType", 
-		"basicType", "typeQual", "typeQuals", "typePtr", "idTplArgs", "nestedType", 
-		"nestedTypes", "funcType", "typeSpec", "arg", "args", "funcCall", "indexCall", 
-		"param", "funcTypeDef", "tplArg", "tplArgs", "tplParams", "preOpExpr", 
-		"castExpr", "sizeofExpr", "newExpr", "deleteExpr", "expr", "idAccessor", 
-		"idExpr", "idAccessors", "idExprs", "typedIdAcors", "attrib", "attribBlk", 
-		"caseStmt", "initList", "ctorDef", "funcBody", "accessorDef", "funcDef", 
-		"opDef", "prog", "levTop", "levClass", "levStmt", "levStmtDef", "inTop", 
-		"inAnyDecl", "inClass", "inAnyStmt", "inStmt"
+		"typespecBasic", "typeQual", "typeQuals", "typePtr", "idTplArgs", "typespecNested", 
+		"typespecsNested", "typespecFunc", "typeSpec", "arg", "args", "funcCall", 
+		"indexCall", "param", "funcTypeDef", "tplArg", "tplArgs", "tplParams", 
+		"preOpExpr", "castExpr", "sizeofExpr", "newExpr", "deleteExpr", "expr", 
+		"idAccessor", "idExpr", "idAccessors", "idExprs", "typedIdAcors", "attrib", 
+		"attribBlk", "caseStmt", "initList", "ctorDef", "funcBody", "accessorDef", 
+		"funcDef", "opDef", "prog", "levTop", "levClass", "levStmt", "levStmtDef", 
+		"inTop", "inAnyDecl", "inClass", "inAnyStmt", "inStmt"
 	};
 
 	private static readonly string[] _LiteralNames = {
@@ -1354,7 +1354,7 @@ public partial class MyllParser : Parser {
 		return _localctx;
 	}
 
-	public partial class BasicTypeContext : ParserRuleContext {
+	public partial class TypespecBasicContext : ParserRuleContext {
 		public SpecialTypeContext specialType() {
 			return GetRuleContext<SpecialTypeContext>(0);
 		}
@@ -1373,22 +1373,22 @@ public partial class MyllParser : Parser {
 		public UnsignIntTypeContext unsignIntType() {
 			return GetRuleContext<UnsignIntTypeContext>(0);
 		}
-		public BasicTypeContext(ParserRuleContext parent, int invokingState)
+		public TypespecBasicContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
 		}
-		public override int RuleIndex { get { return RULE_basicType; } }
+		public override int RuleIndex { get { return RULE_typespecBasic; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
 			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
-			if (typedVisitor != null) return typedVisitor.VisitBasicType(this);
+			if (typedVisitor != null) return typedVisitor.VisitTypespecBasic(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 
 	[RuleVersion(0)]
-	public BasicTypeContext basicType() {
-		BasicTypeContext _localctx = new BasicTypeContext(Context, State);
-		EnterRule(_localctx, 54, RULE_basicType);
+	public TypespecBasicContext typespecBasic() {
+		TypespecBasicContext _localctx = new TypespecBasicContext(Context, State);
+		EnterRule(_localctx, 54, RULE_typespecBasic);
 		try {
 			State = 216;
 			ErrorHandler.Sync(this);
@@ -1721,7 +1721,7 @@ public partial class MyllParser : Parser {
 		return _localctx;
 	}
 
-	public partial class NestedTypeContext : ParserRuleContext {
+	public partial class TypespecNestedContext : ParserRuleContext {
 		public IdTplArgsContext[] idTplArgs() {
 			return GetRuleContexts<IdTplArgsContext>();
 		}
@@ -1732,22 +1732,22 @@ public partial class MyllParser : Parser {
 		public ITerminalNode SCOPE(int i) {
 			return GetToken(MyllParser.SCOPE, i);
 		}
-		public NestedTypeContext(ParserRuleContext parent, int invokingState)
+		public TypespecNestedContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
 		}
-		public override int RuleIndex { get { return RULE_nestedType; } }
+		public override int RuleIndex { get { return RULE_typespecNested; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
 			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
-			if (typedVisitor != null) return typedVisitor.VisitNestedType(this);
+			if (typedVisitor != null) return typedVisitor.VisitTypespecNested(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 
 	[RuleVersion(0)]
-	public NestedTypeContext nestedType() {
-		NestedTypeContext _localctx = new NestedTypeContext(Context, State);
-		EnterRule(_localctx, 64, RULE_nestedType);
+	public TypespecNestedContext typespecNested() {
+		TypespecNestedContext _localctx = new TypespecNestedContext(Context, State);
+		EnterRule(_localctx, 64, RULE_typespecNested);
 		try {
 			int _alt;
 			EnterOuterAlt(_localctx, 1);
@@ -1782,39 +1782,39 @@ public partial class MyllParser : Parser {
 		return _localctx;
 	}
 
-	public partial class NestedTypesContext : ParserRuleContext {
-		public NestedTypeContext[] nestedType() {
-			return GetRuleContexts<NestedTypeContext>();
+	public partial class TypespecsNestedContext : ParserRuleContext {
+		public TypespecNestedContext[] typespecNested() {
+			return GetRuleContexts<TypespecNestedContext>();
 		}
-		public NestedTypeContext nestedType(int i) {
-			return GetRuleContext<NestedTypeContext>(i);
+		public TypespecNestedContext typespecNested(int i) {
+			return GetRuleContext<TypespecNestedContext>(i);
 		}
 		public ITerminalNode[] COMMA() { return GetTokens(MyllParser.COMMA); }
 		public ITerminalNode COMMA(int i) {
 			return GetToken(MyllParser.COMMA, i);
 		}
-		public NestedTypesContext(ParserRuleContext parent, int invokingState)
+		public TypespecsNestedContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
 		}
-		public override int RuleIndex { get { return RULE_nestedTypes; } }
+		public override int RuleIndex { get { return RULE_typespecsNested; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
 			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
-			if (typedVisitor != null) return typedVisitor.VisitNestedTypes(this);
+			if (typedVisitor != null) return typedVisitor.VisitTypespecsNested(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 
 	[RuleVersion(0)]
-	public NestedTypesContext nestedTypes() {
-		NestedTypesContext _localctx = new NestedTypesContext(Context, State);
-		EnterRule(_localctx, 66, RULE_nestedTypes);
+	public TypespecsNestedContext typespecsNested() {
+		TypespecsNestedContext _localctx = new TypespecsNestedContext(Context, State);
+		EnterRule(_localctx, 66, RULE_typespecsNested);
 		int _la;
 		try {
 			int _alt;
 			EnterOuterAlt(_localctx, 1);
 			{
-			State = 247; nestedType();
+			State = 247; typespecNested();
 			State = 252;
 			ErrorHandler.Sync(this);
 			_alt = Interpreter.AdaptivePredict(TokenStream,8,Context);
@@ -1823,7 +1823,7 @@ public partial class MyllParser : Parser {
 					{
 					{
 					State = 248; Match(COMMA);
-					State = 249; nestedType();
+					State = 249; typespecNested();
 					}
 					} 
 				}
@@ -1853,7 +1853,7 @@ public partial class MyllParser : Parser {
 		return _localctx;
 	}
 
-	public partial class FuncTypeContext : ParserRuleContext {
+	public partial class TypespecFuncContext : ParserRuleContext {
 		public ITerminalNode FUNC() { return GetToken(MyllParser.FUNC, 0); }
 		public FuncTypeDefContext funcTypeDef() {
 			return GetRuleContext<FuncTypeDefContext>(0);
@@ -1865,22 +1865,22 @@ public partial class MyllParser : Parser {
 		public TypeSpecContext typeSpec() {
 			return GetRuleContext<TypeSpecContext>(0);
 		}
-		public FuncTypeContext(ParserRuleContext parent, int invokingState)
+		public TypespecFuncContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
 		}
-		public override int RuleIndex { get { return RULE_funcType; } }
+		public override int RuleIndex { get { return RULE_typespecFunc; } }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
 			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
-			if (typedVisitor != null) return typedVisitor.VisitFuncType(this);
+			if (typedVisitor != null) return typedVisitor.VisitTypespecFunc(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 
 	[RuleVersion(0)]
-	public FuncTypeContext funcType() {
-		FuncTypeContext _localctx = new FuncTypeContext(Context, State);
-		EnterRule(_localctx, 68, RULE_funcType);
+	public TypespecFuncContext typespecFunc() {
+		TypespecFuncContext _localctx = new TypespecFuncContext(Context, State);
+		EnterRule(_localctx, 68, RULE_typespecFunc);
 		int _la;
 		try {
 			EnterOuterAlt(_localctx, 1);
@@ -1923,14 +1923,14 @@ public partial class MyllParser : Parser {
 		public TypeQualsContext typeQuals() {
 			return GetRuleContext<TypeQualsContext>(0);
 		}
-		public BasicTypeContext basicType() {
-			return GetRuleContext<BasicTypeContext>(0);
+		public TypespecBasicContext typespecBasic() {
+			return GetRuleContext<TypespecBasicContext>(0);
 		}
-		public FuncTypeContext funcType() {
-			return GetRuleContext<FuncTypeContext>(0);
+		public TypespecFuncContext typespecFunc() {
+			return GetRuleContext<TypespecFuncContext>(0);
 		}
-		public NestedTypeContext nestedType() {
-			return GetRuleContext<NestedTypeContext>(0);
+		public TypespecNestedContext typespecNested() {
+			return GetRuleContext<TypespecNestedContext>(0);
 		}
 		public TypePtrContext[] typePtr() {
 			return GetRuleContexts<TypePtrContext>();
@@ -1991,17 +1991,17 @@ public partial class MyllParser : Parser {
 			case F32:
 			case F16:
 				{
-				State = 268; basicType();
+				State = 268; typespecBasic();
 				}
 				break;
 			case FUNC:
 				{
-				State = 269; funcType();
+				State = 269; typespecFunc();
 				}
 				break;
 			case ID:
 				{
-				State = 270; nestedType();
+				State = 270; typespecNested();
 				}
 				break;
 			default:
@@ -4387,8 +4387,8 @@ public partial class MyllParser : Parser {
 			return GetRuleContext<TypeSpecContext>(0);
 		}
 		public ITerminalNode REQUIRES() { return GetToken(MyllParser.REQUIRES, 0); }
-		public NestedTypesContext nestedTypes() {
-			return GetRuleContext<NestedTypesContext>(0);
+		public TypespecsNestedContext typespecsNested() {
+			return GetRuleContext<TypespecsNestedContext>(0);
 		}
 		public FuncDefContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
@@ -4437,7 +4437,7 @@ public partial class MyllParser : Parser {
 			if (_la==REQUIRES) {
 				{
 				State = 609; Match(REQUIRES);
-				State = 610; nestedTypes();
+				State = 610; typespecsNested();
 				}
 			}
 
@@ -4471,8 +4471,8 @@ public partial class MyllParser : Parser {
 			return GetRuleContext<TypeSpecContext>(0);
 		}
 		public ITerminalNode REQUIRES() { return GetToken(MyllParser.REQUIRES, 0); }
-		public NestedTypesContext nestedTypes() {
-			return GetRuleContext<NestedTypesContext>(0);
+		public TypespecsNestedContext typespecsNested() {
+			return GetRuleContext<TypespecsNestedContext>(0);
 		}
 		public OpDefContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
@@ -4521,7 +4521,7 @@ public partial class MyllParser : Parser {
 			if (_la==REQUIRES) {
 				{
 				State = 624; Match(REQUIRES);
-				State = 625; nestedTypes();
+				State = 625; typespecsNested();
 				}
 			}
 
@@ -5082,8 +5082,8 @@ public partial class MyllParser : Parser {
 			return GetRuleContext<TplParamsContext>(0);
 		}
 		public ITerminalNode COLON() { return GetToken(MyllParser.COLON, 0); }
-		public NestedTypesContext nestedTypes() {
-			return GetRuleContext<NestedTypesContext>(0);
+		public TypespecsNestedContext typespecsNested() {
+			return GetRuleContext<TypespecsNestedContext>(0);
 		}
 		public LevClassContext[] levClass() {
 			return GetRuleContexts<LevClassContext>();
@@ -5100,8 +5100,8 @@ public partial class MyllParser : Parser {
 	}
 	public partial class StructDeclContext : InAnyDeclContext {
 		public IToken v;
-		public NestedTypesContext bases;
-		public NestedTypesContext reqs;
+		public TypespecsNestedContext bases;
+		public TypespecsNestedContext reqs;
 		public IdContext id() {
 			return GetRuleContext<IdContext>(0);
 		}
@@ -5121,11 +5121,11 @@ public partial class MyllParser : Parser {
 		public LevClassContext levClass(int i) {
 			return GetRuleContext<LevClassContext>(i);
 		}
-		public NestedTypesContext[] nestedTypes() {
-			return GetRuleContexts<NestedTypesContext>();
+		public TypespecsNestedContext[] typespecsNested() {
+			return GetRuleContexts<TypespecsNestedContext>();
 		}
-		public NestedTypesContext nestedTypes(int i) {
-			return GetRuleContext<NestedTypesContext>(i);
+		public TypespecsNestedContext typespecsNested(int i) {
+			return GetRuleContext<TypespecsNestedContext>(i);
 		}
 		public StructDeclContext(InAnyDeclContext context) { CopyFrom(context); }
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
@@ -5208,7 +5208,7 @@ public partial class MyllParser : Parser {
 				if (_la==COLON) {
 					{
 					State = 698; Match(COLON);
-					State = 699; ((StructDeclContext)_localctx).bases = nestedTypes();
+					State = 699; ((StructDeclContext)_localctx).bases = typespecsNested();
 					}
 				}
 
@@ -5218,7 +5218,7 @@ public partial class MyllParser : Parser {
 				if (_la==REQUIRES) {
 					{
 					State = 702; Match(REQUIRES);
-					State = 703; ((StructDeclContext)_localctx).reqs = nestedTypes();
+					State = 703; ((StructDeclContext)_localctx).reqs = typespecsNested();
 					}
 				}
 
@@ -5260,7 +5260,7 @@ public partial class MyllParser : Parser {
 				if (_la==COLON) {
 					{
 					State = 720; Match(COLON);
-					State = 721; nestedTypes();
+					State = 721; typespecsNested();
 					}
 				}
 
@@ -5536,8 +5536,8 @@ public partial class MyllParser : Parser {
 	}
 	public partial class UsingContext : InAnyStmtContext {
 		public ITerminalNode USING() { return GetToken(MyllParser.USING, 0); }
-		public NestedTypesContext nestedTypes() {
-			return GetRuleContext<NestedTypesContext>(0);
+		public TypespecsNestedContext typespecsNested() {
+			return GetRuleContext<TypespecsNestedContext>(0);
 		}
 		public ITerminalNode SEMI() { return GetToken(MyllParser.SEMI, 0); }
 		public UsingContext(InAnyStmtContext context) { CopyFrom(context); }
@@ -5580,7 +5580,7 @@ public partial class MyllParser : Parser {
 				EnterOuterAlt(_localctx, 1);
 				{
 				State = 784; Match(USING);
-				State = 785; nestedTypes();
+				State = 785; typespecsNested();
 				State = 786; Match(SEMI);
 				}
 				break;

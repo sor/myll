@@ -49,7 +49,7 @@ namespace Myll
 		public override Stmt VisitUsing( UsingContext c )
 		{
 			Stmt ret = new UsingStmt {
-				types = VisitNestedTypes( c.nestedTypes() ),
+				types = VisitTypespecsNested( c.typespecsNested() ),
 			};
 			return ret;
 		}

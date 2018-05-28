@@ -47,7 +47,7 @@ binaryType	:	v=( BYTE | B64 | B32 | B16 | B8 );
 signedIntType:	v=( INT  | ISIZE | I64 | I32 | I16 | I8 );
 unsignIntType:  v=( UINT | USIZE | U64 | U32 | U16 | U8 );
 
-basicType	:	specialType
+typespecBasic:	specialType
 			|	charType
 			|	floatingType
 			|	binaryType
@@ -62,12 +62,13 @@ typePtr		:	typeQuals	( ptr=( AT_BANG | AT_QUEST | AT_PLUS | DBL_AMP | AMP | STAR
 			;
 
 idTplArgs	:	id tplArgs?;
-nestedType	:	idTplArgs (SCOPE idTplArgs)*;
-nestedTypes	:	nestedType (COMMA nestedType)* COMMA?;
 
-funcType	:	FUNC tplArgs? funcTypeDef (RARROW typeSpec)?;
+typespecNested	:	idTplArgs (SCOPE idTplArgs)*;
+typespecsNested	:	typespecNested (COMMA typespecNested)* COMMA?;
 
-typeSpec	:	typeQuals	( basicType | funcType | nestedType )	typePtr*;
+typespecFunc	:	FUNC tplArgs? funcTypeDef (RARROW typeSpec)?;
+
+typeSpec	:	typeQuals	( typespecBasic | typespecFunc | typespecNested )	typePtr*;
 // --- handled
 
 arg			:	(id COLON)? expr;
@@ -144,10 +145,10 @@ ctorDef		:	funcTypeDef	initList?	(SEMI | levStmt);
 funcBody	:	('=>' expr SEMI | levStmt);
 accessorDef	:	CONST?		v=(GET | REFGET | SET)	funcBody;
 funcDef		:	id			tplParams?	funcTypeDef (RARROW typeSpec)?
-				(REQUIRES nestedTypes)?		// TODO
+				(REQUIRES typespecsNested)?		// TODO
 				funcBody;
 opDef		:	STRING_LIT	tplParams?	funcTypeDef (RARROW typeSpec)?
-				(REQUIRES nestedTypes)?		// TODO
+				(REQUIRES typespecsNested)?		// TODO
 				funcBody;
 
 prog		:	levTop+;
@@ -165,11 +166,11 @@ inTop		:	NS	id (SCOPE id)*	SEMI					# Namespace
 
 // class, enum, func
 inAnyDecl	:	v=(STRUCT | CLASS | UNION) id tplParams?
-				(COLON		bases=nestedTypes)?
-				(REQUIRES 	reqs=nestedTypes)?		// TODO
+				(COLON		bases=typespecsNested)?
+				(REQUIRES 	reqs=typespecsNested)?	// TODO
 						LCURLY	levClass*	RCURLY	# StructDecl
 			|	CONCEPT	id tplParams?		// TODO
-				(COLON	nestedTypes)?
+				(COLON	typespecsNested)?
             			LCURLY	levClass*	RCURLY	# ConceptDecl
 			|	ENUM id	LCURLY	idExprs		RCURLY	# EnumDecl
 			|	FUNC	LCURLY	funcDef*	RCURLY	# FunctionDecl
@@ -189,7 +190,7 @@ inClass		:	v=(PUB | PRIV | PROT) COLON			# AccessMod
 			;
 
 // using, var, const
-inAnyStmt	:	USING			nestedTypes		SEMI	# Using
+inAnyStmt	:	USING			typespecsNested	SEMI	# Using
 			|	VAR		LCURLY	typedIdAcors*	RCURLY	# VariableDecl
 			|	VAR				typedIdAcors			# VariableDecl
 			|	CONST	LCURLY	typedIdAcors*	RCURLY	# VariableDecl
