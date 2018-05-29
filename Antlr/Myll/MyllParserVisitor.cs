@@ -201,12 +201,6 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitTypeQual([NotNull] MyllParser.TypeQualContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.typeQuals"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitTypeQuals([NotNull] MyllParser.TypeQualsContext context);
-	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.typePtr"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>

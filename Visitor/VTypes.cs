@@ -74,7 +74,7 @@ namespace Myll
 			else if( c.typespecFunc()   != null ) ret = VisitTypespecFunc( c.typespecFunc() );
 			else if( c.typespecNested() != null ) ret = VisitTypespecNested( c.typespecNested() );
 			else throw new Exception( "unknown typespec" );
-			ret.qual = VisitTypeQuals( c.typeQuals() );
+			ret.qual = VisitTypeQuals( c.typeQual() );
 			ret.ptrs = c.typePtr().Select( VisitTypePtr ).ToList();
 			return ret;
 		}
@@ -94,13 +94,14 @@ namespace Myll
 			}
 			else throw new Exception( "unknown ptr type" );
 
-			ret.qual = VisitTypeQuals( c.typeQuals() );
+			ret.qual = VisitTypeQuals( c.typeQual() );
 			return ret;
 		}
 
-		public new Qualifier VisitTypeQuals( TypeQualsContext c )
+		public Qualifier VisitTypeQuals( TypeQualContext[] c )
 		{
-			Qualifier ret = c.typeQual().Aggregate( Qualifier.None, ( a, q ) => a | ToQual[q.qual.Type] );
+			Qualifier ret = c.Aggregate( Qualifier.None,
+				( a, q ) => a | ToQual[q.v.Type] );
 			return ret;
 		}
 

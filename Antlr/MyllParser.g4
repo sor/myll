@@ -47,24 +47,24 @@ binaryType	:	v=( BYTE | B64 | B32 | B16 | B8 );
 signedIntType:	v=( INT  | ISIZE | I64 | I32 | I16 | I8 );
 unsignIntType:  v=( UINT | USIZE | U64 | U32 | U16 | U8 );
 
-typeQual	:	qual=( CONST | MUTABLE | VOLATILE | STABLE );
-typeQuals	:	typeQual*;
+typeQual	:	v=( CONST | MUTABLE | VOLATILE | STABLE );
 
-typePtr		:	typeQuals	( ptr=( AT_BANG | AT_QUEST | AT_PLUS | DBL_AMP | AMP | STAR | PTR_TO_ARY )
+typePtr		:	typeQual*	( ptr=( AT_BANG | AT_QUEST | AT_PLUS | DBL_AMP | AMP | STAR | PTR_TO_ARY )
 							| ary=( AT_LBRACK | LBRACK ) expr? RBRACK )
 			;
 
 idTplArgs	:	id tplArgs?;
 
-typespec		:	typeQuals	( typespecBasic | typespecFunc | typespecNested )	typePtr*;
+typespec		:	typeQual*	( typespecBasic
+								| typespecFunc
+								| typespecNested )	typePtr*;
 
 typespecBasic	:	specialType
 				|	charType
 				|	floatingType
 				|	binaryType
 				|	signedIntType
-				|	unsignIntType
-				;
+				|	unsignIntType;
 
 typespecFunc	:	FUNC tplArgs? funcTypeDef (RARROW typespec)?;
 
