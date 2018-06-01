@@ -37,13 +37,13 @@ DBL_LBRACK	: '[[';
 DBL_RBRACK	: ']]';
 DBL_AMP		: '&&';
 DBL_QM		: '??';
-//DBL_STAR	: '**';
+//DBL_STAR	: '**';	// this is only supported by 2x STAR because of: var int** a; which is a double pointer, not a pow
 DBL_PLUS	: '++';
 DBL_MINUS	: '--';
 RARROW		: '->';
 PHATRARROW	: '=>';
 LSHIFT		: '<<';
-//RSHIFT		: '>>';
+//RSHIFT	: '>>';// this is only supported by 2x GT because of: var v<v<int>> a; which is two templates closing, not a right shift
 SCOPE		: '::';
 AT_BANG		: '@!';
 AT_QUEST	: '@?';
@@ -92,8 +92,11 @@ GT			: '>';
 ASSIGN		: '=';
 AS_POW		: '**=';
 AS_MUL		: '*=';
-AS_DIV		: '/=';	// ÷= makes no sense since type of left side is already determined
+AS_SLASH	: '/=';
 AS_MOD		: '%=';
+AS_DOT		: '·=';
+AS_CROSS	: '×=';
+AS_DIV		: '÷=';
 AS_ADD		: '+=';
 AS_SUB		: '-=';
 AS_LSH		: '<<=';
@@ -151,7 +154,8 @@ DTOR		: ('destructor'|'dtor');
 PUB			: ('public'|'pub');
 PRIV		: ('private'|'priv');
 PROT		: ('protected'|'prot');
-FUNC		: ('function'|'func'|'fn');
+FUNC		: ('function'|'func');
+PROC		: ('procedure'|'proc');
 //METH		: ('method'|'meth');
 ENUM		: 'enum';
 CONCEPT		: 'concept';

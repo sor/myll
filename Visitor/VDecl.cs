@@ -34,7 +34,20 @@ namespace Myll
 		public new List<Func.Param> VisitFuncTypeDef( FuncTypeDefContext c )
 			=> c.param().Select( VisitParam ).ToList();
 
-		// list of typed and initialized vars
+		public new Var.Accessor VisitAccessorDef( AccessorDefContext c )
+		{
+			Var.Accessor ret = new Var.Accessor {
+				body    = c.funcBody().Visit(),
+				isConst = false, // TODO
+				kind    = c.v.ToAccessorKind(),
+			};
+			return ret;
+		}
+
+		public List<Var.Accessor> VisitAccessorsDef( AccessorDefContext[] c )
+			=> c.Select( VisitAccessorDef ).ToList();
+
+// list of typed and initialized vars
 		public new List<Var> VisitTypedIdAcors( TypedIdAcorsContext c )
 		{
 			Typespec type = VisitTypespec( c.typespec() );
@@ -44,6 +57,7 @@ namespace Myll
 					name = q.id().GetText(),
 					type = type,
 					init = q.expr().Visit(),
+					accessor = VisitAccessorsDef(q.accessorDef()),
 					// TODO: Accessors
 				} )
 				.ToList();
@@ -51,9 +65,14 @@ namespace Myll
 		}
 	}
 
-	public partial class Visitor
-		: ExtendedVisitor<object>
+	public class DeclVisitor
+		: ExtendedVisitor<Decl>
 	{
+		public override Decl Visit( IParseTree c )
+			=> c == null
+				? null
+				: base.Visit( c );
+
 		public Stack<Decl> hierarchyStack;
 
 		public Enum.Entry VisitEnumEntry( IdExprContext c )
@@ -70,19 +89,19 @@ namespace Myll
 		public List<Enum.Entry> VisitEnumEntrys( IdExprsContext c )
 			=> c.idExpr().Select( VisitEnumEntry ).ToList();
 
-		public override object VisitEnumDecl( EnumDeclContext c )
+		public override Decl VisitEnumDecl( EnumDeclContext c )
 		{
 			// TODO add to hierarchy stack
 			Console.WriteLine( "HelloVisitor enum" );
 
-			Enum ret = new Enum {
+			Decl ret = new Enum {
 				name    = VisitId( c.id() ),
 				entries = VisitEnumEntrys( c.idExprs() )
 			};
 			return ret;
 		}
 
-		public override object VisitFuncDef( FuncDefContext c )
+		public override Decl VisitFuncDef( FuncDefContext c )
 		{
 			Func ret = new Func {
 				name           = VisitId( c.id() ),
@@ -91,11 +110,15 @@ namespace Myll
 				retType        = VisitTypespec( c.typespec() ),
 				block          = c.funcBody().Visit(),
 			};
-
 			return ret;
 		}
 
-		public override object VisitStructDecl( StructDeclContext c )
+		public new List<Decl> VisitFunctionDecl( FunctionDeclContext c )
+		{
+			return c.funcDef().Select( VisitFuncDef ).ToList();
+		}
+
+		public override Decl VisitStructDecl( StructDeclContext c )
 		{
 			string               name      = VisitId( c.id() );
 			List<TemplateParam>  tplParams = VisitTplParams( c.tplParams() );
@@ -107,11 +130,6 @@ namespace Myll
 				case UNION:  break;
 			}
 			return base.VisitStructDecl( c );
-		}
-
-		public override object VisitFunctionDecl( FunctionDeclContext c )
-		{
-			return c.funcDef().Select( VisitFuncDef ).ToList();
 		}
 	}
 }

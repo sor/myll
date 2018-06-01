@@ -4,35 +4,33 @@ options { tokenVocab = MyllLexer; }
 
 comment		:	COMMENT;
 
-postOP		:	v=('++' |	'--');
+// all operators handled by ToOp except mentioned
+postOP		:	v=(	'++' | '--' );
 
-// handled by ToPreOp because of colisions
-preOP		:	v=('++' |	'--' |	'+'  |	'-'  |	'!'  |	'~'  | '*' | '&');
+// handled by ToPreOp because of collisions
+preOP		:	v=(	'++' | '--' | '+' | '-' | '!' | '~' | '*' | '&' );
 
-powOP		:			'*''*';
-multOP		:	v=(				'*'  |	'/'  |	'%' |   '&' | '·' | '×' | '÷');
-addOP		:	v=(										'+' |   '-' |   '|' |   '^');
-shiftOP		: 	'<<' |	'>''>';
-/*
-bitAndOP	:					'&';
-bitXorOP	:							'^';
-bitOrOP		:									'|';
-*/
-cmpOp       :   '<=>';
-orderOP		:	v=('<'|'<='|'>'|'>=');
-equalOP		:	v=('=='|'!=');
+powOP		:		'*''*';
+multOP		:	v=(	'*' | '/' | '%' | '&' | '·' | '×' | '÷' );
+addOP		:	v=(	'+' | '-' | '|' | '^' );
+shiftOP		:		'<<' | '>''>';
 
-andOP		:					'&&';
-orOP		:									'||';
+cmpOp       :   	'<=>';
+orderOP		:	v=(	'<=' | '>=' | '<' | '>' );
+equalOP		:	v=(	'==' | '!=' );
 
-nulCoalOP	:	'??';
+andOP		:		'&&';
+orOP		:		'||';
 
-memAccOP	:	v=('.'  | '?.'	| '->'	);
-memAccPtrOP	:	v=('.*' | '?.*'	| '->*'	);
+nulCoalOP	:		'??';
 
-assignOP	:	'=';
-aggrAssignOP:	v=(			'**=' |	'*=' |	'/=' |	'%=' |	'+=' |	'-='
-				|	'<<='|  '>>=' |	'&=' |	'^=' |	'|=');
+memAccOP	:	v=(	'.'  | '?.'  | '->'  );
+memAccPtrOP	:	v=(	'.*' | '?.*' | '->*' );
+
+// handled by ToAssignOp because of collisions
+assignOP	:		'=';
+aggrAssignOP:	v=(	'**=' | '*=' | '/=' | '%=' | '&=' |	'·=' |	'×=' |	'÷='
+				|	'+='  | '-=' | '|=' | '^=' | '<<=' | '>>=' );
 
 lit			:	HEX_LIT | OCT_LIT | BIN_LIT | INTEGER_LIT | FLOAT_LIT | STRING_LIT | CHAR_LIT | BOOL_LIT | NUL;
 wildId		:	AUTOINDEX | USCORE;
@@ -144,8 +142,8 @@ caseStmt	:	CASE expr (COMMA expr)* COLON levStmt+ (FALL SEMI)?;
 initList	:	COLON id funcCall (COMMA id funcCall)* COMMA?;
 ctorDef		:	funcTypeDef	initList?	(SEMI | levStmt);
 
-funcBody	:	('=>' expr SEMI | levStmt);
-accessorDef	:	CONST?		v=(GET | REFGET | SET)	funcBody;
+funcBody	:	(PHATRARROW expr SEMI | levStmt);
+accessorDef	:	CONST?		v=( GET | REFGET | SET )	funcBody;
 funcDef		:	id			tplParams?	funcTypeDef (RARROW typespec)?
 				(REQUIRES typespecsNested)?		// TODO
 				funcBody;
@@ -167,7 +165,7 @@ inTop		:	NS	id (SCOPE id)*	SEMI					# Namespace
 			;
 
 // class, enum, func
-inAnyDecl	:	v=(STRUCT | CLASS | UNION) id tplParams?
+inAnyDecl	:	v=( STRUCT | CLASS | UNION ) id tplParams?
 				(COLON		bases=typespecsNested)?
 				(REQUIRES 	reqs=typespecsNested)?	// TODO
 						LCURLY	levClass*	RCURLY	# StructDecl
@@ -182,7 +180,7 @@ inAnyDecl	:	v=(STRUCT | CLASS | UNION) id tplParams?
 			;
 
 // ppp, prop, ctor, alias, static
-inClass		:	v=(PUB | PRIV | PROT) COLON			# AccessMod
+inClass		:	v=( PUB | PRIV | PROT ) COLON		# AccessMod
 //			|	PROP	typedIdExprs				# PropDecl
 			|	CTOR	ctorDef						# CtorDecl
 			|	DTOR	ctorDef						# CtorDecl

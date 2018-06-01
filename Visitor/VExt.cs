@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Antlr4.Runtime;
@@ -12,6 +13,7 @@ namespace Myll
 	{
 		private static readonly ExprVisitor ExprVis = new ExprVisitor();
 		private static readonly StmtVisitor StmtVis = new StmtVisitor();
+		private static readonly DeclVisitor DeclVis = new DeclVisitor();
 		public static readonly  Visitor     AllVis  = new Visitor();
 
 		private static readonly Dictionary<int, Operand>
@@ -70,11 +72,11 @@ namespace Myll
 				{Parser.ASSIGN,		Operand.Equal},
 				{Parser.AS_POW,		Operand.Pow},
 				{Parser.AS_MUL,		Operand.Multiply},
-				{Parser.AS_DIV,		Operand.EuclideanDivide},
+				{Parser.AS_SLASH,	Operand.EuclideanDivide},
 				{Parser.AS_MOD,		Operand.Modulo},
-				{Parser.DOT,		Operand.Dot},
-				{Parser.CROSS,		Operand.Cross},
-			//	{Parser.AS_DIV,		Operand.Divide},
+				{Parser.AS_DOT,		Operand.Dot},
+				{Parser.AS_CROSS,	Operand.Cross},
+				{Parser.AS_DIV,		Operand.Divide},
 				{Parser.AS_ADD,		Operand.Add},
 				{Parser.AS_SUB,		Operand.Subtract},
 				{Parser.AS_LSH,		Operand.LeftShift},
@@ -82,6 +84,14 @@ namespace Myll
 				{Parser.AS_AND,		Operand.BitAnd},
 				{Parser.AS_OR,		Operand.BitOr},
 				{Parser.AS_XOR,		Operand.BitXor},
+			};
+
+		private static readonly Dictionary<int, Var.Accessor.Kind>
+			ToVarAccessorKind = new Dictionary<int, Var.Accessor.Kind>
+			{
+				{Parser.GET,		Var.Accessor.Kind.Get},
+				{Parser.REFGET,		Var.Accessor.Kind.RefGet},
+				{Parser.SET,		Var.Accessor.Kind.Set},
 			};
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
@@ -95,6 +105,10 @@ namespace Myll
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Operand ToAssignOp( this IToken tok )
 			=> ToAssignOperand[tok.Type];
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static Var.Accessor.Kind ToAccessorKind( this IToken tok )
+			=> ToVarAccessorKind[tok.Type];
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Expr Visit( this Parser.ExprContext c )
@@ -113,5 +127,17 @@ namespace Myll
 			=> c == null
 				? null
 				: StmtVis.VisitFuncBody( c );
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static Decl Visit( this Parser.LevTopContext c )
+			=> c == null
+				? null
+				: DeclVis.Visit( c );
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static Decl Visit( this Parser.LevClassContext c )
+			=> c == null
+				? null
+				: DeclVis.Visit( c );
 	}
 }
