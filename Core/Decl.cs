@@ -7,11 +7,27 @@ namespace Myll.Core
 	public class Decl
 	{
 		public string name;
-		public string srcFile;
-		public uint   srcLine;
-		public uint   srcCol;
+		public SrcPos srcPos;
 
 		// TODO Symbol
+	}
+
+	// introduces a scope with child decls
+	public class Scope : Decl
+	{
+		public List<Decl>                     children;
+		public Dictionary<string, List<Decl>> namedChildren;
+
+		public void AddChild( Decl decl )
+		{
+			children.Add( decl );
+			List<Decl> list;
+			if( !namedChildren.TryGetValue( decl.name, out list ) ) {
+				list = new List<Decl>( 1 );
+				namedChildren.Add( decl.name, list );
+			}
+			list.Add( decl );
+		}
 	}
 
 	public class Func : Decl
@@ -71,14 +87,7 @@ namespace Myll.Core
 		// TODO: maybe Qualifier instead of isConst?
 	}
 
-	// introduces a scope and has child decls
-	public class DeclContainer : Decl
-	{
-		public List<Decl>               children;
-		public Dictionary<string, Decl> namedChildren;
-	}
-
-	public class Enum : DeclContainer
+	public class Enum : Scope
 	{
 		public class Entry : Decl
 		{
@@ -90,13 +99,25 @@ namespace Myll.Core
 		public bool        flags;
 	}
 
-	public class Namespace : DeclContainer
+	public class Namespace : Scope
 	{
-		// TODO: this must already be expanded to multiple nested namespace objects
-		public List<string> names;
+		public bool withBody;
+
+		// TODO: what is needed here?
 	}
 
-	public class Class : DeclContainer
+	public class Structural : Scope
 	{
+		public enum Kind
+		{
+			Struct,
+			Class,
+			Union,
+		}
+
+		public Kind                 kind;
+		public List<TemplateParam>  tplParams;
+		public List<TypespecNested> bases;
+		public List<TypespecNested> reqs;
 	}
 }

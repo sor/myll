@@ -24,7 +24,8 @@ namespace Myll
 			MyllLexer         lexer             = new MyllLexer(inputStream);
 			CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
 			MyllParser        parser            = new MyllParser(commonTokenStream);
-			VisitorExtensions.AllVis.Visit( parser.prog() );
+			//VisitorExtensions.AllVis.Visit( parser.prog() );
+			VisitorExtensions.DeclVis.Visit( parser.prog() );
 			//parser.levStmt().Visit();
 		}
 	}

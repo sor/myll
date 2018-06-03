@@ -160,8 +160,8 @@ levStmt		:	attribBlk? ( inAnyStmt | inStmt );
 levStmtDef	:	attribBlk? ( inAnyStmt );
 
 // ns
-inTop		:	NS	id (SCOPE id)*	SEMI					# Namespace
-			|	NS	id (SCOPE id)*	LCURLY	levTop+	RCURLY	# Namespace
+inTop		:	NS id (SCOPE id)* SEMI					# Namespace
+			|	NS id (SCOPE id)* LCURLY levTop+ RCURLY	# Namespace
 			;
 
 // class, enum, func
@@ -181,7 +181,6 @@ inAnyDecl	:	v=( STRUCT | CLASS | UNION ) id tplParams?
 
 // ppp, prop, ctor, alias, static
 inClass		:	v=( PUB | PRIV | PROT ) COLON		# AccessMod
-//			|	PROP	typedIdExprs				# PropDecl
 			|	CTOR	ctorDef						# CtorDecl
 			|	DTOR	ctorDef						# CtorDecl
 			|	ALIAS 	id ASSIGN typespec SEMI		# Alias
@@ -189,7 +188,7 @@ inClass		:	v=( PUB | PRIV | PROT ) COLON		# AccessMod
 			|	STATIC			levClass			# StaticDecl
 			;
 
-// using, var, const
+// using, var, const: these are Stmt both Decl
 inAnyStmt	:	USING			typespecsNested	SEMI	# Using
 			|	VAR		LCURLY	typedIdAcors*	RCURLY	# VariableDecl
 			|	VAR				typedIdAcors			# VariableDecl
@@ -201,17 +200,17 @@ inStmt		:	SEMI								# EmptyStmt
 			|	RETURN	expr?	SEMI				# ReturnStmt
 			|	THROW	expr	SEMI				# ThrowStmt
 			|	BREAK	INTEGER_LIT	SEMI			# BreakStmt
-			|	IF	LPAREN expr RPAREN
+			|	IF		LPAREN expr RPAREN
 				levStmt	(ELSE levStmt)?				# IfStmt
-			|	SWITCH LPAREN expr RPAREN	LCURLY
+			|	SWITCH	LPAREN expr RPAREN	LCURLY
 				caseStmt+ 	(ELSE levStmt+)? RCURLY	# SwitchStmt
 			|	LOOP	levStmt						# LoopStmt
-			|	FOR LPAREN levStmtDef expr SEMI expr RPAREN
+			|	FOR		LPAREN levStmtDef expr SEMI expr RPAREN
 				levStmt	(ELSE levStmt)?				# ForStmt
-			|	WHILE LPAREN expr RPAREN
+			|	WHILE	LPAREN expr RPAREN
 				levStmt	(ELSE levStmt)?				# WhileStmt
 			|	DO levStmt
-				WHILE LPAREN expr RPAREN SEMI?		# DoWhileStmt
+				WHILE	LPAREN expr RPAREN SEMI?	# DoWhileStmt
 			|	expr TIMES			id?	levStmt		# TimesStmt
 			|	expr DBL_POINT expr id?	levStmt		# EachStmt
 			| 	(expr	assignOP)+		expr SEMI	# MultiAssignStmt

@@ -47,7 +47,7 @@ namespace Myll
 		public List<Var.Accessor> VisitAccessorsDef( AccessorDefContext[] c )
 			=> c.Select( VisitAccessorDef ).ToList();
 
-// list of typed and initialized vars
+		// list of typed and initialized vars
 		public new List<Var> VisitTypedIdAcors( TypedIdAcorsContext c )
 		{
 			Typespec type = VisitTypespec( c.typespec() );
@@ -63,17 +63,6 @@ namespace Myll
 				.ToList();
 			return ret;
 		}
-	}
-
-	public class DeclVisitor
-		: ExtendedVisitor<Decl>
-	{
-		public override Decl Visit( IParseTree c )
-			=> c == null
-				? null
-				: base.Visit( c );
-
-		public Stack<Decl> hierarchyStack;
 
 		public Enum.Entry VisitEnumEntry( IdExprContext c )
 		{
@@ -88,6 +77,15 @@ namespace Myll
 
 		public List<Enum.Entry> VisitEnumEntrys( IdExprsContext c )
 			=> c.idExpr().Select( VisitEnumEntry ).ToList();
+	}
+
+	public class DeclVisitor
+		: ExtendedVisitor<Decl>
+	{
+		public override Decl Visit( IParseTree c )
+			=> c == null
+				? null
+				: base.Visit( c );
 
 		public override Decl VisitEnumDecl( EnumDeclContext c )
 		{
@@ -118,18 +116,79 @@ namespace Myll
 			return c.funcDef().Select( VisitFuncDef ).ToList();
 		}
 
+		public override Decl VisitProg( ProgContext c )
+		{
+			Namespace glob = new Namespace {
+				name          = "",
+				srcPos        = c.ToSrcPos(),
+				children      = new List<Decl>(),
+				namedChildren = new Dictionary<string, List<Decl>>(),
+			};
+			HierarchyStack.Push( glob );
+
+			Console.WriteLine( "HelloVisitor VisitR" );
+			c.levTop().Select( Visit ).Exec();
+			/*c.children
+				//.OfType<TerminalNodeImpl>()
+				.ToList()
+				.ForEach( child => Visit( child ) );}
+			*/
+			return null;
+		}
+
+		public override Decl VisitNamespace( NamespaceContext c )
+		{
+			// cleanup old scopeless namespaces
+			while( !((Namespace) HierarchyStack.Peek()).withBody )
+				HierarchyStack.Pop();
+
+			Namespace ret = null;
+
+			// add new namespaces to hierarchy
+			bool withBody = (c.levTop() != null);
+			foreach( IdContext idc in c.id() ) {
+				Namespace ns = new Namespace {
+					name          = VisitId( idc ),
+					srcPos        = idc.ToSrcPos(),
+					children      = new List<Decl>(),
+					namedChildren = new Dictionary<string, List<Decl>>(),
+					withBody      = withBody,
+				};
+				if( ret == null ) ret = ns;
+				HierarchyStack.Push( ns );
+			}
+
+			// only visit children and remove hierearchy with body
+			if( withBody ) {
+				c.levTop().Select( Visit ).Exec();
+
+				foreach( IdContext idc in c.id() )
+					HierarchyStack.Pop();
+			}
+			return ret;
+		}
+
 		public override Decl VisitStructDecl( StructDeclContext c )
 		{
-			string               name      = VisitId( c.id() );
-			List<TemplateParam>  tplParams = VisitTplParams( c.tplParams() );
-			List<TypespecNested> bases     = VisitTypespecsNested( c.bases );
-			List<TypespecNested> reqs      = VisitTypespecsNested( c.reqs );
-			switch( c.v.Type ) {
-				case STRUCT: break;
-				case CLASS:  break;
-				case UNION:  break;
-			}
-			return base.VisitStructDecl( c );
+			Console.WriteLine( "HelloVisitor struct" );
+
+			Structural ret = new Structural {
+				name          = VisitId( c.id() ),
+				srcPos        = c.ToSrcPos(),
+				children      = new List<Decl>(),
+				namedChildren = new Dictionary<string, List<Decl>>(),
+				kind          = c.v.ToStructuralKind(),
+				tplParams     = VisitTplParams( c.tplParams() ),
+				bases         = VisitTypespecsNested( c.bases ),
+				reqs          = VisitTypespecsNested( c.reqs ),
+			};
+			HierarchyStack.Peek().AddChild( ret );
+
+			HierarchyStack.Push( ret );
+			c.levClass().Select( Visit ).Exec();
+			HierarchyStack.Pop();
+
+			return ret;
 		}
 	}
 }

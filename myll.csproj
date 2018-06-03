@@ -94,6 +94,7 @@
     <Compile Include="Visitor\VExt.cs" />
     <Compile Include="Visitor\VMain.cs" />
     <Compile Include="Visitor\VStmt.cs" />
+    <Compile Include="Visitor\VTpl.cs" />
     <Compile Include="Visitor\VTypes.cs" />
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
