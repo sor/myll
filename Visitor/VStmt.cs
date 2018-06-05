@@ -39,7 +39,8 @@ namespace Myll
 			}
 			else if( c.expr() != null ) {
 				ret = new ReturnStmt {
-					expr = c.expr().Visit(),
+					srcPos = c.ToSrcPos(),
+					expr   = c.expr().Visit(),
 				};
 			}
 			else throw new Exception( "unknown function decl body" );
@@ -49,7 +50,8 @@ namespace Myll
 		public override Stmt VisitUsing( UsingContext c )
 		{
 			Stmt ret = new UsingStmt {
-				types = VisitTypespecsNested( c.typespecsNested() ),
+				srcPos = c.ToSrcPos(),
+				types  = VisitTypespecsNested( c.typespecsNested() ),
 			};
 			return ret;
 		}
@@ -68,13 +70,16 @@ namespace Myll
 
 		public override Stmt VisitEmptyStmt( EmptyStmtContext c )
 		{
-			return new EmptyStmt();
+			return new EmptyStmt {
+				srcPos = c.ToSrcPos(),
+			};
 		}
 
 		public override Stmt VisitReturnStmt( ReturnStmtContext c )
 		{
 			Stmt ret = new ReturnStmt {
-				expr = c.expr().Visit(),
+				srcPos = c.ToSrcPos(),
+				expr   = c.expr().Visit(),
 			};
 			return ret;
 		}
@@ -82,7 +87,8 @@ namespace Myll
 		public override Stmt VisitThrowStmt( ThrowStmtContext c )
 		{
 			Stmt ret = new ThrowStmt {
-				expr = c.expr().Visit(),
+				srcPos = c.ToSrcPos(),
+				expr   = c.expr().Visit(),
 			};
 			return ret;
 		}
@@ -90,7 +96,8 @@ namespace Myll
 		public override Stmt VisitBreakStmt( BreakStmtContext c )
 		{
 			Stmt ret = new BreakStmt {
-				depth = int.Parse( c.INTEGER_LIT().ToString() ),
+				srcPos = c.ToSrcPos(),
+				depth  = int.Parse( c.INTEGER_LIT().ToString() ),
 			};
 			return ret;
 		}
@@ -98,6 +105,7 @@ namespace Myll
 		public override Stmt VisitIfStmt( IfStmtContext c )
 		{
 			Stmt ret = new IfStmt {
+				srcPos   = c.ToSrcPos(),
 				condExpr = c.expr().Visit(),
 				thenStmt = c.levStmt( 0 ).Visit(),
 				elseStmt = c.levStmt( 1 ).Visit(),
@@ -108,6 +116,7 @@ namespace Myll
 		public new CaseStmt VisitCaseStmt( CaseStmtContext c )
 		{
 			CaseStmt ret = new CaseStmt {
+				srcPos    = c.ToSrcPos(),
 				caseExprs = c.expr().Select( q => q.Visit() ).ToList(),
 				bodyStmts = c.levStmt().Select( Visit ).ToList(),
 				autoBreak = c.FALL() != null,
@@ -118,6 +127,7 @@ namespace Myll
 		public override Stmt VisitSwitchStmt( SwitchStmtContext c )
 		{
 			Stmt ret = new SwitchStmt {
+				srcPos    = c.ToSrcPos(),
 				condExpr  = c.expr().Visit(),
 				caseStmts = c.caseStmt().Select( VisitCaseStmt ).ToList(),
 				elseStmts = c.levStmt().Select( Visit ).ToList(),
@@ -128,6 +138,7 @@ namespace Myll
 		public override Stmt VisitLoopStmt( LoopStmtContext c )
 		{
 			LoopStmt ret = new LoopStmt {
+				srcPos   = c.ToSrcPos(),
 				bodyStmt = c.levStmt().Visit(),
 			};
 			return ret;
@@ -136,6 +147,7 @@ namespace Myll
 		public override Stmt VisitForStmt( ForStmtContext c )
 		{
 			LoopStmt ret = new ForStmt {
+				srcPos   = c.ToSrcPos(),
 				initStmt = Visit( c.levStmtDef() ),
 				condExpr = c.expr( 0 ).Visit(),
 				iterExpr = c.expr( 1 ).Visit(),
@@ -148,6 +160,7 @@ namespace Myll
 		public override Stmt VisitWhileStmt( WhileStmtContext c )
 		{
 			LoopStmt ret = new WhileStmt {
+				srcPos   = c.ToSrcPos(),
 				condExpr = c.expr().Visit(),
 				bodyStmt = c.levStmt( 0 ).Visit(),
 				elseStmt = c.levStmt( 1 ).Visit(),
@@ -158,6 +171,7 @@ namespace Myll
 		public override Stmt VisitDoWhileStmt( DoWhileStmtContext c )
 		{
 			LoopStmt ret = new DoWhileStmt {
+				srcPos   = c.ToSrcPos(),
 				condExpr = c.expr().Visit(),
 				bodyStmt = c.levStmt().Visit(),
 			};
@@ -167,27 +181,32 @@ namespace Myll
 		public override Stmt VisitTimesStmt( TimesStmtContext c )
 		{
 			LoopStmt ret = new TimesStmt {
+				srcPos    = c.ToSrcPos(),
 				countExpr = c.expr().Visit(),
-				name      = c.id().GetText(),
+				name      = c.id().GetText(), // TODO: check for null
 				bodyStmt  = c.levStmt().Visit(),
 			};
+			// TODO: add name to current scope
 			return ret;
 		}
 
 		public override Stmt VisitEachStmt( EachStmtContext c )
 		{
 			LoopStmt ret = new EachStmt {
+				srcPos   = c.ToSrcPos(),
 				fromExpr = c.expr( 0 ).Visit(),
 				toExpr   = c.expr( 1 ).Visit(),
-				name     = c.id().GetText(),
+				name     = c.id().GetText(), // TODO: check for null
 				bodyStmt = c.levStmt().Visit(),
 			};
+			// TODO: add name to current scope
 			return ret;
 		}
 
 		public override Stmt VisitAggrAssignStmt( AggrAssignStmtContext c )
 		{
 			AssignStmt ret = new AggrAssignStmt {
+				srcPos    = c.ToSrcPos(),
 				op        = c.aggrAssignOP().v.ToAssignOp(),
 				leftExpr  = c.expr( 0 ).Visit(),
 				rightExpr = c.expr( 1 ).Visit(),
@@ -198,8 +217,9 @@ namespace Myll
 		public override Stmt VisitMultiAssignStmt( MultiAssignStmtContext c )
 		{
 			AssignStmt ret = new MultiAssignStmt {
-				op    = Operand.Equal,
-				exprs = c.expr().Select( q => q.Visit() ).ToList(),
+				srcPos = c.ToSrcPos(),
+				op     = Operand.Equal,
+				exprs  = c.expr().Select( q => q.Visit() ).ToList(),
 			};
 			return ret;
 		}
@@ -207,8 +227,9 @@ namespace Myll
 		public override Stmt VisitBlockStmt( BlockStmtContext c )
 		{
 			Block ret = new Block {
+				srcPos = c.ToSrcPos(),
 				statements = c.levStmt()?.Select( Visit ).ToList()
-							 ?? new List<Stmt>()
+				             ?? new List<Stmt>()
 			};
 			return ret;
 		}
@@ -216,7 +237,8 @@ namespace Myll
 		public override Stmt VisitExpressionStmt( ExpressionStmtContext c )
 		{
 			Stmt ret = new ExprStmt {
-				expr = c.expr().Visit(),
+				srcPos = c.ToSrcPos(),
+				expr   = c.expr().Visit(),
 			};
 			return ret;
 		}

@@ -3,28 +3,54 @@ using System.Collections.Generic;
 
 namespace Myll.Core
 {
-	// introduces a name (most of the time)
-	public class Decl
-	{
-		public string name;
-		public SrcPos srcPos;
+	/*
+	 scope ganz losgeloest von stmt und decl maybe?
+	 */
 
-		// TODO Symbol
+	public enum Accessability
+	{
+		None,
+		Public,
+		Protected,
+		Private,
 	}
 
-	// introduces a scope with child decls
-	public class Scope : Decl
+	// introduces a name (most of the time)
+	public class Decl : Stmt
 	{
-		public List<Decl>                     children;
-		public Dictionary<string, List<Decl>> namedChildren;
+		public string        name;
+		public Accessability accessability;
+
+		// TODO Symbol?
+	}
+
+	// has in-order list of decls, visible from outside
+	public class Container : Decl
+	{
+		public List<Decl> children = new List<Decl>();
+		public Scope      scope    = new Scope();
 
 		public void AddChild( Decl decl )
 		{
 			children.Add( decl );
+			scope.AddChild( decl );
+		}
+	}
+
+	// has fast indexable decls, NOT directly visible from outside
+	public class Scope
+	{
+		public Dictionary<string, List<Decl>>
+			children = new Dictionary<string, List<Decl>>();
+
+		// TODO: List<Using>, here or in Container
+
+		public void AddChild( Decl decl )
+		{
 			List<Decl> list;
-			if( !namedChildren.TryGetValue( decl.name, out list ) ) {
+			if( !children.TryGetValue( decl.name, out list ) ) {
 				list = new List<Decl>( 1 );
-				namedChildren.Add( decl.name, list );
+				children.Add( decl.name, list );
 			}
 			list.Add( decl );
 		}
@@ -50,10 +76,27 @@ namespace Myll.Core
 			public List<Arg> args;
 		}
 
+		public Scope               scope;
 		public List<TemplateParam> templateParams;
 		public List<Param>         paras;
 		public Stmt                block;
 		public Typespec            retType;
+	}
+
+	// Constructor / Destructor
+	public class Structor : Container
+	{
+		public enum Kind
+		{
+			Constructor,
+			Destructor,
+		}
+
+		public Kind             kind;
+		public List<Func.Param> paras;
+		public Stmt             block;
+
+		// TODO: initlist
 	}
 
 	public class Using : Decl
@@ -87,7 +130,7 @@ namespace Myll.Core
 		// TODO: maybe Qualifier instead of isConst?
 	}
 
-	public class Enum : Scope
+	public class Enum : Container
 	{
 		public class Entry : Decl
 		{
@@ -99,14 +142,14 @@ namespace Myll.Core
 		public bool        flags;
 	}
 
-	public class Namespace : Scope
+	public class Namespace : Container
 	{
 		public bool withBody;
 
 		// TODO: what is needed here?
 	}
 
-	public class Structural : Scope
+	public class Structural : Container
 	{
 		public enum Kind
 		{
@@ -119,5 +162,7 @@ namespace Myll.Core
 		public List<TemplateParam>  tplParams;
 		public List<TypespecNested> bases;
 		public List<TypespecNested> reqs;
+
+		public Accessability currentAccessability;
 	}
 }

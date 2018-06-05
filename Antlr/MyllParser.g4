@@ -140,7 +140,6 @@ attribBlk	:	LBRACK	attrib (COMMA attrib)* COMMA? RBRACK;
 caseStmt	:	CASE expr (COMMA expr)* COLON levStmt+ (FALL SEMI)?;
 
 initList	:	COLON id funcCall (COMMA id funcCall)* COMMA?;
-ctorDef		:	funcTypeDef	initList?	(SEMI | levStmt);
 
 funcBody	:	(PHATRARROW expr SEMI | levStmt);
 accessorDef	:	CONST?		v=( GET | REFGET | SET )	funcBody;
@@ -181,9 +180,9 @@ inAnyDecl	:	v=( STRUCT | CLASS | UNION ) id tplParams?
 
 // ppp, prop, ctor, alias, static
 inClass		:	v=( PUB | PRIV | PROT ) COLON		# AccessMod
-			|	CTOR	ctorDef						# CtorDecl
-			|	DTOR	ctorDef						# CtorDecl
-			|	ALIAS 	id ASSIGN typespec SEMI		# Alias
+			|	CTOR funcTypeDef initList?	(SEMI | levStmt) # CtorDecl
+			|	DTOR LPAREN RPAREN			(SEMI | levStmt) # DtorDecl
+			|	ALIAS 	id ASSIGN typespec SEMI		# AliasDecl
 			|	STATIC	LCURLY	levClass* RCURLY	# StaticDecl
 			|	STATIC			levClass			# StaticDecl
 			;

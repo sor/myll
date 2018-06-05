@@ -23,7 +23,8 @@ namespace Myll
 	public partial class ExtendedVisitor<Result>
 		: MyllParserBaseVisitor<Result>
 	{
-		public static Stack<Scope> HierarchyStack = new Stack<Scope>();
+		public static Stack<Container>
+			HierarchyStack = new Stack<Container>();
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public new string VisitId( IdContext c )

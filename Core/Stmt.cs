@@ -6,17 +6,38 @@ namespace Myll.Core
 {
 	public class Stmt
 	{
+		public SrcPos srcPos;
+
 		public override string ToString()
 		{
 			var sb = new StringBuilder();
 			foreach( var info in GetType().GetProperties() ) {
-				var value = info.GetValue( this, null ) ?? "(null)";
+				var value = info.GetValue( this, null )
+				            ?? "(null)";
 				sb.Append( info.Name + ": " + value.ToString() + ", " );
 			}
 			sb.Length = Math.Max( sb.Length - 2, 0 );
 			return "{"
 			       + GetType().Name + " "
 			       + sb.ToString()  + "}";
+		}
+	}
+
+	// introduces a scope with child stmts
+	public class ScopeStmt : Stmt
+	{
+		public List<Stmt>                     children;
+		public Dictionary<string, List<Stmt>> namedChildren;
+
+		public void AddChild( Stmt stmt )
+		{/*
+			children.Add( stmt );
+			List<Decl> list;
+			if( !namedChildren.TryGetValue( stmt.name, out list ) ) {
+				list = new List<Decl>( 1 );
+				namedChildren.Add( stmt.name, list );
+			}
+			list.Add( stmt );*/
 		}
 	}
 
@@ -52,7 +73,7 @@ namespace Myll.Core
 		public Stmt elseStmt; // opt
 	}
 
-	public class CaseStmt // not a Stmt?
+	public class CaseStmt : Stmt
 	{
 		public List<Expr> caseExprs;
 		public List<Stmt> bodyStmts;
