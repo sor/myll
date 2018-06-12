@@ -48,16 +48,18 @@ namespace Myll
 			=> c.Select( VisitAccessorDef ).ToList();
 
 		// list of typed and initialized vars
-		public new List<Var> VisitTypedIdAcors( TypedIdAcorsContext c )
+		public List<Var> VisitVars( TypedIdAcorsContext c )
 		{
+			Scope scope = ScopeStack.Peek();
+			// determine if only scope or container
 			Typespec type = VisitTypespec( c.typespec() );
 			List<Var> ret = c.idAccessors()
 				.idAccessor()
 				.Select( q => new Var {
-					name = q.id().GetText(),
-					type = type,
-					init = q.expr().Visit(),
-					accessor = VisitAccessorsDef(q.accessorDef()),
+					name     = q.id().GetText(),
+					type     = type,
+					init     = q.expr().Visit(),
+					accessor = VisitAccessorsDef( q.accessorDef() ),
 					// TODO: Accessors
 				} )
 				.ToList();
@@ -66,12 +68,11 @@ namespace Myll
 
 		public Enum.Entry VisitEnumEntry( IdExprContext c )
 		{
-			Console.WriteLine( "HelloVisitor enumentry" );
-
 			Enum.Entry ret = new Enum.Entry {
 				name  = VisitId( c.id() ),
 				value = c.expr().Visit(),
 			};
+			AddChild( ret );
 			return ret;
 		}
 
@@ -89,13 +90,13 @@ namespace Myll
 
 		public override Decl VisitEnumDecl( EnumDeclContext c )
 		{
-			// TODO add to hierarchy stack
-			Console.WriteLine( "HelloVisitor enum" );
-
-			Decl ret = new Enum {
-				name    = VisitId( c.id() ),
-				entries = VisitEnumEntrys( c.idExprs() )
+			Enum ret = new Enum {
+				name = VisitId( c.id() ),
 			};
+			PushScope( ret );
+			VisitEnumEntrys( c.idExprs() );
+			PopScope();
+
 			return ret;
 		}
 
@@ -119,19 +120,28 @@ namespace Myll
 		public override Decl VisitProg( ProgContext c )
 		{
 			Namespace glob = new Namespace {
-				name   = "",
-				srcPos = c.ToSrcPos(),
+				name     = "",
+				srcPos   = c.ToSrcPos(),
+				withBody = true,
 			};
-			HierarchyStack.Push( glob );
+			Scope scope = new Scope {
+				parent = null,
+				decl   = glob,
+			};
 
-			Console.WriteLine( "HelloVisitor VisitR" );
-			c.levTop().Select( Visit ).Exec();
-			/*c.children
-				//.OfType<TerminalNodeImpl>()
-				.ToList()
-				.ForEach( child => Visit( child ) );}
-			*/
-			return null;
+			ScopeStack.Push( scope );
+			c.levDecl().Select( Visit ).Exec();
+
+			// cleanup old bodyless namespaces
+			while( !((Namespace) ScopeStack.Peek().decl).withBody )
+				PopScope();
+
+			ScopeStack.Pop();
+
+			if(ScopeStack.Count != 0)
+				throw new Exception( "scope stack was not empty" );
+
+			return glob;
 		}
 
 		public override Decl VisitNamespace( NamespaceContext c )
@@ -139,30 +149,29 @@ namespace Myll
 			Namespace ret = null;
 
 			// cleanup old bodyless namespaces
-			while( !((Namespace) HierarchyStack.Peek()).withBody )
-				HierarchyStack.Pop();
+			while( !((Namespace) ScopeStack.Peek().decl).withBody )
+				PopScope();
 
 			// add new namespaces to hierarchy
-			bool withBody = (c.levTop() != null);
+			bool withBody = (c.levDecl().Length >= 1);
 			foreach( IdContext idc in c.id() ) {
 				Namespace ns = new Namespace {
 					name     = VisitId( idc ),
 					srcPos   = idc.ToSrcPos(),
 					withBody = withBody,
 				};
-				HierarchyStack.Peek().AddChild( ns );
-				HierarchyStack.Push( ns );
+				PushScope( ns );
 				if( ret == null )
 					ret = ns;
 			}
 
 			// only visit children and remove hierearchy with body
 			if( withBody ) {
-				c.levTop().Select( Visit ).Exec();
+				c.levDecl().Select( Visit ).Exec();
 
 				// wrong order but irrelevant now
 				foreach( IdContext unused in c.id() )
-					HierarchyStack.Pop();
+					PopScope();
 			}
 			return ret;
 		}
@@ -179,10 +188,9 @@ namespace Myll
 				bases     = VisitTypespecsNested( c.bases ),
 				reqs      = VisitTypespecsNested( c.reqs ),
 			};
-			HierarchyStack.Peek().AddChild( ret );
-			HierarchyStack.Push( ret );
-			c.levClass().Select( Visit ).Exec();
-			HierarchyStack.Pop();
+			PushScope( ret );
+			c.levDecl().Select( Visit ).Exec();
+			PopScope();
 
 			return ret;
 		}
@@ -192,13 +200,11 @@ namespace Myll
 			Structor ret = new Structor {
 				kind  = Structor.Kind.Constructor,
 				paras = VisitFuncTypeDef( c.funcTypeDef() ),
-				//block = cc.levStmt().Visit()
 				// TODO: cc.initList(); // opt
 			};
-			HierarchyStack.Peek().AddChild( ret );
-			HierarchyStack.Push( ret );
-			c.levStmt().Visit();
-			HierarchyStack.Pop();
+			PushScope( ret );
+			ret.block = c.levStmt().Visit();
+			PopScope();
 
 			return ret;
 		}

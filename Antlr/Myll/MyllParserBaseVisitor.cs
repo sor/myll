@@ -195,6 +195,16 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	/// <return>The visitor result.</return>
 	public virtual Result VisitAssignOP([NotNull] MyllParser.AssignOPContext context) { return VisitChildren(context); }
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.moveOP"/>.
+	/// <para>
+	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
+	/// on <paramref name="context"/>.
+	/// </para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	public virtual Result VisitMoveOP([NotNull] MyllParser.MoveOPContext context) { return VisitChildren(context); }
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.aggrAssignOP"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
@@ -874,7 +884,7 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	/// <return>The visitor result.</return>
 	public virtual Result VisitProg([NotNull] MyllParser.ProgContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.levTop"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.levDecl"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -882,17 +892,7 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitLevTop([NotNull] MyllParser.LevTopContext context) { return VisitChildren(context); }
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.levClass"/>.
-	/// <para>
-	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
-	/// on <paramref name="context"/>.
-	/// </para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	public virtual Result VisitLevClass([NotNull] MyllParser.LevClassContext context) { return VisitChildren(context); }
+	public virtual Result VisitLevDecl([NotNull] MyllParser.LevDeclContext context) { return VisitChildren(context); }
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.levStmt"/>.
 	/// <para>
@@ -915,7 +915,7 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	public virtual Result VisitLevStmtDef([NotNull] MyllParser.LevStmtDefContext context) { return VisitChildren(context); }
 	/// <summary>
 	/// Visit a parse tree produced by the <c>Namespace</c>
-	/// labeled alternative in <see cref="MyllParser.inTop"/>.
+	/// labeled alternative in <see cref="MyllParser.inDecl"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -926,7 +926,7 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	public virtual Result VisitNamespace([NotNull] MyllParser.NamespaceContext context) { return VisitChildren(context); }
 	/// <summary>
 	/// Visit a parse tree produced by the <c>StructDecl</c>
-	/// labeled alternative in <see cref="MyllParser.inAnyDecl"/>.
+	/// labeled alternative in <see cref="MyllParser.inDecl"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -937,7 +937,7 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	public virtual Result VisitStructDecl([NotNull] MyllParser.StructDeclContext context) { return VisitChildren(context); }
 	/// <summary>
 	/// Visit a parse tree produced by the <c>ConceptDecl</c>
-	/// labeled alternative in <see cref="MyllParser.inAnyDecl"/>.
+	/// labeled alternative in <see cref="MyllParser.inDecl"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -948,7 +948,7 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	public virtual Result VisitConceptDecl([NotNull] MyllParser.ConceptDeclContext context) { return VisitChildren(context); }
 	/// <summary>
 	/// Visit a parse tree produced by the <c>EnumDecl</c>
-	/// labeled alternative in <see cref="MyllParser.inAnyDecl"/>.
+	/// labeled alternative in <see cref="MyllParser.inDecl"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -959,7 +959,7 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	public virtual Result VisitEnumDecl([NotNull] MyllParser.EnumDeclContext context) { return VisitChildren(context); }
 	/// <summary>
 	/// Visit a parse tree produced by the <c>FunctionDecl</c>
-	/// labeled alternative in <see cref="MyllParser.inAnyDecl"/>.
+	/// labeled alternative in <see cref="MyllParser.inDecl"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -970,7 +970,7 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	public virtual Result VisitFunctionDecl([NotNull] MyllParser.FunctionDeclContext context) { return VisitChildren(context); }
 	/// <summary>
 	/// Visit a parse tree produced by the <c>OpDecl</c>
-	/// labeled alternative in <see cref="MyllParser.inAnyDecl"/>.
+	/// labeled alternative in <see cref="MyllParser.inDecl"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -980,19 +980,8 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	/// <return>The visitor result.</return>
 	public virtual Result VisitOpDecl([NotNull] MyllParser.OpDeclContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by the <c>AccessMod</c>
-	/// labeled alternative in <see cref="MyllParser.inClass"/>.
-	/// <para>
-	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
-	/// on <paramref name="context"/>.
-	/// </para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	public virtual Result VisitAccessMod([NotNull] MyllParser.AccessModContext context) { return VisitChildren(context); }
-	/// <summary>
 	/// Visit a parse tree produced by the <c>CtorDecl</c>
-	/// labeled alternative in <see cref="MyllParser.inClass"/>.
+	/// labeled alternative in <see cref="MyllParser.inDecl"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -1003,7 +992,7 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	public virtual Result VisitCtorDecl([NotNull] MyllParser.CtorDeclContext context) { return VisitChildren(context); }
 	/// <summary>
 	/// Visit a parse tree produced by the <c>DtorDecl</c>
-	/// labeled alternative in <see cref="MyllParser.inClass"/>.
+	/// labeled alternative in <see cref="MyllParser.inDecl"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -1012,28 +1001,6 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	public virtual Result VisitDtorDecl([NotNull] MyllParser.DtorDeclContext context) { return VisitChildren(context); }
-	/// <summary>
-	/// Visit a parse tree produced by the <c>AliasDecl</c>
-	/// labeled alternative in <see cref="MyllParser.inClass"/>.
-	/// <para>
-	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
-	/// on <paramref name="context"/>.
-	/// </para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	public virtual Result VisitAliasDecl([NotNull] MyllParser.AliasDeclContext context) { return VisitChildren(context); }
-	/// <summary>
-	/// Visit a parse tree produced by the <c>StaticDecl</c>
-	/// labeled alternative in <see cref="MyllParser.inClass"/>.
-	/// <para>
-	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
-	/// on <paramref name="context"/>.
-	/// </para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	public virtual Result VisitStaticDecl([NotNull] MyllParser.StaticDeclContext context) { return VisitChildren(context); }
 	/// <summary>
 	/// Visit a parse tree produced by the <c>Using</c>
 	/// labeled alternative in <see cref="MyllParser.inAnyStmt"/>.
@@ -1045,6 +1012,17 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	public virtual Result VisitUsing([NotNull] MyllParser.UsingContext context) { return VisitChildren(context); }
+	/// <summary>
+	/// Visit a parse tree produced by the <c>AliasDecl</c>
+	/// labeled alternative in <see cref="MyllParser.inAnyStmt"/>.
+	/// <para>
+	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
+	/// on <paramref name="context"/>.
+	/// </para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	public virtual Result VisitAliasDecl([NotNull] MyllParser.AliasDeclContext context) { return VisitChildren(context); }
 	/// <summary>
 	/// Visit a parse tree produced by the <c>VariableDecl</c>
 	/// labeled alternative in <see cref="MyllParser.inAnyStmt"/>.
@@ -1067,6 +1045,17 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	public virtual Result VisitEmptyStmt([NotNull] MyllParser.EmptyStmtContext context) { return VisitChildren(context); }
+	/// <summary>
+	/// Visit a parse tree produced by the <c>BlockStmt</c>
+	/// labeled alternative in <see cref="MyllParser.inStmt"/>.
+	/// <para>
+	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
+	/// on <paramref name="context"/>.
+	/// </para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	public virtual Result VisitBlockStmt([NotNull] MyllParser.BlockStmtContext context) { return VisitChildren(context); }
 	/// <summary>
 	/// Visit a parse tree produced by the <c>ReturnStmt</c>
 	/// labeled alternative in <see cref="MyllParser.inStmt"/>.
@@ -1210,17 +1199,6 @@ public partial class MyllParserBaseVisitor<Result> : AbstractParseTreeVisitor<Re
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	public virtual Result VisitAggrAssignStmt([NotNull] MyllParser.AggrAssignStmtContext context) { return VisitChildren(context); }
-	/// <summary>
-	/// Visit a parse tree produced by the <c>BlockStmt</c>
-	/// labeled alternative in <see cref="MyllParser.inStmt"/>.
-	/// <para>
-	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
-	/// on <paramref name="context"/>.
-	/// </para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	public virtual Result VisitBlockStmt([NotNull] MyllParser.BlockStmtContext context) { return VisitChildren(context); }
 	/// <summary>
 	/// Visit a parse tree produced by the <c>ExpressionStmt</c>
 	/// labeled alternative in <see cref="MyllParser.inStmt"/>.

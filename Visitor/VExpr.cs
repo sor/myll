@@ -39,7 +39,7 @@ namespace Myll
 		public new Func.Arg VisitArg( ArgContext c )
 		{
 			Func.Arg ret = new Func.Arg {
-				name = c.id().GetText(),
+				name = VisitId( c.id() ),
 				expr = c.expr().Visit(),
 			};
 			return ret;

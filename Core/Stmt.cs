@@ -23,29 +23,12 @@ namespace Myll.Core
 		}
 	}
 
-	// introduces a scope with child stmts
-	public class ScopeStmt : Stmt
-	{
-		public List<Stmt>                     children;
-		public Dictionary<string, List<Stmt>> namedChildren;
-
-		public void AddChild( Stmt stmt )
-		{/*
-			children.Add( stmt );
-			List<Decl> list;
-			if( !namedChildren.TryGetValue( stmt.name, out list ) ) {
-				list = new List<Decl>( 1 );
-				namedChildren.Add( stmt.name, list );
-			}
-			list.Add( stmt );*/
-		}
-	}
-
 	public class UsingStmt : Stmt
 	{
 		public List<TypespecNested> types;
 	}
 
+	// decl
 	public class VarsStmt : Stmt
 	{
 		public List<Var> vars;
@@ -66,6 +49,7 @@ namespace Myll.Core
 		public int depth;
 	}
 
+	// 1-2 scopes
 	public class IfStmt : Stmt
 	{
 		public Expr condExpr;
@@ -87,11 +71,13 @@ namespace Myll.Core
 		public List<Stmt>     elseStmts; // opt
 	}
 
+	// 1 scope
 	public class LoopStmt : Stmt
 	{
 		public Stmt bodyStmt;
 	}
 
+	// +0-1 scope
 	public class ForStmt : LoopStmt
 	{
 		public Stmt initStmt;
@@ -100,6 +86,7 @@ namespace Myll.Core
 		public Stmt elseStmt; // opt
 	}
 
+	// +0-1 scope
 	public class WhileStmt : LoopStmt
 	{
 		public Expr condExpr;
@@ -140,6 +127,7 @@ namespace Myll.Core
 		public Expr rightExpr;
 	}
 
+	// 1 scope
 	public class Block : Stmt
 	{
 		public List<Stmt> statements;

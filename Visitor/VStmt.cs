@@ -33,6 +33,7 @@ namespace Myll
 
 		public override Stmt VisitFuncBody( FuncBodyContext c )
 		{
+			// Scope already open?
 			Stmt ret;
 			if( c.levStmt() != null ) {
 				ret = c.levStmt().Visit();
@@ -60,7 +61,7 @@ namespace Myll
 		{
 			Stmt ret = new VarsStmt {
 				vars = c.typedIdAcors()
-					.Select( VisitTypedIdAcors )
+					.Select( VisitVars )
 					.SelectMany( q => q )
 					.ToList(),
 			};
@@ -183,7 +184,7 @@ namespace Myll
 			LoopStmt ret = new TimesStmt {
 				srcPos    = c.ToSrcPos(),
 				countExpr = c.expr().Visit(),
-				name      = c.id().GetText(), // TODO: check for null
+				name      = VisitId( c.id() ), // TODO: check for null
 				bodyStmt  = c.levStmt().Visit(),
 			};
 			// TODO: add name to current scope
@@ -196,7 +197,7 @@ namespace Myll
 				srcPos   = c.ToSrcPos(),
 				fromExpr = c.expr( 0 ).Visit(),
 				toExpr   = c.expr( 1 ).Visit(),
-				name     = c.id().GetText(), // TODO: check for null
+				name     = VisitId( c.id() ), // TODO: check for null
 				bodyStmt = c.levStmt().Visit(),
 			};
 			// TODO: add name to current scope

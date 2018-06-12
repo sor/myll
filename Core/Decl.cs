@@ -3,10 +3,6 @@ using System.Collections.Generic;
 
 namespace Myll.Core
 {
-	/*
-	 scope ganz losgeloest von stmt und decl maybe?
-	 */
-
 	public enum Accessability
 	{
 		None,
@@ -20,39 +16,21 @@ namespace Myll.Core
 	{
 		public string        name;
 		public Accessability accessability;
+		public ScopeLeaf     scope;
 
 		// TODO Symbol?
 	}
 
 	// has in-order list of decls, visible from outside
-	public class Container : Decl
+	public class Hierarchical : Decl
 	{
-		public List<Decl> children = new List<Decl>();
-		public Scope      scope    = new Scope();
+		public new Scope scope;
+		public readonly List<Decl> children = new List<Decl>();
 
+		// the children add themselves through AddChild or PushScope
 		public void AddChild( Decl decl )
 		{
 			children.Add( decl );
-			scope.AddChild( decl );
-		}
-	}
-
-	// has fast indexable decls, NOT directly visible from outside
-	public class Scope
-	{
-		public Dictionary<string, List<Decl>>
-			children = new Dictionary<string, List<Decl>>();
-
-		// TODO: List<Using>, here or in Container
-
-		public void AddChild( Decl decl )
-		{
-			List<Decl> list;
-			if( !children.TryGetValue( decl.name, out list ) ) {
-				list = new List<Decl>( 1 );
-				children.Add( decl.name, list );
-			}
-			list.Add( decl );
 		}
 	}
 
@@ -76,7 +54,6 @@ namespace Myll.Core
 			public List<Arg> args;
 		}
 
-		public Scope               scope;
 		public List<TemplateParam> templateParams;
 		public List<Param>         paras;
 		public Stmt                block;
@@ -84,7 +61,7 @@ namespace Myll.Core
 	}
 
 	// Constructor / Destructor
-	public class Structor : Container
+	public class Structor : Hierarchical
 	{
 		public enum Kind
 		{
@@ -130,26 +107,24 @@ namespace Myll.Core
 		// TODO: maybe Qualifier instead of isConst?
 	}
 
-	public class Enum : Container
+	public class Enum : Hierarchical
 	{
 		public class Entry : Decl
 		{
 			public Expr value;
 		}
 
-		// the enum entries are stored here and not in DeclContainer::children
-		public List<Entry> entries = new List<Entry>();
-		public bool        flags;
+		public bool flags;
 	}
 
-	public class Namespace : Container
+	public class Namespace : Hierarchical
 	{
 		public bool withBody;
 
 		// TODO: what is needed here?
 	}
 
-	public class Structural : Container
+	public class Structural : Hierarchical
 	{
 		public enum Kind
 		{

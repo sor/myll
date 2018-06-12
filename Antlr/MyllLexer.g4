@@ -18,9 +18,10 @@ channels { NEWLINES, COMMENTS }
 	protected const int COMMENTS	= Hidden;
 }*/
 
-COMMENT		: ( '//' ~('\r'|'\n')*
-			  | '/*' .*? '*/'
-			  )	-> channel(COMMENTS);
+COMMENT		:	(	'#!' ~('\r'|'\n')*	// ignore shebang for now
+				|	'//' ~('\r'|'\n')*
+				|	'/*' .*? '*/'
+				) -> channel(COMMENTS);
 
 STRING_LIT	: '"' (STR_ESC | ~('\\' | '"'  | '\r' | '\n'))* '"';
 CHAR_LIT	: '\'' (CH_ESC | ~('\\' | '\'' | '\r' | '\n')) '\'';
@@ -42,6 +43,7 @@ DBL_PLUS	: '++';
 DBL_MINUS	: '--';
 RARROW		: '->';
 PHATRARROW	: '=>';
+MOVEARROW	: '=<';
 LSHIFT		: '<<';
 //RSHIFT	: '>>';// this is only supported by 2x GT because of: var v<v<int>> a; which is two templates closing, not a right shift
 SCOPE		: '::';
@@ -142,8 +144,12 @@ NS			: 'namespace';
 VOLATILE	: 'volatile';
 STABLE		: 'stable';
 CONST		: 'const';
+CONSTS		: 'consts';
 MUTABLE		: 'mutable';
-STATIC		: 'static';
+//STATIC	: 'static';
+//PUB		: ('public'|'pub');
+//PRIV		: ('private'|'priv');
+//PROT		: ('protected'|'prot');
 USING		: 'using';
 ALIAS       : 'alias';
 UNION		: 'union';
@@ -151,10 +157,8 @@ STRUCT		: 'struct';
 CLASS		: 'class';
 CTOR		: ('constructor'|'ctor');
 DTOR		: ('destructor'|'dtor');
-PUB			: ('public'|'pub');
-PRIV		: ('private'|'priv');
-PROT		: ('protected'|'prot');
 FUNC		: ('function'|'func');
+FUNCS		: ('functions'|'funcs');
 PROC		: ('procedure'|'proc');
 //METH		: ('method'|'meth');
 ENUM		: 'enum';
@@ -166,7 +170,9 @@ REFGET		: 'refget';
 SET			: 'set';
 //FIELD		: 'field';
 OPERATOR	: 'operator';
+OPERATORS	: 'operators';
 VAR			: 'var';
+VARS		: 'vars';
 LET			: 'let';
 LOOP		: 'loop';
 FOR			: 'for';
@@ -187,7 +193,7 @@ THROW		: 'throw';
 
 ID			: ALPHA_ ALNUM_*;
 
-NUL			: 'null';
+NUL			: ('null'|'nullptr');
 BOOL_LIT	: 'true'|'false';
 FLOAT_LIT	:	(	DIGIT* '.' DIGIT+ ( [eE] [+-]? DIGIT+ )?
 				|	DIGIT+ [eE] [+-]? DIGIT+
@@ -211,3 +217,15 @@ fragment ALNUM_		: [0-9A-Za-z_];
 
 NL			: ('\r'|'\n')+	-> channel(NEWLINES);
 WS			: (' '|'\t')+	-> skip;// channel(HIDDEN);
+
+/*
+mode MODE;
+LOOK		: 'look';
+COPY		: 'copy';
+EDIT		: 'edit';
+SHARE		: 'share';
+WEAKSHARE	: 'weakshare';
+CONSUME		: 'consume';
+PRODUCE		: 'produce';
+REPLACE		: 'replace';
+*/

@@ -155,13 +155,7 @@ namespace Myll
 				: StmtVis.VisitFuncBody( c );
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static Decl Visit( this Parser.LevTopContext c )
-			=> c == null
-				? null
-				: DeclVis.Visit( c );
-
-		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static Decl Visit( this Parser.LevClassContext c )
+		public static Decl Visit( this Parser.LevDeclContext c )
 			=> c == null
 				? null
 				: DeclVis.Visit( c );

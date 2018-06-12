@@ -29,6 +29,7 @@ memAccPtrOP	:	v=(	'.*' | '?.*' | '->*' );
 
 // handled by ToAssignOp because of collisions
 assignOP	:		'=';
+moveOP		:		'=<';
 aggrAssignOP:	v=(	'**=' | '*=' | '/=' | '%=' | '&=' |	'·=' |	'×=' |	'÷='
 				|	'+='  | '-=' | '|=' | '^=' | '<<=' | '>>=' );
 
@@ -150,54 +151,52 @@ opDef		:	STRING_LIT	tplParams?	funcTypeDef (RARROW typespec)?
 				(REQUIRES typespecsNested)?		// TODO
 				funcBody;
 
-prog		:	levTop+;
+prog		:	levDecl+;
 
-// only refer to these lev*, not the in*
-levTop		:	attribBlk? ( inAnyStmt | inAnyDecl | inTop );
-levClass	:	attribBlk? ( inAnyStmt | inAnyDecl | inClass );
-levStmt		:	attribBlk? ( inAnyStmt | inStmt );
-levStmtDef	:	attribBlk? ( inAnyStmt );
+// only refer to these lev* levels, not the in*
+levDecl		:	attribBlk	LCURLY	levDecl	RCURLY	// must be in here, since it MUST have an attrib block
+			|	attribBlk	COLON
+			|	attribBlk?	( inAnyStmt | inDecl );
+levStmt		:	attribBlk?	( inAnyStmt | inStmt );
+levStmtDef	:	attribBlk?	( inAnyStmt );
 
-// ns
-inTop		:	NS id (SCOPE id)* SEMI					# Namespace
-			|	NS id (SCOPE id)* LCURLY levTop+ RCURLY	# Namespace
-			;
-
-// class, enum, func
-inAnyDecl	:	v=( STRUCT | CLASS | UNION ) id tplParams?
+// ns, class, enum, func, ppp, c/dtor, alias, static
+inDecl		:	NS id (SCOPE id)* SEMI						# Namespace
+			|	NS id (SCOPE id)* LCURLY levDecl+ RCURLY	# Namespace
+			|	v=( STRUCT | CLASS | UNION ) id tplParams?
 				(COLON		bases=typespecsNested)?
 				(REQUIRES 	reqs=typespecsNested)?	// TODO
-						LCURLY	levClass*	RCURLY	# StructDecl
+						LCURLY	levDecl*	RCURLY	# StructDecl
 			|	CONCEPT	id tplParams?		// TODO
 				(COLON	typespecsNested)?
-            			LCURLY	levClass*	RCURLY	# ConceptDecl
+            			LCURLY	levDecl*	RCURLY	# ConceptDecl
+            // TODO aspect
 			|	ENUM id	LCURLY	idExprs		RCURLY	# EnumDecl
-			|	FUNC	LCURLY	funcDef*	RCURLY	# FunctionDecl
+			|	FUNCS	LCURLY	funcDef*	RCURLY	# FunctionDecl
 			|	FUNC			funcDef				# FunctionDecl
-			|	OPERATOR LCURLY	opDef		RCURLY	# OpDecl
+			|	OPERATORS LCURLY opDef*		RCURLY	# OpDecl
 			|	OPERATOR		opDef				# OpDecl
-			;
-
-// ppp, prop, ctor, alias, static
-inClass		:	v=( PUB | PRIV | PROT ) COLON		# AccessMod
+// class only:
+			//|	v=( PUB | PROT | PRIV ) COLON		# AccessMod
 			|	CTOR funcTypeDef initList?	(SEMI | levStmt) # CtorDecl
 			|	DTOR LPAREN RPAREN			(SEMI | levStmt) # DtorDecl
-			|	ALIAS 	id ASSIGN typespec SEMI		# AliasDecl
-			|	STATIC	LCURLY	levClass* RCURLY	# StaticDecl
-			|	STATIC			levClass			# StaticDecl
+			//|	STATIC	LCURLY	levDecl* RCURLY		# StaticDecl
+			//|	STATIC			levDecl				# StaticDecl
 			;
 
-// using, var, const: these are Stmt both Decl
+// using, var, const: these are both Stmt and Decl
 inAnyStmt	:	USING			typespecsNested	SEMI	# Using
-			|	VAR		LCURLY	typedIdAcors*	RCURLY	# VariableDecl
+			|	ALIAS id ASSIGN	typespec 		SEMI	# AliasDecl
+			|	VARS	LCURLY	typedIdAcors*	RCURLY	# VariableDecl
 			|	VAR				typedIdAcors			# VariableDecl
-			|	CONST	LCURLY	typedIdAcors*	RCURLY	# VariableDecl
+			|	CONSTS	LCURLY	typedIdAcors*	RCURLY	# VariableDecl
 			|	CONST			typedIdAcors			# VariableDecl
 			;
 
 inStmt		:	SEMI								# EmptyStmt
-			|	RETURN	expr?	SEMI				# ReturnStmt
-			|	THROW	expr	SEMI				# ThrowStmt
+			|	LCURLY	levStmt*	RCURLY			# BlockStmt
+			|	RETURN	expr?		SEMI			# ReturnStmt
+			|	THROW	expr		SEMI			# ThrowStmt
 			|	BREAK	INTEGER_LIT	SEMI			# BreakStmt
 			|	IF		LPAREN expr RPAREN
 				levStmt	(ELSE levStmt)?				# IfStmt
@@ -214,6 +213,5 @@ inStmt		:	SEMI								# EmptyStmt
 			|	expr DBL_POINT expr id?	levStmt		# EachStmt
 			| 	(expr	assignOP)+		expr SEMI	# MultiAssignStmt
 			| 	expr	aggrAssignOP	expr SEMI	# AggrAssignStmt
-			|	LCURLY	levStmt*	RCURLY			# BlockStmt
 			|	expr SEMI							# ExpressionStmt
 			;

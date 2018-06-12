@@ -1,33 +1,55 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml;
-using Antlr4.Runtime;
-using Antlr4.Runtime.Misc;
-using Antlr4.Runtime.Tree;
 using Myll.Core;
 
-using Array = Myll.Core.Array;
-using Enum = Myll.Core.Enum;
 using Parser = Myll.MyllParser;
-
-using static Myll.MyllParser;	// sadly pulls in all constants
 
 namespace Myll
 {
 	public partial class ExtendedVisitor<Result>
 		: MyllParserBaseVisitor<Result>
 	{
-		public static Stack<Container>
-			HierarchyStack = new Stack<Container>();
+		public static Stack<Scope> ScopeStack = new Stack<Scope>();
+
+		public static void AddChild( Decl leaf )
+		{
+			Scope parent = ScopeStack.Peek();
+			ScopeLeaf scopeLeaf = new ScopeLeaf {
+				parent = parent,
+				decl   = leaf,
+			};
+			parent.AddChild( scopeLeaf );
+		}
+
+		public static void PushScope( Hierarchical hierarchical )
+		{
+			Scope parent = ScopeStack.Peek();
+			Scope scope = new Scope {
+				parent = parent,
+				decl   = hierarchical,
+			};
+			parent.AddChild( scope );
+			ScopeStack.Push( scope );
+		}
+
+		// pushing a scope which can't be addressed from the outside
+		public static void PushScope()
+		{
+			Scope parent = ScopeStack.Peek();
+			Scope scope = new Scope {
+				parent = parent,
+				decl   = null,
+			};
+			ScopeStack.Push( scope );
+		}
+
+		public static void PopScope()
+		{
+			ScopeStack.Pop();
+		}
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public new string VisitId( IdContext c )
+		public new string VisitId( Parser.IdContext c )
 			=> c.GetText();
 	}
 }
