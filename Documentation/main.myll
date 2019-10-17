@@ -1,0 +1,56 @@
+namespace std::console
+{
+	[needs(cstdio)]
+	func print( const string & s )
+	{
+		// maybe migrate to fwrite to get rid of the \0
+		C::fputs( s.c_str, C::stdout );
+	}
+}
+
+namespace std::math
+{
+	[pure]
+	func sqr(float f) -> float
+	{
+		return f * f;
+	}
+}
+
+class Stack<T> {
+priv:
+	fields {
+		uint _size = 0;
+		uint _capa = 0;
+		T[*] _data = new[_capa];
+	}
+pub:
+	ctor() {}
+	ctor( uint capa ) {
+		_capa = capa;
+	}
+	// template specialization
+	meth hans<TT>( TT param )	-> bool { return false; }
+	meth hans<int>( int param )	-> bool { return true;  }
+	meth hans( int param )		-> bool => true;
+}
+
+func main()
+{
+	using
+		std::console,
+		std::math;
+	
+	const string@[] & args = std::args;
+	
+	var func(float f)->float mysqr = sqr;
+	
+	mysqr( 8 );
+	mysqr( f: 8 );
+	
+	print( sqr( 42 ).to_s );
+	
+	exit( Success );	// if a var Success exists will return that
+						// else it will look if exit has first param an enum and match that enum member
+}
+

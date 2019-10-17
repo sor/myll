@@ -1,0 +1,152 @@
+pure: does not modify anything
+const: does not modify this
+
+
+namespace symbol nesting
+global	0		 999
+
+myll	1000	1999
+math	1002	1099
+pow		1003	1003
+log		1004	1004
+core	1100	1199
+vec		1102	1114
+
+front	1103	1103
+back	1104	1104
+count	1105	1105
+push_b	1106	1106
+pop_b	1107	1107
+INIT_C	1108	1108
+capa	1109	1109
+size	1110	1110
+buff	1111	1111
+[]		1112	1112
+grow	1113	1113
+
+sor		2000	2999
+
+
+Stack<>
+toplevel
+	List<Pair<string,>>
+
+ns myll;	
+class Vec<T> { var int a; func b(); }
+
+[
+	name: myll,
+	kind: ns,
+	tpl: null,
+	children: [
+		name: vec,
+		kind: type,
+		tpl: [T],
+		children: [{
+			name: a,
+			kind: var,
+			type: int,		// in var
+			tpl: null,		// not in var
+			children: []	// not in var
+		},{
+			name: b,
+			kind: func,
+			type: int,		// in var
+			tpl: null,		// in func
+			children: []	// not in func
+		}]
+	]
+]
+
+namespace JanSordid::Core {
+	func pow(float b, float e) -> float {
+		var float c = b ** e;
+		return c;
+	}
+}
+
+func main(string[] args) -> int {
+	using std; // legacy
+	using JanSordid::Core;
+	alias pow = JanSordid::Core::pow;
+	var ostringstream oss;        // should find ostringstream in std
+	var float j;
+	{
+		var int i = -1;
+		if( args.count < 1 )
+		{
+			i = pow(3.14,0.707);        // should find pow in JanSordid::Core
+		}
+	}
+	oss << j << endl;
+	return (int)j;
+}
+(global){
+	(name=float,kind=type){
+		(name='==',kind=op)
+		(name='!=',kind=op)
+		...
+	}
+	(name=int,kind=type)
+	(name=JanSordid,kind=ns){
+		(name=Core,kind=ns){
+			(name=pow,kind=fn){
+				(name=ret,kind=return,type=float)
+				(name=a,kind=param,type=float)
+				(name=b,kind=param,type=float)
+				(name=c,kind=var,type=float)
+			}
+		}
+	}
+	(name=main,kind=fn){
+		(using=std)
+		(using=JanSordid::Core)
+		(name=ret,kind=return,type=int)
+		(name=args,kind=param,type=string[])
+		(name=oss,kind=var,type=ostringstream)
+		(unnamed){
+			(name=i,kind=var,type=int)
+			(unnamed){}
+		}
+	}
+}
+
+classes haben sortierte sichtbare DECLs
+concepts haben sortierte sichtbare DECLs
+enums haben sortierte sichtbare DECLs
+functions sind 
+
+Insgesamt wird in zwei Stufen resolved, der erste nimmt alle global erreichbaren Decls/Identifier auf, der Zweite resolved alles was nicht im ersten Durchgang machbar war.
+Ich baue den global Scope so wie geplant:
+	Baum
+	Kinder am Namen ansprechbar
+	Mehrere Kinder mit gleichem Namen möglich (overloaded, overwritten functions), manche kollidieren, andere nicht...
+	Kind kann Elter erreichen
+	Jeder Knoten hat die Möglichkeit über using Statements und Ableitung parallel Namen zu importieren, werden im zweiten Durchgang resolved.
+	Jede Decl hat eine Liste aller lokalen Identifier (die noch resolved werden müssen), werden im zweiten Durchgang resolved.
+	Jedes Hierarchical, also ein Decl welches weitere Decls enthalten kann, speichert seine usings.
+
+Local Scope:
+	Jede lokale Decl wird in einer temporären Liste erfasst, am Ende des Scopes verworfen, dazwischen ist sie matchbar.
+	Alle lokalen IDs versuchen zu matchen,
+		wenn erfolgreich: merken sich den match,
+		wenn nicht: fügen sich der globalen Decl die sie enthält hinzu.
+	Im zweiten Durchgang werden diese lokalen IDs, die in der globalen Decl gemerkt wurden resolved.
+	Parallel dazu wird zu jeder dieser IDs gespeichert welche usings auf sie wirken.
+
+
+Was ist sinnvoller: Ordered oder Sorted?
+	Sorted ist etwas das nach seinem Wert sortiert ist, A vor Z.
+	Ordered ist etwas das eine Ordnung hat: Das Array [1,3,2] ist ordererd. Die Elemente einer Menge sind nicht ordered.
+	Besser noch OrderPreserving für Container.
+
+Overloading zusammen mit Overwriting funktionieren nicht wie erwartet:
+struct A            { void a(double){ cout << "double" << endl; } };
+struct B : public A { void a(float ){ cout << "float"  << endl; } };
+int main()          { B b; b.a(9.0); }
+Dieses Programm gibt "float" aus. Auch beide Funktionen virtuell zu machen ändert nichts daran.
+In B den Eintrag using A::a; hinzuzufügen macht das in diesem Kontext der double overload verwendet wird.
+Den Aufruf innerhalb main in b.A::a(9.0) zu ändern führt auch dazu das der double overload verwendet wird.
+Dies ist nicht optimal und besonders hässlich im zweiten Fall.
+
+

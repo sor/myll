@@ -1,0 +1,43 @@
+https://softwareengineering.stackexchange.com/questions/350388/is-it-wrong-to-use-flags-for-grouping-enums
+https://wiki.archlinux.org/index.php/ATI
+https://wiki.archlinux.org/index.php/CPU_frequency_scaling
+
+class Root;
+class Left : Root;
+class Right : Root;
+class L1 : Left;
+class L2 : Left;
+class R1 : Right;
+class R2 : Right;
+
+		Root
+	Left	Right
+   L1  L2  R1   R2
+
+TFPPI
+	Transparent, Flattened and Padded Polymorphism and Inheritance
+	- Implemented with a "Kind" enum, shared fields and a union of field structs which differ between the kinds
+	- Different objects can reside in contigous allocated, equal size binned memory
+	Pro:
+		- More control over memory layout
+		- Possible less memory usage since the Kinds can be byte sized (compared to vtable pointers which take 4 to 8 bytes)
+		- Flat hierarchy provides more flexibility to reuse deeply nested implementations.
+			E.g. L2 can use R1 implementation even if Left and Right already disagree, this would be difficult in C++.
+		- Handling in one place can be beneficial. E.g. all ToString implementations in one file, they all behave similar and use similar includes.
+			Contrary C++ needs these includes in every class/file and similar code is distant to each other.
+	Con:
+		- More work for some simple cases.
+		- Needs full control over the inheritance since handling is done in one place.
+		- Wasted memory for all Kinds which are smaller than the biggest. (Possible solution: Ptr to different memory blocks, for outliers in size)
+
+Interning of imutable strings / hash consing
+
+Arena memory allocation
+	- Enables the possibility of memory tricks like comparison of pointers in a LessThan/GreaterThan manner
+
+
+Highlevel Goals for Myll 2
+	- Decouple allocation from initialization (allows for more C style allocation patterns without uglyness of placement new)
+	- Will involve way more effort than Myll 1, since its not 1:1 translateable to C++
+
+

@@ -1,0 +1,182 @@
+﻿namespace JanSordid::Core
+{
+	class Base {}
+	class IAmTheFinalBoss : Base
+	{
+		var int*	a, b;
+		var int[4]	ary1, ary2;
+		var int*[4]	ary_of_4_ptrs_to_int;
+		var int[4]*	one_ptr_to_ary_of_4_ints;
+		var func(int,int)->int				fp;
+		// C & C++: int f(int (*(*)(double))[3]) {}
+		// from cdecl.org: declare f as function (pointer to function (double)
+		//                 returning pointer to array 3 of int) returning int
+		func f(func(double)->int[3]*)->int	{}
+		// C & C++: int(*(*x)(double))[3]
+		// from cdecl.org: declare x as pointer to function (double)
+		//                 returning pointer to array 3 of int
+		var func(double)->int[3]*			x;
+	public:
+		ctor( int value ) {}
+		func pow<T>( T b, int e ) -> T {}
+		func test()
+		{
+			var int i = 10;
+			do {} while( i-- >= 0 )
+			while( i++ < 10 ) {}
+		}
+		
+		[noreturn, pure, virtual, override, final, nothrow]
+		func foo()
+		-> const float
+		{}
+		
+		func op_precedence()
+		{
+			var int a = 6, b = 9;
+			cout << a & b;
+			if( a & b == 2 ) {}
+			a = 1;
+			if( a ) {}
+			cout << (a == b);
+			if( a << 1 == 23 ) {}
+			fmt::print( "{0}'s birthday is {1:%m/%d/%Y}.\n",     name, birthday );
+			fmt::print( "Am {1:%Y-%m-%d} hat {0} Geburtstag.\n", name, birthday );
+		}
+		
+		func naming()
+		{
+			var vec<3> point_in_3d_space;
+
+			// Ruby: sum = [4, 6, 14].map{|e| e / 2}.reduce{|accu,e| accu * e}
+			{
+				var dyn_array<int> ns = [4, 6, 14];
+				map(ns.begin(),ns.end(),ns.begin(),[](int e)->int{return e/2;});
+				const int sum = reduce(ns.begin(),ns.end(),0,multiplies<int>());
+				// OMG this is ugly
+			}
+			{
+				var dyn_array<int> ns = [4, 6, 14];
+				ns..map(func(int e)=>{e/2});
+				const int sum = ns..reduce(multiplies<int>());
+			}
+			{
+				var dyn_array<int> ns = [4, 6, 14];
+				const int sum = ns..map_reduce(func(int e)=>{e/2},multiplies<int>())
+			}
+		}
+		
+		func verbose()
+		{
+			var int@! unique_ptr1 = 1;
+			var int@! unique_ptr2 = (move) unique_ptr1;
+			var int@+ shared_ptr2 = 2;
+			var int@? weak_ptr2 = shared_ptr2;
+			var int@+ shared_ptr3 = weak_ptr2.lock();
+			IAmTheFinalBoss* boss = new;
+			Base* base1 = (Base*) boss;
+			Base* base2 = (auto) boss;
+		}
+	}	
+
+	class List<T>
+	{
+		//[[abstract]]
+		meth test() -> T {}
+	}
+	/*
+	[[specialize]]
+	class List<T = int>
+	{
+		[[implement]]
+		meth test() {} -> int _OR_ T {}
+	}
+	*/
+
+	class Stack
+	{
+		//[[inline]]
+		alias			T		= int;
+		prop	int		count	= 0;
+		field	int		alloced	= 8;
+		field	T*		store	= new T[ alloced ];
+
+	public:
+		ctor(){} // this is default
+		ctor(int prealloc)
+		{
+			alloced = prealloc;
+		}
+
+		meth top() -> T
+		{
+			if( count > 0 )
+				return store[count-1];
+			else {
+				return -1; // what to do?
+			}
+		}
+
+		// implicit void? not a good idea... Oder doch nicht, weil auto zu undurchsichtig ist
+		// implicit auto? would be void because no return, better than implicit void
+		/*[[mutable]]*/
+		meth push( /*copy*/ T o )
+		{
+			if( alloced <= count )
+				enlarge( 2 );
+
+			store[count] = o;
+			count++;
+		}
+
+		/*[[mutable]]*/
+		meth emplace( /*sink*/ T o ) // T && o
+		{
+			if( alloced <= count )
+				enlarge( 2 );
+
+			store[count] = move(o);
+			count++;
+		}
+
+	private:
+		/*[[mutable]]*/
+		meth enlarge( int factor ) -> void
+		{
+			var int* new_store = new int[ alloced * factor ]; // fails
+			alloced times o {
+				new_store[o] = store[o];
+				new_store[#0] = store[#0];
+			}
+			delete store;
+			store = new_store;
+		}
+
+		//[pure binary]
+		operator "=="() -> bool
+		{
+			if( count != other.count )
+				return false;
+
+			// new style
+			count times i
+				if( store[i] != other.store[i] )
+					return false;
+
+			for( var int i = 0; i < self.count; ++i )
+				if( self.store[i] != other.store[i] )
+					return false;
+
+			return true;
+		}
+	}
+
+	//class blubb{}
+
+	fn main() -> int
+	{
+		var stack s;
+		cout << s.count << endl;
+		//a?b:c?d:e;
+	}
+}
