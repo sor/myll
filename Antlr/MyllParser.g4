@@ -22,7 +22,7 @@ equalOP		:	v=(	'==' | '!=' );
 andOP		:		'&&';
 orOP		:		'||';
 
-nulCoalOP	:		'??';
+nulCoalOP	:		'??' | '?:';
 
 memAccOP	:	v=(	'.'  | '?.'  | '->'  );
 memAccPtrOP	:	v=(	'.*' | '?.*' | '->*' );
@@ -33,7 +33,7 @@ moveOP		:		'=<';
 aggrAssignOP:	v=(	'**=' | '*=' | '/=' | '%=' | '&=' |	'·=' |	'×=' |	'÷='
 				|	'+='  | '-=' | '|=' | '^=' | '<<=' | '>>=' );
 
-lit			:	HEX_LIT | OCT_LIT | BIN_LIT | INTEGER_LIT | FLOAT_LIT | STRING_LIT | CHAR_LIT | BOOL_LIT | NUL;
+lit			:	CLASS_LIT | HEX_LIT | OCT_LIT | BIN_LIT | INTEGER_LIT | FLOAT_LIT | STRING_LIT | CHAR_LIT | BOOL_LIT | NUL;
 wildId		:	AUTOINDEX | USCORE;
 id			:	ID;
 idOrLit		:	id | lit;
@@ -142,7 +142,9 @@ caseStmt	:	CASE expr (COMMA expr)* COLON levStmt+ (FALL SEMI)?;
 
 initList	:	COLON id funcCall (COMMA id funcCall)* COMMA?;
 
-funcBody	:	(PHATRARROW expr SEMI | levStmt);
+funcBody	:	PHATRARROW LCURLY expr RCURLY
+ 			|	PHATRARROW expr SEMI
+			|	levStmt;
 accessorDef	:	CONST?		v=( GET | REFGET | SET )	funcBody;
 funcDef		:	id			tplParams?	funcTypeDef (RARROW typespec)?
 				(REQUIRES typespecsNested)?		// TODO
@@ -172,9 +174,9 @@ inDecl		:	NS id (SCOPE id)* SEMI						# Namespace
             			LCURLY	levDecl*	RCURLY	# ConceptDecl
             // TODO aspect
 			|	ENUM id	LCURLY	idExprs		RCURLY	# EnumDecl
-			|	FUNCS	LCURLY	funcDef*	RCURLY	# FunctionDecl
+			|	FUNC	LCURLY	funcDef*	RCURLY	# FunctionDecl
 			|	FUNC			funcDef				# FunctionDecl
-			|	OPERATORS LCURLY opDef*		RCURLY	# OpDecl
+			|	OPERATOR LCURLY opDef*		RCURLY	# OpDecl
 			|	OPERATOR		opDef				# OpDecl
 // class only:
 			//|	v=( PUB | PROT | PRIV ) COLON		# AccessMod
@@ -187,9 +189,9 @@ inDecl		:	NS id (SCOPE id)* SEMI						# Namespace
 // using, var, const: these are both Stmt and Decl
 inAnyStmt	:	USING			typespecsNested	SEMI	# Using
 			|	ALIAS id ASSIGN	typespec 		SEMI	# AliasDecl
-			|	VARS	LCURLY	typedIdAcors*	RCURLY	# VariableDecl
+			|	VAR	LCURLY	typedIdAcors*	RCURLY	# VariableDecl
 			|	VAR				typedIdAcors			# VariableDecl
-			|	CONSTS	LCURLY	typedIdAcors*	RCURLY	# VariableDecl
+			|	CONST	LCURLY	typedIdAcors*	RCURLY	# VariableDecl
 			|	CONST			typedIdAcors			# VariableDecl
 			;
 
