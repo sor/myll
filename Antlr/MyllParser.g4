@@ -181,6 +181,8 @@ inDecl		:	NS id (SCOPE id)* SEMI						# Namespace
 // class only:
 			//|	v=( PUB | PROT | PRIV ) COLON		# AccessMod
 			|	CTOR funcTypeDef initList?	(SEMI | levStmt) # CtorDecl
+			|	COPYCTOR funcTypeDef initList?	(SEMI | levStmt) # CtorDecl
+			|	MOVECTOR funcTypeDef initList?	(SEMI | levStmt) # CtorDecl
 			|	DTOR LPAREN RPAREN			(SEMI | levStmt) # DtorDecl
 			//|	STATIC	LCURLY	levDecl* RCURLY		# StaticDecl
 			//|	STATIC			levDecl				# StaticDecl
