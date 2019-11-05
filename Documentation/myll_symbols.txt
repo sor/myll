@@ -140,6 +140,8 @@ Was ist sinnvoller: Ordered oder Sorted?
 	Ordered ist etwas das eine Ordnung hat: Das Array [1,3,2] ist ordererd. Die Elemente einer Menge sind nicht ordered.
 	Besser noch OrderPreserving für Container.
 
+// SCHON BESCHRIEBEN
+
 Overloading zusammen mit Overwriting funktionieren nicht wie erwartet:
 struct A            { void a(double){ cout << "double" << endl; } };
 struct B : public A { void a(float ){ cout << "float"  << endl; } };

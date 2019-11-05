@@ -1,90 +1,4 @@
-#!/bin/myll
-
-namespace myll::core;
-
-func main() -> int {
-	const BC a;
-	a.c();
-	return 0;
-}
-class BC : SomeBase {}
-
-
-Globale namen werden erfasst, lokale scopes werden komplett auf später verschoben...
-Dadurch ist es einfach Implementierungen komplett zu skippen.
-
-Phase 1:
-Z5: 'func main' wird erzeugt, lokaler Scope wird gequeued für phase 3.
-Z10: class BC wird erzeugt, baseclass SomeBase wird gequeued für phase 2
-
-Phase 2:
-Z10 SomeBase wird gesucht und als Basisklasse zu BC assoziiert
-
-Phase 3: Lokale Scopes werden...
-Z6: 'const a' wird erzeugt im lokalen Scope, Typ BC wird im LocalScope nicht gefunden, in GlobalScope schon. Typ von 'a' ist voll resolved.
-Z7: 'a' wird im lokalen Scope gefunden, ".c" member und fcall auf diesen kann geprüft werden weil BC und SomeBase bekannt sind. ReturnType der Expression bekannt.
-
-*/
-
-/*
-var {
-	float	f;
-	double	d;
-	int*	ptr;
-	int		bi;	// bool stored in an int, like return value from isupper
-	string	str;
-	func	fn(){}
-	class Foo<T> {}
-}
-
-'is' operator like in sql:
-	f is nan		// isnan(f)
-	d is not inf	// !isinf(d)
-	ptr is null		// ptr == nullptr
-	bi is true		// may just do: bi != 0
-	str is upper	// isupper(str) != 0
-	fn is pure		// maybe compile time check of aspect
-	T is ordered	// compile time check of concept
-= OR =
-transform the operators:
-	f == nan		// isnan(f)
-	d != inf		// !isinf(d)
-	ptr == null		// ptr == nullptr
-	bi == true		// may just do: bi != 0
-	str == upper	// Ugly! isupper(str) != 0
-	str.isupper()	// UFCS, yeah! isupper(str) != 0
-	fn == pure		// Ugly? maybe compile time check of aspect
-	pure<fn>		// compile time check of aspect
-	T == ordered	// Ugly? compile time check of concept
-	ordered<T>		// compile time check of concept
-	sortable<T>		// better name for above
-
-Whenever something is constexpr, it is, you dont need to write it.
-
-Use [must aspect_name] when the aspect must match, otherwise don't fail if aspect does not exist, keep it and pass deeper, may match there...
-[const] namespace A{}		// namespaces can not be const, but dont fail
-[must const] namespace A{}	// namespaces can not be const, FAIL
-
-aspect static
-	: structural, structural::var, structural::const, structural::func; // makes them static in C++
-	// class A { [static] func a(){} }
-
-aspect const
-	: structural::operator, structural::func, structural // makes the target unable to change 'this' state
-
-aspect pure
-	: operator, func, structural // makes the target unable to change global state
-
-aspect pre // or post
-	: operator // makes the op a pre or post increment
-
-aspect symmetric
-	: operator, func // makes the op or func symmetric, f(b,a) calls f(a,b) 
-
-aspect asymmetric
-	: operator, func // makes the op or func asymmetric, f(b,a) calls !f(a,b) or -f(a,b)
-*/
-
+// this really only is a stack
 class vector<T>
 {
 	const int INITIAL_CAPACITY = 16;
@@ -95,23 +9,23 @@ class vector<T>
 	[static]
 	var int numRealocs;
 
-[public]:
+public:
 	class iterator
 	{
 		var T* ptr;
 
-	[public]:
-		constructor(T* ptr) : ptr(ptr);
+	public:
+		ctor(T* ptr) : ptr(ptr);
 
-		// [pre] or the 'n'
+		// [pre] or the 'this'
 		[pre]
-		operator "++n" () -> iterator& {
+		operator "++this" () -> iterator& {
 			++ptr;
 			return self;
 		}
 
 		[post]
-		operator "n++" () -> iterator {
+		operator "this++" () -> iterator {
 			return ptr++;
 		}
 
@@ -120,28 +34,29 @@ class vector<T>
 		} 
 	}
 
-	constructor()
+	ctor()
 	:	capa(INITIAL_CAPACITY),
 		size(0),
 		buff(new T[INITIAL_CAPACITY]);
 
-	constructor(int capa)
-	:	capa(capa),
+	ctor(int capacity)
+	:	capa(capacity),
 		size(0),
-		buff(new T[capa]);
+		buff(new T[capacity]);
 
-	destructor()
+	dtor()
 	{
 		if(buff != null)
 			delete[] buff;
 	}
 
-	[pure] funcs {
+	[pure]
+	func {
 		front()	-> T& => buff[0];
 		back()	-> T& => buff[size-1];
 	}
 
-	// use [virtual] at your own discretion
+	[virtual]
 	func push(const T& v) {
 		if(size >= capa)
 			grow();
@@ -155,7 +70,7 @@ class vector<T>
 
 	operator "[]" (int index) -> T& => buff[index];
 
-[priv]:
+private:
 	func grow() {
 		++numRealocs;
 		capa *= 2;
@@ -170,7 +85,8 @@ class vector<T>
 
 class sorted_vector<T> : vector<T>
 {
-	[pub, override]
+public:
+	[override]
 	func push(const T& v)
 	{
 		// TODO: would be faster to find the correct spot to insert, then move the rest
@@ -178,72 +94,5 @@ class sorted_vector<T> : vector<T>
 		sort(buff);
 	}
 }
-
-//class array
-
-concept Compareable<TL,TR>
-{
-	[symetric]	// for operators and functions, generates a (TR r, TL l) mirrored equivalent op/func 
-	operator "<" (TL l, TR r) -> bool;
-}
-
-func hans<T>(T& val) -> V
-requires Compareable<T,int>
-{
-	return val == 6;
-}
-
-func foo<T>([look] vector<T> vec, [share] T val) {}
-
-func test()
-{
-	var int@+ intPtr = 99; // make_shared<int>(99)
-	
-	// IDE can display the following:
-	//  [look] vec,   [share] val
-	foo(myIntVec,	  intPtr);
-	
-	// OR:
-	//  [look],        [share]
-	foo(vec: myIntVec, val: intPtr);
-	
-	// you dont need to think about the correct way of passing
-	// if val is a shared_ptr then its passed by value
-	// if val is a raw ptr then its passed by pointer
-}
-
-/*
-
-
-class A { // container: list<decl>, kann hoeher und tiefer traversen
-	static var int B;
-	static func C( int D ) { // scope: dict<decl>, kann nur hoeher traversen //// list<stmt>
-		var int E;
-		if ...
-		D+E+B
-	}
-}
-
-class G : A {
-using namespace std;
-}
-
-A::B
-A::C
-A::C::D NICHT
-A::C::E NICHT
-G::B
-G::pow
-
-A ist Scope, children sind B und C decls
-
-ns global{
-	enum Moep {
-		A,
-		B,
-		C,
-	}
-}
-*/
 
 

@@ -1,0 +1,34 @@
+// given
+var {
+	float	f;
+	double	d;
+	int*	ptr;
+	int		bi;	// bool stored in an int, like return value from isupper
+	string	str;
+}
+func	fn(){}
+class	Foo<T>{}
+
+// 'is' operator like in sql:
+	f is nan		// isnan(f)
+	d is not inf	// !isinf(d)
+	ptr is null		// ptr == nullptr
+	bi is true		// may just do: bi != 0
+	str is upper	// isupper(str) != 0
+	fn is pure		// maybe compile time check of aspect
+	T is ordered	// compile time check of concept
+
+// == OR ==
+
+// transform the operators:
+	f == nan		// isnan(f)
+	d != inf		// !isinf(d)
+	ptr == null		// ptr == nullptr
+	bi == true		// may just do: bi != 0
+	str == upper	// Ugly! isupper(str) != 0
+	str.isupper()	// UFCS, yeah! isupper(str) != 0
+	fn == pure		// Ugly? maybe compile time check of aspect
+	pure<fn>		// compile time check of aspect
+	T == ordered	// Ugly? compile time check of concept
+	ordered<T>		// compile time check of concept
+	sortable<T>		// better name for above

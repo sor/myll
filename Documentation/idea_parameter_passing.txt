@@ -1,0 +1,25 @@
+func foo<T>(
+	[look]	vector<T> vec,
+	[share]	T val)
+{}
+
+func test()
+{
+	var int@+ intPtr = 99; // make_shared<int>(99)
+	
+	// IDE can display the following:
+	//   [look],    [share]
+	foo( myIntVec,  intPtr );
+	
+	// OR:
+	//   [look] vec,  [share] val
+	foo( myIntVec,	  intPtr );
+	
+	// OR:
+	//   [look],        [share]
+	foo( vec: myIntVec, val: intPtr );
+	
+	// you dont need to think about the correct way of passing
+	// if val is a shared_ptr then its passed by value
+	// if val is a raw ptr then its passed by pointer
+}

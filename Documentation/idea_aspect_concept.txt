@@ -1,0 +1,39 @@
+Use [must aspect_name] when the aspect must directly do something,
+	otherwise don't fail if aspect does not exist,
+	keep it and pass deeper, may match there...
+[const] namespace A{}		// namespaces can not be const, but dont fail, pass to children
+[must const] namespace A{}	// namespaces can not be const, FAIL
+
+aspect static
+	: structural, structural::var, structural::const, structural::func; // makes them static in C++
+	// class A { [static] func a(){} }
+
+aspect const
+	: structural::operator, structural::func, structural // makes the target unable to change 'this' state
+
+aspect pure
+	: operator, func, structural // makes the target unable to change global state
+
+aspect pre // or post
+	: operator // makes the op a pre or post increment
+
+aspect symmetric
+	: operator, func // makes the op or func symmetric, f(b,a) calls f(a,b) 
+
+aspect asymmetric
+	: operator, func // makes the op or func asymmetric, f(b,a) calls !f(a,b) or -f(a,b)
+
+
+//class array
+
+concept Compareable<TL,TR>
+{
+	[symetric]	// for operators and functions, generates a (TR r, TL l) mirrored equivalent op/func 
+	operator "<" (TL l, TR r) -> bool;
+}
+
+func hans<T>(T& val) -> V
+requires Compareable<T,int>
+{
+	return val == 6;
+}

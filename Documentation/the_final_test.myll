@@ -1,7 +1,7 @@
 ﻿namespace JanSordid::Core
 {
 	class Base {}
-	class IAmTheFinalBoss : Base
+	class IAmTheFinalTest : Base
 	{
 		var int*	a, b;
 		var int[4]	ary1, ary2;
@@ -40,7 +40,7 @@
 			if( a ) {}
 			cout << (a == b);
 			if( a << 1 == 23 ) {}
-			fmt::print( "{0}'s birthday is {1:%m/%d/%Y}.\n",     name, birthday );
+			fmt::print( "{0}'s birthday is on {1:%m/%d/%Y}.\n",  name, birthday );
 			fmt::print( "Am {1:%Y-%m-%d} hat {0} Geburtstag.\n", name, birthday );
 		}
 		
@@ -108,7 +108,7 @@
 			alloced = prealloc;
 		}
 
-		meth top() -> T
+		method top() -> T
 		{
 			if( count > 0 )
 				return store[count-1];
@@ -120,7 +120,7 @@
 		// implicit void? not a good idea... Oder doch nicht, weil auto zu undurchsichtig ist
 		// implicit auto? would be void because no return, better than implicit void
 		/*[[mutable]]*/
-		meth push( /*copy*/ T o )
+		method push( /*copy*/ T o )
 		{
 			if( alloced <= count )
 				enlarge( 2 );
@@ -130,7 +130,7 @@
 		}
 
 		/*[[mutable]]*/
-		meth emplace( /*sink*/ T o ) // T && o
+		method emplace( /*sink*/ T o ) // T && o
 		{
 			if( alloced <= count )
 				enlarge( 2 );
@@ -141,7 +141,7 @@
 
 	private:
 		/*[[mutable]]*/
-		meth enlarge( int factor ) -> void
+		method enlarge( int factor ) -> void
 		{
 			var int* new_store = new int[ alloced * factor ]; // fails
 			alloced times o {
@@ -173,7 +173,7 @@
 
 	//class blubb{}
 
-	fn main() -> int
+	func main() -> int
 	{
 		var stack s;
 		cout << s.count << endl;
