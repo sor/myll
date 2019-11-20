@@ -36,16 +36,8 @@ namespace Myll
 
 		public new Var.Accessor VisitAccessorDef( AccessorDefContext c )
 		{
-			Var.Accessor ret = new Var.Accessor {
-				body    = c.funcBody().Visit(),
-				isConst = false, // TODO
-				kind    = c.v.ToAccessorKind(),
-			};
-			return ret;
+			throw new NotImplementedException("refactored away on 20-11-2019");
 		}
-
-		public List<Var.Accessor> VisitAccessorsDef( AccessorDefContext[] c )
-			=> c.Select( VisitAccessorDef ).ToList();
 
 		// list of typed and initialized vars
 		public List<Var> VisitVars( TypedIdAcorsContext c )
@@ -59,7 +51,7 @@ namespace Myll
 					name     = q.id().GetText(),
 					type     = type,
 					init     = q.expr().Visit(),
-					accessor = VisitAccessorsDef( q.accessorDef() ),
+					accessor = q.accessorDef().Visit(),
 					// TODO: Accessors
 				} )
 				.ToList();
@@ -113,9 +105,7 @@ namespace Myll
 		}
 
 		public new List<Decl> VisitFunctionDecl( FunctionDeclContext c )
-		{
-			return c.funcDef().Select( VisitFuncDef ).ToList();
-		}
+			=> c.funcDef().Select( VisitFuncDef ).ToList();
 
 		public override Decl VisitProg( ProgContext c )
 		{
@@ -138,7 +128,7 @@ namespace Myll
 
 			ScopeStack.Pop();
 
-			if(ScopeStack.Count != 0)
+			if( ScopeStack.Count != 0 )
 				throw new Exception( "scope stack was not empty" );
 
 			return glob;
@@ -165,7 +155,7 @@ namespace Myll
 					ret = ns;
 			}
 
-			// only visit children and remove hierearchy with body
+			// only visit children and remove hierarchy with body
 			if( withBody ) {
 				c.levDecl().Select( Visit ).Exec();
 
@@ -173,6 +163,7 @@ namespace Myll
 				foreach( IdContext unused in c.id() )
 					PopScope();
 			}
+
 			return ret;
 		}
 

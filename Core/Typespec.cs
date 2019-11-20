@@ -48,6 +48,8 @@ namespace Myll.Core
 			Unsized  = 1 << 3,
 		}
 
+		public const int SizeUndetermined = -1;
+		public const int SizeInvalid = -2;
 		public int  size;  // in bytes, -1 not yet determined, -2 invalid
 		public int  align; // in bytes
 		public Kind kind;

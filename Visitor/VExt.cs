@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Antlr4.Runtime;
 
@@ -66,35 +67,43 @@ namespace Myll
 
 		private static readonly Dictionary<int, Operand>
 			ToAssignOperand = new Dictionary<int, Operand> {
-				{ Parser.ASSIGN, Operand.Equal },
-				{ Parser.AS_POW, Operand.Pow },
-				{ Parser.AS_MUL, Operand.Multiply },
-				{ Parser.AS_SLASH, Operand.EuclideanDivide },
-				{ Parser.AS_MOD, Operand.Modulo },
-				{ Parser.AS_DOT, Operand.Dot },
-				{ Parser.AS_CROSS, Operand.Cross },
-				{ Parser.AS_DIV, Operand.Divide },
-				{ Parser.AS_ADD, Operand.Add },
-				{ Parser.AS_SUB, Operand.Subtract },
-				{ Parser.AS_LSH, Operand.LeftShift },
-				{ Parser.AS_RSH, Operand.RightShift },
-				{ Parser.AS_AND, Operand.BitAnd },
-				{ Parser.AS_OR, Operand.BitOr },
-				{ Parser.AS_XOR, Operand.BitXor },
+				{ Parser.ASSIGN,	Operand.Equal },
+				{ Parser.AS_POW,	Operand.Pow },
+				{ Parser.AS_MUL,	Operand.Multiply },
+				{ Parser.AS_SLASH,	Operand.EuclideanDivide },
+				{ Parser.AS_MOD,	Operand.Modulo },
+				{ Parser.AS_DOT,	Operand.Dot },
+				{ Parser.AS_CROSS,	Operand.Cross },
+				{ Parser.AS_DIV,	Operand.Divide },
+				{ Parser.AS_ADD,	Operand.Add },
+				{ Parser.AS_SUB,	Operand.Subtract },
+				{ Parser.AS_LSH,	Operand.LeftShift },
+				{ Parser.AS_RSH,	Operand.RightShift },
+				{ Parser.AS_AND,	Operand.BitAnd },
+				{ Parser.AS_OR,		Operand.BitOr },
+				{ Parser.AS_XOR,	Operand.BitXor },
 			};
 
 		private static readonly Dictionary<int, Var.Accessor.Kind>
 			ToAccessorKindDict = new Dictionary<int, Var.Accessor.Kind> {
-				{ Parser.GET, Var.Accessor.Kind.Get },
-				{ Parser.REFGET, Var.Accessor.Kind.RefGet },
-				{ Parser.SET, Var.Accessor.Kind.Set },
+				{ Parser.GET,		Var.Accessor.Kind.Get },
+				{ Parser.REFGET,	Var.Accessor.Kind.RefGet },
+				{ Parser.SET,		Var.Accessor.Kind.Set },
 			};
 
 		private static readonly Dictionary<int, Structural.Kind>
 			ToStructuralKindDict = new Dictionary<int, Structural.Kind> {
-				{ Parser.STRUCT, Structural.Kind.Struct },
-				{ Parser.CLASS, Structural.Kind.Class },
-				{ Parser.UNION, Structural.Kind.Union },
+				{ Parser.STRUCT,	Structural.Kind.Struct },
+				{ Parser.CLASS,		Structural.Kind.Class },
+				{ Parser.UNION,		Structural.Kind.Union },
+			};
+
+		private static readonly Dictionary<int, Qualifier>
+			ToQual = new Dictionary<int, Qualifier> {
+				{ MyllParser.CONST,		Qualifier.Const		},
+				{ MyllParser.MUTABLE,	Qualifier.Mutable	},
+				{ MyllParser.VOLATILE,	Qualifier.Volatile	},
+				{ MyllParser.STABLE,	Qualifier.Stable	},
 			};
 
 		public static void Exec<TSource>( this IEnumerable<TSource> s )
@@ -124,6 +133,7 @@ namespace Myll
 		public static Structural.Kind ToStructuralKind( this IToken tok )
 			=> ToStructuralKindDict[tok.Type];
 
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static SrcPos ToSrcPos( this ParserRuleContext c )
 			=> new SrcPos {
 				from = {
@@ -135,6 +145,10 @@ namespace Myll
 					col  = c.Stop.Column,
 				},
 			};
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static string Visit( this Parser.IdContext c )
+			=> c.GetText();
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Expr Visit( this Parser.ExprContext c )
@@ -159,5 +173,21 @@ namespace Myll
 			=> c == null
 				? null
 				: DeclVis.Visit( c );
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static Qualifier Visit( this Parser.QualContext[] c )
+			=> c.Aggregate( Qualifier.None, ( a, q ) => a | ToQual[q.v.Type] );
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static Var.Accessor Visit( this Parser.AccessorDefContext c )
+			=> new Var.Accessor {
+				body = c.funcBody().Visit(),
+				qual = c.qual().Visit(),
+				kind = c.v.ToAccessorKind(),
+			};
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static List<Var.Accessor> Visit( this Parser.AccessorDefContext[] c )
+			=> c.Select( Visit ).ToList();
 	}
 }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Myll.Core
 {
-	public enum Accessability
+	public enum Accessibility
 	{
 		None,
 		Public,
@@ -15,7 +15,7 @@ namespace Myll.Core
 	public class Decl : Stmt
 	{
 		public string        name;
-		public Accessability accessability;
+		public Accessibility accessibility;
 		public ScopeLeaf     scope;
 
 		// TODO Symbol?
@@ -92,19 +92,14 @@ namespace Myll.Core
 				Set,
 			}
 
-			public Kind kind;
-			public Stmt body;
-			public bool isConst;
-
-			// TODO: maybe Qualifier instead of isConst?
+			public Kind      kind;
+			public Qualifier qual;
+			public Stmt      body; // opt
 		}
 
-		public Typespec       type;
+		public Typespec       type;     // contains Qualifier
 		public List<Accessor> accessor; // opt
 		public Expr           init;     // opt
-		public bool           isConst;
-
-		// TODO: maybe Qualifier instead of isConst?
 	}
 
 	public class Enum : Hierarchical
@@ -138,6 +133,6 @@ namespace Myll.Core
 		public List<TypespecNested> bases;
 		public List<TypespecNested> reqs;
 
-		public Accessability currentAccessability;
+		public Accessibility currentAccessibility;
 	}
 }

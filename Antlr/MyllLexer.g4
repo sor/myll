@@ -1,22 +1,6 @@
 lexer grammar MyllLexer;
 
-/*
-tokens
-{
-	NEWLINES,
-	COMMENTS
-}
-*/
-
 channels { NEWLINES, COMMENTS }
-
-/*@lexer::members
-{
-	protected const int EOF			= Eof;
-	protected const int HIDDEN		= Hidden;
-	protected const int NEWLINES	= Hidden;
-	protected const int COMMENTS	= Hidden;
-}*/
 
 COMMENT		:	(	'#!' ~('\r'|'\n')*	// ignore shebang for now
 				|	'//' ~('\r'|'\n')*
@@ -136,10 +120,10 @@ B64			: 'b64';
 B32			: 'b32';
 B16			: 'b16';
 B8			: 'b8';
-F80			: 'f80';
+F80			: 'f80';	// long double
 F64			: 'f64';
 F32			: 'f32';
-F16			: 'f16';
+F16			: 'f16';	// half float
 
 NS			: 'namespace';
 VOLATILE	: 'volatile';
@@ -194,8 +178,8 @@ THROW		: 'throw';
 
 ID			: ALPHA_ ALNUM_*;
 
-NUL			: ('null'|'nullptr');
-CLASS_LIT	: 'this'|'base';
+NUL			: 'null'|'nullptr';
+CLASS_LIT	: 'this'|'self'|'base';
 BOOL_LIT	: 'true'|'false';
 FLOAT_LIT	:	(	DIGIT* '.' DIGIT+ ( [eE] [+-]? DIGIT+ )?
 				|	DIGIT+ [eE] [+-]? DIGIT+
@@ -221,6 +205,7 @@ NL			: ('\r'|'\n')+	-> channel(NEWLINES);
 WS			: (' '|'\t')+	-> skip;// channel(HIDDEN);
 
 /*
+contextual keywords for parameters
 mode MODE;
 LOOK		: 'look';
 COPY		: 'copy';

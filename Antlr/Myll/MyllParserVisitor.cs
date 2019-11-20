@@ -201,11 +201,11 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitUnsignIntType([NotNull] MyllParser.UnsignIntTypeContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.typeQual"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.qual"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitTypeQual([NotNull] MyllParser.TypeQualContext context);
+	Result VisitQual([NotNull] MyllParser.QualContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.typePtr"/>.
 	/// </summary>
@@ -609,6 +609,13 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitOpDecl([NotNull] MyllParser.OpDeclContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>AccessMod</c>
+	/// labeled alternative in <see cref="MyllParser.inDecl"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitAccessMod([NotNull] MyllParser.AccessModContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>CtorDecl</c>
 	/// labeled alternative in <see cref="MyllParser.inDecl"/>.
