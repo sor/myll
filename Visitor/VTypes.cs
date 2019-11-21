@@ -41,6 +41,7 @@ namespace Myll
 		private static readonly Dictionary<int, int>
 			ToSize = new Dictionary<int, int> {
 				{ MyllParser.FLOAT, 4 }, // TODO: native best float
+				{ MyllParser.DOUBLE, 8 },
 				{ MyllParser.F80, 10 },
 				{ MyllParser.F64, 8 },
 				{ MyllParser.F32, 4 },
