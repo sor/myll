@@ -73,7 +73,7 @@ typespecsNested	:	typespecNested (COMMA typespecNested)* COMMA?;
 // --- handled
 
 arg			:	(id COLON)? expr;
-args		:	(arg (COMMA arg)* COMMA?);
+args		:	arg (COMMA arg)* COMMA?;
 funcCall	:	ary=( QM_LPAREN | LPAREN )	args?	RPAREN;
 indexCall	:	ary=( QM_LBRACK | LBRACK )	args	RBRACK;
 
@@ -95,6 +95,7 @@ sizeofExpr	:	SIZEOF					expr;
 newExpr		:	NEW		typespec?	funcCall?;
 deleteExpr	:	DELETE	(ary='['']')?	expr;
 
+// The order here is significant, it determines the operator precedence
 expr		:	(idTplArgs	SCOPE)+		expr	# ScopedExpr
 			|	expr
 				(	postOP
@@ -106,7 +107,7 @@ expr		:	(idTplArgs	SCOPE)+		expr	# ScopedExpr
 				|	castExpr
 				|	sizeofExpr
 				|	newExpr
-				|	deleteExpr	)				# PreExpr
+				|	deleteExpr	)				# PreExpr // this visitor is unused
 			|	expr	memAccPtrOP		expr	# MemPtrExpr
 			| <assoc=right>
 				expr	powOP			expr	# PowExpr
@@ -123,7 +124,7 @@ expr		:	(idTplArgs	SCOPE)+		expr	# ScopedExpr
 				expr	QM expr COLON	expr	# ConditionalExpr
 			|	LPAREN	expr	RPAREN			# ParenExpr
 			|	wildId							# WildIdExpr
-			|	lit								# LiteralExpr
+			|	lit								# LiteralExpr	// TODO
 			|	idTplArgs						# IdTplExpr
 			;
 
@@ -134,7 +135,7 @@ idExprs		:	idExpr		(COMMA idExpr)*		COMMA?;
 typedIdAcors:	typespec 	idAccessors	SEMI;
 
 attrib		:	id	(	'=' idOrLit
-					|	'(' idOrLit (COMMA idOrLit)* ')'
+					|	'(' idOrLit (COMMA idOrLit)* COMMA? ')'
 					)?;
 attribBlk	:	LBRACK	attrib (COMMA attrib)* COMMA? RBRACK;
 

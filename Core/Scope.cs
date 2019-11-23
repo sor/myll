@@ -4,7 +4,7 @@ namespace Myll.Core
 {
 	public class ScopeLeaf
 	{
-		public Scope parent; // only global is null
+		public Scope parent; // only global scope has this set to null
 		public Decl  decl;
 
 		public bool HasDecl => decl != null;
@@ -16,10 +16,14 @@ namespace Myll.Core
 	// ELSE NOT visible from outside
 	public class Scope : ScopeLeaf
 	{
-		public new Hierarchical decl; // opt
+		// opt
+		public new Hierarchical decl {
+			get => base.decl as Hierarchical;
+			set => base.decl = value;
+		}
 
-		public Dictionary<string, List<ScopeLeaf>>
-			children = new Dictionary<string, List<ScopeLeaf>>();
+		public Dictionary<string, List<ScopeLeaf>> children
+		 = new Dictionary<string, List<ScopeLeaf>>();
 
 		// unresolved???
 		public List<Scope> importedScopes; // (base) Class (es) and (using) Namespaces

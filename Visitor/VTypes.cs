@@ -68,7 +68,7 @@ namespace Myll
 		public new Typespec VisitTypespec( TypespecContext c )
 		{
 			if( c == null )
-				return null;
+				return null;	// TypespecBasic Auto might make sense
 
 			Typespec ret;
 			if( c.typespecBasic()       != null ) ret = VisitTypespecBasic( c.typespecBasic() );
@@ -102,8 +102,9 @@ namespace Myll
 		public new TypespecBasic VisitTypespecBasic( TypespecBasicContext c )
 		{
 			TypespecBasic ret = new TypespecBasic {
-				align = -1,
-				size  = -1
+				srcPos = c.ToSrcPos(),
+				align  = -1,
+				size   = TypespecBasic.SizeUndetermined,
 			};
 			var cc = c.GetChild<ParserRuleContext>( 0 );
 			switch( cc.RuleIndex ) {
@@ -115,7 +116,7 @@ namespace Myll
 							break;
 						case MyllParser.VOID:
 							ret.kind = TypespecBasic.Kind.Void;
-							ret.size = -2;
+							ret.size = TypespecBasic.SizeInvalid;
 							break;
 						case MyllParser.BOOL:
 							ret.kind = TypespecBasic.Kind.Bool;
@@ -169,6 +170,7 @@ namespace Myll
 		public new TypespecFunc VisitTypespecFunc( TypespecFuncContext c )
 		{
 			TypespecFunc ret = new TypespecFunc {
+				srcPos       = c.ToSrcPos(),
 				templateArgs = VisitTplArgs( c.tplArgs() ),
 				paras        = VisitFuncTypeDef( c.funcTypeDef() ),
 				retType      = VisitTypespec( c.typespec() ),
@@ -179,6 +181,7 @@ namespace Myll
 		public new TypespecNested VisitTypespecNested( TypespecNestedContext c )
 		{
 			TypespecNested ret = new TypespecNested {
+				srcPos      = c.ToSrcPos(),
 				identifiers = c.idTplArgs().Select( VisitIdTplArgs ).ToList()
 			};
 			return ret;

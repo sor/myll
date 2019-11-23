@@ -75,6 +75,8 @@ namespace Myll
 	public class DeclVisitor
 		: ExtendedVisitor<Decl>
 	{
+		public DeclVisitor( Stack<Scope> ScopeStack ) : base( ScopeStack ) {}
+
 		public override Decl Visit( IParseTree c )
 			=> c == null
 				? null
@@ -94,6 +96,8 @@ namespace Myll
 
 		public override Decl VisitFuncDef( FuncDefContext c )
 		{
+			// ist das hier richtig?
+			PushScope();
 			Func ret = new Func {
 				name           = VisitId( c.id() ),
 				templateParams = VisitTplParams( c.tplParams() ),
@@ -101,6 +105,8 @@ namespace Myll
 				retType        = VisitTypespec( c.typespec() ),
 				block          = c.funcBody().Visit(),
 			};
+			PopScope();
+			AddChild( ret );
 			return ret;
 		}
 
@@ -109,38 +115,20 @@ namespace Myll
 
 		public override Decl VisitProg( ProgContext c )
 		{
-			Namespace glob = new Namespace {
-				name     = "",
-				srcPos   = c.ToSrcPos(),
-				withBody = true,
-			};
-			Scope scope = new Scope {
-				parent = null,
-				decl   = glob,
-			};
+			Namespace global = GenerateGlobalScope( c.ToSrcPos() );
 
-			ScopeStack.Push( scope );
 			c.levDecl().Select( Visit ).Exec();
 
-			// cleanup old bodyless namespaces
-			while( !((Namespace) ScopeStack.Peek().decl).withBody )
-				PopScope();
+			CloseGlobalScope();
 
-			ScopeStack.Pop();
-
-			if( ScopeStack.Count != 0 )
-				throw new Exception( "scope stack was not empty" );
-
-			return glob;
+			return global;
 		}
 
 		public override Decl VisitNamespace( NamespaceContext c )
 		{
 			Namespace ret = null;
 
-			// cleanup old bodyless namespaces
-			while( !((Namespace) ScopeStack.Peek().decl).withBody )
-				PopScope();
+			CleanBodylessNamespace();
 
 			// add new namespaces to hierarchy
 			bool withBody = (c.levDecl().Length >= 1);
@@ -188,13 +176,14 @@ namespace Myll
 
 		public override Decl VisitCtorDecl( CtorDeclContext c )
 		{
-			Structor ret = new Structor {
-				kind  = Structor.Kind.Constructor,
+			PushScope();
+			ConDestructor ret = new ConDestructor {
+				kind  = ConDestructor.Kind.Constructor,
 				paras = VisitFuncTypeDef( c.funcTypeDef() ),
+				block = c.levStmt().Visit(),
 				// TODO: cc.initList(); // opt
 			};
-			PushScope( ret );
-			ret.block = c.levStmt().Visit();
+			AddChild( ret );
 			PopScope();
 
 			return ret;
@@ -204,8 +193,8 @@ namespace Myll
 		public override Decl VisitDtorDecl( DtorDeclContext c )
 		{
 			var cc = c.ctorDef();
-			Structor ret = new Structor {
-				kind  = Structor.Kind.Constructor,
+			ConDestructor ret = new ConDestructor {
+				kind  = ConDestructor.Kind.Constructor,
 				paras = VisitFuncTypeDef( cc.funcTypeDef() ),
 				//block = cc.levStmt().Visit()
 				// TODO: cc.initList(); // opt

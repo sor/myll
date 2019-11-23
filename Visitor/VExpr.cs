@@ -14,24 +14,25 @@ namespace Myll
 	{
 		public new List<Func.Arg> VisitArgs( ArgsContext c )
 		{
-			List<Func.Arg> ret = c.arg().Select( VisitArg ).ToList();
+			List<Func.Arg> ret = c?.arg().Select( VisitArg ).ToList()
+			                     ?? new List<Func.Arg>();
 			return ret;
 		}
 
 		public new Func.Call VisitIndexCall( IndexCallContext c )
 		{
-			// TODO ?[] call
 			Func.Call ret = new Func.Call {
-				args = VisitArgs( c.args() ),
+				args     = VisitArgs( c.args() ),
+				nullCoal = c.ary.Type == QM_LBRACK,
 			};
 			return ret;
 		}
 
 		public new Func.Call VisitFuncCall( FuncCallContext c )
 		{
-			// TODO ?() call
 			Func.Call ret = new Func.Call {
-				args = VisitArgs( c.args() ),
+				args     = VisitArgs( c?.args() ),
+				nullCoal = c?.ary.Type == QM_LPAREN,
 			};
 			return ret;
 		}
@@ -53,6 +54,8 @@ namespace Myll
 	public class ExprVisitor
 		: ExtendedVisitor<Expr>
 	{
+		public ExprVisitor( Stack<Scope> ScopeStack ) : base( ScopeStack ) {}
+
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public override Expr Visit( IParseTree c )
 			=> c == null
@@ -73,11 +76,12 @@ namespace Myll
 		{
 			Expr ret;
 			Expr left = c.expr().Visit();
-			if( c.postOP() != null )
+			if( c.postOP() != null ) {
 				ret = new UnOp {
 					expr = left,
 					op   = c.postOP().v.ToOp(),
 				};
+			}
 			else if( c.funcCall() != null ) {
 				ret = new FuncCallExpr {
 					op       = c.funcCall().ary.ToOp(),
@@ -104,7 +108,7 @@ namespace Myll
 				};
 			}
 			else
-				throw new Exception( "unknown pre op" );
+				throw new Exception( "unknown post op" );
 
 			return ret;
 		}
@@ -120,8 +124,12 @@ namespace Myll
 
 		public override Expr VisitCastExpr( CastExprContext c )
 		{
+			Operand op =
+				c.QM() != null ? Operand.DynamicCast :
+				c.EM() != null ? Operand.AnyCast :
+				                 Operand.StaticCast;
 			Expr ret = new CastExpr {
-				op   = Operand.StaticCast,
+				op   = op,
 				type = VisitTypespec( c.typespec() ),
 				expr = c.expr().Visit(),
 			};
@@ -159,10 +167,10 @@ namespace Myll
 		public override Expr VisitPreExpr( PreExprContext c )
 		{
 			IParseTree cc = c.preOpExpr()
-							?? c.castExpr()
-							?? c.sizeofExpr()
-							?? c.newExpr()
-							?? c.deleteExpr() as IParseTree;
+			                ?? c.castExpr()
+			                ?? c.sizeofExpr()
+			                ?? c.newExpr()
+			                ?? c.deleteExpr() as IParseTree;
 
 			if( cc == null )
 				throw new Exception( "unknown pre op" );
@@ -172,6 +180,7 @@ namespace Myll
 			return ret;
 		}
 
+		// TODO: check if this really works
 		public override Expr VisitMemPtrExpr( MemPtrExprContext c )
 		{
 			BinOp ret = new BinOp {
@@ -215,7 +224,7 @@ namespace Myll
 		public override Expr VisitShiftExpr( ShiftExprContext c )
 		{
 			BinOp ret = new BinOp {
-				op    = Operand.LeftShift, // TODO
+				op    = c.shiftOP().LSHIFT() != null ? Operand.LeftShift : Operand.RightShift,
 				left  = c.expr( 0 ).Visit(),
 				right = c.expr( 1 ).Visit(),
 			};

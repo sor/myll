@@ -15,8 +15,7 @@ namespace Myll.Core
 
 	public class Typespec
 	{
-		public string        srcFile;
-		public uint          srcLine;
+		public SrcPos        srcPos;
 		public Qualifier     qual;
 		public List<Pointer> ptrs;
 
@@ -38,6 +37,7 @@ namespace Myll.Core
 			Unsigned,
 		}
 
+		// deprecated, never used, maybe for dynamically sized integer in the future
 		[Flags]
 		public enum Modifier
 		{
@@ -55,7 +55,8 @@ namespace Myll.Core
 		public Kind kind;
 	}
 
-	// var func<int,4>(int a, float b) fun; // Here in the Template are Args and in the Parens are Params
+	// var func<int,4>(int a, float b) fun;
+	// In here the Template are Args and in the Parens are Params
 	public class TypespecFunc : Typespec
 	{
 		public List<TemplateArg> templateArgs; // opt

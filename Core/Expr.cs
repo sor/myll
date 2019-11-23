@@ -12,11 +12,11 @@ namespace Myll.Core
 		PostIncr,
 		PostDecr,
 		FuncCall,
-		NCFuncCall,
+		NCFuncCall, // special
 		IndexCall,
-		NCIndexCall,
+		NCIndexCall, // special
 		MemberAccess,
-		NCMemberAccess,
+		NCMemberAccess, // special
 		MemberPtrAccess,
 		PostOps_End,
 
@@ -30,9 +30,12 @@ namespace Myll.Core
 		Dereference,
 		AddressOf,
 
+		Cast_Begin,
 		StaticCast,
 		DynamicCast,
-		AnyCast,
+		AnyCast, // const_cast & reinterpret_cast
+		Cast_End,
+
 		SizeOf,
 		New,
 		Delete,
@@ -41,7 +44,7 @@ namespace Myll.Core
 
 		MemberAccessPtr_Begin,
 		MemberAccessPtr,
-		NCMemberAccessPtr,
+		NCMemberAccessPtr, // special
 		MemberPtrAccessPtr,
 		MemberAccessPtr_End,
 
@@ -51,17 +54,17 @@ namespace Myll.Core
 		Multiply,
 		EuclideanDivide,
 		Modulo,
-		BitAnd,
-		Dot,
-		Cross,
-		Divide,
+		BitAnd, // special
+		Dot,    // special
+		Cross,  // special
+		Divide, // special
 		MultOps_End,
 
 		AddOps_Begin,
 		Add,
 		Subtract,
-		BitOr,
-		BitXor,
+		BitOr,  // special
+		BitXor, // special
 		AddOps_End,
 
 		ShiftOps_Begin,
@@ -69,7 +72,7 @@ namespace Myll.Core
 		RightShift,
 		ShiftOps_End,
 
-		Comparison,
+		Comparison, // special, spaceship
 
 		OrderOps_Begin,
 		LessThan,
@@ -88,15 +91,17 @@ namespace Myll.Core
 		Or,
 		BooleanOps_End,
 
-		NullCoalesce,
+		NullCoalesce, // special
 
-		Conditional,
+		Conditional, // a ? b : c
 
 		Parens,
 
+		Ids_Begin,
 		Id,
-		WildId,
-		DiscardId,
+		WildId,    // special
+		DiscardId, // special
+		Ids_End,
 
 		Literal,
 	}
@@ -119,17 +124,20 @@ namespace Myll.Core
 		}
 	}
 
+	// Unary Operation - one operand
 	public class UnOp : Expr
 	{
 		public Expr expr { get; set; }
 	}
 
+	// Binary Operation - two operands
 	public class BinOp : Expr
 	{
 		public Expr left  { get; set; }
 		public Expr right { get; set; }
 	}
 
+	// Ternary Operation - three operands, right now only: if ? then : else
 	public class TernOp : Expr
 	{
 		public Expr ifExpr   { get; set; }

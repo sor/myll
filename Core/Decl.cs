@@ -24,7 +24,11 @@ namespace Myll.Core
 	// has in-order list of decls, visible from outside
 	public class Hierarchical : Decl
 	{
-		public new Scope scope;
+		public new Scope scope {
+			get => base.scope as Scope;
+			set => base.scope = value;
+		}
+
 		public readonly List<Decl> children = new List<Decl>();
 
 		// the children add themselves through AddChild or PushScope
@@ -52,6 +56,7 @@ namespace Myll.Core
 		public class Call
 		{
 			public List<Arg> args;
+			public bool      nullCoal;
 		}
 
 		public List<TemplateParam> templateParams;
@@ -61,7 +66,7 @@ namespace Myll.Core
 	}
 
 	// Constructor / Destructor
-	public class Structor : Hierarchical
+	public class ConDestructor : Decl
 	{
 		public enum Kind
 		{

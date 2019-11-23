@@ -14,12 +14,10 @@ fragment CH_ESC:  '\\' ('\\' | '\'' | 't' | 'n' | 'r');
 
 ARROW_STAR	: '->*';
 POINT_STAR	: '.*';
-PTR_TO_ARY	: '[*]';
+PTR_TO_ARY	: '[]*';	// [*] could be a dynamic array
 COMPARE		: '<=>';
 TRP_POINT	: '...';
 DBL_POINT	: '..';
-DBL_LBRACK	: '[[';
-DBL_RBRACK	: ']]';
 DBL_AMP		: '&&';
 DBL_QM		: '??';
 QM_COLON	: '?:';

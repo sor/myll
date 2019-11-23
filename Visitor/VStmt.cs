@@ -26,6 +26,8 @@ namespace Myll
 	public class StmtVisitor
 		: ExtendedVisitor<Stmt>
 	{
+		public StmtVisitor( Stack<Scope> ScopeStack ) : base( ScopeStack ) {}
+
 		public override Stmt Visit( IParseTree c )
 			=> c == null
 				? null
