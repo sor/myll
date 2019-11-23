@@ -1,33 +1,3 @@
-#!/bin/myll
-
-namespace myll::core;
-
-func main() -> int {
-	const BC a;
-	a.c();
-	return 0;
-}
-class BC : SomeBase {}
-
-
-Globale namen werden erfasst, lokale scopes werden komplett auf später verschoben...
-Dadurch ist es einfach Implementierungen komplett zu skippen.
-
-Phase 1:
-Z5: 'func main' wird erzeugt,
-	resolve von 'int' gequeued für phase 2,
-	lokaler Scope wird gequeued für phase 3.
-Z10: class BC wird erzeugt,
-	baseclass SomeBase wird gequeued für phase 2
-
-Phase 2:
-Z10 SomeBase wird gesucht und als Basisklasse zu BC assoziiert
-
-Phase 3: Lokale Scopes werden...
-Z6: 'const a' wird erzeugt im lokalen Scope, Typ BC wird im LocalScope nicht gefunden, in GlobalScope schon. Typ von 'a' ist voll resolved.
-Z7: 'a' wird im lokalen Scope gefunden, ".c" member und fcall auf diesen kann geprüft werden weil BC und SomeBase bekannt sind. ReturnType der Expression bekannt.
-
-===============
 
 class A { // container: list<decl>, kann hoeher und tiefer traversen
 	static var int B;
