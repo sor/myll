@@ -31,3 +31,4 @@ Created by Jan Reitz. Licence undecided (apparently its open source).
     - SOA attribute
     - PIMPL attribute
     - Source file unification build
+    - Glue classes
