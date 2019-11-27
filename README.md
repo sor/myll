@@ -33,3 +33,4 @@ Created by Jan Reitz. Licence undecided (apparently its open source).
     - Source file unification build
     - Glue classes
     - Memorization as language feature
+    - Static init of singletons, optimizing away the thread lock
