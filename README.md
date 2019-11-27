@@ -32,3 +32,4 @@ Created by Jan Reitz. Licence undecided (apparently its open source).
     - PIMPL attribute
     - Source file unification build
     - Glue classes
+    - Memorization as language feature
