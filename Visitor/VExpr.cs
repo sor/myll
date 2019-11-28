@@ -294,10 +294,10 @@ namespace Myll
 		public override Expr VisitConditionalExpr( ConditionalExprContext c )
 		{
 			TernOp ret = new TernOp {
-				op       = Operand.Conditional,
-				ifExpr   = c.expr( 0 ).Visit(),
-				thenExpr = c.expr( 1 ).Visit(),
-				elseExpr = c.expr( 2 ).Visit(),
+				op    = Operand.Conditional,
+				left  = c.expr( 0 ).Visit(),
+				mid   = c.expr( 1 ).Visit(),
+				right = c.expr( 2 ).Visit(),
 			};
 			return ret;
 		}

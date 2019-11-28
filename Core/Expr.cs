@@ -4,6 +4,51 @@ using System.Text;
 
 namespace Myll.Core
 {
+	static class Precedence
+	{
+		// Precedence Table in MYLL, will be filled with everything from Operand
+		// The original C++ levels are times 10 here to enable insertion of new in-between levels
+		public static readonly IDictionary<Operand, int>
+			PrecedenceLevel = new Dictionary<Operand, int> {
+				{ Operand.Scoped, 10 },
+				{ Operand.PostOps_Begin, 20 },
+				{ Operand.PreOps_Begin, 30 },
+				{ Operand.MemberAccessPtr_Begin, 40 },
+				{ Operand.Pow, 45 }, // new mid level
+				{ Operand.MultOps_Begin, 50 },
+				{ Operand.AddOps_Begin, 60 },
+				{ Operand.ShiftOps_Begin, 70 },
+				{ Operand.Comparison, 80 },
+				{ Operand.OrderOps_Begin, 90 },
+				{ Operand.EqualOps_Begin, 100 },
+				{ Operand.And, 140 },
+				{ Operand.Or, 150 },
+				{ Operand.NullCoalesce, 155 }, // new mid level
+				{ Operand.Conditional, 160 },
+			};
+
+		// Only the deviating levels for moved operators
+		public static readonly IDictionary<Operand, int>
+			OriginalPrecedenceLevel = new Dictionary<Operand, int> {
+				{ Operand.BitAnd, 110 },
+				{ Operand.BitXor, 120 },
+				{ Operand.BitOr, 130 },
+			};
+
+		static Precedence()
+		{
+			int currentLevel = 0;
+			foreach( Operand op in System.Enum.GetValues( typeof( Operand ) ) ) {
+				if( PrecedenceLevel.TryGetValue( op, out int level ) ) {
+					currentLevel = level;
+				}
+				else {
+					PrecedenceLevel.Add( op, currentLevel );
+				}
+			}
+		}
+	}
+
 	public enum Operand
 	{
 		Scoped,
@@ -12,11 +57,11 @@ namespace Myll.Core
 		PostIncr,
 		PostDecr,
 		FuncCall,
-		NCFuncCall, // special
+		NCFuncCall, // new, special
 		IndexCall,
-		NCIndexCall, // special
+		NCIndexCall, // new, special
 		MemberAccess,
-		NCMemberAccess, // special
+		NCMemberAccess, // new, special
 		MemberPtrAccess,
 		PostOps_End,
 
@@ -29,13 +74,11 @@ namespace Myll.Core
 		Complement,
 		Dereference,
 		AddressOf,
-
 		Cast_Begin,
 		StaticCast,
 		DynamicCast,
 		AnyCast, // const_cast & reinterpret_cast
 		Cast_End,
-
 		SizeOf,
 		New,
 		Delete,
@@ -44,7 +87,7 @@ namespace Myll.Core
 
 		MemberAccessPtr_Begin,
 		MemberAccessPtr,
-		NCMemberAccessPtr, // special
+		NCMemberAccessPtr, // new, special
 		MemberPtrAccessPtr,
 		MemberAccessPtr_End,
 
@@ -54,17 +97,17 @@ namespace Myll.Core
 		Multiply,
 		EuclideanDivide,
 		Modulo,
-		BitAnd, // special
-		Dot,    // special
-		Cross,  // special
-		Divide, // special
+		BitAnd, // moved, special
+		Dot,    // new, special
+		Cross,  // new, special
+		Divide, // new, special
 		MultOps_End,
 
 		AddOps_Begin,
 		Add,
 		Subtract,
-		BitOr,  // special
-		BitXor, // special
+		BitOr,  // moved, special
+		BitXor, // moved, special
 		AddOps_End,
 
 		ShiftOps_Begin,
@@ -74,7 +117,7 @@ namespace Myll.Core
 
 		Comparison, // special, spaceship
 
-		OrderOps_Begin,
+		OrderOps_Begin,	// TODO: Relational Ops
 		LessThan,
 		LessEqual,
 		GreaterThan,
@@ -91,7 +134,7 @@ namespace Myll.Core
 		Or,
 		BooleanOps_End,
 
-		NullCoalesce, // special
+		NullCoalesce, // new, special
 
 		Conditional, // a ? b : c
 
@@ -109,6 +152,12 @@ namespace Myll.Core
 	public class Expr
 	{
 		public Operand op { get; set; }
+		public int PrecedenceLevel => Precedence.PrecedenceLevel[op];
+		public bool IsDivergentPrecedence => Precedence.OriginalPrecedenceLevel.ContainsKey( op );
+		public int OriginalPrecedenceLevel
+			=> Precedence.OriginalPrecedenceLevel.TryGetValue( op, out int value )
+				? value
+				: PrecedenceLevel;
 
 		public override string ToString()
 		{
@@ -122,12 +171,34 @@ namespace Myll.Core
 				   + GetType().Name + " "
 				   + sb.ToString()  + "}";
 		}
+
+		public virtual string Gen( bool doBrace = false )
+		{
+			throw new NotImplementedException();
+		}
 	}
 
 	// Unary Operation - one operand
 	public class UnOp : Expr
 	{
 		public Expr expr { get; set; }
+
+		public override string Gen( bool doBrace = false )
+		{
+			bool isPreOp = Operand.PreOps_Begin < op && op < Operand.PreOps_End;
+			bool isPostOp = Operand.PostOps_Begin < op && op < Operand.PostOps_End;
+			bool divPrecedence = IsDivergentPrecedence;
+			bool doBraceExpr = (divPrecedence || expr.IsDivergentPrecedence)
+			                   && OriginalPrecedenceLevel < expr.OriginalPrecedenceLevel;
+
+			// TODO: pre or post or what?
+			return string.Format(
+				doBrace
+					? "({1} <{0}>)"
+					: "{1} <{0}>",
+				op.ToString(),
+				expr.Gen( doBraceExpr ) );
+		}
 	}
 
 	// Binary Operation - two operands
@@ -135,14 +206,65 @@ namespace Myll.Core
 	{
 		public Expr left  { get; set; }
 		public Expr right { get; set; }
+
+		public override string Gen( bool doBrace = false )
+		{
+			// only look down
+			// myll: a * b | c == d
+			// c++: (a * b | c) == d
+			// myll: 100 / 60 / 50
+			//      eq / binor / mult
+			// c++: 100 / *110* / 50
+
+			bool divPrecedence = IsDivergentPrecedence;
+			bool doBraceLeft = (divPrecedence || left.IsDivergentPrecedence)
+			                   && OriginalPrecedenceLevel < left.OriginalPrecedenceLevel;
+			bool doBraceRight = (divPrecedence || right.IsDivergentPrecedence)
+			                    && OriginalPrecedenceLevel < right.OriginalPrecedenceLevel;
+
+			return string.Format(
+				doBrace
+					? "({1} <{0}> {2})"
+					: "{1} <{0}> {2}",
+				op.ToString(),
+				left.Gen( doBraceLeft ),
+				right.Gen( doBraceRight ) );
+		}
 	}
 
 	// Ternary Operation - three operands, right now only: if ? then : else
 	public class TernOp : Expr
 	{
-		public Expr ifExpr   { get; set; }
-		public Expr thenExpr { get; set; }
-		public Expr elseExpr { get; set; }
+		public Expr left  { get; set; }
+		public Expr mid   { get; set; }
+		public Expr right { get; set; }
+
+		public override string Gen( bool doBrace = false )
+		{
+			// only look down
+			// myll: a * b | c == d
+			// c++: (a * b | c) == d
+			// myll: 100 / 60 / 50
+			//      eq / binor / mult
+			// c++: 100 / *110* / 50
+
+			bool divPrecedence = IsDivergentPrecedence;
+			bool doBraceLeft = (divPrecedence || left.IsDivergentPrecedence)
+			                   && OriginalPrecedenceLevel < left.OriginalPrecedenceLevel;
+			bool doBraceMid = (divPrecedence || mid.IsDivergentPrecedence)
+			                  && OriginalPrecedenceLevel < mid.OriginalPrecedenceLevel;
+			bool doBraceRight = (divPrecedence || right.IsDivergentPrecedence)
+			                    && OriginalPrecedenceLevel < right.OriginalPrecedenceLevel;
+
+			return string.Format(
+				doBrace
+				? "({1} <{0}> {2})" // TODO: ternary ^^
+					: "{1} <{0}> {2}",
+				op.ToString(),
+				left.Gen( doBraceLeft ),
+				mid.Gen( doBraceMid ),
+				right.Gen( doBraceRight ) );
+		}
 	}
 
 	public class ScopedExpr : Expr
