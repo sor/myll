@@ -216,7 +216,7 @@ namespace Myll.Core
 
 		public override string Gen( bool doBrace = false )
 		{
-			// only look down
+			// only look downward
 			// myll: a * b | c == d
 			// c++: (a * b | c) == d
 			// myll: 100 / 60 / 50
