@@ -12,7 +12,7 @@ preOP		:	v=(	'++' | '--' | '+' | '-' | '!' | '~' | '*' | '&' );
 
 powOP		:		'*''*';
 multOP		:	v=(	'*' | '/' | '%' | '&' | '·' | '×' | '÷' );
-addOP		:	v=(	'+' | '-' | '|' | '^' );
+addOP		:	v=(	'+' | '-' | '^' | '|' ); // split xor and or?
 shiftOP		:		'<<' | '>''>';
 
 cmpOp       :   	'<=>';
@@ -22,16 +22,15 @@ equalOP		:	v=(	'==' | '!=' );
 andOP		:		'&&';
 orOP		:		'||';
 
-nulCoalOP	:		'??' | '?:';
+nulCoalOP	:		'?:';
 
 memAccOP	:	v=(	'.'  | '?.'  | '->'  );
 memAccPtrOP	:	v=(	'.*' | '?.*' | '->*' );
 
 // handled by ToAssignOp because of collisions
 assignOP	:		'=';
-moveOP		:		'=<';
-aggrAssignOP:	v=(	'**=' | '*=' | '/=' | '%=' | '&=' |	'·=' |	'×=' |	'÷='
-				|	'+='  | '-=' | '|=' | '^=' | '<<=' | '>>=' );
+aggrAssignOP:	v=(	'**=' | '*=' | '/=' | '%=' | '&=' |	'·=' |	'×=' |	'÷=' |
+					'+='  | '-=' | '|=' | '^=' | '<<=' | '>>=' );
 
 lit			:	CLASS_LIT | HEX_LIT | OCT_LIT | BIN_LIT | INTEGER_LIT | FLOAT_LIT | STRING_LIT | CHAR_LIT | BOOL_LIT | NUL;
 wildId		:	AUTOINDEX | USCORE;
@@ -90,7 +89,7 @@ tplParams	:	LT id (COMMA id)* GT;
 // Tier 3
 //cast: nothing = static, ? = dynamic, ! = const & reinterpret
 preOpExpr	:	preOP					expr;
-castExpr	:	LPAREN (QM|EM)? typespec RPAREN	expr;
+castExpr	:	(MOVE|LPAREN (QM|EM)? typespec RPAREN)	expr;
 sizeofExpr	:	SIZEOF					expr;
 newExpr		:	NEW		typespec?	funcCall?;
 deleteExpr	:	DELETE	(ary='['']')?	expr;
@@ -122,11 +121,16 @@ expr		:	(idTplArgs	SCOPE)+		expr	# ScopedExpr
 			|	expr	nulCoalOP		expr	# NullCoalesceExpr
 			| <assoc=right>
 				expr	QM expr COLON	expr	# ConditionalExpr
+			| <assoc=right>
+				expr	DBL_QM threeWay+ (COLON expr)?	# ThreeWayConditionalExpr
 			|	LPAREN	expr	RPAREN			# ParenExpr
 			|	wildId							# WildIdExpr
 			|	lit								# LiteralExpr	// TODO
 			|	idTplArgs						# IdTplExpr
 			;
+
+threeWay	:	orderOP	COLON	expr
+			|	equalOP	COLON	expr;
 
 idAccessor	:	id	(LCURLY accessorDef+ RCURLY)?	(ASSIGN expr)?;
 idExpr		:	id									(ASSIGN expr)?;
@@ -217,6 +221,7 @@ inStmt		:	SEMI								# EmptyStmt
 				WHILE	LPAREN expr RPAREN SEMI?	# DoWhileStmt
 			|	expr TIMES			id?	levStmt		# TimesStmt
 			|	expr DBL_POINT expr id?	levStmt		# EachStmt
+			//| <assoc=right>???
 			| 	(expr	assignOP)+		expr SEMI	# MultiAssignStmt
 			| 	expr	aggrAssignOP	expr SEMI	# AggrAssignStmt
 			|	expr SEMI							# ExpressionStmt

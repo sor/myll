@@ -54,7 +54,7 @@ namespace Myll
 	public class ExprVisitor
 		: ExtendedVisitor<Expr>
 	{
-		public ExprVisitor( Stack<Scope> ScopeStack ) : base( ScopeStack ) {}
+		public ExprVisitor( Stack<Scope> scopeStack ) : base( scopeStack ) {}
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public override Expr Visit( IParseTree c )
@@ -294,9 +294,9 @@ namespace Myll
 		public override Expr VisitConditionalExpr( ConditionalExprContext c )
 		{
 			TernOp ret = new TernOp {
-				op    = Operand.Conditional,
-				left  = c.expr( 0 ).Visit(),
-				mid   = c.expr( 1 ).Visit(),
+				op       = Operand.Conditional,
+				left   = c.expr( 0 ).Visit(),
+				mid = c.expr( 1 ).Visit(),
 				right = c.expr( 2 ).Visit(),
 			};
 			return ret;

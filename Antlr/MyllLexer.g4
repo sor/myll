@@ -12,6 +12,7 @@ CHAR_LIT	: '\'' (CH_ESC | ~('\\' | '\'' | '\r' | '\n')) '\'';
 fragment STR_ESC: '\\' ('\\' | '"' | 't' | 'n' | 'r');
 fragment CH_ESC:  '\\' ('\\' | '\'' | 't' | 'n' | 'r');
 
+MOVE		: '(move)';
 ARROW_STAR	: '->*';
 POINT_STAR	: '.*';
 PTR_TO_ARY	: '[]*';	// [*] could be a dynamic array
@@ -26,7 +27,6 @@ DBL_PLUS	: '++';
 DBL_MINUS	: '--';
 RARROW		: '->';
 PHATRARROW	: '=>';
-MOVEARROW	: '=<';
 LSHIFT		: '<<';
 //RSHIFT	: '>>';// this is only supported by 2x GT because of: var v<v<int>> a; which is two templates closing, not a right shift
 SCOPE		: '::';

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Myll.Generator;
 
 namespace Myll.Core
 {
@@ -28,6 +29,7 @@ namespace Myll.Core
 			};
 
 		// Only the deviating levels for moved operators
+		// If there is too much difference in precedence, this check might not make sense anymore
 		public static readonly IDictionary<Operand, int>
 			OriginalPrecedenceLevel = new Dictionary<Operand, int> {
 				{ Operand.BitAnd, 110 },
@@ -153,6 +155,7 @@ namespace Myll.Core
 	{
 		public Operand op { get; set; }
 		public int PrecedenceLevel => Precedence.PrecedenceLevel[op];
+		/// Is precedence divergent from the based upon language?
 		public bool IsDivergentPrecedence => Precedence.OriginalPrecedenceLevel.ContainsKey( op );
 		public int OriginalPrecedenceLevel
 			=> Precedence.OriginalPrecedenceLevel.TryGetValue( op, out int value )
@@ -166,10 +169,11 @@ namespace Myll.Core
 				var value = info.GetValue( this, null ) ?? "(null)";
 				sb.Append( info.Name + ": " + value.ToString() + ", " );
 			}
+
 			sb.Length = Math.Max( sb.Length - 2, 0 );
 			return "{"
-				   + GetType().Name + " "
-				   + sb.ToString()  + "}";
+			       + GetType().Name + " "
+			       + sb.ToString()  + "}";
 		}
 
 		public virtual string Gen( bool doBrace = false )
@@ -178,15 +182,18 @@ namespace Myll.Core
 		}
 	}
 
-	// Unary Operation - one operand
+	/// Unary Operation - one operand
 	public class UnOp : Expr
 	{
 		public Expr expr { get; set; }
 
 		public override string Gen( bool doBrace = false )
 		{
-			bool isPreOp = Operand.PreOps_Begin < op && op < Operand.PreOps_End;
-			bool isPostOp = Operand.PostOps_Begin < op && op < Operand.PostOps_End;
+			if( op == Operand.Parens )
+				return string.Format( "({0})", expr.Gen() );
+
+			bool isPreOp = Operand.PreOps_Begin <= op && op <= Operand.PreOps_End;
+			bool isPostOp = Operand.PostOps_Begin <= op && op <= Operand.PostOps_End;
 			bool divPrecedence = IsDivergentPrecedence;
 			bool doBraceExpr = (divPrecedence || expr.IsDivergentPrecedence)
 			                   && OriginalPrecedenceLevel < expr.OriginalPrecedenceLevel;
@@ -201,7 +208,7 @@ namespace Myll.Core
 		}
 	}
 
-	// Binary Operation - two operands
+	/// Binary Operation - two operands
 	public class BinOp : Expr
 	{
 		public Expr left  { get; set; }
@@ -222,17 +229,18 @@ namespace Myll.Core
 			bool doBraceRight = (divPrecedence || right.IsDivergentPrecedence)
 			                    && OriginalPrecedenceLevel < right.OriginalPrecedenceLevel;
 
+			string opFormat = doBrace
+				? "(" + op.GetFormat() + ")"
+				: op.GetFormat();
+
 			return string.Format(
-				doBrace
-					? "({1} <{0}> {2})"
-					: "{1} <{0}> {2}",
-				op.ToString(),
+				opFormat,
 				left.Gen( doBraceLeft ),
 				right.Gen( doBraceRight ) );
 		}
 	}
 
-	// Ternary Operation - three operands, right now only: if ? then : else
+	/// Ternary Operation - three operands, right now only: if ? then : else
 	public class TernOp : Expr
 	{
 		public Expr left  { get; set; }
@@ -241,13 +249,6 @@ namespace Myll.Core
 
 		public override string Gen( bool doBrace = false )
 		{
-			// only look down
-			// myll: a * b | c == d
-			// c++: (a * b | c) == d
-			// myll: 100 / 60 / 50
-			//      eq / binor / mult
-			// c++: 100 / *110* / 50
-
 			bool divPrecedence = IsDivergentPrecedence;
 			bool doBraceLeft = (divPrecedence || left.IsDivergentPrecedence)
 			                   && OriginalPrecedenceLevel < left.OriginalPrecedenceLevel;
@@ -258,9 +259,8 @@ namespace Myll.Core
 
 			return string.Format(
 				doBrace
-				? "({1} <{0}> {2})" // TODO: ternary ^^
-					: "{1} <{0}> {2}",
-				op.ToString(),
+					? "({0} ? {1} : {2})"
+					: "{0} ? {1} : {2}",
 				left.Gen( doBraceLeft ),
 				mid.Gen( doBraceMid ),
 				right.Gen( doBraceRight ) );
@@ -276,6 +276,12 @@ namespace Myll.Core
 	public class IdExpr : Expr
 	{
 		public IdentifierTpl id;
+
+		public override string Gen( bool doBrace = false )
+		{
+			return id.Gen();
+			//return string.Format( "{0}", id.Gen() );
+		}
 	}
 
 	public class FuncCallExpr : Expr
@@ -299,5 +305,9 @@ namespace Myll.Core
 	{
 		// TODO
 		public string text { get; set; }
+		public override string Gen( bool doBrace = false )
+		{
+			return doBrace ? "(" + text + ")" : text;
+		}
 	}
 }

@@ -129,12 +129,6 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitAssignOP([NotNull] MyllParser.AssignOPContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.moveOP"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitMoveOP([NotNull] MyllParser.MoveOPContext context);
-	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.aggrAssignOP"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>

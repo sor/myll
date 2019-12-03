@@ -219,11 +219,12 @@ namespace Myll
 
 		public override Stmt VisitMultiAssignStmt( MultiAssignStmtContext c )
 		{
-			AssignStmt ret = new MultiAssignStmt {
+			MultiAssignStmt ret = new MultiAssignStmt {
 				srcPos = c.ToSrcPos(),
 				op     = Operand.Equal,
 				exprs  = c.expr().Select( q => q.Visit() ).ToList(),
 			};
+			Form1.Output = ret.exprs.Last().Gen();
 			return ret;
 		}
 

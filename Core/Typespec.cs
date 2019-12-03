@@ -82,6 +82,18 @@ namespace Myll.Core
 	{
 		public string            name;
 		public List<TemplateArg> templateArgs; // opt
+
+		public string Gen()
+		{
+			if( templateArgs.Count == 0 )
+				return name;
+
+			return string.Format(
+					"{0}<{1}>",
+					name,
+					"TODO" // TODO
+					);
+		}
 	}
 
 	// typeSpecOrLit

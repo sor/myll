@@ -31,7 +31,7 @@ namespace Myll
 
 		public new List<TemplateArg> VisitTplArgs( TplArgsContext c )
 			=> c?.tplArg().Select( VisitTplArg ).ToList()
-			   ?? new List<TemplateArg>();
+			   ?? new List<TemplateArg>( 0 );
 
 		public TemplateParam VisitTplParam( IdContext c )
 		{
