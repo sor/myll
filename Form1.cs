@@ -27,6 +27,8 @@ namespace Myll
 			//VisitorExtensions.AllVis.Visit( parser.prog() );
 			VisitorExtensions.DeclVis.Visit( parser.prog() );
 			//parser.levStmt().Visit();
+
+			// HACK
 			textBox2.Text = Output;
 		}
 

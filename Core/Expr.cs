@@ -273,12 +273,35 @@ namespace Myll.Core
 		public Expr                expr;
 	}
 
+	/*
+	 	The replacement must happen before Gen()
+
+		This Code:
+			// tryget is func(int, int&) {...}
+			tryget( c, _ ); // we don't care about 2nd param
+		Needs to Gen this:
+	 		[[maybe_unused]] int temp_4711; // non colliding name, up and down the line
+	 		tryget( c, temp_4711 );
+
+	 	Assignment case:
+	 		std::ignore = func_with_nodiscard();
+
+		Pointer:
+			func ptr(T*) called as ptr( _ ) will transform to ptr( nullptr )
+
+		Problems:
+			Overloaded Functions, which to call? cast the _ like: call((int)_)
+			This should fail: var int a = _;
+	*/
 	public class IdExpr : Expr
 	{
 		public IdentifierTpl id;
 
 		public override string Gen( bool doBrace = false )
 		{
+			if( op.In( Operand.WildId, Operand.DiscardId ) )
+				throw new InvalidOperationException( "These should have already been replaced by now" );
+
 			return id.Gen();
 			//return string.Format( "{0}", id.Gen() );
 		}
@@ -307,7 +330,7 @@ namespace Myll.Core
 		public string text { get; set; }
 		public override string Gen( bool doBrace = false )
 		{
-			return doBrace ? "(" + text + ")" : text;
+			return /*doBrace ? "(" + text + ")" :*/ text;
 		}
 	}
 }

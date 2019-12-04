@@ -208,7 +208,7 @@ namespace Myll
 
 		public override Stmt VisitAggrAssignStmt( AggrAssignStmtContext c )
 		{
-			AssignStmt ret = new AggrAssignStmt {
+			AggrAssignStmt ret = new AggrAssignStmt {
 				srcPos    = c.ToSrcPos(),
 				op        = c.aggrAssignOP().v.ToAssignOp(),
 				leftExpr  = c.expr( 0 ).Visit(),
@@ -221,9 +221,10 @@ namespace Myll
 		{
 			MultiAssignStmt ret = new MultiAssignStmt {
 				srcPos = c.ToSrcPos(),
-				op     = Operand.Equal,
 				exprs  = c.expr().Select( q => q.Visit() ).ToList(),
 			};
+
+			// HACK
 			Form1.Output = ret.exprs.Last().Gen();
 			return ret;
 		}

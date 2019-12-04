@@ -111,20 +111,16 @@ namespace Myll.Core
 		public string name; // opt
 	}
 
-	public class AssignStmt : Stmt
-	{
-		public Operand op;
-	}
-
-	public class MultiAssignStmt : AssignStmt
+	public class MultiAssignStmt : Stmt
 	{
 		public List<Expr> exprs;
 	}
 
-	public class AggrAssignStmt : AssignStmt
+	public class AggrAssignStmt : Stmt
 	{
-		public Expr leftExpr;
-		public Expr rightExpr;
+		public Operand op;
+		public Expr    leftExpr;
+		public Expr    rightExpr;
 	}
 
 	// 1 scope
