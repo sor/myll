@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -20,7 +21,8 @@ namespace Myll
 		}
 	}
 
-	static class Extensions
+	// TODO: move to dedicated file
+	static class GeneralExtensions
 	{
 		public static bool In<T>( this T val, params T[] values )
 			where T : struct
@@ -33,6 +35,22 @@ namespace Myll
 		{
 			return min.CompareTo( value ) <= 0
 				&& value.CompareTo( max ) <= 0;
+		}
+
+		public static string Repeat( this string value, int count )
+		{
+			return count == 0 || string.IsNullOrEmpty( value )
+				? string.Empty
+				: new StringBuilder( value.Length * count )
+					.Insert( 0, value, count )
+					.ToString();
+		}
+
+		public static string Join( this ICollection<string> values, string delimiter )
+		{
+			// TODO: this might be the bottleneck in the end, bench when finished
+			// there is a specialized string.Join with string[]
+			return string.Join( delimiter, values );
 		}
 	}
 }

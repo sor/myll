@@ -40,9 +40,8 @@ namespace Myll
 
 		private static readonly Dictionary<int, int>
 			ToSize = new Dictionary<int, int> {
-				{ MyllParser.FLOAT, 4 }, // TODO: native best float
-				{ MyllParser.DOUBLE, 8 },
-				{ MyllParser.F80, 10 },
+				{ MyllParser.FLOAT, 4 }, // HACK: native best float, min 32 bit
+				{ MyllParser.F128, 16 },
 				{ MyllParser.F64, 8 },
 				{ MyllParser.F32, 4 },
 				{ MyllParser.F16, 2 },
@@ -51,14 +50,14 @@ namespace Myll
 				{ MyllParser.B32, 4 },
 				{ MyllParser.B16, 2 },
 				{ MyllParser.B8, 1 },
-				{ MyllParser.INT, 4 },   // TODO: native best int
-				{ MyllParser.ISIZE, 8 }, // TODO: native ptr/container sized int / offset
+				{ MyllParser.INT, 4 },   // HACK: native best int, min 32 bit
+				{ MyllParser.ISIZE, 8 }, // HACK: native ptr/container sized int / offset
 				{ MyllParser.I64, 8 },
 				{ MyllParser.I32, 4 },
 				{ MyllParser.I16, 2 },
 				{ MyllParser.I8, 1 },
-				{ MyllParser.UINT, 4 },  // TODO: native best int
-				{ MyllParser.USIZE, 8 }, // TODO: native ptr/container sized int
+				{ MyllParser.UINT, 4 },  // HACK: native best int, min 32 bit
+				{ MyllParser.USIZE, 8 }, // HACK: native ptr/container sized int
 				{ MyllParser.U64, 8 },
 				{ MyllParser.U32, 4 },
 				{ MyllParser.U16, 2 },
@@ -152,7 +151,7 @@ namespace Myll
 				case RULE_signedIntType: {
 					var t = c.signedIntType().v.Type;
 					ret.kind = TypespecBasic.Kind.Integer;
-					ret.size = ToSize[t];
+					ret.size = ToSize[t];					// HACK: its too early to do sizes here
 					break;
 				}
 				case RULE_unsignIntType: {
@@ -171,7 +170,7 @@ namespace Myll
 		{
 			TypespecFunc ret = new TypespecFunc {
 				srcPos       = c.ToSrcPos(),
-				templateArgs = VisitTplArgs( c.tplArgs() ),
+				//templateArgs = VisitTplArgs( c.tplArgs() ),
 				paras        = VisitFuncTypeDef( c.funcTypeDef() ),
 				retType      = VisitTypespec( c.typespec() ),
 			};
@@ -189,6 +188,6 @@ namespace Myll
 
 		public new List<TypespecNested> VisitTypespecsNested( TypespecsNestedContext c )
 			=> c?.typespecNested().Select( VisitTypespecNested ).ToList()
-			   ?? new List<TypespecNested>();
+			?? new List<TypespecNested>();
 	}
 }

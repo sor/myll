@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Antlr4.Runtime;
-
+using Antlr4.Runtime.Tree;
 using Myll.Core;
 
 using Parser = Myll.MyllParser;
@@ -113,6 +113,12 @@ namespace Myll
 			using( IEnumerator<TSource> e = s.GetEnumerator() )
 				while( e.MoveNext() ) {}
 		}
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static int ToInt( this ITerminalNode o, int @default = 0 )
+			=> o == null
+				? @default
+				: int.Parse( o.GetText() );
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Operand ToOp( this IToken tok )

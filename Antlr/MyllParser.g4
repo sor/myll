@@ -40,7 +40,7 @@ idOrLit		:	id | lit;
 // +++ handled
 specialType	:	v=( AUTO | VOID | BOOL );
 charType	:	v=( CHAR | CODEPOINT | STRING );
-floatingType:	v=( FLOAT | DOUBLE | F80 | F64 | F32 | F16 );
+floatingType:	v=( FLOAT | F128 | F64 | F32 | F16 ); // 80 and 96 bit?
 binaryType	:	v=( BYTE | B64 | B32 | B16 | B8 );
 signedIntType:	v=( INT  | ISIZE | I64 | I32 | I16 | I8 );
 unsignIntType:  v=( UINT | USIZE | U64 | U32 | U16 | U8 );
@@ -64,10 +64,10 @@ typespecBasic	:	specialType
 				|	signedIntType
 				|	unsignIntType;
 
-typespecFunc	:	FUNC tplArgs? funcTypeDef (RARROW typespec)?;
+typespecFunc	:	FUNC funcTypeDef (RARROW typespec)?;
 
 typespecNested	:	idTplArgs (SCOPE idTplArgs)*;
-typespecsNested	:	typespecNested (COMMA typespecNested)* COMMA?;
+typespecsNested	:	typespecNested (COMMA typespecNested)* COMMA?;	// trailing COMMA here really possible?
 
 // --- handled
 
@@ -77,14 +77,16 @@ funcCall	:	ary=( QM_LPAREN | LPAREN )	args?	RPAREN;
 indexCall	:	ary=( QM_LBRACK | LBRACK )	args	RBRACK;
 
 param		:	typespec id?;
-funcTypeDef	:	LPAREN (param (COMMA param)*)? RPAREN;
+funcTypeDef	:	LPAREN (param (COMMA param)* COMMA?)? RPAREN;
 
 // this expr needs to be a constexpr and can be an id (from a surrounding template)
 // TODO evaluate if 'id' is really necessary/beneficial here or just let expr handle it
 tplArg		:	typespec | id | expr; //INTEGER_LIT | id;
-tplArgs		:	LT tplArg (COMMA tplArg)* GT;
+tplArgs		:	LT tplArg (COMMA tplArg)* COMMA? GT;
 
-tplParams	:	LT id (COMMA id)* GT;
+tplParams	:	LT id (COMMA id)* COMMA? GT;
+
+threeWay	:	(orderOP|equalOP)	COLON	expr;
 
 // Tier 3
 //cast: nothing = static, ? = dynamic, ! = const & reinterpret
@@ -119,18 +121,18 @@ expr		:	(idTplArgs	SCOPE)+		expr	# ScopedExpr
 			|	expr	andOP			expr	# AndExpr
 			|	expr	orOP			expr	# OrExpr
 			|	expr	nulCoalOP		expr	# NullCoalesceExpr
+			// TODO: cond and throw were in the same level, test if this still works fine
 			| <assoc=right>
 				expr	QM expr COLON	expr	# ConditionalExpr
 			| <assoc=right>
 				expr	DBL_QM threeWay+ (COLON expr)?	# ThreeWayConditionalExpr
+			| <assoc=right>
+				THROW	expr					# ThrowExpr		// Good or not?
 			|	LPAREN	expr	RPAREN			# ParenExpr
 			|	wildId							# WildIdExpr
 			|	lit								# LiteralExpr	// TODO
 			|	idTplArgs						# IdTplExpr
 			;
-
-threeWay	:	orderOP	COLON	expr
-			|	equalOP	COLON	expr;
 
 idAccessor	:	id	(LCURLY accessorDef+ RCURLY)?	(ASSIGN expr)?;
 idExpr		:	id									(ASSIGN expr)?;
@@ -148,26 +150,20 @@ caseStmt	:	CASE expr (COMMA expr)* COLON levStmt+ (FALL SEMI)?;
 initList	:	COLON id funcCall (COMMA id funcCall)* COMMA?;
 
 // is just SEMI as well in levStmt/inStmt
-funcBody	:	PHATRARROW LCURLY expr RCURLY
+funcBody	:	PHATRARROW LCURLY expr RCURLY	// whatfor was this?
  			|	PHATRARROW expr SEMI
 			|	levStmt;
-accessorDef	:	a=( PUB | PROT | PRIV )? qual* v=( GET | REFGET | SET ) funcBody;
+accessorDef	:	attribBlk? a=( PUB | PROT | PRIV )? qual* v=( GET | REFGET | SET ) funcBody;
 funcDef		:	id			tplParams?	funcTypeDef (RARROW typespec)?
 				(REQUIRES typespecsNested)?		// TODO
 				funcBody;
 opDef		:	STRING_LIT	tplParams?	funcTypeDef (RARROW typespec)?
 				(REQUIRES typespecsNested)?		// TODO
 				funcBody;
+// TODO: can be used in more places
+condThen	:	LPAREN expr RPAREN	levStmt;
 
-prog		:	levDecl+;
-
-// only refer to these lev* levels, not the in*
-levDecl		:	attribBlk	LCURLY	levDecl	RCURLY	// must be in here, since it MUST have an attrib block
-			//|	attribBlk	COLON
-			|	attribBlk?	( inAnyStmt | inDecl );
-levStmt		:	attribBlk?	( inAnyStmt | inStmt );
-levStmtDef	:	attribBlk?	( inAnyStmt );
-
+// DON'T refer to these in* here, ONLY refer to lev* levels
 // ns, class, enum, func, ppp, c/dtor, alias, static
 inDecl		:	NS id (SCOPE id)* SEMI						# Namespace // or better COLON
 			|	NS id (SCOPE id)* LCURLY levDecl+ RCURLY	# Namespace
@@ -207,18 +203,20 @@ inStmt		:	SEMI								# EmptyStmt
 			|	LCURLY	levStmt*	RCURLY			# BlockStmt
 			|	RETURN	expr?		SEMI			# ReturnStmt
 			|	THROW	expr		SEMI			# ThrowStmt
-			|	BREAK	INTEGER_LIT	SEMI			# BreakStmt
-			|	IF		LPAREN expr RPAREN
-				levStmt	(ELSE levStmt)?				# IfStmt
+			|	BREAK	INTEGER_LIT?	SEMI		# BreakStmt
+			|	IF			condThen
+				(ELSE IF	condThen)*	// helps with formatting properly and de-nesting the AST
+				(ELSE		levStmt)?				# IfStmt
 			|	SWITCH	LPAREN expr RPAREN	LCURLY
 				caseStmt+ 	(ELSE levStmt+)? RCURLY	# SwitchStmt
 			|	LOOP	levStmt						# LoopStmt
-			|	FOR		LPAREN levStmtDef expr SEMI expr RPAREN
-				levStmt	(ELSE levStmt)?				# ForStmt
-			|	WHILE	LPAREN expr RPAREN
-				levStmt	(ELSE levStmt)?				# WhileStmt
-			|	DO levStmt
-				WHILE	LPAREN expr RPAREN SEMI?	# DoWhileStmt
+			|	FOR LPAREN levStmtDef expr SEMI
+					expr RPAREN	levStmt
+				(ELSE			levStmt)?			# ForStmt
+			|	WHILE		condThen
+				(ELSE		levStmt)?				# WhileStmt
+			|	DO		levStmt
+				WHILE	LPAREN expr RPAREN			# DoWhileStmt
 			|	expr TIMES			id?	levStmt		# TimesStmt
 			|	expr DBL_POINT expr id?	levStmt		# EachStmt
 			//| <assoc=right>???
@@ -226,3 +224,12 @@ inStmt		:	SEMI								# EmptyStmt
 			| 	expr	aggrAssignOP	expr SEMI	# AggrAssignStmt
 			|	expr SEMI							# ExpressionStmt
 			;
+
+// ONLY refer to these lev* levels, NOT the in*
+levDecl		:	attribBlk	LCURLY	levDecl	RCURLY	// must be in here, since it MUST have an attrib block
+			//|	attribBlk	COLON
+			|	attribBlk?	( inAnyStmt | inDecl );
+levStmt		:	attribBlk?	( inAnyStmt | inStmt );
+levStmtDef	:	attribBlk?	( inAnyStmt );
+
+prog		:	levDecl+;

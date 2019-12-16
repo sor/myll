@@ -1,0 +1,24 @@
+class name
+{
+	using / alias
+	
+pri/prot/pub:
+	types
+	
+static: ppp fields, ppp getter/setter, ppp methods
+	
+pri/prot/pub:
+	fields
+	
+pri/prot/pub:
+	ctor / dtor
+
+pri/prot/pub:
+	getter/setter
+	
+pri/prot/pub:
+	operator
+	
+pri/prot/pub:
+	methods
+}

@@ -297,6 +297,12 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitTplParams([NotNull] MyllParser.TplParamsContext context);
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.threeWay"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitThreeWay([NotNull] MyllParser.ThreeWayContext context);
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.preOpExpr"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
@@ -404,6 +410,13 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitOrExpr([NotNull] MyllParser.OrExprContext context);
 	/// <summary>
+	/// Visit a parse tree produced by the <c>ThreeWayConditionalExpr</c>
+	/// labeled alternative in <see cref="MyllParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitThreeWayConditionalExpr([NotNull] MyllParser.ThreeWayConditionalExprContext context);
+	/// <summary>
 	/// Visit a parse tree produced by the <c>PreExpr</c>
 	/// labeled alternative in <see cref="MyllParser.expr"/>.
 	/// </summary>
@@ -424,6 +437,13 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitEqualityExpr([NotNull] MyllParser.EqualityExprContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>ThrowExpr</c>
+	/// labeled alternative in <see cref="MyllParser.expr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitThrowExpr([NotNull] MyllParser.ThrowExprContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>LiteralExpr</c>
 	/// labeled alternative in <see cref="MyllParser.expr"/>.
@@ -538,29 +558,11 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitOpDef([NotNull] MyllParser.OpDefContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.prog"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.condThen"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitProg([NotNull] MyllParser.ProgContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.levDecl"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitLevDecl([NotNull] MyllParser.LevDeclContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.levStmt"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitLevStmt([NotNull] MyllParser.LevStmtContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.levStmtDef"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitLevStmtDef([NotNull] MyllParser.LevStmtDefContext context);
+	Result VisitCondThen([NotNull] MyllParser.CondThenContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>Namespace</c>
 	/// labeled alternative in <see cref="MyllParser.inDecl"/>.
@@ -757,5 +759,29 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitExpressionStmt([NotNull] MyllParser.ExpressionStmtContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.levDecl"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitLevDecl([NotNull] MyllParser.LevDeclContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.levStmt"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitLevStmt([NotNull] MyllParser.LevStmtContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.levStmtDef"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitLevStmtDef([NotNull] MyllParser.LevStmtDefContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.prog"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitProg([NotNull] MyllParser.ProgContext context);
 }
 } // namespace Myll

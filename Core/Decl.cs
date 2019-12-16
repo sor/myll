@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 
+using static System.String;
+using static Myll.Generator.StmtFormatting;
+
 namespace Myll.Core
 {
 	public enum Accessibility
@@ -11,7 +14,10 @@ namespace Myll.Core
 		Private,
 	}
 
-	// introduces a name (most of the time)
+	/// <summary>
+	/// introduces a name (most of the time)
+	/// a Decl is a Stmt, do not question this for now
+	/// </summary>
 	public class Decl : Stmt
 	{
 		public string        name;
@@ -56,7 +62,7 @@ namespace Myll.Core
 		public class Call
 		{
 			public List<Arg> args;
-			public bool      nullCoal;
+			public bool nullCoal;
 		}
 
 		public List<TemplateParam> templateParams;
@@ -86,6 +92,9 @@ namespace Myll.Core
 		public List<TypespecNested> types;
 	}
 
+	/*
+	var int i { [inline] get; [inline] set; } = 99;
+	*/
 	public class Var : Decl
 	{
 		public class Accessor
@@ -105,6 +114,22 @@ namespace Myll.Core
 		public Typespec       type;     // contains Qualifier
 		public List<Accessor> accessor; // opt
 		public Expr           init;     // opt
+
+		// TODO signature needs to change to provide the different locations to write too
+		public override IList<string> Gen( int level )
+		{
+			// var int[] blah = {1,2,3};
+			// int blah[] = {1,2,3};
+			bool needsTypename = false; // TODO how to determine this
+			return new[] {
+				Format(
+					VarFormat[0],
+					Indent.Repeat( level ),
+					needsTypename ? VarFormat[1] : "",
+					type.Gen( name ),
+					init != null ? VarFormat[2] + init.Gen() : "" )
+			};
+		}
 	}
 
 	public class Enum : Hierarchical

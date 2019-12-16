@@ -153,11 +153,11 @@ namespace Myll.Core
 
 	public class Expr
 	{
-		public Operand op { get; set; }
-		public int PrecedenceLevel => Precedence.PrecedenceLevel[op];
+		public Operand op              { get; set; }
+		public int     PrecedenceLevel => Precedence.PrecedenceLevel[op];
 		/// Is precedence divergent from the based upon language?
-		public bool IsDivergentPrecedence => Precedence.OriginalPrecedenceLevel.ContainsKey( op );
-		public int OriginalPrecedenceLevel
+		public bool    IsDivergentPrecedence => Precedence.OriginalPrecedenceLevel.ContainsKey( op );
+		public int     OriginalPrecedenceLevel
 			=> Precedence.OriginalPrecedenceLevel.TryGetValue( op, out int value )
 				? value
 				: PrecedenceLevel;
@@ -172,8 +172,8 @@ namespace Myll.Core
 
 			sb.Length = Math.Max( sb.Length - 2, 0 );
 			return "{"
-			       + GetType().Name + " "
-			       + sb.ToString()  + "}";
+			     + GetType().Name + " "
+			     + sb.ToString()  + "}";
 		}
 
 		public virtual string Gen( bool doBrace = false )
@@ -192,11 +192,11 @@ namespace Myll.Core
 			if( op == Operand.Parens )
 				return string.Format( "({0})", expr.Gen() );
 
-			bool isPreOp = Operand.PreOps_Begin <= op && op <= Operand.PreOps_End;
-			bool isPostOp = Operand.PostOps_Begin <= op && op <= Operand.PostOps_End;
+			bool isPreOp       = Operand.PreOps_Begin  <= op && op <= Operand.PreOps_End;
+			bool isPostOp      = Operand.PostOps_Begin <= op && op <= Operand.PostOps_End;
 			bool divPrecedence = IsDivergentPrecedence;
 			bool doBraceExpr = (divPrecedence || expr.IsDivergentPrecedence)
-			                   && OriginalPrecedenceLevel < expr.OriginalPrecedenceLevel;
+			                && OriginalPrecedenceLevel < expr.OriginalPrecedenceLevel;
 
 			// TODO: pre or post or what?
 			return string.Format(
@@ -225,9 +225,9 @@ namespace Myll.Core
 
 			bool divPrecedence = IsDivergentPrecedence;
 			bool doBraceLeft = (divPrecedence || left.IsDivergentPrecedence)
-			                   && OriginalPrecedenceLevel < left.OriginalPrecedenceLevel;
+			                && OriginalPrecedenceLevel < left.OriginalPrecedenceLevel;
 			bool doBraceRight = (divPrecedence || right.IsDivergentPrecedence)
-			                    && OriginalPrecedenceLevel < right.OriginalPrecedenceLevel;
+			                 && OriginalPrecedenceLevel < right.OriginalPrecedenceLevel;
 
 			string opFormat = doBrace
 				? "(" + op.GetFormat() + ")"
@@ -251,11 +251,11 @@ namespace Myll.Core
 		{
 			bool divPrecedence = IsDivergentPrecedence;
 			bool doBraceLeft = (divPrecedence || left.IsDivergentPrecedence)
-			                   && OriginalPrecedenceLevel < left.OriginalPrecedenceLevel;
+			                && OriginalPrecedenceLevel < left.OriginalPrecedenceLevel;
 			bool doBraceMid = (divPrecedence || mid.IsDivergentPrecedence)
-			                  && OriginalPrecedenceLevel < mid.OriginalPrecedenceLevel;
+			               && OriginalPrecedenceLevel < mid.OriginalPrecedenceLevel;
 			bool doBraceRight = (divPrecedence || right.IsDivergentPrecedence)
-			                    && OriginalPrecedenceLevel < right.OriginalPrecedenceLevel;
+			                 && OriginalPrecedenceLevel < right.OriginalPrecedenceLevel;
 
 			return string.Format(
 				doBrace
@@ -275,6 +275,7 @@ namespace Myll.Core
 
 	/*
 	 	The replacement must happen before Gen()
+	 	Happens along with the generation of the symbols, so SKIP for later as well
 
 		This Code:
 			// tryget is func(int, int&) {...}
@@ -288,9 +289,10 @@ namespace Myll.Core
 
 		Pointer:
 			func ptr(T*) called as ptr( _ ) will transform to ptr( nullptr )
+			or maybe not, this is only for out-parameters???
 
 		Problems:
-			Overloaded Functions, which to call? cast the _ like: call((int)_)
+			Overloaded Functions, which to call? cast the _ like: call( (int)_ )
 			This should fail: var int a = _;
 	*/
 	public class IdExpr : Expr

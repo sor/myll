@@ -86,6 +86,7 @@
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
     <Compile Include="Generator\ExprFormatting.cs" />
+    <Compile Include="Generator\StmtFormatting.cs" />
     <Compile Include="MyllLexer.cs" />
     <Compile Include="MyllParser.cs" />
     <Compile Include="MyllParserBaseVisitor.cs" />

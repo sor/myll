@@ -101,10 +101,10 @@ BYTE		: 'byte';
 CHAR		: 'char';
 CODEPOINT	: 'codepoint';
 STRING		: 'string';
-HALF		: 'half';
+//HALF		: 'half';
 FLOAT		: 'float';
-DOUBLE		: 'double';
-LONGDOUBLE	: 'longdouble';
+//DOUBLE		: 'double';
+//LONGDOUBLE	: 'longdouble';
 
 I64			: 'i64';
 I32			: 'i32';
@@ -118,17 +118,18 @@ B64			: 'b64';
 B32			: 'b32';
 B16			: 'b16';
 B8			: 'b8';
-F80			: 'f80';	// long double
-F64			: 'f64';
-F32			: 'f32';
-F16			: 'f16';	// half float
+F128		: 'f128';	// long double prec. float
+F64			: 'f64';	// double prec. float
+F32			: 'f32';	// single prec. float
+F16			: 'f16';	// half prec. float
 
 NS			: 'namespace';
 VOLATILE	: 'volatile';
 STABLE		: 'stable';
 CONST		: 'const';
 MUTABLE		: 'mutable';
-STATIC		: 'static';
+//STATIC		: 'static';
+//EXTERN		: 'extern';
 PUB			: 'public'|'pub';
 PRIV		: 'private'|'priv';
 PROT		: 'protected'|'prot';

@@ -100,19 +100,29 @@ namespace Myll
 		{
 			Stmt ret = new BreakStmt {
 				srcPos = c.ToSrcPos(),
-				depth  = int.Parse( c.INTEGER_LIT().ToString() ),
+				depth  = c.INTEGER_LIT().ToInt( 1 ),
 			};
 			return ret;
 		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public new CondThen VisitCondThen( CondThenContext c )
+			=> new CondThen {
+				condExpr = c.expr().Visit(),
+				thenStmt = c.levStmt().Visit(),
+			};
 
 		public override Stmt VisitIfStmt( IfStmtContext c )
 		{
 			Stmt ret = new IfStmt {
 				srcPos   = c.ToSrcPos(),
-				condExpr = c.expr().Visit(),
-				thenStmt = c.levStmt( 0 ).Visit(),
-				elseStmt = c.levStmt( 1 ).Visit(),
+				ifThens  = c.condThen().Select( VisitCondThen ).ToList(),
+				elseStmt = c.levStmt().Visit(),
 			};
+
+			// HACK
+			Form1.Output = ret.Gen( 0 ).Join( "\n" );
+
 			return ret;
 		}
 
@@ -162,11 +172,12 @@ namespace Myll
 
 		public override Stmt VisitWhileStmt( WhileStmtContext c )
 		{
+			CondThen condThen = VisitCondThen( c.condThen() );
 			LoopStmt ret = new WhileStmt {
 				srcPos   = c.ToSrcPos(),
-				condExpr = c.expr().Visit(),
-				bodyStmt = c.levStmt( 0 ).Visit(),
-				elseStmt = c.levStmt( 1 ).Visit(),
+				condExpr = condThen.condExpr,
+				bodyStmt = condThen.thenStmt,
+				elseStmt = c.levStmt().Visit(),
 			};
 			return ret;
 		}
@@ -234,7 +245,7 @@ namespace Myll
 			Block ret = new Block {
 				srcPos = c.ToSrcPos(),
 				statements = c.levStmt()?.Select( Visit ).ToList()
-				             ?? new List<Stmt>()
+				          ?? new List<Stmt>()
 			};
 			return ret;
 		}
