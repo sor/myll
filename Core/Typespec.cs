@@ -67,11 +67,11 @@ namespace Myll.Core
 			Unsized  = 1 << 3,
 		}
 
-		public const int SizeUndetermined = -1;
-		public const int SizeInvalid = -2;
-		public int  size;  // in bytes, -1 not yet determined, -2 invalid
-		public int  align; // in bytes
-		public Kind kind;
+		public const int  SizeUndetermined = -1;
+		public const int  SizeInvalid      = -2;
+		public       int  size;  // in bytes, -1 not yet determined, -2 invalid
+		public       int  align; // in bytes
+		public       Kind kind;
 
 		public override string Gen( string name = "" )
 		{
@@ -85,8 +85,8 @@ namespace Myll.Core
 	// In here the Template are Args and in the Parens are Params
 	public class TypespecFunc : Typespec
 	{
-		public List<Func.Param>  paras;
-		public Typespec          retType; // opt
+		public List<Func.Param> paras;
+		public Typespec         retType; // opt
 	}
 
 	// func blah(int a) // int is _type_, a is _name_
@@ -117,7 +117,7 @@ namespace Myll.Core
 				"{0}<{1}>",
 				name,
 				"TODO" // TODO
-				);
+			);
 		}
 	}
 
@@ -143,7 +143,7 @@ namespace Myll.Core
 			LVRef, // Ref
 			RVRef,
 			RawArray,
-			NoNeedForBracketing_Begin,	// Sentinel
+			NoNeedForBracketing_Begin, // Sentinel
 			Unique,
 			Shared,
 			Weak,

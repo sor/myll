@@ -13,9 +13,9 @@ namespace Myll
 	public static class VisitorExtensions
 	{
 		private static readonly Stack<Scope> ScopeStack = new Stack<Scope>();
-		private static readonly ExprVisitor ExprVis = new ExprVisitor(ScopeStack);
-		private static readonly StmtVisitor StmtVis = new StmtVisitor(ScopeStack);
-		public static readonly  DeclVisitor DeclVis = new DeclVisitor(ScopeStack);
+		private static readonly ExprVisitor  ExprVis    = new ExprVisitor( ScopeStack );
+		private static readonly StmtVisitor  StmtVis    = new StmtVisitor( ScopeStack );
+		public static readonly  DeclVisitor  DeclVis    = new DeclVisitor( ScopeStack );
 
 		private static readonly Dictionary<int, Operand>
 			ToOperand = new Dictionary<int, Operand> {

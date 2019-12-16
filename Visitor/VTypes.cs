@@ -67,7 +67,7 @@ namespace Myll
 		public new Typespec VisitTypespec( TypespecContext c )
 		{
 			if( c == null )
-				return null;	// TypespecBasic Auto might make sense
+				return null; // TypespecBasic Auto might make sense
 
 			Typespec ret;
 			if( c.typespecBasic()       != null ) ret = VisitTypespecBasic( c.typespecBasic() );
@@ -83,14 +83,15 @@ namespace Myll
 		{
 			Pointer ret;
 			if( c.ptr != null ) {
-				ret      = new Pointer();
-				ret.kind = ToPtr[c.ptr.Type];
+				ret = new Pointer {
+					kind = ToPtr[c.ptr.Type],
+				};
 			}
 			else if( c.ary != null ) {
 				ret = new Array {
-					expr = c.expr().Visit()
+					expr = c.expr().Visit(),
+					kind = ToPtr[c.ary.Type],
 				};
-				ret.kind = ToPtr[c.ary.Type];
 			}
 			else throw new Exception( "unknown ptr type" );
 
@@ -108,25 +109,29 @@ namespace Myll
 			var cc = c.GetChild<ParserRuleContext>( 0 );
 			switch( cc.RuleIndex ) {
 				case RULE_specialType: {
-					var t = c.specialType().v.Type;
+					int t = c.specialType().v.Type;
 					switch( t ) {
 						case MyllParser.AUTO:
 							ret.kind = TypespecBasic.Kind.Auto;
 							break;
+
 						case MyllParser.VOID:
 							ret.kind = TypespecBasic.Kind.Void;
 							ret.size = TypespecBasic.SizeInvalid;
 							break;
+
 						case MyllParser.BOOL:
 							ret.kind = TypespecBasic.Kind.Bool;
 							ret.size = 1;
 							break;
+
 						default: throw new Exception( "unknown typespec" );
 					}
 					break;
 				}
+
 				case RULE_charType: {
-					var tc = c.charType();
+					CharTypeContext tc = c.charType();
 					if( tc.STRING() != null ) {
 						ret.kind = TypespecBasic.Kind.Char;
 						ret.size = (tc.CHAR() != null) ? 1 : 4;
@@ -136,30 +141,35 @@ namespace Myll
 					}
 					break;
 				}
+
 				case RULE_floatingType: {
-					var t = c.floatingType().v.Type;
+					int t = c.floatingType().v.Type;
 					ret.kind = TypespecBasic.Kind.Float;
 					ret.size = ToSize[t];
 					break;
 				}
+
 				case RULE_binaryType: {
-					var t = c.binaryType().v.Type;
+					int t = c.binaryType().v.Type;
 					ret.kind = TypespecBasic.Kind.Binary;
 					ret.size = ToSize[t];
 					break;
 				}
+
 				case RULE_signedIntType: {
-					var t = c.signedIntType().v.Type;
+					int t = c.signedIntType().v.Type;
 					ret.kind = TypespecBasic.Kind.Integer;
-					ret.size = ToSize[t];					// HACK: its too early to do sizes here
+					ret.size = ToSize[t]; // HACK: its too early to do sizes here
 					break;
 				}
+
 				case RULE_unsignIntType: {
-					var t = c.unsignIntType().v.Type;
+					int t = c.unsignIntType().v.Type;
 					ret.kind = TypespecBasic.Kind.Unsigned;
 					ret.size = ToSize[t];
 					break;
 				}
+
 				default:
 					throw new Exception( "unknown typespec" );
 			}

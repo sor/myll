@@ -36,7 +36,7 @@ namespace Myll
 
 		public new Var.Accessor VisitAccessorDef( AccessorDefContext c )
 		{
-			throw new NotImplementedException("refactored away on 20-11-2019");
+			throw new NotImplementedException( "refactored away on 20-11-2019" );
 		}
 
 		// list of typed and initialized vars
@@ -47,13 +47,14 @@ namespace Myll
 			Typespec type = VisitTypespec( c.typespec() );
 			List<Var> ret = c.idAccessors()
 				.idAccessor()
-				.Select( q => new Var {
-					name     = q.id().GetText(),
-					type     = type,
-					init     = q.expr().Visit(),
-					accessor = q.accessorDef().Visit(),
-					// TODO: Accessors
-				} )
+				.Select(
+					q => new Var {
+						name     = q.id().GetText(),
+						type     = type,
+						init     = q.expr().Visit(),
+						accessor = q.accessorDef().Visit(),
+						// TODO: Accessors
+					} )
 				.ToList();
 			return ret;
 		}

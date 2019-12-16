@@ -16,8 +16,8 @@ namespace Myll
 		static void Main()
 		{
 			Application.EnableVisualStyles();
-			Application.SetCompatibleTextRenderingDefault(false);
-			Application.Run(new Form1());
+			Application.SetCompatibleTextRenderingDefault( false );
+			Application.Run( new Form1() );
 		}
 	}
 
@@ -34,7 +34,7 @@ namespace Myll
 			where T : IComparable<T>
 		{
 			return min.CompareTo( value ) <= 0
-				&& value.CompareTo( max ) <= 0;
+			    && value.CompareTo( max ) <= 0;
 		}
 
 		public static string Repeat( this string value, int count )

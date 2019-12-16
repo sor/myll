@@ -330,6 +330,7 @@ namespace Myll.Core
 	{
 		// TODO
 		public string text { get; set; }
+
 		public override string Gen( bool doBrace = false )
 		{
 			return /*doBrace ? "(" + text + ")" :*/ text;

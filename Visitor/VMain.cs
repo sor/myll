@@ -12,12 +12,12 @@ namespace Myll
 	{
 		private readonly Stack<Scope> ScopeStack;
 
-		public ExtendedVisitor(Stack<Scope> ScopeStack)
+		public ExtendedVisitor( Stack<Scope> ScopeStack )
 		{
 			this.ScopeStack = ScopeStack;
 		}
 
-		public Namespace GenerateGlobalScope(SrcPos srcPos)
+		public Namespace GenerateGlobalScope( SrcPos srcPos )
 		{
 			Namespace global = new Namespace {
 				name     = "", // global

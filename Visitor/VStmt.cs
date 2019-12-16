@@ -105,7 +105,7 @@ namespace Myll
 			return ret;
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public new CondThen VisitCondThen( CondThenContext c )
 			=> new CondThen {
 				condExpr = c.expr().Visit(),

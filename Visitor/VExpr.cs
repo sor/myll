@@ -15,7 +15,7 @@ namespace Myll
 		public new List<Func.Arg> VisitArgs( ArgsContext c )
 		{
 			List<Func.Arg> ret = c?.arg().Select( VisitArg ).ToList()
-			                     ?? new List<Func.Arg>();
+			                  ?? new List<Func.Arg>();
 			return ret;
 		}
 
@@ -167,10 +167,10 @@ namespace Myll
 		public override Expr VisitPreExpr( PreExprContext c )
 		{
 			IParseTree cc = c.preOpExpr()
-			                ?? c.castExpr()
-			                ?? c.sizeofExpr()
-			                ?? c.newExpr()
-			                ?? c.deleteExpr() as IParseTree;
+			             ?? c.castExpr()
+			             ?? c.sizeofExpr()
+			             ?? c.newExpr()
+			             ?? c.deleteExpr() as IParseTree;
 
 			if( cc == null )
 				throw new Exception( "unknown pre op" );

@@ -62,7 +62,7 @@ namespace Myll.Core
 		public class Call
 		{
 			public List<Arg> args;
-			public bool nullCoal;
+			public bool      nullCoal;
 		}
 
 		public List<TemplateParam> templateParams;

@@ -16,8 +16,8 @@ namespace Myll.Core
 		{
 			var sb = new StringBuilder();
 			foreach( var info in GetType().GetProperties() ) {
-				var value = info.GetValue( this, null )
-				         ?? "(null)";
+				object value = info.GetValue( this, null )
+				            ?? "(null)";
 				sb.Append( info.Name + ": " + value.ToString() + ", " );
 			}
 

@@ -6,13 +6,15 @@ namespace Myll.Generator
 {
 	public static class StmtFormatting
 	{
-		public static readonly string Indent = "\t";
+		public static readonly string Indent      = "\t";
+		public static readonly string ThrowFormat = "{0}throw {1};";
+		public static readonly string BreakFormat = "{0}break;";
+
 		public static readonly string[] ReturnFormat = {
 			"{0}return;",
 			"{0}return {1};",
 		};
-		public static readonly string ThrowFormat = "{0}throw {1};";
-		public static readonly string BreakFormat = "{0}break;";
+
 		public static readonly string[] IfFormat = {
 			"{0}if( {1} )",
 			"{0}else if( {1} )",

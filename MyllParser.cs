@@ -2,7 +2,5 @@
 
 namespace Myll
 {
-    public partial class MyllParser : Parser
-    {
-    }
+	public partial class MyllParser : Parser {}
 }

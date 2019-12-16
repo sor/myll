@@ -19,14 +19,14 @@ namespace Myll.Core
 		}
 
 		public const int UNRESOLVED = -2;
-		public const int RESOLVING  = - 1;
+		public const int RESOLVING  = -1;
 		public const int RESOLVED   = 0;
 
 		public int unresolvedCount = UNRESOLVED;
 
 		public bool IsUnResolved => unresolvedCount == UNRESOLVED;
-		public bool IsResolving => unresolvedCount  == RESOLVING;
-		public bool IsResolved => unresolvedCount   == RESOLVED;
+		public bool IsResolving  => unresolvedCount == RESOLVING;
+		public bool IsResolved   => unresolvedCount == RESOLVED;
 
 		public Kind         kind;
 		public string       name;
@@ -40,8 +40,7 @@ namespace Myll.Core
 		public MultiDict<string, Symbol> children      = new MultiDict<string, Symbol>();
 	}
 
-	public class PairList<TKey, TValue> : List<KeyValuePair<TKey, TValue>>
-	{}
+	public class PairList<TKey, TValue> : List<KeyValuePair<TKey, TValue>> {}
 
 	public class MultiDict<TKey, TValue> : Dictionary<TKey, List<TValue>>
 	{
