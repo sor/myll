@@ -35,3 +35,4 @@ Created by Jan Reitz. Licence undecided (apparently its open source).
     - Memorization as language feature
     - Static init of singletons, optimizing away the thread lock
     - *typename* instead of *var*
+    - cost of moving, cost of comp, constexpr to switch algs, see "speed is in the minds of ppl"
