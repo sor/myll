@@ -4,10 +4,13 @@ using System.Linq;
 using System.Text;
 
 using static System.String;
+
 using static Myll.Generator.StmtFormatting;
 
 namespace Myll.Core
 {
+	using Strings = List<string>;
+
 	public class Stmt
 	{
 		public SrcPos srcPos;
@@ -27,7 +30,7 @@ namespace Myll.Core
 			     + sb.ToString()  + "}";
 		}
 
-		public virtual IList<string> Gen( int level )
+		public virtual Strings Gen( int level )
 		{
 			throw new NotImplementedException( "plx override Gen" );
 		}
@@ -49,7 +52,7 @@ namespace Myll.Core
 	{
 		public List<Var> vars;
 
-		public override IList<string> Gen( int level )
+		public override Strings Gen( int level )
 		{
 			return vars
 				.SelectMany( v => v.Gen( level ) )
@@ -61,9 +64,9 @@ namespace Myll.Core
 	{
 		public Expr expr; // opt
 
-		public override IList<string> Gen( int level )
+		public override Strings Gen( int level )
 		{
-			return new[] {
+			return new Strings {
 				expr == null
 					? Format( ReturnFormat[0], Indent.Repeat( level ) )
 					: Format( ReturnFormat[1], Indent.Repeat( level ), expr.Gen() )
@@ -75,9 +78,9 @@ namespace Myll.Core
 	{
 		public Expr expr;
 
-		public override IList<string> Gen( int level )
+		public override Strings Gen( int level )
 		{
-			return new[] { Format( ThrowFormat, Indent.Repeat( level ), expr.Gen() ) };
+			return new Strings { Format( ThrowFormat, Indent.Repeat( level ), expr.Gen() ) };
 		}
 	}
 
@@ -85,13 +88,13 @@ namespace Myll.Core
 	{
 		public int depth; // C++ default is 1, break one level
 
-		public override IList<string> Gen( int level )
+		public override Strings Gen( int level )
 		{
 			if( depth != 1 )
 				throw new NotImplementedException(
 					"no depth except 1 supported directly, analyze step must take care of this!" );
 
-			return new[] {
+			return new Strings {
 				Format( BreakFormat, Indent.Repeat( level ) )
 			};
 		}
@@ -109,11 +112,11 @@ namespace Myll.Core
 		public List<CondThen> ifThens;
 		public Stmt           elseStmt; // opt
 
-		public override IList<string> Gen( int level )
+		public override Strings Gen( int level )
 		{
-			string       indent = Indent.Repeat( level );
-			List<string> ret    = new List<string>();
-			int          index  = 0;
+			string  indent = Indent.Repeat( level );
+			Strings ret    = new Strings();
+			int     index  = 0;
 			foreach( CondThen ifThen in ifThens ) {
 				ret.Add( Format( IfFormat[index], indent, ifThen.condExpr.Gen() ) );
 				ret.AddRange( ifThen.thenStmt.Gen( level + 1 ) );
@@ -198,12 +201,12 @@ namespace Myll.Core
 	{
 		public List<Stmt> statements;
 
-		public override IList<string> Gen( int level )
+		public override Strings Gen( int level )
 		{
 			// Block to Block needs to indent further else it's ok to remain same level
 			// The curly braces need to be outdentented one level
-			string       indent = Indent.Repeat( level - 1 );
-			List<string> ret    = new List<string>();
+			string  indent = Indent.Repeat( level - 1 );
+			Strings ret    = new Strings();
 			ret.Add( indent + "{" );
 			ret.AddRange( statements.SelectMany( s => s.Gen( level + (s is Block ? 1 : 0) ) ) );
 			ret.Add( indent + "}" );
@@ -215,10 +218,10 @@ namespace Myll.Core
 	{
 		public Expr expr;
 
-		public override IList<string> Gen( int level )
+		public override Strings Gen( int level )
 		{
 			string indent = Indent.Repeat( level );
-			return new List<string> { indent + expr.Gen() };
+			return new Strings { indent + expr.Gen() };
 		}
 	}
 

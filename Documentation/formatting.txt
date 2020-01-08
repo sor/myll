@@ -5,7 +5,7 @@ class name
 pri/prot/pub:
 	types
 	
-static: ppp fields, ppp getter/setter, ppp methods
+static: ppp fields, ppp getter/setter, ppp op, ppp methods
 	
 pri/prot/pub:
 	fields
@@ -17,8 +17,26 @@ pri/prot/pub:
 	getter/setter
 	
 pri/prot/pub:
-	operator
+	operators
 	
 pri/prot/pub:
 	methods
 }
+
+global:
+	includes
+	
+	prototypes
+	
+	using / alias
+	
+	types
+	
+	vars
+	
+	accessors
+	
+	operators
+	
+	funcs
+

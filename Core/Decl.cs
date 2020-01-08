@@ -2,11 +2,14 @@
 using System.Collections.Generic;
 
 using static System.String;
+
 using static Myll.Generator.StmtFormatting;
 
 namespace Myll.Core
 {
-	public enum Accessibility
+	using Strings = List<string>;
+
+	public enum Access
 	{
 		None,
 		Public,
@@ -20,22 +23,27 @@ namespace Myll.Core
 	/// </summary>
 	public class Decl : Stmt
 	{
-		public string        name;
-		public Accessibility accessibility;
-		public ScopeLeaf     scope;
+		public string    name;
+		public Access    access;
+		public ScopeLeaf scope;
 
 		// TODO Symbol?
+
+		public virtual void Gen( int level, DeclGen gen )
+		{
+			throw new NotImplementedException( "plx override Decl Gen" );
+		}
 	}
 
 	// has in-order list of decls, visible from outside
 	public class Hierarchical : Decl
 	{
+		public readonly List<Decl> children = new List<Decl>();
+
 		public new Scope scope {
 			get => base.scope as Scope;
 			set => base.scope = value;
 		}
-
-		public readonly List<Decl> children = new List<Decl>();
 
 		// the children add themselves through AddChild or PushScope
 		public void AddChild( Decl decl )
@@ -115,13 +123,13 @@ namespace Myll.Core
 		public List<Accessor> accessor; // opt
 		public Expr           init;     // opt
 
-		// TODO signature needs to change to provide the different locations to write too
-		public override IList<string> Gen( int level )
+		// TODO params needs to change to provide the different locations to write too
+		public override void Gen( int level, DeclGen gen )
 		{
 			// var int[] blah = {1,2,3};
 			// int blah[] = {1,2,3};
 			bool needsTypename = false; // TODO how to determine this
-			return new[] {
+			Strings ret = new Strings {
 				Format(
 					VarFormat[0],
 					Indent.Repeat( level ),
@@ -129,6 +137,7 @@ namespace Myll.Core
 					type.Gen( name ),
 					init != null ? VarFormat[2] + init.Gen() : "" )
 			};
+			gen.AddVarOrField( ret, access );
 		}
 	}
 
@@ -163,6 +172,24 @@ namespace Myll.Core
 		public List<TypespecNested> bases;
 		public List<TypespecNested> reqs;
 
-		public Accessibility currentAccessibility;
+		public Access currentAccess;
+
+		public override Strings Gen( int level )
+		{
+			StructuralInstanceGen g = new StructuralInstanceGen(
+				kind == Kind.Class
+					? Access.Private
+					: Access.Public
+			);
+
+			// this happens inside the children, each knows which method to call
+			// e.g.: g.AddAccessor( ... );
+			int childLevel = level + 1;
+			children.ForEach( c => c.Gen( childLevel, g ) );
+
+			g.Gen( 1 );
+			return null;
+			//children.
+		}
 	}
 }

@@ -36,3 +36,5 @@ Created by Jan Reitz. Licence undecided (apparently its open source).
     - Static init of singletons, optimizing away the thread lock
     - *typename* instead of *var*
     - cost of moving, cost of comp, constexpr to switch algs, see "speed is in the minds of ppl"
+    - no shadow language -> no preprocessor
+        - solve by having compile time descisions handled in the language itself

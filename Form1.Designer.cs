@@ -1,7 +1,10 @@
-﻿namespace Myll
+﻿using System.Drawing;
+
+namespace Myll
 {
 	partial class Form1
 	{
+
 		/// <summary>
 		/// Required designer variable.
 		/// </summary>
@@ -72,19 +75,24 @@
 			this.textBox1.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.textBox1.Location = new System.Drawing.Point(0, 0);
 			this.textBox1.Multiline = true;
+			this.textBox1.AcceptsTab = true;
 			this.textBox1.Name = "textBox1";
 			this.textBox1.Size = new System.Drawing.Size(184, 280);
 			this.textBox1.TabIndex = 1;
 			this.textBox1.Text = "enum Moep {\r\n A,\r\n B = 3,\r\n C\r\n}\r\nfunc main(){\r\n	(a)(?b)c;\r\n}";
+			this.textBox1.Text = testcase;
+			this.textBox1.Font = new Font( FontFamily.GenericMonospace, 8.0f );
 			//
 			// textBox2
 			//
 			this.textBox2.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.textBox2.Location = new System.Drawing.Point(0, 0);
 			this.textBox2.Multiline = true;
+			this.textBox2.AcceptsTab = true;
 			this.textBox2.Name = "textBox2";
 			this.textBox2.Size = new System.Drawing.Size(187, 280);
 			this.textBox2.TabIndex = 1;
+			this.textBox2.Font = new Font( FontFamily.GenericMonospace, 8.0f );
 			//
 			// Form1
 			//

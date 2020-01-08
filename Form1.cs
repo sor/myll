@@ -1,12 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
+
 using Antlr4.Runtime;
 
 namespace Myll
@@ -17,6 +11,24 @@ namespace Myll
 		{
 			InitializeComponent();
 		}
+
+		public string testcase = @"#!/usr/bin/myll
+[bitwise_ops]
+enum Moep {
+	A,
+	B = 3,
+	C
+}
+class Vec {
+	field int a;
+	method b(){}
+}
+func main(){
+	if(a+b|8==c)
+		(move)(a)(?b)(!d)c;
+	else
+		var int i = 9;
+}";
 
 		private void button1_Click(object sender, EventArgs e)
 		{
