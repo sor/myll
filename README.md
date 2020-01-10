@@ -38,3 +38,4 @@ Created by Jan Reitz. Licence undecided (apparently its open source).
     - cost of moving, cost of comp, constexpr to switch algs, see "speed is in the minds of ppl"
     - no shadow language -> no preprocessor
         - solve by having compile time descisions handled in the language itself
+    - default arguments possible from callsite (like LINE and FILE)
