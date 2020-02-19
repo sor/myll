@@ -1,15 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml;
-using Antlr4.Runtime;
-using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Tree;
+
 using Myll.Core;
 
 using Array = Myll.Core.Array;
@@ -119,9 +113,6 @@ namespace Myll
 				ifThens  = c.condThen().Select( VisitCondThen ).ToList(),
 				elseStmt = c.levStmt().Visit(),
 			};
-
-			// HACK
-			Form1.Output = ret.Gen( 0 ).Join( "\n" );
 
 			return ret;
 		}
@@ -234,9 +225,6 @@ namespace Myll
 				srcPos = c.ToSrcPos(),
 				exprs  = c.expr().Select( q => q.Visit() ).ToList(),
 			};
-
-			// HACK
-			Form1.Output = ret.exprs.Last().Gen();
 			return ret;
 		}
 

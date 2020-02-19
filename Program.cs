@@ -2,22 +2,57 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+
+using Antlr4.Runtime;
 
 namespace Myll
 {
 	static class Program
 	{
+		public static string Output { get; set; }
+
+		public static string testcase = @"#!/usr/bin/myll
+[bitwise_ops]
+enum Moep {
+	A,
+	B = 3,
+	C
+}
+class Vec {
+	field int a;
+	method b() -> void {}
+	func main() -> int {
+		if(a+b|8==c)
+			(move)(a)(?b)(!d)c;
+		else
+			var int i = 9;
+	}
+}
+";
+
+		static string Compile( string code )
+		{
+			AntlrInputStream  inputStream       = new AntlrInputStream( code );
+			MyllLexer         lexer             = new MyllLexer( inputStream );
+			CommonTokenStream commonTokenStream = new CommonTokenStream( lexer );
+			MyllParser        parser            = new MyllParser( commonTokenStream );
+			//VisitorExtensions.AllVis.Visit( parser.prog() );
+			VisitorExtensions.DeclVis.Visit( parser.prog() );
+			//parser.levStmt().Visit();
+
+			// HACK
+			return Output;
+		}
+
 		/// <summary>
 		/// The main entry point for the application.
 		/// </summary>
 		[STAThread]
 		static void Main()
 		{
-			Application.EnableVisualStyles();
-			Application.SetCompatibleTextRenderingDefault( false );
-			Application.Run( new Form1() );
+			string output = Compile( testcase );
+
+			Console.WriteLine( output );
 		}
 	}
 

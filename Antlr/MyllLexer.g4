@@ -124,6 +124,7 @@ F32			: 'f32';	// single prec. float
 F16			: 'f16';	// half prec. float
 
 NS			: 'namespace';
+MODULE		: 'module';
 VOLATILE	: 'volatile';
 STABLE		: 'stable';
 CONST		: 'const';
@@ -139,8 +140,8 @@ UNION		: 'union';
 STRUCT		: 'struct';
 CLASS		: 'class';
 CTOR		: 'ctor';
-COPYCTOR	: 'copyctor'|'copy_ctor';
-MOVECTOR	: 'movector'|'move_ctor';
+COPYCTOR	: 'copyctor'|'copy_ctor'|'cctor';
+MOVECTOR	: 'movector'|'move_ctor'|'mctor';
 DTOR		: 'dtor';
 COPYASSIGN	: 'copy=';
 MOVEASSIGN	: 'move=';

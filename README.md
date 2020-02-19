@@ -38,3 +38,19 @@ Created by Jan Reitz. Licence undecided (apparently its open source).
     - cost of moving, cost of comp, constexpr to switch algs, see "speed is in the minds of ppl"
     - no shadow language -> no preprocessor
         - solve by having compile time descisions handled in the language itself
+
+# Modules
+C++ modules already foreshadow and Myll already supports the idea, although a bit different in their current form.
+Myll modules specify in which .cpp/.h file things end up, when you specify "module test;" in 2 .myll files they will merge their output to a test.h and test.cpp file.
+If you don't specify a module, the original filename is used as its module, test.myll is implicily "module test;".
+
+# Missing Stuff from C++
+There are plenty of differences to C++, but only the ones listed here could somehow be considered downsides to C++.
+- No uncontained using namespace. It would introduce the leaking C++ suffers from.
+- Headers which are included need to be order-independant and must not need preceeding #defines.
+
+# Schreiben
+Äpfel mit Birnen mischen... und was sich sonst noch alles an Früchten findet.
+static hat etliche Bedeutungen, const auch:
+...Echte 'Konstanten' wurden aber sehr lange nicht etwa mit 'const float PI = 3.14f;'
+geschrieben, sondern mit '#define PI 3.14f'

@@ -30,34 +30,30 @@ namespace Myll.Core
 			     + sb.ToString()  + "}";
 		}
 
-		public virtual Strings Gen( int level )
+		/// <summary>
+		/// This outputs immediate generated code
+		/// and inserts necessary declarations through the DeclGen parameter
+		/// </summary>
+		/// <param name="level">level of indentation</param>
+		/// <param name="gen">surrounding context</param>
+		/// <returns>immediate generated lines of code</returns>
+		public virtual Strings Gen( int level/*, DeclGen gen*/ )
 		{
-			throw new NotImplementedException( "plx override Gen" );
+			SimpleGen gen = new SimpleGen { LevelDecl = level };
+			Gen( gen );
+			return gen.AllDecl;
+		}
+
+		public virtual void Gen( DeclGen gen )
+		{
+			// TODO: will become abstract once its overriden everywhere
+			throw new NotImplementedException( Format( "plx override Decl Gen @ {0}", GetType().Name) );
 		}
 	}
 
 	public class UsingStmt : Stmt
 	{
 		public List<TypespecNested> types;
-	}
-
-	/// <summary>
-	/// HACK? Why is this not derived from Decl? Var is!
-	/// </summary>
-	/// <remarks>
-	/// This needs to know if it needs to output "typename" in front of the type.
-	/// This needs to have been created by <see cref="Operand.WildId"/> and <see cref="Operand.DiscardId"/>
-	/// </remarks>
-	public class VarsStmt : Stmt
-	{
-		public List<Var> vars;
-
-		public override Strings Gen( int level )
-		{
-			return vars
-				.SelectMany( v => v.Gen( level ) )
-				.ToList();
-		}
 	}
 
 	public class ReturnStmt : Stmt
@@ -114,9 +110,10 @@ namespace Myll.Core
 
 		public override Strings Gen( int level )
 		{
-			string  indent = Indent.Repeat( level );
-			Strings ret    = new Strings();
-			int     index  = 0;
+			string indent = Indent.Repeat( level );
+
+			Strings ret   = new Strings();
+			int     index = 0;
 			foreach( CondThen ifThen in ifThens ) {
 				ret.Add( Format( IfFormat[index], indent, ifThen.condExpr.Gen() ) );
 				ret.AddRange( ifThen.thenStmt.Gen( level + 1 ) );

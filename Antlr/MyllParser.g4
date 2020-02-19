@@ -149,7 +149,7 @@ caseStmt	:	CASE expr (COMMA expr)* COLON levStmt+ (FALL SEMI)?;
 
 initList	:	COLON id funcCall (COMMA id funcCall)* COMMA?;
 
-// is just SEMI as well in levStmt/inStmt
+// is just SEMI as well in levStmt->inStmt
 funcBody	:	PHATRARROW LCURLY expr RCURLY	// whatfor was this?
  			|	PHATRARROW expr SEMI
 			|	levStmt;
@@ -176,8 +176,8 @@ inDecl		:	NS id (SCOPE id)* SEMI						# Namespace // or better COLON
 						LCURLY	levDecl*	RCURLY	# ConceptDecl
 			// TODO aspect
 			|	ENUM id	LCURLY	idExprs		RCURLY	# EnumDecl
-			|	FUNC	LCURLY	funcDef*	RCURLY	# FunctionDecl
-			|	FUNC			funcDef				# FunctionDecl
+			|	(FUNC|METHOD)	LCURLY	funcDef*	RCURLY	# FunctionDecl
+			|	(FUNC|METHOD)			funcDef				# FunctionDecl
 			|	OPERATOR LCURLY opDef*		RCURLY	# OpDecl
 			|	OPERATOR		opDef				# OpDecl
 // class only:
@@ -193,8 +193,8 @@ inDecl		:	NS id (SCOPE id)* SEMI						# Namespace // or better COLON
 // using, var, const: these are both Stmt and Decl
 inAnyStmt	:	USING			typespecsNested	SEMI	# Using
 			|	ALIAS id ASSIGN	typespec 		SEMI	# AliasDecl
-			|	VAR		LCURLY	typedIdAcors*	RCURLY	# VariableDecl
-			|	VAR				typedIdAcors			# VariableDecl
+			|	(VAR|FIELD)		LCURLY	typedIdAcors*	RCURLY	# VariableDecl
+			|	(VAR|FIELD)				typedIdAcors			# VariableDecl
 			|	CONST	LCURLY	typedIdAcors*	RCURLY	# VariableDecl
 			|	CONST			typedIdAcors			# VariableDecl
 			;

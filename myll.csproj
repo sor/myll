@@ -5,10 +5,10 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{0D86A0ED-2EFA-4455-8AE6-8440BBA3501B}</ProjectGuid>
-    <OutputType>WinExe</OutputType>
+    <OutputType>Exe</OutputType>
     <RootNamespace>Myll</RootNamespace>
     <AssemblyName>Myll</AssemblyName>
-    <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <NuGetPackageImportStamp>
@@ -53,20 +53,12 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Antlr4.Runtime.Standard, Version=4.7.1.0, Culture=neutral, PublicKeyToken=e78b2c5abd1fcb3f">
-      <HintPath>packages\Antlr4.Runtime.Standard.4.7.1.1\lib\net35\Antlr4.Runtime.Standard.dll</HintPath>
+    <Reference Include="Antlr4.Runtime.Standard, Version=4.7.2.0, Culture=neutral, PublicKeyToken=e78b2c5abd1fcb3f">
+      <HintPath>packages\Antlr4.Runtime.Standard.4.7.2\lib\net35\Antlr4.Runtime.Standard.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Deployment" />
-    <Reference Include="System.Drawing" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Windows.Forms" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Antlr\Myll\MyllLexer.cs" />
@@ -80,12 +72,6 @@
     <Compile Include="Core\Stmt.cs" />
     <Compile Include="Core\Symbol.cs" />
     <Compile Include="Core\Typespec.cs" />
-    <Compile Include="Form1.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Form1.Designer.cs">
-      <DependentUpon>Form1.cs</DependentUpon>
-    </Compile>
     <Compile Include="Generator\ExprFormatting.cs" />
     <Compile Include="Generator\StmtFormatting.cs" />
     <Compile Include="MyllLexer.cs" />
@@ -100,9 +86,6 @@
     <Compile Include="Visitor\VStmt.cs" />
     <Compile Include="Visitor\VTpl.cs" />
     <Compile Include="Visitor\VTypes.cs" />
-    <EmbeddedResource Include="Form1.resx">
-      <DependentUpon>Form1.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>

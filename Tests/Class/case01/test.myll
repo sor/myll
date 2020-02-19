@@ -1,0 +1,11 @@
+module test;
+
+func do_a( A* a ) -> void {}
+
+class A {
+	class C {
+		func do_b( B* b ) -> void {}
+	}
+	class B {}
+}
+

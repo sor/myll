@@ -1,17 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml;
-using Antlr4.Runtime;
-using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Tree;
-using Myll.Core;
 
+using Myll.Core;
+using Myll.Generator;
 using Array = Myll.Core.Array;
 using Enum = Myll.Core.Enum;
 
@@ -171,6 +164,14 @@ namespace Myll
 			PushScope( ret );
 			c.levDecl().Select( Visit ).Exec();
 			PopScope();
+
+			// HACK
+			StmtFormatting.SimpleGen gen = new StmtFormatting.SimpleGen { LevelDecl = 0 };
+			gen.AddStruct( ret );
+			ret.Gen( gen );
+			Program.Output = gen.AllDecl.Join( "\n" )
+				+ "\n"
+				+ gen.AllImpl.Join( "\n" );
 
 			return ret;
 		}

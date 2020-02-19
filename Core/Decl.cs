@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-
+using System.Text;
 using static System.String;
 
 using static Myll.Generator.StmtFormatting;
@@ -29,9 +29,20 @@ namespace Myll.Core
 
 		// TODO Symbol?
 
-		public virtual void Gen( int level, DeclGen gen )
+		public override string ToString()
 		{
-			throw new NotImplementedException( "plx override Decl Gen" );
+			var sb = new StringBuilder();
+			foreach( var info in GetType().GetProperties() ) {
+				object value = info.GetValue( this, null )
+				            ?? "(null)";
+				sb.Append( info.Name + ": " + value.ToString() + ", " );
+			}
+
+			sb.Length = Math.Max( sb.Length - 2, 0 );
+			return "{"
+			     + GetType().Name + " "
+			     + name + " "
+			     + sb.ToString() + "}";
 		}
 	}
 
@@ -77,6 +88,11 @@ namespace Myll.Core
 		public List<Param>         paras;
 		public Stmt                block;
 		public Typespec            retType;
+
+		public override void Gen( DeclGen gen )
+		{
+			gen.AddFunc( this, access );
+		}
 	}
 
 	// Constructor / Destructor
@@ -100,8 +116,15 @@ namespace Myll.Core
 		public List<TypespecNested> types;
 	}
 
-	/*
-	var int i { [inline] get; [inline] set; } = 99;
+	/**
+	<remarks>
+		This needs to know if it needs to output "typename" in front of the type.
+		This needs to have been created by a var or field decl,
+			or from <see cref="Operand.WildId"/> and <see cref="Operand.DiscardId"/> in an earlier step
+	</remarks>
+	<example>
+		var int i { [inline] get; [inline] set; } = 99;
+	</example>
 	*/
 	public class Var : Decl
 	{
@@ -120,24 +143,24 @@ namespace Myll.Core
 		}
 
 		public Typespec       type;     // contains Qualifier
-		public List<Accessor> accessor; // opt
+		public List<Accessor> accessor; // opt, structural or global
 		public Expr           init;     // opt
 
 		// TODO params needs to change to provide the different locations to write too
-		public override void Gen( int level, DeclGen gen )
+		public override void Gen( DeclGen gen )
 		{
-			// var int[] blah = {1,2,3};
-			// int blah[] = {1,2,3};
-			bool needsTypename = false; // TODO how to determine this
-			Strings ret = new Strings {
-				Format(
-					VarFormat[0],
-					Indent.Repeat( level ),
-					needsTypename ? VarFormat[1] : "",
-					type.Gen( name ),
-					init != null ? VarFormat[2] + init.Gen() : "" )
-			};
-			gen.AddVarOrField( ret, access );
+			gen.AddVar( this, access );
+		}
+	}
+
+	// TODO: rename class, its not a stmt anymore
+	public class VarsStmt : Decl
+	{
+		public List<Var> vars;
+
+		public override void Gen( DeclGen gen )
+		{
+			vars.ForEach( v => v.Gen( gen ) );
 		}
 	}
 
@@ -174,22 +197,9 @@ namespace Myll.Core
 
 		public Access currentAccess;
 
-		public override Strings Gen( int level )
+		public override void Gen( DeclGen gen )
 		{
-			StructuralInstanceGen g = new StructuralInstanceGen(
-				kind == Kind.Class
-					? Access.Private
-					: Access.Public
-			);
-
-			// this happens inside the children, each knows which method to call
-			// e.g.: g.AddAccessor( ... );
-			int childLevel = level + 1;
-			children.ForEach( c => c.Gen( childLevel, g ) );
-
-			g.Gen( 1 );
-			return null;
-			//children.
+			gen.AddStruct( this, access );
 		}
 	}
 }

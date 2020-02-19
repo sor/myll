@@ -5,7 +5,11 @@ class name
 pri/prot/pub:
 	types
 	
-static: ppp fields, ppp getter/setter, ppp op, ppp methods
+static:
+	ppp fields,
+	ppp getter/setter,
+	ppp op,
+	ppp methods
 	
 pri/prot/pub:
 	fields
