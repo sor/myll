@@ -38,6 +38,7 @@ Created by Jan Reitz. Licence undecided (apparently its open source).
     - cost of moving, cost of comp, constexpr to switch algs, see "speed is in the minds of ppl"
     - no shadow language -> no preprocessor
         - solve by having compile time descisions handled in the language itself
+    - default arguments possible from callsite (like LINE and FILE)
 
 # Modules
 C++ modules already foreshadow and Myll already supports the idea, although a bit different in their current form.
