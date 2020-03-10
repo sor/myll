@@ -75,7 +75,10 @@ namespace Myll.Core
 
 		public override string Gen( string name = "" )
 		{
-			return BasicFormat[kind][size];
+			return BasicFormat[kind][size]
+			     + (name == ""
+				       ? ""
+				       : " " + name);
 		}
 	}
 

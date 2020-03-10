@@ -6,6 +6,7 @@ void do_a(A* a);
 
 class A
 {
+	class C;
 	class B;
 
 	class C

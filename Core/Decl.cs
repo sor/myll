@@ -12,9 +12,10 @@ namespace Myll.Core
 	public enum Access
 	{
 		None,
-		Public,
-		Protected,
 		Private,
+		Protected,
+		Public,
+		Irrelevant,
 	}
 
 	/// <summary>
@@ -26,6 +27,7 @@ namespace Myll.Core
 		public string    name;
 		public Access    access;
 		public ScopeLeaf scope;
+		public bool IsStatic => false; // TODO
 
 		// TODO Symbol?
 
@@ -89,7 +91,7 @@ namespace Myll.Core
 		public Stmt                block;
 		public Typespec            retType;
 
-		public override void Gen( DeclGen gen )
+		public override void AddToGen( DeclGen gen )
 		{
 			gen.AddFunc( this, access );
 		}
@@ -146,8 +148,7 @@ namespace Myll.Core
 		public List<Accessor> accessor; // opt, structural or global
 		public Expr           init;     // opt
 
-		// TODO params needs to change to provide the different locations to write too
-		public override void Gen( DeclGen gen )
+		public override void AddToGen( DeclGen gen )
 		{
 			gen.AddVar( this, access );
 		}
@@ -158,9 +159,9 @@ namespace Myll.Core
 	{
 		public List<Var> vars;
 
-		public override void Gen( DeclGen gen )
+		public override void AddToGen( DeclGen gen )
 		{
-			vars.ForEach( v => v.Gen( gen ) );
+			vars.ForEach( v => v.AddToGen( gen ) );
 		}
 	}
 
@@ -179,6 +180,10 @@ namespace Myll.Core
 		public bool withBody;
 
 		// TODO: what is needed here?
+		public override void AddToGen( DeclGen gen )
+		{
+			gen.AddNamespace( this );
+		}
 	}
 
 	public class Structural : Hierarchical
@@ -197,7 +202,7 @@ namespace Myll.Core
 
 		public Access currentAccess;
 
-		public override void Gen( DeclGen gen )
+		public override void AddToGen( DeclGen gen )
 		{
 			gen.AddStruct( this, access );
 		}

@@ -124,6 +124,9 @@
   <ItemGroup>
     <Content Include="Antlr\MyllLexer.g4" />
     <Content Include="Antlr\MyllParser.g4" />
+    <Content Include="testcase.myll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Tests\Enum\01_basic.myll" />
     <Content Include="Tests\Enum\02_basic_comma.myll" />
     <Content Include="Tests\Enum\03_numbered.myll" />

@@ -85,28 +85,7 @@ namespace Myll
 				{ Parser.AS_XOR,	Operand.BitXor },
 			};
 
-		private static readonly Dictionary<int, Var.Accessor.Kind>
-			ToAccessorKindDict = new Dictionary<int, Var.Accessor.Kind> {
-				{ Parser.GET,		Var.Accessor.Kind.Get },
-				{ Parser.REFGET,	Var.Accessor.Kind.RefGet },
-				{ Parser.SET,		Var.Accessor.Kind.Set },
-			};
-
-		private static readonly Dictionary<int, Structural.Kind>
-			ToStructuralKindDict = new Dictionary<int, Structural.Kind> {
-				{ Parser.STRUCT,	Structural.Kind.Struct },
-				{ Parser.CLASS,		Structural.Kind.Class },
-				{ Parser.UNION,		Structural.Kind.Union },
-			};
-
-		private static readonly Dictionary<int, Qualifier>
-			ToQual = new Dictionary<int, Qualifier> {
-				{ MyllParser.CONST,		Qualifier.Const		},
-				{ MyllParser.MUTABLE,	Qualifier.Mutable	},
-				{ MyllParser.VOLATILE,	Qualifier.Volatile	},
-				{ MyllParser.STABLE,	Qualifier.Stable	},
-			};
-
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static void Exec<TSource>( this IEnumerable<TSource> s )
 		{
 			if( s == null ) return;
@@ -131,14 +110,6 @@ namespace Myll
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Operand ToAssignOp( this IToken tok )
 			=> ToAssignOperand[tok.Type];
-
-		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static Var.Accessor.Kind ToAccessorKind( this IToken tok )
-			=> ToAccessorKindDict[tok.Type];
-
-		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static Structural.Kind ToStructuralKind( this IToken tok )
-			=> ToStructuralKindDict[tok.Type];
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static SrcPos ToSrcPos( this ParserRuleContext c )
@@ -183,7 +154,8 @@ namespace Myll
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Qualifier Visit( this Parser.QualContext[] c )
-			=> c.Aggregate( Qualifier.None, ( a, q ) => a | ToQual[q.v.Type] );
+			=> c.Aggregate( Qualifier.None, ( a, q ) => a | q.Visit() );
+
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Var.Accessor Visit( this Parser.AccessorDefContext c )
@@ -196,5 +168,40 @@ namespace Myll
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static List<Var.Accessor> Visit( this Parser.AccessorDefContext[] c )
 			=> c.Select( Visit ).ToList();
+
+#pragma warning disable 8509
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static Var.Accessor.Kind ToAccessorKind( this IToken tok )
+			=> tok.Type switch {
+				Parser.GET    => Var.Accessor.Kind.Get,
+				Parser.REFGET => Var.Accessor.Kind.RefGet,
+				Parser.SET    => Var.Accessor.Kind.Set
+			};
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static Structural.Kind ToStructuralKind( this IToken tok )
+			=> tok.Type switch {
+				Parser.STRUCT => Structural.Kind.Struct,
+				Parser.CLASS  => Structural.Kind.Class,
+				Parser.UNION  => Structural.Kind.Union,
+			};
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static Qualifier Visit( this Parser.QualContext c )
+			=> c.v.Type switch {
+				MyllParser.CONST    => Qualifier.Const,
+				MyllParser.MUTABLE  => Qualifier.Mutable,
+				MyllParser.VOLATILE => Qualifier.Volatile,
+				MyllParser.STABLE   => Qualifier.Stable,
+			};
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static Access Visit( this Parser.AccessModContext c )
+			=> c.a.Type switch {
+				MyllParser.PRIV => Access.Private,
+				MyllParser.PROT => Access.Protected,
+				MyllParser.PUB  => Access.Public,
+			};
+#pragma warning restore 8509
 	}
 }

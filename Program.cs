@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -10,27 +11,9 @@ namespace Myll
 	static class Program
 	{
 		public static string Output { get; set; }
+		public static string OutputImpl { get; set; }
 
-		public static string testcase = @"#!/usr/bin/myll
-[bitwise_ops]
-enum Moep {
-	A,
-	B = 3,
-	C
-}
-class Vec {
-	field int a;
-	method b() -> void {}
-	func main() -> int {
-		if(a+b|8==c)
-			(move)(a)(?b)(!d)c;
-		else
-			var int i = 9;
-	}
-}
-";
-
-		static string Compile( string code )
+		static (string,string) Compile( string code )
 		{
 			AntlrInputStream  inputStream       = new AntlrInputStream( code );
 			MyllLexer         lexer             = new MyllLexer( inputStream );
@@ -41,7 +24,7 @@ class Vec {
 			//parser.levStmt().Visit();
 
 			// HACK
-			return Output;
+			return (Output, OutputImpl);
 		}
 
 		/// <summary>
@@ -50,9 +33,13 @@ class Vec {
 		[STAThread]
 		static void Main()
 		{
-			string output = Compile( testcase );
+			string testcase = File.ReadAllText( "testcase.myll" );
+			var outputs = Compile( testcase );
 
-			Console.WriteLine( output );
+			Console.WriteLine("// decl");
+			Console.WriteLine( outputs.Item1 );
+			Console.WriteLine("// impl");
+			Console.WriteLine( outputs.Item2 );
 		}
 	}
 
@@ -72,9 +59,10 @@ class Vec {
 			    && value.CompareTo( max ) <= 0;
 		}
 
+		// handles negative counts gracefully, returning an empty string
 		public static string Repeat( this string value, int count )
 		{
-			return count == 0 || string.IsNullOrEmpty( value )
+			return count <= 0 || string.IsNullOrEmpty( value )
 				? string.Empty
 				: new StringBuilder( value.Length * count )
 					.Insert( 0, value, count )

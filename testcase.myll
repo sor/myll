@@ -1,0 +1,46 @@
+#!/usr/bin/myll // ignored by the compiler
+
+namespace test
+{
+	/*
+	[bitwise_ops]
+	enum Moep
+	{
+		A,
+		B = 3,
+		C
+	}
+	*/
+
+	class Vec
+	{
+		field int _a, _b;
+	public:
+		field float c, d;
+
+		[inline]
+		func a() -> int { return _a; }
+
+		func main() -> int
+		{
+			if(a+b|8==c)
+				(move)(a)(?b)(!d)c;
+			else
+				var int i = 9;
+		}
+
+	private:
+		class subclass
+		{
+			method sub_meth(anothersubclass* other) -> void {}
+			field int sub_var;
+		}
+
+	protected:
+		class anothersubclass
+		{
+			class subsubclass{}
+		}
+	}
+
+}

@@ -42,21 +42,25 @@ namespace Myll
 				.idAccessor()
 				.Select(
 					q => new Var {
+						srcPos   = c.ToSrcPos(),
 						name     = q.id().GetText(),
+						// TODO: access = curAccess,
 						type     = type,
 						init     = q.expr().Visit(),
 						accessor = q.accessorDef().Visit(),
-						// TODO: Accessors
+						// TODO: Accessors, is this still valid?
 					} )
 				.ToList();
+			ret.ForEach( var => AddChild( var ) );
 			return ret;
 		}
 
 		public Enum.Entry VisitEnumEntry( IdExprContext c )
 		{
 			Enum.Entry ret = new Enum.Entry {
-				name  = VisitId( c.id() ),
-				value = c.expr().Visit(),
+				srcPos = c.ToSrcPos(),
+				name   = VisitId( c.id() ),
+				value  = c.expr().Visit(),
 			};
 			AddChild( ret );
 			return ret;
@@ -79,7 +83,9 @@ namespace Myll
 		public override Decl VisitEnumDecl( EnumDeclContext c )
 		{
 			Enum ret = new Enum {
-				name = VisitId( c.id() ),
+				srcPos = c.ToSrcPos(),
+				name   = VisitId( c.id() ),
+				access = curAccess,
 			};
 			PushScope( ret );
 			VisitEnumEntrys( c.idExprs() );
@@ -93,7 +99,9 @@ namespace Myll
 			// ist das hier richtig?
 			PushScope();
 			Func ret = new Func {
+				srcPos         = c.ToSrcPos(),
 				name           = VisitId( c.id() ),
+				access         = curAccess,
 				templateParams = VisitTplParams( c.tplParams() ),
 				paras          = VisitFuncTypeDef( c.funcTypeDef() ),
 				retType        = VisitTypespec( c.typespec() ),
@@ -115,6 +123,15 @@ namespace Myll
 
 			CloseGlobalScope();
 
+			// HACK: but less hack than before
+			StmtFormatting.SimpleGen gen = new StmtFormatting.SimpleGen(-1, 0);
+			// do NOT call gen.AddNamespace( ret ).
+			// Instead AddToGen() is there to call the correct virtual method on the gen
+			global.AddToGen( gen );
+			// last call wins, writes the output
+			Program.Output     = gen.GenDecl().Join( "\n" );
+			Program.OutputImpl = gen.GenImpl().Join( "\n" );
+
 			return global;
 		}
 
@@ -128,8 +145,9 @@ namespace Myll
 			bool withBody = (c.levDecl().Length >= 1);
 			foreach( IdContext idc in c.id() ) {
 				Namespace ns = new Namespace {
-					name     = VisitId( idc ),
 					srcPos   = idc.ToSrcPos(),
+					name     = VisitId( idc ),
+					access   = curAccess,
 					withBody = withBody,
 				};
 				PushScope( ns );
@@ -151,27 +169,22 @@ namespace Myll
 
 		public override Decl VisitStructDecl( StructDeclContext c )
 		{
-			Console.WriteLine( "HelloVisitor struct" );
-
 			Structural ret = new Structural {
-				name      = VisitId( c.id() ),
 				srcPos    = c.ToSrcPos(),
+				name      = VisitId( c.id() ),
+				access    = curAccess,
 				kind      = c.v.ToStructuralKind(),
 				tplParams = VisitTplParams( c.tplParams() ),
 				bases     = VisitTypespecsNested( c.bases ),
 				reqs      = VisitTypespecsNested( c.reqs ),
 			};
 			PushScope( ret );
+			// HACK: will be buggy. needs to move to ScopeStack, when ScopeStack works.
+			curAccess = (ret.kind == Structural.Kind.Class)
+				? Access.Private
+				: Access.Public;
 			c.levDecl().Select( Visit ).Exec();
 			PopScope();
-
-			// HACK
-			StmtFormatting.SimpleGen gen = new StmtFormatting.SimpleGen { LevelDecl = 0 };
-			gen.AddStruct( ret );
-			ret.Gen( gen );
-			Program.Output = gen.AllDecl.Join( "\n" )
-				+ "\n"
-				+ gen.AllImpl.Join( "\n" );
 
 			return ret;
 		}
@@ -179,10 +192,13 @@ namespace Myll
 		public override Decl VisitCtorDecl( CtorDeclContext c )
 		{
 			PushScope();
+
 			ConDestructor ret = new ConDestructor {
-				kind  = ConDestructor.Kind.Constructor,
-				paras = VisitFuncTypeDef( c.funcTypeDef() ),
-				block = c.levStmt().Visit(),
+				srcPos = c.ToSrcPos(),
+				access = curAccess,
+				kind   = ConDestructor.Kind.Constructor,
+				paras  = VisitFuncTypeDef( c.funcTypeDef() ),
+				block  = c.levStmt().Visit(),
 				// TODO: cc.initList(); // opt
 			};
 			AddChild( ret );
@@ -209,5 +225,25 @@ namespace Myll
 			return ret;
 		}
 		*/
+
+		public override Decl VisitVariableDecl( VariableDeclContext c )
+		{
+			Decl ret = new VarsStmt {
+				vars = c.typedIdAcors()
+					.Select( VisitVars )
+					.SelectMany( q => q )
+					.ToList(),
+			};
+			// TODO save the constness
+			return ret;
+		}
+
+		// HACK: will be buggy. needs to move to ScopeStack, when ScopeStack works.
+		private Access curAccess = Access.None;
+		public override Decl VisitAccessMod( AccessModContext c )
+		{
+			curAccess = c.Visit();
+			return null;
+		}
 	}
 }

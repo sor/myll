@@ -39,12 +39,13 @@ namespace Myll.Core
 		/// <returns>immediate generated lines of code</returns>
 		public virtual Strings Gen( int level/*, DeclGen gen*/ )
 		{
-			SimpleGen gen = new SimpleGen { LevelDecl = level };
-			Gen( gen );
-			return gen.AllDecl;
+			// TODO: fix levels
+			SimpleGen gen = new SimpleGen(level,level);
+			AddToGen( gen );
+			return gen.GenDecl();
 		}
 
-		public virtual void Gen( DeclGen gen )
+		public virtual void AddToGen( DeclGen gen )
 		{
 			// TODO: will become abstract once its overriden everywhere
 			throw new NotImplementedException( Format( "plx override Decl Gen @ {0}", GetType().Name) );
@@ -64,8 +65,8 @@ namespace Myll.Core
 		{
 			return new Strings {
 				expr == null
-					? Format( ReturnFormat[0], Indent.Repeat( level ) )
-					: Format( ReturnFormat[1], Indent.Repeat( level ), expr.Gen() )
+					? Format( ReturnFormat[0], IndentString.Repeat( level ) )
+					: Format( ReturnFormat[1], IndentString.Repeat( level ), expr.Gen() )
 			};
 		}
 	}
@@ -76,7 +77,7 @@ namespace Myll.Core
 
 		public override Strings Gen( int level )
 		{
-			return new Strings { Format( ThrowFormat, Indent.Repeat( level ), expr.Gen() ) };
+			return new Strings { Format( ThrowFormat, IndentString.Repeat( level ), expr.Gen() ) };
 		}
 	}
 
@@ -91,7 +92,7 @@ namespace Myll.Core
 					"no depth except 1 supported directly, analyze step must take care of this!" );
 
 			return new Strings {
-				Format( BreakFormat, Indent.Repeat( level ) )
+				Format( BreakFormat, IndentString.Repeat( level ) )
 			};
 		}
 	}
@@ -110,7 +111,7 @@ namespace Myll.Core
 
 		public override Strings Gen( int level )
 		{
-			string indent = Indent.Repeat( level );
+			string indent = IndentString.Repeat( level );
 
 			Strings ret   = new Strings();
 			int     index = 0;
@@ -202,7 +203,7 @@ namespace Myll.Core
 		{
 			// Block to Block needs to indent further else it's ok to remain same level
 			// The curly braces need to be outdentented one level
-			string  indent = Indent.Repeat( level - 1 );
+			string  indent = IndentString.Repeat( level - 1 );
 			Strings ret    = new Strings();
 			ret.Add( indent + "{" );
 			ret.AddRange( statements.SelectMany( s => s.Gen( level + (s is Block ? 1 : 0) ) ) );
@@ -217,7 +218,7 @@ namespace Myll.Core
 
 		public override Strings Gen( int level )
 		{
-			string indent = Indent.Repeat( level );
+			string indent = IndentString.Repeat( level );
 			return new Strings { indent + expr.Gen() };
 		}
 	}
