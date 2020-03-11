@@ -1,6 +1,6 @@
 #!/usr/bin/myll // ignored by the compiler
 
-namespace test
+namespace Namespace
 {
 	/*
 	[bitwise_ops]
@@ -12,7 +12,15 @@ namespace test
 	}
 	*/
 
-	class Vec
+	func main() -> int
+	{
+		if(a+b|8==c)
+			(move)(a)(?b)(!d)c;
+		else
+			var int i = 9;
+	}
+
+	class Class
 	{
 		field int _a, _b;
 	public:
@@ -21,26 +29,17 @@ namespace test
 		[inline]
 		func a() -> int { return _a; }
 
-		func main() -> int
-		{
-			if(a+b|8==c)
-				(move)(a)(?b)(!d)c;
-			else
-				var int i = 9;
-		}
-
 	private:
-		class subclass
+		class SubClass
 		{
 			method sub_meth(anothersubclass* other) -> void {}
 			field int sub_var;
 		}
 
 	protected:
-		class anothersubclass
+		class AnotherSubClass
 		{
-			class subsubclass{}
+			class SubSubClass{}
 		}
 	}
-
 }

@@ -545,9 +545,12 @@ namespace Myll.Generator
 
 				public void AddVarImpl( Var obj, Access access = Access.None )
 				{
+					if( !obj.IsStatic )
+						return;
+
 					string indent        = parent.IndentImpl;
 					bool   needsTypename = false; // TODO how to determine this
-					string name          = /*parent.*/ obj.name; // TODO fully qualify name
+					string name          = obj.FullyQualifiedName;
 					Strings ret = new Strings {
 						Format(
 							VarFormat[0],
@@ -619,15 +622,16 @@ namespace Myll.Generator
 				// Alternative to two derived classes just for these methods
 				public void AddFuncDecl( Func obj, Access access = Access.None )
 				{
-					string  indent = parent.IndentDecl;
 					Strings target = TargetMethod( access );
+					string  indent = parent.IndentDecl;
+					string  name   = obj.name;
 					target.Add(
 						Format(
 							FuncFormat[0],
 							indent,
 							"",
 							obj.retType.Gen(),
-							obj.name,
+							name,
 							"params",
 							";" ) );
 				}
@@ -635,15 +639,16 @@ namespace Myll.Generator
 				// Alternative to two derived classes just for these methods
 				public void AddFuncImpl( Func obj, Access access = Access.None )
 				{
-					string  indent = parent.IndentImpl;
 					Strings target = TargetMethod( access );
+					string  indent = parent.IndentImpl;
+					string  name   = obj.FullyQualifiedName;
 					target.Add(
 						Format(
 							FuncFormat[0],
 							indent,
 							"",
 							obj.retType.Gen(),
-							obj.name,
+							name,
 							"params",
 							"" ) );
 					target.AddRange( obj.block.Gen( parent.LevelImpl + 1 ) );

@@ -28,6 +28,7 @@ namespace Myll.Core
 		public Access    access;
 		public ScopeLeaf scope;
 		public bool IsStatic => false; // TODO
+		public bool IsInline => false; // TODO
 
 		// TODO Symbol?
 
@@ -45,6 +46,16 @@ namespace Myll.Core
 			     + GetType().Name + " "
 			     + name + " "
 			     + sb.ToString() + "}";
+		}
+
+		public string FullyQualifiedName {
+			get {
+				string ret = name;
+				for( Scope cur = scope.parent; cur != null; cur = cur.parent )
+					ret = (cur.decl?.name ?? "unknown_fix_me") + "::" + ret;
+
+				return ret;
+			}
 		}
 	}
 

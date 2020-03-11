@@ -53,6 +53,7 @@ namespace Myll
 			return ret;
 		}
 
+		/*
 		public override Stmt VisitVariableDecl( VariableDeclContext c )
 		{
 			Stmt ret = new VarsStmt {
@@ -64,6 +65,7 @@ namespace Myll
 			// TODO save the constness
 			return ret;
 		}
+		*/
 
 		public override Stmt VisitEmptyStmt( EmptyStmtContext c )
 		{

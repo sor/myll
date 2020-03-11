@@ -10,7 +10,7 @@ namespace Myll
 	public partial class ExtendedVisitor<Result>
 		: MyllParserBaseVisitor<Result>
 	{
-		private readonly Stack<Scope> ScopeStack;
+		protected readonly Stack<Scope> ScopeStack;
 
 		public ExtendedVisitor( Stack<Scope> ScopeStack )
 		{

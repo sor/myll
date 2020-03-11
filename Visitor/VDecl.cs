@@ -32,29 +32,6 @@ namespace Myll
 			throw new NotImplementedException( "refactored away on 20-11-2019" );
 		}
 
-		// list of typed and initialized vars
-		public List<Var> VisitVars( TypedIdAcorsContext c )
-		{
-			Scope scope = ScopeStack.Peek();
-			// determine if only scope or container
-			Typespec type = VisitTypespec( c.typespec() );
-			List<Var> ret = c.idAccessors()
-				.idAccessor()
-				.Select(
-					q => new Var {
-						srcPos   = c.ToSrcPos(),
-						name     = q.id().GetText(),
-						// TODO: access = curAccess,
-						type     = type,
-						init     = q.expr().Visit(),
-						accessor = q.accessorDef().Visit(),
-						// TODO: Accessors, is this still valid?
-					} )
-				.ToList();
-			ret.ForEach( var => AddChild( var ) );
-			return ret;
-		}
-
 		public Enum.Entry VisitEnumEntry( IdExprContext c )
 		{
 			Enum.Entry ret = new Enum.Entry {
@@ -79,6 +56,7 @@ namespace Myll
 			=> c == null
 				? null
 				: base.Visit( c );
+
 
 		public override Decl VisitEnumDecl( EnumDeclContext c )
 		{
@@ -225,6 +203,29 @@ namespace Myll
 			return ret;
 		}
 		*/
+
+		// list of typed and initialized vars
+		public List<Var> VisitVars( TypedIdAcorsContext c )
+		{
+			Scope scope = ScopeStack.Peek();
+			// determine if only scope or container
+			Typespec type = VisitTypespec( c.typespec() );
+			List<Var> ret = c.idAccessors()
+				.idAccessor()
+				.Select(
+					q => new Var {
+						srcPos   = c.ToSrcPos(),
+						name     = q.id().GetText(),
+						access   = curAccess,
+						type     = type,
+						init     = q.expr().Visit(),
+						accessor = q.accessorDef().Visit(),
+						// TODO: Accessors, is this still valid?
+					} )
+				.ToList();
+			ret.ForEach( var => AddChild( var ) );
+			return ret;
+		}
 
 		public override Decl VisitVariableDecl( VariableDeclContext c )
 		{
