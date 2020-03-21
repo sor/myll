@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using static System.String;
 
@@ -27,8 +28,8 @@ namespace Myll.Core
 		public string    name;
 		public Access    access;
 		public ScopeLeaf scope;
-		public bool IsStatic => false; // TODO
-		public bool IsInline => false; // TODO
+		public bool      IsStatic => false; // TODO
+		public bool      IsInline => false; // TODO
 
 		// TODO Symbol?
 
@@ -44,14 +45,14 @@ namespace Myll.Core
 			sb.Length = Math.Max( sb.Length - 2, 0 );
 			return "{"
 			     + GetType().Name + " "
-			     + name + " "
-			     + sb.ToString() + "}";
+			     + name           + " "
+			     + sb.ToString()  + "}";
 		}
 
 		public string FullyQualifiedName {
 			get {
 				string ret = name;
-				for( Scope cur = scope.parent; cur != null; cur = cur.parent )
+				for( Scope cur = scope.parent; cur?.parent != null; cur = cur.parent )
 					ret = (cur.decl?.name ?? "unknown_fix_me") + "::" + ret;
 
 				return ret;
@@ -82,6 +83,11 @@ namespace Myll.Core
 		{
 			public Typespec type;
 			public string   name;
+
+			public string Gen()
+			{
+				return type.Gen( name );
+			}
 		}
 
 		// fac(n: 1+2) // n is matching _name_ of param, 1+2 is _expr_
@@ -89,18 +95,37 @@ namespace Myll.Core
 		{
 			public string name; // opt
 			public Expr   expr;
+
+			public string Gen()
+			{
+				if( !IsNullOrEmpty( name ) )
+					throw new NotImplementedException( "named function arguments needs to be implemented" );
+
+				return expr.Gen();
+			}
 		}
 
 		public class Call
 		{
 			public List<Arg> args;
 			public bool      nullCoal;
+
+			public string Gen()
+			{
+				if( nullCoal )
+					throw new NotImplementedException( "null coalescing for function calls needs to be implemented" );
+
+				if( args.Count == 0 )
+					return "()";
+
+				return "( " + args.Select( a => a.Gen() ).Join( ", " ) + " )";
+			}
 		}
 
-		public List<TemplateParam> templateParams;
-		public List<Param>         paras;
-		public Stmt                block;
-		public Typespec            retType;
+		public List<TplParam> tplParams;
+		public List<Param>    paras;
+		public Stmt           block;
+		public Typespec       retType;
 
 		public override void AddToGen( DeclGen gen )
 		{
@@ -207,7 +232,7 @@ namespace Myll.Core
 		}
 
 		public Kind                 kind;
-		public List<TemplateParam>  tplParams;
+		public List<TplParam>       tplParams;
 		public List<TypespecNested> bases;
 		public List<TypespecNested> reqs;
 

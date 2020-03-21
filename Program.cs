@@ -69,7 +69,8 @@ namespace Myll
 					.ToString();
 		}
 
-		public static string Join( this ICollection<string> values, string delimiter )
+		// why was this ICollection instead of IEnumerable?
+		public static string Join( this IEnumerable<string> values, string delimiter )
 		{
 			// TODO: this might be the bottleneck in the end, bench when finished
 			// there is a specialized string.Join with string[]

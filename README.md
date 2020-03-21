@@ -27,6 +27,30 @@ Created by Jan Reitz. Licence undecided (apparently its open source).
 - profit
 
 ## TODO
+- Prio 1 Output:
+    - pointer/array, output
+    - manual includes
+    - common statements, output
+    - common expressions, output
+
+- Prio 2:
+    - split var/field/global, yes!
+    - make attributes work
+    - static, input
+    - accessor, 100% concept, identify use cases and morph them
+    - module grammar
+    - casting, output
+
+- Prio 3:
+    - inline, in/out
+    - intelligent extra linespacing (between output groups)
+    - multiple files
+    - automatic includes (e.g. recognize std::vector)
+
+- fix:
+    - ppp in namespaces
+    - ppp at end of struct
+
 - Don't forget high level ideas!
     - SOA attribute
     - PIMPL attribute
@@ -41,7 +65,7 @@ Created by Jan Reitz. Licence undecided (apparently its open source).
     - default arguments possible from callsite (like LINE and FILE)
 
 # Modules
-C++ modules already foreshadow and Myll already supports the idea, although a bit different in their current form.
+C++'s modules already foreshadow and Myll already supports the idea, although a bit different in their current form.
 Myll modules specify in which .cpp/.h file things end up, when you specify "module test;" in 2 .myll files they will merge their output to a test.h and test.cpp file.
 If you don't specify a module, the original filename is used as its module, test.myll is implicily "module test;".
 
@@ -55,3 +79,23 @@ There are plenty of differences to C++, but only the ones listed here could some
 static hat etliche Bedeutungen, const auch:
 ...Echte 'Konstanten' wurden aber sehr lange nicht etwa mit 'const float PI = 3.14f;'
 geschrieben, sondern mit '#define PI 3.14f'
+
+# Pointer / Array output
+
+int a;			declare a as int
+
+int *a;			declare a as pointer to int
+int a[];		declare a as array of int
+
+int *a[];		declare a as array of pointer to int
+int *(a)[];		declare a as array of pointer to int
+int (*a)[];		declare a as pointer to array of int
+
+ptr<int> a;
+ary<int> a;
+
+ary<ptr<int>> a;
+ptr<ary<int>> a;
+
+ptr<int(*)[]> a;
+

@@ -11,22 +11,27 @@ namespace Namespace
 		C
 	}
 	*/
-
-	func main() -> int
+	// 					const char* argv[]
+	func main(int argc, const char*[] argv) -> int
 	{
 		if(a+b|8==c)
-			(move)(a)(?b)(!d)c;
+			(move)(a)(?b)(!c)my_var;
 		else
-			var int i = 9;
+			left::fn() += 9|8+1;
+		a = new Class( 1, "Blah" );
+		2**8;
+		//var int i = 9;
 	}
 
 	class Class
 	{
+		field std::array<int*[],5>*[] x;
 		field int _a, _b;
 	public:
+		[static]
 		field float c, d;
 
-		[inline]
+		//[inline, const] // atm no effect
 		func a() -> int { return _a; }
 
 	private:

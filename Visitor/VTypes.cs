@@ -5,9 +5,6 @@ using Antlr4.Runtime;
 
 using Myll.Core;
 
-using Array = Myll.Core.Array;
-using Enum = Myll.Core.Enum;
-
 using static Myll.MyllParser;
 
 namespace Myll
@@ -88,7 +85,7 @@ namespace Myll
 				};
 			}
 			else if( c.ary != null ) {
-				ret = new Array {
+				ret = new Pointer {
 					expr = c.expr().Visit(),
 					kind = ToPtr[c.ary.Type],
 				};
@@ -132,12 +129,19 @@ namespace Myll
 
 				case RULE_charType: {
 					CharTypeContext tc = c.charType();
-					if( tc.STRING() != null ) {
-						ret.kind = TypespecBasic.Kind.Char;
-						ret.size = (tc.CHAR() != null) ? 1 : 4;
-					}
-					else {
-						ret.kind = TypespecBasic.Kind.String;
+					int t = tc.v.Type;
+					switch( t ) {
+						case MyllParser.CHAR:
+							ret.kind = TypespecBasic.Kind.Char;
+							ret.size = (tc.CHAR() != null) ? 1 : 4;
+							break;
+
+						case MyllParser.STRING:
+							ret.kind = TypespecBasic.Kind.String;
+							break;
+
+						// TODO: codepoint not supported yet
+						default: throw new Exception( "unknown typespec" );
 					}
 					break;
 				}
@@ -190,8 +194,8 @@ namespace Myll
 		public new TypespecNested VisitTypespecNested( TypespecNestedContext c )
 		{
 			TypespecNested ret = new TypespecNested {
-				srcPos      = c.ToSrcPos(),
-				identifiers = c.idTplArgs().Select( VisitIdTplArgs ).ToList()
+				srcPos = c.ToSrcPos(),
+				idTpls = c.idTplArgs().Select( VisitIdTplArgs ).ToList()
 			};
 			return ret;
 		}

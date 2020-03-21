@@ -10,11 +10,11 @@ namespace Myll
 	public partial class ExtendedVisitor<Result>
 		: MyllParserBaseVisitor<Result>
 	{
-		public new IdentifierTpl VisitIdTplArgs( IdTplArgsContext c )
+		public new IdTpl VisitIdTplArgs( IdTplArgsContext c )
 		{
-			IdentifierTpl ret = new IdentifierTpl {
-				name         = VisitId( c.id() ),
-				templateArgs = VisitTplArgs( c.tplArgs() )
+			IdTpl ret = new IdTpl {
+				id      = VisitId( c.id() ),
+				tplArgs = VisitTplArgs( c.tplArgs() )
 			};
 			return ret;
 		}
@@ -22,9 +22,9 @@ namespace Myll
 		public new TemplateArg VisitTplArg( TplArgContext c )
 		{
 			TemplateArg ret;
-			if( c.typespec()  != null ) ret = new TemplateArg { type = VisitTypespec( c.typespec() ) };
-			else if( c.id()   != null ) ret = new TemplateArg { name = VisitId( c.id() ) };
-			else if( c.expr() != null ) ret = new TemplateArg { expr = c.expr().Visit() };
+			if( c.typespec()  != null ) ret = new TemplateArg { typespec = VisitTypespec( c.typespec() ) };
+			else if( c.id()   != null ) ret = new TemplateArg { id       = VisitId( c.id() ) };
+			else if( c.expr() != null ) ret = new TemplateArg { expr     = c.expr().Visit() };
 			else throw new Exception( "unknown template arg kind" );
 			return ret;
 		}
@@ -33,16 +33,16 @@ namespace Myll
 			=> c?.tplArg().Select( VisitTplArg ).ToList()
 			?? new List<TemplateArg>( 0 );
 
-		public TemplateParam VisitTplParam( IdContext c )
+		public TplParam VisitTplParam( IdContext c )
 		{
-			TemplateParam tp = new TemplateParam {
+			TplParam tp = new TplParam {
 				name = VisitId( c )
 			};
 			return tp;
 		}
 
-		public new List<TemplateParam> VisitTplParams( TplParamsContext c )
+		public new List<TplParam> VisitTplParams( TplParamsContext c )
 			=> c?.id().Select( VisitTplParam ).ToList()
-			?? new List<TemplateParam>();
+			?? new List<TplParam>();
 	}
 }

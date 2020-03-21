@@ -65,9 +65,9 @@ namespace Myll
 		public override Expr VisitScopedExpr( ScopedExprContext c )
 		{
 			ScopedExpr ret = new ScopedExpr {
-				op   = Operand.Scoped,
-				ids  = c.idTplArgs().Select( VisitIdTplArgs ).ToList(),
-				expr = c.expr().Visit(),
+				op     = Operand.Scoped,
+				idTpls = c.idTplArgs().Select( VisitIdTplArgs ).ToList(),
+				expr   = c.expr().Visit(),
 			};
 			return ret;
 		}
@@ -98,8 +98,8 @@ namespace Myll
 			}
 			else if( c.memAccOP() != null ) {
 				IdExpr right = new IdExpr {
-					op = Operand.Id,
-					id = VisitIdTplArgs( c.idTplArgs() ),
+					op    = Operand.Id,
+					idTpl = VisitIdTplArgs( c.idTplArgs() ),
 				};
 				ret = new BinOp {
 					op    = c.memAccOP().v.ToOp(),
@@ -107,8 +107,9 @@ namespace Myll
 					right = right,
 				};
 			}
-			else
+			else {
 				throw new Exception( "unknown post op" );
+			}
 
 			return ret;
 		}
@@ -125,12 +126,25 @@ namespace Myll
 		public override Expr VisitCastExpr( CastExprContext c )
 		{
 			Operand op =
-				c.QM() != null ? Operand.DynamicCast :
-				c.EM() != null ? Operand.AnyCast :
-				                 Operand.StaticCast;
+				c.QM()   != null ? Operand.DynamicCast :
+				c.EM()   != null ? Operand.AnyCast :
+				c.MOVE() != null ? Operand.MoveCast :
+				                   Operand.StaticCast;
+
+			Typespec t = (op != Operand.MoveCast)
+				? VisitTypespec( c.typespec() )
+				: new TypespecNested {
+					srcPos = c.ToSrcPos(),
+					idTpls = new List<IdTpl> {
+						new IdTpl {
+							id      = "move", // TODO: support std::forward as well
+							tplArgs = new List<TemplateArg>()
+						}
+					}
+				};
 			Expr ret = new CastExpr {
 				op   = op,
-				type = VisitTypespec( c.typespec() ),
+				type = t,
 				expr = c.expr().Visit(),
 			};
 			return ret;
@@ -321,17 +335,18 @@ namespace Myll
 				};
 			}
 			else if( cc.AUTOINDEX() != null ) {
-				IdentifierTpl id = new IdentifierTpl {
-					name         = cc.AUTOINDEX().GetText(),
-					templateArgs = new List<TemplateArg>( 0 ),
+				IdTpl idTpl = new IdTpl {
+					id           = cc.AUTOINDEX().GetText(),
+					tplArgs = new List<TemplateArg>( 0 ),
 				};
 				ret = new IdExpr {
-					op = Operand.WildId,
-					id = id,
+					op    = Operand.WildId,
+					idTpl = idTpl,
 				};
 			}
-			else
+			else {
 				throw new Exception( "unknown wildId op" );
+			}
 
 			return ret;
 		}
@@ -348,8 +363,8 @@ namespace Myll
 		public override Expr VisitIdTplExpr( IdTplExprContext c )
 		{
 			Expr ret = new IdExpr {
-				op = Operand.Id,
-				id = VisitIdTplArgs( c.idTplArgs() ),
+				op    = Operand.Id,
+				idTpl = VisitIdTplArgs( c.idTplArgs() ),
 			};
 			return ret;
 		}

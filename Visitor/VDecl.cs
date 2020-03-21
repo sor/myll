@@ -5,7 +5,7 @@ using Antlr4.Runtime.Tree;
 
 using Myll.Core;
 using Myll.Generator;
-using Array = Myll.Core.Array;
+
 using Enum = Myll.Core.Enum;
 
 using static Myll.MyllParser;
@@ -77,13 +77,13 @@ namespace Myll
 			// ist das hier richtig?
 			PushScope();
 			Func ret = new Func {
-				srcPos         = c.ToSrcPos(),
-				name           = VisitId( c.id() ),
-				access         = curAccess,
-				templateParams = VisitTplParams( c.tplParams() ),
-				paras          = VisitFuncTypeDef( c.funcTypeDef() ),
-				retType        = VisitTypespec( c.typespec() ),
-				block          = c.funcBody().Visit(),
+				srcPos    = c.ToSrcPos(),
+				name      = VisitId( c.id() ),
+				access    = curAccess,
+				tplParams = VisitTplParams( c.tplParams() ),
+				paras     = VisitFuncTypeDef( c.funcTypeDef() ),
+				retType   = VisitTypespec( c.typespec() ),
+				block     = c.funcBody().Visit(),
 			};
 			PopScope();
 			AddChild( ret );

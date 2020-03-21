@@ -89,6 +89,6 @@ namespace Myll
 		// this will become more specialized most likely, don't depend on current behavior
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public new string VisitId( Parser.IdContext c )
-			=> c.GetText();
+			=> c?.GetText();
 	}
 }

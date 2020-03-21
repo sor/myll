@@ -19,6 +19,9 @@ namespace Myll.Generator
 		public static readonly string IndentString = "    "; // \t
 		public static readonly string ThrowFormat  = "{0}throw {1};";
 		public static readonly string BreakFormat  = "{0}break;";
+		public static readonly string CurlyOpen    = "{0}{{";
+		public static readonly string CurlyClose   = "{0}}}";
+		public static readonly string CurlyCloseSC = "{0}}};";
 
 		public static readonly Dictionary<Access, string>
 			AccessFormat = new Dictionary<Access, string> {
@@ -38,6 +41,13 @@ namespace Myll.Generator
 			"{0}else",
 		};
 
+		public static readonly string[] LoopFormat = {
+			"{0}for( {1}; {2}; {3} )",
+			"{0}while( {1} )",
+			"{0}do",
+			"{0}while( {1} );",
+		};
+
 		public static readonly string[] VarFormat = {
 			"{0}{1}{2}{3};", // 0 indent, 1 typename, 2 type & name, 3 init
 			"typename ",
@@ -53,8 +63,8 @@ namespace Myll.Generator
 			"{0}{1}{2} {3}{4}{5}", // 0 indent, 1 keyword, 2 attributes, 3 name, 4 final, 5 bases or semicolon
 			"{0}{{",               // 0 indent
 			"{0}}};",              // 0 indent
-			" : {0}{1}",           // first base; 0 virtual or ppp, 1 name
-			", {0}{1}",            // other bases; 0 virtual or ppp, 1 name
+			" : {0}{1}",           // first base; 0 virtual and/or ppp, 1 name
+			", {0}{1}",            // other bases; 0 virtual and/or ppp, 1 name
 			"struct",
 			"class",
 			"union",
@@ -218,7 +228,6 @@ namespace Myll.Generator
 						obj.type.Gen( name ),
 						obj.init != null ? VarFormat[2] + obj.init.Gen() : "" )
 				};
-
 				AllDecl.AddRange( ret );
 			}
 
@@ -227,6 +236,10 @@ namespace Myll.Generator
 				string indentDecl = IndentDecl;
 				string indentImpl = IndentImpl;
 
+				string paramString = obj.paras
+					.Select( para => para.Gen() )
+					.Join( ", " );
+
 				Strings ret = new Strings {
 					Format(
 						FuncFormat[0],
@@ -234,13 +247,23 @@ namespace Myll.Generator
 						"",
 						obj.retType.Gen(),
 						obj.name,
-						"params",
+						paramString,
+						";" )
+				};
+				AllDecl.AddRange( ret );
+
+				Strings impl = new Strings {
+					Format(
+						FuncFormat[0],
+						indentImpl,
+						"",
+						obj.retType.Gen(),
+						obj.FullyQualifiedName,
+						paramString,
 						"" )
 				};
-
-				ret.AddRange( obj.block.Gen( LevelDecl + 1 ) );
-
-				AllDecl.AddRange( ret );
+				impl.AddRange( obj.block.Gen( LevelImpl + 1 ) );
+				AllImpl.AddRange( impl );
 			}
 
 			public override void AddStruct( Structural obj, Access access = Access.None )

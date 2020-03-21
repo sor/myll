@@ -81,7 +81,7 @@ funcTypeDef	:	LPAREN (param (COMMA param)* COMMA?)? RPAREN;
 
 // this expr needs to be a constexpr and can be an id (from a surrounding template)
 // TODO evaluate if 'id' is really necessary/beneficial here or just let expr handle it
-tplArg		:	typespec | id | expr; //INTEGER_LIT | id;
+tplArg		:	id | typespec | expr; //INTEGER_LIT | id; // change of order not fully tested 21 March 2020
 tplArgs		:	LT tplArg (COMMA tplArg)* COMMA? GT;
 
 tplParams	:	LT id (COMMA id)* COMMA? GT;
@@ -210,7 +210,8 @@ inStmt		:	SEMI								# EmptyStmt
 			|	SWITCH	LPAREN expr RPAREN	LCURLY
 				caseStmt+ 	(ELSE levStmt+)? RCURLY	# SwitchStmt
 			|	LOOP	levStmt						# LoopStmt
-			|	FOR LPAREN levStmtDef expr SEMI
+			|	FOR LPAREN levStmtDef	// TODO: add the syntax: for( a : b )
+					expr SEMI
 					expr RPAREN	levStmt
 				(ELSE			levStmt)?			# ForStmt
 			|	WHILE		condThen

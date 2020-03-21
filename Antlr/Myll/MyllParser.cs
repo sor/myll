@@ -2436,11 +2436,11 @@ public partial class MyllParser : Parser {
 	}
 
 	public partial class TplArgContext : ParserRuleContext {
-		public TypespecContext typespec() {
-			return GetRuleContext<TypespecContext>(0);
-		}
 		public IdContext id() {
 			return GetRuleContext<IdContext>(0);
+		}
+		public TypespecContext typespec() {
+			return GetRuleContext<TypespecContext>(0);
 		}
 		public ExprContext expr() {
 			return GetRuleContext<ExprContext>(0);
@@ -2468,13 +2468,13 @@ public partial class MyllParser : Parser {
 			case 1:
 				EnterOuterAlt(_localctx, 1);
 				{
-				State = 322; typespec();
+				State = 322; id();
 				}
 				break;
 			case 2:
 				EnterOuterAlt(_localctx, 2);
 				{
-				State = 323; id();
+				State = 323; typespec();
 				}
 				break;
 			case 3:
@@ -6917,8 +6917,8 @@ public partial class MyllParser : Parser {
 		'\x141', '\x3', '\x2', '\x2', '\x2', '\x140', '\x135', '\x3', '\x2', '\x2', 
 		'\x2', '\x140', '\x141', '\x3', '\x2', '\x2', '\x2', '\x141', '\x142', 
 		'\x3', '\x2', '\x2', '\x2', '\x142', '\x143', '\a', '!', '\x2', '\x2', 
-		'\x143', 'S', '\x3', '\x2', '\x2', '\x2', '\x144', '\x148', '\x5', '>', 
-		' ', '\x2', '\x145', '\x148', '\x5', '(', '\x15', '\x2', '\x146', '\x148', 
+		'\x143', 'S', '\x3', '\x2', '\x2', '\x2', '\x144', '\x148', '\x5', '(', 
+		'\x15', '\x2', '\x145', '\x148', '\x5', '>', ' ', '\x2', '\x146', '\x148', 
 		'\x5', '\x66', '\x34', '\x2', '\x147', '\x144', '\x3', '\x2', '\x2', '\x2', 
 		'\x147', '\x145', '\x3', '\x2', '\x2', '\x2', '\x147', '\x146', '\x3', 
 		'\x2', '\x2', '\x2', '\x148', 'U', '\x3', '\x2', '\x2', '\x2', '\x149', 

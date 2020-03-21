@@ -6,9 +6,6 @@ using Antlr4.Runtime.Tree;
 
 using Myll.Core;
 
-using Array = Myll.Core.Array;
-using Enum = Myll.Core.Enum;
-
 using static Myll.MyllParser;
 
 namespace Myll
@@ -234,8 +231,8 @@ namespace Myll
 		{
 			Block ret = new Block {
 				srcPos = c.ToSrcPos(),
-				statements = c.levStmt()?.Select( Visit ).ToList()
-				          ?? new List<Stmt>()
+				stmts  = c.levStmt()?.Select( Visit ).ToList()
+				      ?? new List<Stmt>()
 			};
 			return ret;
 		}

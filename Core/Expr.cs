@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Myll.Generator;
+
+using static System.String;
 
 namespace Myll.Core
 {
@@ -77,6 +80,7 @@ namespace Myll.Core
 		Dereference,
 		AddressOf,
 		Cast_Begin,
+		MoveCast,
 		StaticCast,
 		DynamicCast,
 		AnyCast, // const_cast & reinterpret_cast
@@ -97,7 +101,7 @@ namespace Myll.Core
 
 		MultOps_Begin,
 		Multiply,
-		EuclideanDivide,
+		EuclideanDivide, // for floating points it is not euclidean
 		Modulo,
 		BitAnd, // moved, special
 		Dot,    // new, special
@@ -269,8 +273,19 @@ namespace Myll.Core
 
 	public class ScopedExpr : Expr
 	{
-		public List<IdentifierTpl> ids;
-		public Expr                expr;
+		public List<IdTpl> idTpls;
+		public Expr        expr;
+
+		public override string Gen( bool doBrace = false )
+		{
+			string ret = idTpls
+				.Select( s => s.Gen() )
+				.Append( expr.Gen() )
+				.Join( "::" );
+			return doBrace
+				? "(" + ret + ")"
+				: ret;
+		}
 	}
 
 	/*
@@ -297,14 +312,14 @@ namespace Myll.Core
 	*/
 	public class IdExpr : Expr
 	{
-		public IdentifierTpl id;
+		public IdTpl idTpl;
 
 		public override string Gen( bool doBrace = false )
 		{
 			if( op.In( Operand.WildId, Operand.DiscardId ) )
 				throw new InvalidOperationException( "These should have already been replaced by now" );
 
-			return id.Gen();
+			return idTpl.Gen();
 			//return string.Format( "{0}", id.Gen() );
 		}
 	}
@@ -313,17 +328,47 @@ namespace Myll.Core
 	{
 		public Expr      left; // name and tpl args in here
 		public Func.Call funcCall;
+
+		public override string Gen( bool doBrace = false )
+		{
+			string ret = left.Gen() + funcCall.Gen();
+			return doBrace
+				? "(" + ret + ")"
+				: ret;
+		}
 	}
 
 	public class CastExpr : UnOp
 	{
 		public Typespec type;
+
+		public override string Gen( bool doBrace = false )
+		{
+			string format = op switch {
+				Operand.StaticCast  => "std::static_cast<{1}>( {0} )",
+				Operand.DynamicCast => "std::dynamic_cast<{1}>( {0} )",
+				Operand.AnyCast     => "std::reinterpret_cast<{1}>( {0} )", // TODO: identify const_cast
+				Operand.MoveCast    => "std::{1}( {0} )",                   // TODO: this can handle std::forward as well
+			};
+			string ret = Format( format, expr.Gen(), type.Gen() );
+			return doBrace
+				? "(" + ret + ")"
+				: ret;
+		}
 	}
 
 	public class NewExpr : Expr
 	{
 		public Typespec  type;
 		public Func.Call funcCall;
+
+		public override string Gen( bool doBrace = false )
+		{
+			string ret = "new " + type.Gen() + funcCall.Gen();
+			return doBrace
+				? "(" + ret + ")"
+				: ret;
+		}
 	}
 
 	public class Literal : Expr
