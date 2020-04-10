@@ -28,27 +28,27 @@ Created by Jan Reitz. Licence undecided (apparently its open source).
 
 ## TODO
 - Prio 1 Output:
-    - pointer/array, output
-    - manual includes
-    - common statements, output
-    - common expressions, output
+    - [only-raw] pointer/array, output
+    - [done] common statements, output
+    - [done] common expressions, output
 
 - Prio 2:
-    - split var/field/global, yes!
-    - make attributes work
-    - static, input
+    - [done?] split var/field/global, yes!
+    - [done?] static, input
     - accessor, 100% concept, identify use cases and morph them
-    - module grammar
-    - casting, output
+    - [partly] manual includes (OR just do the common includes!)
+    - [partly] make attributes work
+    - [done] module
+    - [done] casting, output
 
 - Prio 3:
-    - inline, in/out
+    - [partly] inline, in/out
     - intelligent extra linespacing (between output groups)
-    - multiple files
     - automatic includes (e.g. recognize std::vector)
+    - [done] multiple files
 
 - fix:
-    - ppp in namespaces
+    - [done?] ppp in namespaces
     - ppp at end of struct
 
 - Don't forget high level ideas!
@@ -98,4 +98,9 @@ ary<ptr<int>> a;
 ptr<ary<int>> a;
 
 ptr<int(*)[]> a;
+
+# Unsolved Issues
+(not to be mistakened with not-implemented features)
+- Non-type template parameters need a distinction.
+- Comments do not get passed through
 

@@ -22,11 +22,11 @@ namespace Myll.Core
 			set => base.decl = value;
 		}
 
-		public Dictionary<string, List<ScopeLeaf>> children
-		 = new Dictionary<string, List<ScopeLeaf>>();
+		public readonly Dictionary<string, List<ScopeLeaf>>
+			children = new Dictionary<string, List<ScopeLeaf>>();
 
 		// unresolved???
-		public List<Scope> importedScopes; // (base) Class (es) and (using) Namespaces
+		public List<Scope> importedScopes; // (base) Class(es) and (using) Namespaces
 
 		public void AddChild( ScopeLeaf scope )
 		{

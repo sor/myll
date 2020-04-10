@@ -31,8 +31,9 @@ namespace Myll
 				{ MyllParser.PTR_TO_ARY,Pointer.Kind.PtrToAry},
 				{ MyllParser.AMP,		Pointer.Kind.LVRef	},
 				{ MyllParser.DBL_AMP,	Pointer.Kind.RVRef	},
+				{ MyllParser.LBRACK,	Pointer.Kind.RawArray	},
 				{ MyllParser.AT_LBRACK,	Pointer.Kind.Vector	},
-				{ MyllParser.LBRACK,	Pointer.Kind.Array	},
+				//{ MyllParser.LBRACK,	Pointer.Kind.Array	},
 			};
 
 		private static readonly Dictionary<int, int>
@@ -64,7 +65,14 @@ namespace Myll
 		public new Typespec VisitTypespec( TypespecContext c )
 		{
 			if( c == null )
-				return null; // TypespecBasic Auto might make sense
+				return new TypespecBasic {
+					//kind = TypespecBasic.Kind.Void,
+					//size = TypespecBasic.SizeInvalid,
+					kind = TypespecBasic.Kind.Auto,
+					size = TypespecBasic.SizeUndetermined,
+					ptrs = new List<Pointer>(),
+				};
+				//return null; // TypespecBasic Auto might make sense
 
 			Typespec ret;
 			if( c.typespecBasic()       != null ) ret = VisitTypespecBasic( c.typespecBasic() );

@@ -4,7 +4,6 @@ using System.Linq;
 using Antlr4.Runtime.Tree;
 
 using Myll.Core;
-using Myll.Generator;
 
 using Enum = Myll.Core.Enum;
 
@@ -12,13 +11,15 @@ using static Myll.MyllParser;
 
 namespace Myll
 {
+	using Attribs = Dictionary<string, List<string>>;
+
 	public partial class ExtendedVisitor<Result>
 		: MyllParserBaseVisitor<Result>
 	{
 		public new Func.Param VisitParam( ParamContext c )
 		{
 			Func.Param ret = new Func.Param {
-				name = VisitId( c.id() ),
+				name = c.id().Visit(),
 				type = VisitTypespec( c.typespec() )
 			};
 			return ret;
@@ -36,7 +37,7 @@ namespace Myll
 		{
 			Enum.Entry ret = new Enum.Entry {
 				srcPos = c.ToSrcPos(),
-				name   = VisitId( c.id() ),
+				name   = c.id().Visit(),
 				value  = c.expr().Visit(),
 			};
 			AddChild( ret );
@@ -52,17 +53,23 @@ namespace Myll
 	{
 		public DeclVisitor( Stack<Scope> ScopeStack ) : base( ScopeStack ) {}
 
+		public string ProbeModule( ProgContext c )
+		{
+			string module = c.module()?.id().GetText()
+			             ?? c.Start.InputStream.SourceName.Replace( ".myll", "" );
+			return module;
+		}
+
 		public override Decl Visit( IParseTree c )
 			=> c == null
 				? null
 				: base.Visit( c );
 
-
 		public override Decl VisitEnumDecl( EnumDeclContext c )
 		{
 			Enum ret = new Enum {
 				srcPos = c.ToSrcPos(),
-				name   = VisitId( c.id() ),
+				name   = c.id().Visit(),
 				access = curAccess,
 			};
 			PushScope( ret );
@@ -78,13 +85,24 @@ namespace Myll
 			PushScope();
 			Func ret = new Func {
 				srcPos    = c.ToSrcPos(),
-				name      = VisitId( c.id() ),
+				name      = c.id().Visit(),
 				access    = curAccess,
-				tplParams = VisitTplParams( c.tplParams() ),
+				TplParams = VisitTplParams( c.tplParams() ),
 				paras     = VisitFuncTypeDef( c.funcTypeDef() ),
-				retType   = VisitTypespec( c.typespec() ),
 				block     = c.funcBody().Visit(),
 			};
+			ret.retType = c.typespec() != null ? VisitTypespec( c.typespec() ) :
+				ret.IsReturningSomething ?
+					new TypespecBasic {
+						kind = TypespecBasic.Kind.Auto,
+						size = TypespecBasic.SizeUndetermined,
+						ptrs = new List<Pointer>(),
+					} :
+					new TypespecBasic {
+						kind = TypespecBasic.Kind.Void,
+						size = TypespecBasic.SizeInvalid,
+						ptrs = new List<Pointer>(),
+					};
 			PopScope();
 			AddChild( ret );
 			return ret;
@@ -93,24 +111,77 @@ namespace Myll
 		public new List<Decl> VisitFunctionDecl( FunctionDeclContext c )
 			=> c.funcDef().Select( VisitFuncDef ).ToList();
 
+		public override Decl VisitAttribBlk( AttribBlkContext c )
+		{
+			Attribs attribs = c.Visit();
+
+			// TODO: how to store and attach to following decl
+			return base.VisitAttribBlk( c );
+		}
+
+		public override Decl VisitAttribDeclBlock( AttribDeclBlockContext c )
+		{
+			List<Decl> decls = c.levDecl()
+				.Select( o => o?.Visit() )
+				.ToList();
+
+			Attribs attribs = c.attribBlk().Visit();
+			decls.ForEach( o => o.AssignAttribs( attribs ) );
+
+			// HACK: can only return one here, is this really a problem? Workaround could be a Decl that contains a Decl[]
+			return decls[0];
+		}
+
+		public override Decl VisitAttribDecl( AttribDeclContext c )
+		{
+			Decl ret =
+				(c.inAnyStmt() != null) ? Visit( c.inAnyStmt() ) :
+				(c.inDecl()    != null) ? Visit( c.inDecl() ) :
+				                          throw new ArgumentOutOfRangeException( "neither inAnyStmt nor inDecl" );
+
+			// PPP is null
+			if( ret != null ) {
+				Attribs attribs = c.attribBlk()?.Visit();
+				ret.AssignAttribs( attribs );
+			}
+
+			return ret;
+		}
+
+		public GlobalNamespace VisitProgs( IEnumerable<ProgContext> cs )
+		{
+			GlobalNamespace global = GenerateGlobalScope();
+
+			foreach( ProgContext c in cs ) {
+				global.imps.UnionWith(
+					c.imports()
+						.SelectMany( i => i.id() )
+						.Select( i => i.GetText() )
+						.ToList() );
+				c.levDecl().Select( Visit ).Exec();
+				CleanBodylessNamespace();
+			}
+
+			CloseGlobalScope();
+
+			return global;
+		}
+
 		public override Decl VisitProg( ProgContext c )
 		{
+			throw new NotImplementedException();
+
+			/*
 			Namespace global = GenerateGlobalScope( c.ToSrcPos() );
+
+			global.module = c.module()?.id().GetText()
+			             ?? c.Start.InputStream.SourceName.Replace( ".myll", "" );
 
 			c.levDecl().Select( Visit ).Exec();
 
 			CloseGlobalScope();
 
-			// HACK: but less hack than before
-			StmtFormatting.SimpleGen gen = new StmtFormatting.SimpleGen(-1, 0);
-			// do NOT call gen.AddNamespace( ret ).
-			// Instead AddToGen() is there to call the correct virtual method on the gen
-			global.AddToGen( gen );
-			// last call wins, writes the output
-			Program.Output     = gen.GenDecl().Join( "\n" );
-			Program.OutputImpl = gen.GenImpl().Join( "\n" );
-
-			return global;
+			return global;*/
 		}
 
 		public override Decl VisitNamespace( NamespaceContext c )
@@ -121,10 +192,10 @@ namespace Myll
 
 			// add new namespaces to hierarchy
 			bool withBody = (c.levDecl().Length >= 1);
-			foreach( IdContext idc in c.id() ) {
+			foreach( IdContext id in c.id() ) {
 				Namespace ns = new Namespace {
-					srcPos   = idc.ToSrcPos(),
-					name     = VisitId( idc ),
+					srcPos   = id.ToSrcPos(),
+					name     = id.Visit(),
 					access   = curAccess,
 					withBody = withBody,
 				};
@@ -149,14 +220,15 @@ namespace Myll
 		{
 			Structural ret = new Structural {
 				srcPos    = c.ToSrcPos(),
-				name      = VisitId( c.id() ),
+				name      = c.id().Visit(),
 				access    = curAccess,
 				kind      = c.v.ToStructuralKind(),
-				tplParams = VisitTplParams( c.tplParams() ),
+				TplParams = VisitTplParams( c.tplParams() ),
 				bases     = VisitTypespecsNested( c.bases ),
 				reqs      = VisitTypespecsNested( c.reqs ),
 			};
 			PushScope( ret );
+
 			// HACK: will be buggy. needs to move to ScopeStack, when ScopeStack works.
 			curAccess = (ret.kind == Structural.Kind.Class)
 				? Access.Private
@@ -169,40 +241,49 @@ namespace Myll
 
 		public override Decl VisitCtorDecl( CtorDeclContext c )
 		{
-			PushScope();
+			Scope parent = ScopeStack.Peek();
+			if( !parent.HasDecl || !(parent.decl is Structural) )
+				throw new Exception( "parent of c/dtor has no decl or is not a structural" );
 
+			string name = parent.decl.name; //.FullyQualifiedName;
+
+			PushScope();
 			ConDestructor ret = new ConDestructor {
 				srcPos = c.ToSrcPos(),
+				name   = name,
 				access = curAccess,
 				kind   = ConDestructor.Kind.Constructor,
 				paras  = VisitFuncTypeDef( c.funcTypeDef() ),
 				block  = c.levStmt().Visit(),
 				// TODO: cc.initList(); // opt
 			};
-			AddChild( ret );
 			PopScope();
-
+			AddChild( ret );
 			return ret;
 		}
 
-		/*
 		public override Decl VisitDtorDecl( DtorDeclContext c )
 		{
-			var cc = c.ctorDef();
+			Scope parent = ScopeStack.Peek();
+			if( !parent.HasDecl || !(parent.decl is Structural) )
+				throw new Exception( "parent of c/dtor has no decl or is not a structural" );
+
+			string name = "~" + parent.decl.name;
+
+			PushScope();
 			ConDestructor ret = new ConDestructor {
-				kind  = ConDestructor.Kind.Constructor,
-				paras = VisitFuncTypeDef( cc.funcTypeDef() ),
-				//block = cc.levStmt().Visit()
+				srcPos = c.ToSrcPos(),
+				name   = name,
+				access = curAccess,
+				kind   = ConDestructor.Kind.Destructor,
+				paras  = new List<Func.Param>(),
+				block  = c.levStmt().Visit(),
 				// TODO: cc.initList(); // opt
 			};
-			HierarchyStack.Peek().AddChild( ret );
-			HierarchyStack.Push( ret );
-			cc.levStmt().Visit();
-			HierarchyStack.Pop();
-
+			PopScope();
+			AddChild( ret );
 			return ret;
 		}
-		*/
 
 		// list of typed and initialized vars
 		public List<Var> VisitVars( TypedIdAcorsContext c )
@@ -229,7 +310,7 @@ namespace Myll
 
 		public override Decl VisitVariableDecl( VariableDeclContext c )
 		{
-			Decl ret = new VarsStmt {
+			Decl ret = new VarsDecl {
 				vars = c.typedIdAcors()
 					.Select( VisitVars )
 					.SelectMany( q => q )

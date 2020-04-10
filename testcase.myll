@@ -1,9 +1,13 @@
 #!/usr/bin/myll // ignored by the compiler
 
-namespace Namespace
+module testcase;
+
+namespace MyNamespace
 {
 	/*
-	[bitwise_ops]
+	does not work yet:
+
+	[operators(bitwise)]
 	enum Moep
 	{
 		A,
@@ -11,8 +15,7 @@ namespace Namespace
 		C
 	}
 	*/
-	// 					const char* argv[]
-	func main(int argc, const char*[] argv) -> int
+	func foo() -> int
 	{
 		if(a+b|8==c)
 			(move)(a)(?b)(!c)my_var;
@@ -23,21 +26,30 @@ namespace Namespace
 		//var int i = 9;
 	}
 
-	class Class
+	class MyClass<T>
 	{
-		field std::array<int*[],5>*[] x;
+		field T::X x; // typename
+		field std::array<int*[],5>*[5] x;
 		field int _a, _b;
 	public:
 		[static]
-		field float c, d;
+		{
+			field int s_c, s_d = 42;
+			field
+			{
+				float s_e;
+				f32   s_f;
+				f64   s_g;
+			}
+		}
 
-		//[inline, const] // atm no effect
+		//[inline, const(ifneedbe)]
 		func a() -> int { return _a; }
 
 	private:
 		class SubClass
 		{
-			method sub_meth(anothersubclass* other) -> void {}
+			method sub_meth(AnotherSubClass* other) -> void {}
 			field int sub_var;
 		}
 

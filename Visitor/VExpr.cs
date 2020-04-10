@@ -24,6 +24,7 @@ namespace Myll
 			Func.Call ret = new Func.Call {
 				args     = VisitArgs( c.args() ),
 				nullCoal = c.ary.Type == QM_LBRACK,
+				indexer  = true,
 			};
 			return ret;
 		}
@@ -33,6 +34,7 @@ namespace Myll
 			Func.Call ret = new Func.Call {
 				args     = VisitArgs( c?.args() ),
 				nullCoal = c?.ary.Type == QM_LPAREN,
+				indexer  = false,
 			};
 			return ret;
 		}
@@ -40,7 +42,7 @@ namespace Myll
 		public new Func.Arg VisitArg( ArgContext c )
 		{
 			Func.Arg ret = new Func.Arg {
-				name = VisitId( c.id() ),
+				name = c.id().Visit(),
 				expr = c.expr().Visit(),
 			};
 			return ret;
@@ -135,10 +137,11 @@ namespace Myll
 				? VisitTypespec( c.typespec() )
 				: new TypespecNested {
 					srcPos = c.ToSrcPos(),
+					ptrs   = new List<Pointer>(),
 					idTpls = new List<IdTpl> {
 						new IdTpl {
 							id      = "move", // TODO: support std::forward as well
-							tplArgs = new List<TemplateArg>()
+							tplArgs = new List<TemplateArg>(),
 						}
 					}
 				};

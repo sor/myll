@@ -17,12 +17,13 @@ namespace Myll
 			this.ScopeStack = ScopeStack;
 		}
 
-		public Namespace GenerateGlobalScope( SrcPos srcPos )
+		public GlobalNamespace GenerateGlobalScope()
 		{
-			Namespace global = new Namespace {
-				name     = "", // global
-				srcPos   = srcPos,
+			GlobalNamespace global = new GlobalNamespace {
+				name     = "",   // global
+				srcPos   = null, // no pos since it exists for multiple files
 				withBody = true,
+				imps     = new HashSet<string>(),
 			};
 			Scope scope = new Scope {
 				parent = null,
@@ -41,7 +42,7 @@ namespace Myll
 
 		public void CloseGlobalScope()
 		{
-			CleanBodylessNamespace();
+			//CleanBodylessNamespace();
 
 			PopScope();
 
@@ -85,10 +86,5 @@ namespace Myll
 		{
 			ScopeStack.Pop();
 		}
-
-		// this will become more specialized most likely, don't depend on current behavior
-		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public new string VisitId( Parser.IdContext c )
-			=> c?.GetText();
 	}
 }

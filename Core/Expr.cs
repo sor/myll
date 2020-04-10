@@ -79,12 +79,14 @@ namespace Myll.Core
 		Complement,
 		Dereference,
 		AddressOf,
+
 		Cast_Begin,
 		MoveCast,
 		StaticCast,
 		DynamicCast,
 		AnyCast, // const_cast & reinterpret_cast
 		Cast_End,
+
 		SizeOf,
 		New,
 		Delete,
@@ -194,20 +196,20 @@ namespace Myll.Core
 		public override string Gen( bool doBrace = false )
 		{
 			if( op == Operand.Parens )
-				return string.Format( "({0})", expr.Gen() );
+				return Format( "({0})", expr.Gen() );
 
-			bool isPreOp       = Operand.PreOps_Begin  <= op && op <= Operand.PreOps_End;
-			bool isPostOp      = Operand.PostOps_Begin <= op && op <= Operand.PostOps_End;
+			bool isPreOp       = op.Between( Operand.PreOps_Begin,  Operand.PreOps_End );
+			bool isPostOp      = op.Between( Operand.PostOps_Begin, Operand.PostOps_End );
 			bool divPrecedence = IsDivergentPrecedence;
 			bool doBraceExpr = (divPrecedence || expr.IsDivergentPrecedence)
 			                && OriginalPrecedenceLevel < expr.OriginalPrecedenceLevel;
 
-			// TODO: pre or post or what?
-			return string.Format(
-				doBrace
-					? "({1} <{0}>)"
-					: "{1} <{0}>",
-				op.ToString(),
+			string opFormat = doBrace
+				? "(" + op.GetFormat() + ")"
+				: op.GetFormat();
+
+			return Format(
+				opFormat,
 				expr.Gen( doBraceExpr ) );
 		}
 	}
@@ -237,7 +239,7 @@ namespace Myll.Core
 				? "(" + op.GetFormat() + ")"
 				: op.GetFormat();
 
-			return string.Format(
+			return Format(
 				opFormat,
 				left.Gen( doBraceLeft ),
 				right.Gen( doBraceRight ) );
@@ -261,7 +263,7 @@ namespace Myll.Core
 			bool doBraceRight = (divPrecedence || right.IsDivergentPrecedence)
 			                 && OriginalPrecedenceLevel < right.OriginalPrecedenceLevel;
 
-			return string.Format(
+			return Format(
 				doBrace
 					? "({0} ? {1} : {2})"
 					: "{0} ? {1} : {2}",
@@ -320,7 +322,6 @@ namespace Myll.Core
 				throw new InvalidOperationException( "These should have already been replaced by now" );
 
 			return idTpl.Gen();
-			//return string.Format( "{0}", id.Gen() );
 		}
 	}
 
@@ -371,10 +372,10 @@ namespace Myll.Core
 		}
 	}
 
+	// TODO
 	public class Literal : Expr
 	{
-		// TODO
-		public string text { get; set; }
+		public string text;
 
 		public override string Gen( bool doBrace = false )
 		{

@@ -10,6 +10,8 @@ using Parser = Myll.MyllParser;
 
 namespace Myll
 {
+	using Attribs = Dictionary<string, List<string>>;
+
 	public static class VisitorExtensions
 	{
 		private static readonly Stack<Scope> ScopeStack = new Stack<Scope>();
@@ -114,6 +116,7 @@ namespace Myll
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static SrcPos ToSrcPos( this ParserRuleContext c )
 			=> new SrcPos {
+				file = c.Start.InputStream.SourceName,
 				from = {
 					line = c.Start.Line,
 					col  = c.Start.Column,
@@ -124,9 +127,23 @@ namespace Myll
 				},
 			};
 
+		// this will become more specialized most likely, don't depend on current behavior
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static string Visit( this Parser.IdContext c )
-			=> c.GetText();
+			=> c?.GetText();
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static List<string> Visit( this Parser.IdContext[] c )
+			=> c.Select( i => i.Visit() ).ToList();
+
+		// this will become more specialized most likely, don't depend on current behavior
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static string Visit( this Parser.IdOrLitContext c )
+			=> c?.GetText();
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static List<string> Visit( this Parser.IdOrLitContext[] c )
+			=> c.Select( i => i.Visit() ).ToList();
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Expr Visit( this Parser.ExprContext c )
@@ -169,6 +186,17 @@ namespace Myll
 		public static List<Var.Accessor> Visit( this Parser.AccessorDefContext[] c )
 			=> c.Select( Visit ).ToList();
 
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static Attribs Visit( this Parser.AttribBlkContext c )
+		{
+			Attribs attribs = c.attrib()
+				.ToDictionary(
+					a => a.attribId().GetText(),
+					a => a.idOrLit().Visit() );
+
+			return attribs;
+		}
+
 #pragma warning disable 8509
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Var.Accessor.Kind ToAccessorKind( this IToken tok )
@@ -197,7 +225,7 @@ namespace Myll
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Access Visit( this Parser.AccessModContext c )
-			=> c.a.Type switch {
+			=> c.v.Type switch {
 				MyllParser.PRIV => Access.Private,
 				MyllParser.PROT => Access.Protected,
 				MyllParser.PUB  => Access.Public,

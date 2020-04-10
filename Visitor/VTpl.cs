@@ -13,7 +13,7 @@ namespace Myll
 		public new IdTpl VisitIdTplArgs( IdTplArgsContext c )
 		{
 			IdTpl ret = new IdTpl {
-				id      = VisitId( c.id() ),
+				id      = c.id().Visit(),
 				tplArgs = VisitTplArgs( c.tplArgs() )
 			};
 			return ret;
@@ -23,7 +23,7 @@ namespace Myll
 		{
 			TemplateArg ret;
 			if( c.typespec()  != null ) ret = new TemplateArg { typespec = VisitTypespec( c.typespec() ) };
-			else if( c.id()   != null ) ret = new TemplateArg { id       = VisitId( c.id() ) };
+			else if( c.id()   != null ) ret = new TemplateArg { id       = c.id().Visit() };
 			else if( c.expr() != null ) ret = new TemplateArg { expr     = c.expr().Visit() };
 			else throw new Exception( "unknown template arg kind" );
 			return ret;
@@ -36,7 +36,7 @@ namespace Myll
 		public TplParam VisitTplParam( IdContext c )
 		{
 			TplParam tp = new TplParam {
-				name = VisitId( c )
+				name = c.Visit(),
 			};
 			return tp;
 		}

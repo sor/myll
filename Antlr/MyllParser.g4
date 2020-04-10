@@ -140,12 +140,17 @@ idAccessors	:	idAccessor	(COMMA idAccessor)*	COMMA?;
 idExprs		:	idExpr		(COMMA idExpr)*		COMMA?;
 typedIdAcors:	typespec 	idAccessors	SEMI;
 
-attrib		:	id	(	'=' idOrLit
-					|	'(' idOrLit (COMMA idOrLit)* COMMA? ')'
-					)?;
+attribId	:	id | CONST | FALL | THROW;
+attrib		:	attribId
+				(	'=' idOrLit
+				|	'(' idOrLit (COMMA idOrLit)* COMMA? ')'
+				)?;
 attribBlk	:	LBRACK	attrib (COMMA attrib)* COMMA? RBRACK;
 
-caseStmt	:	CASE expr (COMMA expr)* COLON levStmt+ (FALL SEMI)?;
+caseStmt	:	CASE expr (COMMA expr)*
+				(	COLON		levStmt+ (FALL SEMI)?
+				|	LCURLY		levStmt* (FALL SEMI)? RCURLY
+				|	PHATRARROW	levStmt  (FALL SEMI)?);
 
 initList	:	COLON id funcCall (COMMA id funcCall)* COMMA?;
 
@@ -176,27 +181,27 @@ inDecl		:	NS id (SCOPE id)* SEMI						# Namespace // or better COLON
 						LCURLY	levDecl*	RCURLY	# ConceptDecl
 			// TODO aspect
 			|	ENUM id	LCURLY	idExprs		RCURLY	# EnumDecl
-			|	(FUNC|METHOD)	LCURLY	funcDef*	RCURLY	# FunctionDecl
-			|	(FUNC|METHOD)			funcDef				# FunctionDecl
-			|	OPERATOR LCURLY opDef*		RCURLY	# OpDecl
-			|	OPERATOR		opDef				# OpDecl
+			|	v=( FUNC | PROC | METHOD )
+				(	LCURLY	funcDef*	RCURLY
+				|			funcDef				)	# FunctionDecl
+			|	OPERATOR
+				(	LCURLY	opDef*		RCURLY
+				|			opDef				)	# OpDecl
 // class only:
-			|	a=( PUB | PROT | PRIV ) COLON		# AccessMod
-			|	CTOR funcTypeDef initList?	(SEMI | levStmt) # CtorDecl
-			|	COPYCTOR funcTypeDef initList?	(SEMI | levStmt) # CtorDecl
-			|	MOVECTOR funcTypeDef initList?	(SEMI | levStmt) # CtorDecl
-			|	DTOR LPAREN RPAREN			(SEMI | levStmt) # DtorDecl
-			//|	STATIC	LCURLY	levDecl* RCURLY		# StaticDecl
-			//|	STATIC			levDecl				# StaticDecl
+			|	v=( PUB | PROT | PRIV ) COLON		# AccessMod
+			|	v=( CTOR | COPYCTOR | MOVECTOR )
+				funcTypeDef	initList?	(SEMI | levStmt) # CtorDecl
+			|	DTOR	LPAREN RPAREN	(SEMI | levStmt) # DtorDecl
+		//	|	STATIC	LCURLY	levDecl* RCURLY		# StaticDecl
+		//	|	STATIC			levDecl				# StaticDecl
 			;
 
 // using, var, const: these are both Stmt and Decl
 inAnyStmt	:	USING			typespecsNested	SEMI	# Using
 			|	ALIAS id ASSIGN	typespec 		SEMI	# AliasDecl
-			|	(VAR|FIELD)		LCURLY	typedIdAcors*	RCURLY	# VariableDecl
-			|	(VAR|FIELD)				typedIdAcors			# VariableDecl
-			|	CONST	LCURLY	typedIdAcors*	RCURLY	# VariableDecl
-			|	CONST			typedIdAcors			# VariableDecl
+			|	v=( VAR | FIELD | CONST | LET )
+				(	LCURLY	typedIdAcors*	RCURLY
+				|			typedIdAcors			)	# VariableDecl
 			;
 
 inStmt		:	SEMI								# EmptyStmt
@@ -208,9 +213,9 @@ inStmt		:	SEMI								# EmptyStmt
 				(ELSE IF	condThen)*	// helps with formatting properly and de-nesting the AST
 				(ELSE		levStmt)?				# IfStmt
 			|	SWITCH	LPAREN expr RPAREN	LCURLY
-				caseStmt+ 	(ELSE levStmt+)? RCURLY	# SwitchStmt
+				caseStmt+ 	(DEFAULT levStmt+)? RCURLY	# SwitchStmt
 			|	LOOP	levStmt						# LoopStmt
-			|	FOR LPAREN levStmtDef	// TODO: add the syntax: for( a : b )
+			|	FOR LPAREN levStmt	// TODO: add the syntax: for( a : b )
 					expr SEMI
 					expr RPAREN	levStmt
 				(ELSE			levStmt)?			# ForStmt
@@ -220,17 +225,19 @@ inStmt		:	SEMI								# EmptyStmt
 				WHILE	LPAREN expr RPAREN			# DoWhileStmt
 			|	expr TIMES			id?	levStmt		# TimesStmt
 			|	expr DBL_POINT expr id?	levStmt		# EachStmt
-			//| <assoc=right>???
+		//	| <assoc=right>???
 			| 	(expr	assignOP)+		expr SEMI	# MultiAssignStmt
 			| 	expr	aggrAssignOP	expr SEMI	# AggrAssignStmt
 			|	expr SEMI							# ExpressionStmt
 			;
 
 // ONLY refer to these lev* levels, NOT the in*
-levDecl		:	attribBlk	LCURLY	levDecl	RCURLY	// must be in here, since it MUST have an attrib block
-			//|	attribBlk	COLON
-			|	attribBlk?	( inAnyStmt | inDecl );
-levStmt		:	attribBlk?	( inAnyStmt | inStmt );
-levStmtDef	:	attribBlk?	( inAnyStmt );
+levDecl		:	attribBlk	LCURLY	levDecl+ RCURLY	# AttribDeclBlock // must be in here, since it MUST have an attrib block
+		//	|	attribBlk	COLON // everything needs an antonym to make this work
+			|	attribBlk?	( inAnyStmt | inDecl )	# AttribDecl;
+levStmt		:	attribBlk?	( inAnyStmt | inStmt )	# AttribStmt;
 
-prog		:	levDecl+;
+module		:	MODULE id SEMI;
+imports		:	IMPORT id (COMMA id)* COMMA? SEMI;
+
+prog		:	module? imports* levDecl+;

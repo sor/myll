@@ -10,10 +10,19 @@ using static Myll.Generator.StmtFormatting;
 namespace Myll.Core
 {
 	using Strings = List<string>;
+	using Attribs = Dictionary<string, List<string>>;
 
 	public class Stmt
 	{
-		public SrcPos srcPos;
+		public SrcPos  srcPos;
+		public Attribs attribs { get; private set; }
+
+		public bool IsStatic => attribs?.ContainsKey( "static" ) ?? false;
+
+		public virtual void AssignAttribs( Attribs attribs )
+		{
+			this.attribs = attribs;
+		}
 
 		public override string ToString()
 		{
@@ -58,9 +67,46 @@ namespace Myll.Core
 		}
 	}
 
+	public class VarsStmt : Stmt
+	{
+		public List<Var> vars;
+
+		public override void AssignAttribs( Attribs attribs )
+		{
+			vars.ForEach( v => v.AssignAttribs( attribs ) );
+		}
+
+		public override Strings Gen( int level )
+		{
+			string indent        = IndentString.Repeat( level );
+			bool   needsTypename = false; // TODO how to determine this
+			Strings ret = vars
+				.Select(
+					obj => Format(
+						VarFormat[0],
+						indent,
+						obj.IsStatic ? VarFormat[1] : "",
+						needsTypename ? VarFormat[2] : "",
+						obj.type.Gen( obj.name ),
+						obj.init != null ? VarFormat[3] + obj.init.Gen() : "" ) )
+				.ToList();
+			return ret;
+		}
+	}
+
 	public class UsingStmt : Stmt
 	{
 		public List<TypespecNested> types;
+
+		// in locations where C++ does not support "using namespace" this must not be printed
+		// but instead the unqualified types need to be changed to qualified ones
+		public override Strings Gen( int level )
+		{
+			string indent = IndentString.Repeat( level );
+			return types
+				.Select( o => Format( "{0}using namespace {1};", indent, o.Gen() ) )
+				.ToList();
+		}
 	}
 
 	public class ReturnStmt : Stmt
@@ -183,12 +229,16 @@ namespace Myll.Core
 			if( elseStmt != null )
 				throw new NotImplementedException( "implement else for for-loop" );
 
+			Strings inits = initStmt.Gen( 0 );
+			if( inits.Count > 1 )
+				throw new NotImplementedException( "for statement does not support more than one initializer yet" );
+
 			string  indent = IndentString.Repeat( level );
 			Strings ret    = new Strings();
-			ret.Add( Format( LoopFormat[0], indent, initStmt.Gen( 0 ), condExpr.Gen(), iterExpr.Gen() ) );
+			ret.Add( Format( LoopFormat[0], indent, inits.Count == 0 ? ";" : inits.First(), condExpr.Gen(), iterExpr.Gen() ) );
 			ret.Add( Format( CurlyOpen,     indent ) );
 			ret.AddRange( bodyStmt.GenWithoutCurly( level + 1 ) );
-			ret.Add( Format( CurlyCloseSC, indent ) );
+			ret.Add( Format( CurlyClose, indent ) );
 			return ret;
 		}
 	}
@@ -209,7 +259,7 @@ namespace Myll.Core
 			ret.Add( Format( LoopFormat[1], indent, condExpr.Gen() ) );
 			ret.Add( Format( CurlyOpen,     indent ) );
 			ret.AddRange( bodyStmt.GenWithoutCurly( level + 1 ) );
-			ret.Add( Format( CurlyCloseSC, indent ) );
+			ret.Add( Format( CurlyClose, indent ) );
 			return ret;
 		}
 	}
@@ -244,10 +294,10 @@ namespace Myll.Core
 			string  varname = name ?? RandomName;
 			string  indent  = IndentString.Repeat( level );
 			Strings ret     = new Strings();
-			ret.Add( Format( LoopFormat[0], indent, "int " + varname + " = 0", varname + " < " + countExpr.Gen(), "++" + varname ) );
+			ret.Add( Format( LoopFormat[0], indent, "int " + varname + " = 0;", varname + " < " + countExpr.Gen(), "++" + varname ) );
 			ret.Add( Format( CurlyOpen, indent ) );
 			ret.AddRange( bodyStmt.GenWithoutCurly( level + 1 ) );
-			ret.Add( Format( CurlyCloseSC, indent ) );
+			ret.Add( Format( CurlyClose, indent ) );
 			return ret;
 		}
 	}
@@ -328,7 +378,7 @@ namespace Myll.Core
 		public override Strings Gen( int level )
 		{
 			string indent = IndentString.Repeat( level );
-			return new Strings { indent + expr.Gen() };
+			return new Strings { Format( "{0}{1};", indent, expr.Gen() ) };
 		}
 	}
 

@@ -1,11 +1,20 @@
+// it's already implicitly module test
 module test;
 
-func do_a( A* a ) -> void {}
+func do_a( A* a ) -> void
+{
+}
 
-class A {
-	class C {
-		func do_b( B* b ) -> void {}
+class A
+{
+	class C
+	{
+		func do_b( B* b ) -> void
+		{
+		}
 	}
-	class B {}
+	class B
+	{
+	}
 }
 

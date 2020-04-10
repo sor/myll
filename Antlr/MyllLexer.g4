@@ -125,6 +125,7 @@ F16			: 'f16';	// half prec. float
 
 NS			: 'namespace';
 MODULE		: 'module';
+IMPORT		: 'import';
 VOLATILE	: 'volatile';
 STABLE		: 'stable';
 CONST		: 'const';
@@ -158,7 +159,7 @@ SET			: 'set';
 FIELD		: 'field';
 OPERATOR	: 'operator';
 VAR			: 'var';
-LET			: 'let';
+LET			: 'let';	// obsolete?
 LOOP		: 'loop';
 FOR			: 'for';
 DO			: 'do';
@@ -167,6 +168,7 @@ TIMES		: 'times';
 IF			: 'if';
 ELSE		: 'else';
 SWITCH		: 'switch';
+DEFAULT		: 'default';
 CASE		: 'case';
 BREAK		: 'break';
 FALL		: 'fall';
@@ -178,8 +180,8 @@ THROW		: 'throw';
 
 ID			: ALPHA_ ALNUM_*;
 
-NUL			: 'null'|'nullptr';
-CLASS_LIT	: 'this'|'self'|'base';
+NUL			: 'null'|'nullptr'; // nullptr obsolete?
+CLASS_LIT	: 'this'|'self'|'base'|'super';
 BOOL_LIT	: 'true'|'false';
 FLOAT_LIT	:	(	DIGIT* '.' DIGIT+ ( [eE] [+-]? DIGIT+ )?
 				|	DIGIT+ [eE] [+-]? DIGIT+

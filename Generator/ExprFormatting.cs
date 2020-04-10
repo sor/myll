@@ -12,10 +12,10 @@ namespace Myll.Generator
 				{ Operand.PostDecr, "{0}--" },
 				{ Operand.FuncCall, "{0}( {1} )" },    // 0 = FuncCallExpr.left, 1 = FuncCallExpr.funcCall
 				{ Operand.IndexCall, "{0}[{1}]" },     // 0 = FuncCallExpr.left, 1 = FuncCallExpr.funcCall
-				{ Operand.MemberAccess, "." },         // TODO
-				{ Operand.MemberPtrAccess, "->" },     // TODO
-				{ Operand.MemberAccessPtr, ".*" },     // TODO
-				{ Operand.MemberPtrAccessPtr, "->*" }, // TODO
+				{ Operand.MemberAccess, "{0}.{1}" },
+				{ Operand.MemberPtrAccess, "{0}->{1}" },
+				{ Operand.MemberAccessPtr, "TODO MAP .*" },     // TODO
+				{ Operand.MemberPtrAccessPtr, "TODO MPAP ->*" }, // TODO
 				{ Operand.PreIncr, "++{0}" },
 				{ Operand.PreDecr, "--{0}" },
 				{ Operand.PrePlus, "+{0}" },
@@ -47,6 +47,8 @@ namespace Myll.Generator
 				{ Operand.NotEqual, "{0} != {1}" },
 				{ Operand.And, "{0} && {1}" },
 				{ Operand.Or, "{0} || {1}" },
+
+				{ Operand.DeleteAry, "delete[] {0}" },
 			};
 
 		private static readonly IDictionary<Operand, string>

@@ -16,12 +16,25 @@ namespace Myll.Generator
 
 	public static class StmtFormatting
 	{
-		public static readonly string IndentString = "    "; // \t
+		//public static readonly string IndentString = "\t";
+		public static readonly string IndentString = "    ";
 		public static readonly string ThrowFormat  = "{0}throw {1};";
 		public static readonly string BreakFormat  = "{0}break;";
 		public static readonly string CurlyOpen    = "{0}{{";
 		public static readonly string CurlyClose   = "{0}}}";
 		public static readonly string CurlyCloseSC = "{0}}};";
+
+		internal static AccessStrings AddPPPString( this AccessStrings self, StructuralGen.PPPStrings pppStrings )
+		{
+			self.AddRange(
+				new AccessStrings {
+					(Access.Private,   pppStrings.priv),
+					(Access.Protected, pppStrings.prot),
+					(Access.Public,    pppStrings.pub),
+				} );
+
+			return self;
+		}
 
 		public static readonly Dictionary<Access, string>
 			AccessFormat = new Dictionary<Access, string> {
@@ -42,27 +55,27 @@ namespace Myll.Generator
 		};
 
 		public static readonly string[] LoopFormat = {
-			"{0}for( {1}; {2}; {3} )",
+			"{0}for( {1} {2}; {3} )", // first semicolon is part of the stmt
 			"{0}while( {1} )",
 			"{0}do",
 			"{0}while( {1} );",
 		};
 
 		public static readonly string[] VarFormat = {
-			"{0}{1}{2}{3};", // 0 indent, 1 typename, 2 type & name, 3 init
+			"{0}{1}{2}{3}{4};", // 0 indent, 1 static , 2 typename, 3 type & name, 4 init
+			"static ",
 			"typename ",
 			" = ",
 		};
 
 		public static readonly string[] FuncFormat = {
-			"{0}{1}{2} {3}({4}){5}", // 0 indent, 1 leading attributes, 2 return type, 3 name, 4 params, 5 trailing attributes
+			"{0}{1}{2} {3}({4}){5}", // function:  0 indent, 1 leading attributes, 2 return type, 3 name, 4 params, 5 trailing attributes
+			"{0}{1}{2}({3}){4}",     // ctor/dtor: 0 indent, 1 leading attributes, 2 name, 3 params, 4 trailing attributes
 			"{0}",
 		};
 
 		public static readonly string[] StructFormat = {
 			"{0}{1}{2} {3}{4}{5}", // 0 indent, 1 keyword, 2 attributes, 3 name, 4 final, 5 bases or semicolon
-			"{0}{{",               // 0 indent
-			"{0}}};",              // 0 indent
 			" : {0}{1}",           // first base; 0 virtual and/or ppp, 1 name
 			", {0}{1}",            // other bases; 0 virtual and/or ppp, 1 name
 			"struct",
@@ -185,16 +198,16 @@ namespace Myll.Generator
 
 				obj.children.ForEach( c => c.AddToGen( gen ) );
 
-				string indent = DeIndentDecl;
+				string indent = IndentDecl;
 
 				// -1 is global
 				if( LevelDecl > -1 ) {
 					AllDecl.Add( Format( "{0}namespace {1}", indent, obj.name ) );
-					AllDecl.Add( Format( "{0}{{", indent ) );
+					AllDecl.Add( Format( CurlyOpen, indent ) );
 				}
 				AllDecl.AddRange( gen.GenDecl() );
 				if( LevelDecl > -1 ) {
-					AllDecl.Add( Format( "{0}}}", indent ) );
+					AllDecl.Add( Format( CurlyClose, indent ) );
 				}
 
 				AllImpl.AddRange( gen.GenImpl() );
@@ -224,9 +237,10 @@ namespace Myll.Generator
 					Format(
 						VarFormat[0],
 						indentDecl,
-						needsTypename ? VarFormat[1] : "",
+						obj.IsStatic ? VarFormat[1] : "",
+						needsTypename ? VarFormat[2] : "",
 						obj.type.Gen( name ),
-						obj.init != null ? VarFormat[2] + obj.init.Gen() : "" )
+						obj.init != null ? VarFormat[3] + obj.init.Gen() : "" )
 				};
 				AllDecl.AddRange( ret );
 			}
@@ -268,6 +282,9 @@ namespace Myll.Generator
 
 			public override void AddStruct( Structural obj, Access access = Access.None )
 			{
+				// HACK: since reusing the class implementation, everything needs to be forced to public for now
+				access = Access.Public;
+
 				if( obj.IsStatic )
 					throw new ArgumentOutOfRangeException( nameof( obj ), true, "Structurals can not be static" );
 
@@ -279,19 +296,18 @@ namespace Myll.Generator
 				obj.children.ForEach( c => c.AddToGen( gen ) );
 
 				StructuralGen.GenStructStruct
-					structsDecl = new StructuralGen.GenStructStruct(),
-					structsImpl = new StructuralGen.GenStructStruct();
+					structs = new StructuralGen.GenStructStruct();
 
-				structsDecl.parent = gen;
+				structs.parent = gen;
 
-				structsDecl.AddStructDecl( gen, access );
-				structsImpl.AddStructImpl( gen, access );
+				// they are all public
+				structs.AddStruct( gen, access );
 
 				// TODO: do this later for prototypes to work properly
 				string accessIndent = DeIndentDecl;
-				Access curAccess = Access.None;
-				AllDecl.AddRange( structsDecl.GenDecl( ref curAccess, accessIndent ) );
-				AllImpl.AddRange( structsImpl.GenImpl() );
+				Access curAccess = Access.Public;
+				AllDecl.AddRange( structs.GenDecl( ref curAccess, accessIndent ) );
+				AllImpl.AddRange( structs.GenImpl() );
 
 				//AllDecl.AddRange( gen.GenDecl() );
 				//AllImpl.AddRange( gen.GenImpl() );
@@ -394,23 +410,39 @@ namespace Myll.Generator
 		*/
 		public class StructuralGen : DeclGen
 		{
+			public class PPPStrings
+			{
+				public readonly Strings
+					priv = new Strings(),
+					prot = new Strings(),
+					pub  = new Strings();
+
+				public Strings Target( Access access )
+					=> access switch {
+						Access.Private   => priv,
+						Access.Protected => prot,
+						_                => pub,
+					};
+			}
+
 			internal abstract class GenStructBase
 			{
-				protected AccessStrings genList;
+				protected AccessStrings genListDecl;
+				protected AccessStrings genListImpl;
 				internal  DeclGen       parent;
 
 				// These GenDecl/GenImpl are the alternative to two derived classes just for these methods
 				public Strings GenDecl( ref Access curAccess, string accessIndent )
 				{
 					Strings ret = new Strings();
-					GenList( ret, genList, accessIndent, ref curAccess );
+					GenList( ret, genListDecl, accessIndent, ref curAccess );
 					return ret;
 				}
 
 				public Strings GenImpl()
 				{
 					Strings ret = new Strings();
-					GenList( ret, genList );
+					GenList( ret, genListImpl );
 					return ret;
 				}
 
@@ -449,11 +481,11 @@ namespace Myll.Generator
 					//	access = currentAccess;
 
 					// Could be outside of the Enums valid values
-					if( !access.In( Access.Public, Access.Protected, Access.Private ) )
+					if( !access.In( Access.Private, Access.Protected, Access.Public ) )
 						throw new ArgumentOutOfRangeException(
 							nameof( access ),
 							access,
-							@"Encountered invalid Accessibility; needed to be Public, Protected or Private" );
+							@"Encountered invalid Accessibility; needed to be Private, Protected or Public" );
 				}
 			}
 
@@ -461,83 +493,67 @@ namespace Myll.Generator
 			internal class GenStructStruct : GenStructBase
 			{
 				// Super memory inefficient but I don't care for the moment
-				protected readonly Strings
-					privProto  = new Strings(),
-					protProto  = new Strings(),
-					pubProto   = new Strings(),
-					privStruct = new Strings(),
-					protStruct = new Strings(),
-					pubStruct  = new Strings();
-
-				#region Target Switches
-
-				protected Strings TargetProto( Access access )
-					=> access switch {
-						Access.Private   => privProto,
-						Access.Protected => protProto,
-						_                => pubProto,
-					};
-
-				protected Strings TargetStruct( Access access )
-					=> access switch {
-						Access.Private   => privStruct,
-						Access.Protected => protStruct,
-						_                => pubStruct,
-					};
-
-				#endregion
+				protected readonly PPPStrings
+					protoDecl = new PPPStrings(),
+					protoImpl = new PPPStrings(),
+					structDecl = new PPPStrings(),
+					structImpl = new PPPStrings();
 
 				public GenStructStruct()
 				{
-					genList = new AccessStrings {
-						(Access.Private,    privProto),
-						(Access.Protected,  protProto),
-						(Access.Public,     pubProto),
-						(Access.Irrelevant, new Strings { "" }),
-						(Access.Private,    privStruct),
-						(Access.Protected,  protStruct),
-						(Access.Public,     pubStruct),
-					};
+					genListDecl = new AccessStrings( 6 )
+						.AddPPPString( protoDecl )
+						.AddPPPString( structDecl );
+
+					genListImpl = new AccessStrings( 6 )
+						.AddPPPString( protoImpl )
+						.AddPPPString( structImpl );
 				}
 
-				public void AddStructDecl( StructuralGen gen, Access access = Access.None )
+				public void AddStruct( StructuralGen gen, Access access = Access.None )
 				{
-					Strings targetProto  = TargetProto( access );
-					Strings targetStruct = TargetStruct( access );
-					string  indent       = gen.DeIndentDecl;
-					string  name         = gen.obj.name;
+					string  indentDecl  = gen.DeIndentDecl;
+					string  nameDecl    = gen.obj.name;
+					Strings targetProto = protoDecl.Target( access );
+					Strings targetDecl  = structDecl.Target( access );
+					Strings targetImpl  = structImpl.Target( access );
 
+					List<TplParam> tplParams = gen.obj.TplParams;
+					if( tplParams.Count >= 1 ) {
+						string tpl = Format(
+							"{0}template <{1}>",
+							indentDecl,
+							tplParams.Select( o => "typename " + o.name ).Join( ", " ) );
+
+						targetProto.Add( tpl );
+						targetDecl.Add( tpl );
+					}
 					// "{0}{1}{2} {3}{4}{5}",
 					// 0 indent, 1 keyword, 2 attributes, 3 name, 4 final, 5 bases
 					targetProto.Add(
 						Format(
 							StructFormat[0],
-							indent,
-							StructFormat[6], // TODO: is currently hardcoded to class
+							indentDecl,
+							StructFormat[4], // TODO: is currently hardcoded to class
 							"",
-							name,
+							nameDecl,
 							"",
 							";" ) );
 
-					targetStruct.Add(
+					targetDecl.Add(
 						Format(
 							StructFormat[0],
-							indent,
-							StructFormat[6], // TODO: is currently hardcoded to class
+							indentDecl,
+							StructFormat[4], // TODO: is currently hardcoded to class
 							"",
-							name,
+							nameDecl,
 							"",
 							"" /*StructFormat[2]*/ ) );
-					targetStruct.Add( Format( StructFormat[1], indent ) ); // "{"
-					targetStruct.AddRange( gen.GenDecl() );
-					targetStruct.Add( Format( StructFormat[2], indent ) ); // "};"
-				}
+					targetDecl.Add( Format( CurlyOpen, indentDecl ) );
+					targetDecl.AddRange( gen.GenDecl() );
+					targetDecl.Add( Format( CurlyCloseSC, indentDecl ) );
 
-				public void AddStructImpl( StructuralGen gen, Access access = Access.None )
-				{
-					Strings target = TargetStruct( access );
-
-					target.AddRange( gen.GenImpl() );
+					targetImpl.AddRange( gen.GenImpl() );
 				}
 			}
 
@@ -546,215 +562,247 @@ namespace Myll.Generator
 			{
 				public GenStructField()
 				{
-					genList = new AccessStrings();
+					genListDecl = new AccessStrings();
+					genListImpl = new AccessStrings();
 				}
 
-				public void AddVarDecl( Var obj, Access access = Access.None )
+				public void AddVar( Var obj, Access access = Access.None )
 				{
-					string indent        = parent.IndentDecl;
-					bool   needsTypename = false; // TODO how to determine this
-					string name          = obj.name;
+					bool needsTypename = false; // TODO how to determine this
+
+					string indentDecl = parent.IndentDecl;
+					string indentImpl = parent.IndentImpl;
+					string nameDecl   = obj.name;
+					string nameImpl   = obj.FullyQualifiedName;
+
 					//"{0}{1}{2}{3};", // 0 indent, 1 typename, 2 type & name, 3 init
-					Strings ret = new Strings {
+					Strings retDecl = new Strings {
 						Format(
 							VarFormat[0],
-							indent,
-							needsTypename ? VarFormat[1] : "",
-							obj.type.Gen( name ),
-							obj.init != null ? VarFormat[2] + obj.init.Gen() : "" )
+							indentDecl,
+							obj.IsStatic ? VarFormat[1] : "",
+							needsTypename ? VarFormat[2] : "",
+							obj.type.Gen( nameDecl ),
+							obj.init != null ? VarFormat[3] + obj.init.Gen() : "" )
 					};
-					genList.Add( (access, ret) );
-				}
+					genListDecl.Add( (access, retDecl) );
 
-				public void AddVarImpl( Var obj, Access access = Access.None )
-				{
 					if( !obj.IsStatic )
 						return;
 
-					string indent        = parent.IndentImpl;
-					bool   needsTypename = false; // TODO how to determine this
-					string name          = obj.FullyQualifiedName;
-					Strings ret = new Strings {
+					Strings retImpl = new Strings {
 						Format(
 							VarFormat[0],
-							indent,
-							needsTypename ? VarFormat[1] : "",
-							obj.type.Gen( name ),
-							obj.init != null ? VarFormat[2] + obj.init.Gen() : "" )
+							indentImpl,
+							obj.IsStatic ? VarFormat[1] : "",
+							needsTypename ? VarFormat[2] : "",
+							obj.type.Gen( nameImpl ),
+							obj.init != null ? VarFormat[3] + obj.init.Gen() : "" )
 					};
-					genList.Add( (access, ret) );
+					genListImpl.Add( (access, retImpl) );
 				}
 			}
 
 			private class GenStructFunc : GenStructBase
 			{
 				// Super memory inefficient but I don't care for the moment
-				protected readonly Strings
-					privAccessor = new Strings(),
-					protAccessor = new Strings(),
-					pubAccessor  = new Strings(),
-					privOperator = new Strings(),
-					protOperator = new Strings(),
-					pubOperator  = new Strings(),
-					privMethod   = new Strings(),
-					protMethod   = new Strings(),
-					pubMethod    = new Strings();
-
-				#region Target Switches
-
-				protected Strings TargetAccessor( Access access )
-					=> access switch {
-						Access.Private   => privAccessor,
-						Access.Protected => protAccessor,
-						_                => pubAccessor,
-					};
-
-				protected Strings TargetOperator( Access access )
-					=> access switch {
-						Access.Private   => privOperator,
-						Access.Protected => protOperator,
-						_                => pubOperator,
-					};
-
-				protected Strings TargetMethod( Access access )
-					=> access switch {
-						Access.Private   => privMethod,
-						Access.Protected => protMethod,
-						_                => pubMethod,
-					};
-
-				#endregion
+				protected readonly PPPStrings
+					accessorDecl = new PPPStrings(),
+					accessorImpl = new PPPStrings(),
+					operatorDecl = new PPPStrings(),
+					operatorImpl = new PPPStrings(),
+					methodDecl   = new PPPStrings(),
+					methodImpl   = new PPPStrings();
 
 				public GenStructFunc()
 				{
-					genList = new AccessStrings {
-						(Access.Private, privAccessor),
-						(Access.Protected, protAccessor),
-						(Access.Public, pubAccessor),
-					//	(Access.Irrelevant, new Strings { "" }),
-						(Access.Private, privOperator),
-						(Access.Protected, protOperator),
-						(Access.Public, pubOperator),
-					//	(Access.Irrelevant, new Strings { "" }),
-						(Access.Private, privMethod),
-						(Access.Protected, protMethod),
-						(Access.Public, pubMethod),
+					genListDecl = new AccessStrings {
+						(Access.Private,   accessorDecl.priv),
+						(Access.Protected, accessorDecl.prot),
+						(Access.Public,    accessorDecl.pub),
+						(Access.Private,   operatorDecl.priv),
+						(Access.Protected, operatorDecl.prot),
+						(Access.Public,    operatorDecl.pub),
+						(Access.Private,   methodDecl.priv),
+						(Access.Protected, methodDecl.prot),
+						(Access.Public,    methodDecl.pub),
+					};
+					genListImpl = new AccessStrings {
+						(Access.Private,   accessorImpl.priv),
+						(Access.Protected, accessorImpl.prot),
+						(Access.Public,    accessorImpl.pub),
+						(Access.Private,   operatorImpl.priv),
+						(Access.Protected, operatorImpl.prot),
+						(Access.Public,    operatorImpl.pub),
+						(Access.Private,   methodImpl.priv),
+						(Access.Protected, methodImpl.prot),
+						(Access.Public,    methodImpl.pub),
 					};
 				}
 
-				// Alternative to two derived classes just for these methods
-				public void AddFuncDecl( Func obj, Access access = Access.None )
+				public void AddFunc( Func obj, Access access = Access.None )
 				{
-					Strings target = TargetMethod( access );
-					string  indent = parent.IndentDecl;
-					string  name   = obj.name;
-					target.Add(
-						Format(
-							FuncFormat[0],
-							indent,
-							"",
-							obj.retType.Gen(),
-							name,
-							"params",
-							";" ) );
-				}
+					string  indentDecl = parent.IndentDecl;
+					string  indentImpl = parent.IndentImpl;
+					string  nameDecl   = obj.name;
+					string  nameImpl   = obj.FullyQualifiedName;
+					Strings targetDecl = methodDecl.Target( access );
+					Strings targetImpl = methodImpl.Target( access );
 
-				// Alternative to two derived classes just for these methods
-				public void AddFuncImpl( Func obj, Access access = Access.None )
-				{
-					Strings target = TargetMethod( access );
-					string  indent = parent.IndentImpl;
-					string  name   = obj.FullyQualifiedName;
-					target.Add(
-						Format(
-							FuncFormat[0],
-							indent,
-							"",
-							obj.retType.Gen(),
-							name,
-							"params",
-							"" ) );
-					target.AddRange( obj.block.Gen( parent.LevelImpl + 1 ) );
+					List<TplParam> tplParams = obj.TplParams;
+					if( tplParams.Count >= 1 ) {
+						string tpl = Format(
+							"{0}template <{1}>",
+							indentDecl,
+							tplParams.Select( o => "typename " + o.name ).Join( ", " ) );
+
+						//targetProto.Add( tpl );
+						targetDecl.Add( tpl );
+					}
+
+					string paramString = obj.paras
+						.Select( para => para.Gen() )
+						.Join( ", " );
+
+					if( obj.IsInline ) {
+						targetDecl.Add(
+							Format(
+								FuncFormat[0],
+								indentDecl,
+								"",
+								obj.retType.Gen(),
+								nameDecl,
+								paramString,
+								"" ) );
+						targetDecl.Add( Format( CurlyOpen, indentDecl ) );
+						targetDecl.AddRange( obj.block.GenWithoutCurly( parent.LevelDecl + 1 ) );
+						targetDecl.Add( Format( CurlyClose, indentDecl ) );
+					}
+					else {
+						targetDecl.Add(
+							Format(
+								FuncFormat[0],
+								indentDecl,
+								"",
+								obj.retType.Gen(),
+								nameDecl,
+								paramString,
+								";" ) );
+
+						targetImpl.Add(
+							Format(
+								FuncFormat[0],
+								indentImpl,
+								"",
+								obj.retType.Gen(),
+								nameImpl,
+								paramString,
+								"" ) );
+						targetImpl.Add( Format( CurlyOpen, indentImpl ) );
+						targetImpl.AddRange( obj.block.GenWithoutCurly( parent.LevelImpl + 1 ) );
+						targetImpl.Add( Format( CurlyClose, indentImpl ) );
+					}
 				}
 			}
 
 			private class GenStructCtorDtor : GenStructBase
 			{
-				// Super memory inefficient but don't care for the moment
+				// TODO move somewhere else
 				public readonly Strings
 					protoGen = new Strings(), // still needed for toplevel types?
 					aliasGen = new Strings(),
-					typesGen = new Strings(),
-					privCtor = new Strings(),
-					protCtor = new Strings(),
-					pubCtor  = new Strings(),
-					privDtor = new Strings(), // you can only have one DTor,
-					protDtor = new Strings(), // but this makes it simpler to generate the code
-					pubDtor  = new Strings();
+					typesGen = new Strings();
 
-				#region Target Switches
-
-				protected Strings TargetCtor( Access access )
-					=> access switch {
-						Access.Private   => privCtor,
-						Access.Protected => protCtor,
-						_                => pubCtor,
-					};
-
-				protected Strings TargetDtor( Access access )
-					=> access switch {
-						Access.Private   => privDtor,
-						Access.Protected => protDtor,
-						_                => pubDtor,
-					};
-
-				#endregion
+				// Super memory inefficient but don't care for the moment
+				public readonly PPPStrings
+					ctorsDecl = new PPPStrings(),
+					ctorsImpl = new PPPStrings(),
+					dtorsDecl = new PPPStrings(), // you can only have one DTor,
+					dtorsImpl = new PPPStrings(); // but this makes it simpler to generate the code
 
 				public GenStructCtorDtor()
 				{
-					genList = new AccessStrings {
-						(Access.Private, privCtor),
-						(Access.Protected, protCtor),
-						(Access.Public, pubCtor),
-						(Access.Private, privDtor),
-						(Access.Protected, protDtor),
-						(Access.Public, pubDtor),
-					};
+					genListDecl = new AccessStrings( 6 )
+						.AddPPPString( ctorsDecl )
+						.AddPPPString( dtorsDecl );
+
+					genListImpl = new AccessStrings( 6 )
+						.AddPPPString( ctorsImpl )
+						.AddPPPString( dtorsImpl );
 				}
 
 				public void AddCtorDtor( ConDestructor obj, Access access = Access.None )
 				{
-					Strings target = (obj.kind == ConDestructor.Kind.Constructor)
-						? TargetCtor( access )
-						: TargetDtor( access );
+					bool    isCtor     = obj.kind == ConDestructor.Kind.Constructor;
+					string  indentDecl = parent.IndentDecl;
+					string  indentImpl = parent.IndentImpl;
+					string  nameDecl   = obj.name;
+					string  nameImpl   = obj.FullyQualifiedName;
+					Strings targetDecl = (isCtor ? ctorsDecl : dtorsDecl).Target( access );
+					Strings targetImpl = (isCtor ? ctorsImpl : dtorsImpl).Target( access );
 
-					// TODO
-					//target.AddRange( null );
+					string paramString = obj.paras
+						.Select( para => para.Gen() )
+						.Join( ", " );
+
+					string leadingAttr = "";
+					if( obj.paras.Count == 1
+					 && (!obj.attribs?.ContainsKey( "implicit" ) ?? true) ) {
+						leadingAttr += "explicit ";
+					}
+					if( obj.IsInline ) {
+						targetDecl.Add(
+							Format(
+								FuncFormat[1],
+								indentDecl,
+								leadingAttr,
+								nameDecl,
+								paramString,
+								"" ) );
+						targetDecl.Add( Format( CurlyOpen, indentDecl ) );
+						targetDecl.AddRange( obj.block.GenWithoutCurly( parent.LevelDecl + 1 ) );
+						targetDecl.Add( Format( CurlyClose, indentDecl ) );
+					}
+					else {
+						targetDecl.Add(
+							Format(
+								FuncFormat[1],
+								indentDecl,
+								leadingAttr,
+								nameDecl,
+								paramString,
+								";" ) );
+
+						targetImpl.Add(
+							Format(
+								FuncFormat[1],
+								indentImpl,
+								leadingAttr,
+								nameImpl,
+								paramString,
+								"" ) );
+						targetImpl.Add( Format( CurlyOpen, indentDecl ) );
+						targetImpl.AddRange( obj.block.GenWithoutCurly( parent.LevelImpl + 1 ) );
+						targetImpl.Add( Format( CurlyClose, indentDecl ) );
+					}
 				}
 			}
 
 			private readonly GenStructStruct
-				structsDecl = new GenStructStruct(),
-				structsImpl = new GenStructStruct();
+				structs = new GenStructStruct();
 
 			private readonly GenStructField
-				staticFieldsDecl = new GenStructField(),
-				staticFieldsImpl = new GenStructField(),
-				fieldsDecl       = new GenStructField(),
-				fieldsImpl       = new GenStructField();
+				staticFields = new GenStructField(),
+				fields       = new GenStructField();
 
 			private readonly GenStructFunc
-				staticFuncsDecl = new GenStructFunc(),
-				staticFuncsImpl = new GenStructFunc(),
-				funcsDecl       = new GenStructFunc(),
-				funcsImpl       = new GenStructFunc();
+				staticFuncs = new GenStructFunc(),
+				funcs       = new GenStructFunc();
 
 			private readonly GenStructCtorDtor
-				ctorDtorDecl = new GenStructCtorDtor(),
-				ctorDtorImpl = new GenStructCtorDtor();
+				ctorDtor = new GenStructCtorDtor();
 
-			private readonly List<GenStructBase> allGensDecl;
-			private readonly List<GenStructBase> allGensImpl;
+			private readonly List<GenStructBase> allGens;
 
 			protected readonly Access defaultAccess;
 			protected          Access currentAccess;
@@ -771,26 +819,16 @@ namespace Myll.Generator
 					: Access.Public;
 				currentAccess = defaultAccess;
 
-				allGensDecl = new List<GenStructBase> {
-					structsDecl,
-					staticFieldsDecl,
-					staticFuncsDecl,
-					fieldsDecl,
-					ctorDtorDecl,
-					funcsDecl,
+				allGens = new List<GenStructBase> {
+					structs,
+					staticFields,
+					staticFuncs,
+					fields,
+					ctorDtor,
+					funcs,
 				};
 
-				allGensImpl = new List<GenStructBase> {
-					structsImpl,
-					staticFieldsImpl,
-					staticFuncsImpl,
-					fieldsImpl,
-					ctorDtorImpl,
-					funcsImpl,
-				};
-
-				allGensDecl.ForEach( g => g.parent = this );
-				allGensImpl.ForEach( g => g.parent = this );
+				allGens.ForEach( g => g.parent = this );
 			}
 
 			protected void ThrowOnInvalidAccess( ref Access access )
@@ -812,7 +850,7 @@ namespace Myll.Generator
 				Access  curAccess    = defaultAccess;
 				string  accessIndent = DeIndentDecl;
 
-				allGensDecl.ForEach( o => ret.AddRange( o.GenDecl( ref curAccess, accessIndent ) ) );
+				allGens.ForEach( o => ret.AddRange( o.GenDecl( ref curAccess, accessIndent ) ) );
 
 				return ret;
 			}
@@ -821,7 +859,7 @@ namespace Myll.Generator
 			{
 				Strings ret = new Strings();
 
-				allGensImpl.ForEach( o => ret.AddRange( o.GenImpl() ) );
+				allGens.ForEach( o => ret.AddRange( o.GenImpl() ) );
 
 				return ret;
 			}
@@ -837,12 +875,10 @@ namespace Myll.Generator
 				ThrowOnInvalidAccess( ref access );
 
 				if( obj.IsStatic ) {
-					staticFieldsDecl.AddVarDecl( obj, access );
-					staticFieldsImpl.AddVarImpl( obj, access );
+					staticFields.AddVar( obj, access );
 				}
 				else {
-					fieldsDecl.AddVarDecl( obj, access );
-					fieldsImpl.AddVarImpl( obj, access );
+					fields.AddVar( obj, access );
 				}
 			}
 
@@ -851,12 +887,10 @@ namespace Myll.Generator
 				ThrowOnInvalidAccess( ref access );
 
 				if( obj.IsStatic ) {
-					staticFuncsDecl.AddFuncDecl( obj, access );
-					staticFuncsImpl.AddFuncImpl( obj, access );
+					staticFuncs.AddFunc( obj, access );
 				}
 				else {
-					funcsDecl.AddFuncDecl( obj, access );
-					funcsImpl.AddFuncImpl( obj, access );
+					funcs.AddFunc( obj, access );
 				}
 			}
 
@@ -873,19 +907,16 @@ namespace Myll.Generator
 
 				obj.children.ForEach( c => c.AddToGen( gen ) );
 
-				structsDecl.AddStructDecl( gen, access );
-				structsImpl.AddStructImpl( gen, access );
+				structs.AddStruct( gen, access );
 			}
 
-			// TODO
 			public override void AddCtorDtor( ConDestructor obj, Access access = Access.None )
 			{
 				ThrowOnInvalidAccess( ref access );
 				if( obj.IsStatic )
 					throw new ArgumentOutOfRangeException( nameof( obj ), true, "Con/Destructor can not be static" );
 
-				ctorDtorDecl.AddCtorDtor( obj, access );
-				ctorDtorImpl.AddCtorDtor( obj, access );
+				ctorDtor.AddCtorDtor( obj, access );
 			}
 		}
 	}

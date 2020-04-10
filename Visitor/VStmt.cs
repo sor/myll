@@ -10,6 +10,8 @@ using static Myll.MyllParser;
 
 namespace Myll
 {
+	using Attribs = Dictionary<string, List<string>>;
+
 	/**
 	 * Only Visit can receive null and will return null, the
 	 * other Visit... methods do not support null parameters
@@ -23,6 +25,31 @@ namespace Myll
 			=> c == null
 				? null
 				: base.Visit( c );
+
+		public override Stmt VisitAttribStmt( AttribStmtContext c )
+		{
+			Stmt ret =
+				(c.inAnyStmt() != null) ? Visit( c.inAnyStmt() ) :
+				(c.inStmt()    != null) ? Visit( c.inStmt() ) :
+				                          throw new ArgumentOutOfRangeException( "neither inAnyStmt nor inStmt" );
+
+			Attribs attribs = c.attribBlk()?.Visit();
+			ret.AssignAttribs( attribs );
+
+			return ret;
+		}
+
+		/*public override Stmt VisitAttribStmtDef( AttribStmtDefContext c )
+		{
+			Stmt ret =
+				(c.inAnyStmt() != null) ? Visit( c.inAnyStmt() ) :
+				                          throw new ArgumentOutOfRangeException( "not inAnyStmt" );
+
+			Attribs attribs = c.attribBlk()?.Visit();
+			ret.AssignAttribs( attribs );
+
+			return ret;
+		}*/
 
 		public override Stmt VisitFuncBody( FuncBodyContext c )
 		{
@@ -43,26 +70,48 @@ namespace Myll
 
 		public override Stmt VisitUsing( UsingContext c )
 		{
-			Stmt ret = new UsingStmt {
+			UsingStmt ret = new UsingStmt {
 				srcPos = c.ToSrcPos(),
 				types  = VisitTypespecsNested( c.typespecsNested() ),
 			};
+			ret.types.ForEach( o => o.ptrs = new List<Pointer>() );
 			return ret;
 		}
 
-		/*
+		// list of typed and initialized vars
+		public List<Var> VisitStmtVars( TypedIdAcorsContext c )
+		{
+			Scope scope = ScopeStack.Peek();
+			// determine if only scope or container
+			Typespec type = VisitTypespec( c.typespec() );
+			List<Var> ret = c.idAccessors()
+				.idAccessor()
+				.Select(
+					q => new Var {
+						srcPos   = c.ToSrcPos(),
+						name     = q.id().GetText(),
+						access   = Access.Irrelevant,
+						type     = type,
+						init     = q.expr().Visit(),
+						accessor = q.accessorDef().Visit(),
+						// TODO: Accessors, is this still valid?
+					} )
+				.ToList();
+			ret.ForEach( var => AddChild( var ) );
+			return ret;
+		}
+
 		public override Stmt VisitVariableDecl( VariableDeclContext c )
 		{
-			Stmt ret = new VarsStmt {
+			Decl ret = new VarsDecl {
 				vars = c.typedIdAcors()
-					.Select( VisitVars )
+					.Select( VisitStmtVars )
 					.SelectMany( q => q )
 					.ToList(),
 			};
 			// TODO save the constness
 			return ret;
 		}
-		*/
 
 		public override Stmt VisitEmptyStmt( EmptyStmtContext c )
 		{
@@ -151,11 +200,11 @@ namespace Myll
 		{
 			LoopStmt ret = new ForStmt {
 				srcPos   = c.ToSrcPos(),
-				initStmt = Visit( c.levStmtDef() ),
+				initStmt = c.levStmt(0).Visit(),
 				condExpr = c.expr( 0 ).Visit(),
 				iterExpr = c.expr( 1 ).Visit(),
-				bodyStmt = c.levStmt( 0 ).Visit(),
-				elseStmt = c.levStmt( 1 ).Visit(),
+				bodyStmt = c.levStmt( 1 ).Visit(),
+				elseStmt = c.levStmt( 2 ).Visit(),
 			};
 			return ret;
 		}
@@ -187,7 +236,7 @@ namespace Myll
 			LoopStmt ret = new TimesStmt {
 				srcPos    = c.ToSrcPos(),
 				countExpr = c.expr().Visit(),
-				name      = VisitId( c.id() ), // TODO: check for null
+				name      = c.id().Visit(), // TODO: check for null
 				bodyStmt  = c.levStmt().Visit(),
 			};
 			// TODO: add name to current scope
@@ -200,7 +249,7 @@ namespace Myll
 				srcPos   = c.ToSrcPos(),
 				fromExpr = c.expr( 0 ).Visit(),
 				toExpr   = c.expr( 1 ).Visit(),
-				name     = VisitId( c.id() ), // TODO: check for null
+				name     = c.id().Visit(), // TODO: check for null
 				bodyStmt = c.levStmt().Visit(),
 			};
 			// TODO: add name to current scope

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+
+using static System.String;
 using static Myll.Generator.StmtFormatting;
 
 namespace Myll.Core
@@ -24,32 +26,61 @@ namespace Myll.Core
 	{
 		public SrcPos        srcPos;
 		public Qualifier     qual;
-		public List<Pointer> ptrs;
+		public List<Pointer> ptrs;	// TODO: these are needed in reverse order, maybe store them reversed
 
 		// Type resolvedType;
 
 		public abstract string GenType();
 
-		// public virtual string Gen( string name = "" )
-		// {
-		// 	// TODO maybe nameless Gen() needs a different way
-		// 	return "Named Typespec " + name;
-		// }
 		public virtual string Gen( string name = "" )
 		{
 			// TODO: solve the pointer/array formatting
 			return BaseGen(
 				GenType()
 			  + (name == ""
-					? ""
-					: " " + name) );
+					? PointerizeName()
+					: " " + PointerizeName( name )) );
+		}
+
+		public string PointerizeName( string name = "" )
+		{
+			bool work_on_name = true;
+			foreach( Pointer ptr in ptrs?.AsEnumerable().Reverse() ) {
+				if( ptr.kind < Pointer.Kind.NoNeedForBracketing_Begin ) {
+					// TODO bracketing works for the moment, but ugly since it always brackets subscript operators
+					if( ptr.kind == Pointer.Kind.RawArray ) {
+						if( name == "" ) {
+							name = String.Format( "[{0}]", ptr.expr?.Gen() ?? "" );
+						}
+						else {
+							name = String.Format( "({0})[{1}]", name, ptr.expr?.Gen() ?? "" );
+						}
+					}
+					else {
+						string fmt = ptr.kind switch {
+							Pointer.Kind.RawPtr   => "*{0}",
+							Pointer.Kind.PtrToAry => "*{0}",
+							Pointer.Kind.LVRef    => "&{0}",
+							Pointer.Kind.RVRef    => "&&{0}",
+							_                     => "{0}"
+						};
+						name = Format( fmt, name );
+					}
+				}
+				else {
+					work_on_name = false;
+					// TODO: get smartpointers and containers working as well
+				}
+			}
+			return name;
 		}
 
 		protected string BaseGen( string value )
 		{
+			// TODO: do properly
 			return qual == Qualifier.None
 				? value
-				: qual.ToString().ToLower().Replace( ",", "" ) + " " + value; // TODO: do properly
+				: qual.ToString().ToLower().Replace( ",", "" ) + " " + value;
 		}
 	}
 
@@ -90,9 +121,10 @@ namespace Myll.Core
 			return BaseGen(
 				GenType()
 			  + (string.IsNullOrEmpty( name )
-					? ""
-					: " " + name) );
+					? PointerizeName()
+					: " " + PointerizeName( name )) );
 		}
+
 
 		public override string GenType()
 		{
@@ -190,7 +222,7 @@ namespace Myll.Core
 			Unique,
 			Shared,
 			Weak,
-			Array, // Future...
+			Array,
 			Vector,
 			Set,
 			OrderedSet,
@@ -218,8 +250,9 @@ namespace Myll.Core
 
 		string Gen( string inner )
 		{
+			// TODO with qualifiers
 			if( kind < Kind.NoNeedForBracketing_Begin ) {
-				// TODO bracketing is fixed for the moment, but ugly
+				// TODO bracketing works for the moment, but ugly since it always brackets subscript operators
 				if( kind == Kind.RawArray )
 					return String.Format( "({0})[{1}]", inner, expr?.Gen() ?? "" );
 

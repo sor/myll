@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using static System.String;
 
@@ -9,6 +10,7 @@ using static Myll.Generator.StmtFormatting;
 namespace Myll.Core
 {
 	using Strings = List<string>;
+	using Attribs = Dictionary<string, List<string>>;
 
 	public enum Access
 	{
@@ -17,6 +19,11 @@ namespace Myll.Core
 		Protected,
 		Public,
 		Irrelevant,
+	}
+
+	interface ITplParams
+	{
+		List<TplParam> TplParams { get; }
 	}
 
 	/// <summary>
@@ -28,8 +35,34 @@ namespace Myll.Core
 		public string    name;
 		public Access    access;
 		public ScopeLeaf scope;
-		public bool      IsStatic => false; // TODO
-		public bool      IsInline => false; // TODO
+
+		// recursive
+		public bool IsTemplate {
+			get {
+				for( ScopeLeaf cur = scope; cur?.parent != null; cur = cur.parent )
+					if( cur.decl is ITplParams curStruct )
+						if( curStruct.TplParams.Count >= 1 )
+							return true;
+
+				return false;
+			}
+		}
+
+		public bool IsInline {
+			get {
+				if( attribs != null && attribs.TryGetValue( "inline", out Strings val ) ) {
+					int count = val.Count;
+					return count switch {
+						0 => true,
+						1 => val[0].In( "force", "yes", "preferred", "maybe" ), // TODO: centralize these attribute-keywords
+						_ => throw new NotSupportedException( "[inline(...)] with more than one parameter" ),
+					};
+				}
+				else {
+					return IsTemplate;
+				}
+			}
+		}
 
 		// TODO Symbol?
 
@@ -44,18 +77,26 @@ namespace Myll.Core
 
 			sb.Length = Math.Max( sb.Length - 2, 0 );
 			return "{"
-			     + GetType().Name + " "
-			     + name           + " "
+			     + GetType().Name + " '"
+			     + name           + "' "
 			     + sb.ToString()  + "}";
 		}
 
 		public string FullyQualifiedName {
 			get {
-				string ret = name;
-				for( Scope cur = scope.parent; cur?.parent != null; cur = cur.parent )
-					ret = (cur.decl?.name ?? "unknown_fix_me") + "::" + ret;
-
-				return ret;
+				Strings ret = new Strings();
+				for( ScopeLeaf cur = scope; cur?.parent != null; cur = cur.parent ) {
+					Decl decl = cur.decl;
+					string       name = decl?.name ?? "unknown_fix_me";
+					if( decl is ITplParams curStruct )
+						if( curStruct.TplParams.Count >= 1 )
+							name += "<" + curStruct.TplParams
+								.Select( t => t.name )
+								.Join( ", " ) + ">";
+					ret.Add( name );
+				}
+				// WTF dot net framework?
+				return (ret as IEnumerable<string>).Reverse().Join( "::" );
 			}
 		}
 	}
@@ -77,7 +118,7 @@ namespace Myll.Core
 		}
 	}
 
-	public class Func : Decl
+	public class Func : Decl, ITplParams
 	{
 		public class Param
 		{
@@ -108,6 +149,7 @@ namespace Myll.Core
 		public class Call
 		{
 			public List<Arg> args;
+			public bool      indexer;
 			public bool      nullCoal;
 
 			public string Gen()
@@ -115,17 +157,28 @@ namespace Myll.Core
 				if( nullCoal )
 					throw new NotImplementedException( "null coalescing for function calls needs to be implemented" );
 
-				if( args.Count == 0 )
-					return "()";
+				if( indexer ) {
+					// TODO: call a different method that can handle more than one parameter
+					if( args.Count != 1 )
+						throw new TargetParameterCountException("indexer call with != 1 arguments");
 
-				return "( " + args.Select( a => a.Gen() ).Join( ", " ) + " )";
+					return "[" + args.Select( a => a.Gen() ).Join( ", " ) + "]";
+				}
+				else {
+					if( args.Count == 0 )
+						return "()";
+
+					return "( " + args.Select( a => a.Gen() ).Join( ", " ) + " )";
+				}
 			}
 		}
 
-		public List<TplParam> tplParams;
+		public List<TplParam> TplParams { get; set; }
 		public List<Param>    paras;
 		public Stmt           block;
 		public Typespec       retType;
+
+		public bool IsReturningSomething => false; // TODO: analyze, for void or auto return type of funcs
 
 		public override void AddToGen( DeclGen gen )
 		{
@@ -147,6 +200,11 @@ namespace Myll.Core
 		public Stmt             block;
 
 		// TODO: initlist
+
+		public override void AddToGen( DeclGen gen )
+		{
+			gen.AddCtorDtor( this, access );
+		}
 	}
 
 	public class Using : Decl
@@ -190,14 +248,23 @@ namespace Myll.Core
 		}
 	}
 
-	// TODO: rename class, its not a stmt anymore
-	public class VarsStmt : Decl
+	public class VarsDecl : Decl
 	{
 		public List<Var> vars;
+
+		public override void AssignAttribs( Attribs attribs )
+		{
+			vars.ForEach( v => v.AssignAttribs( attribs ) );
+		}
 
 		public override void AddToGen( DeclGen gen )
 		{
 			vars.ForEach( v => v.AddToGen( gen ) );
+		}
+
+		public override Strings Gen( int level )
+		{
+			return vars.SelectMany( v => v.Gen( level ) ).ToList();
 		}
 	}
 
@@ -222,7 +289,12 @@ namespace Myll.Core
 		}
 	}
 
-	public class Structural : Hierarchical
+	public class GlobalNamespace : Namespace
+	{
+		public HashSet<string> imps;
+	}
+
+	public class Structural : Hierarchical, ITplParams
 	{
 		public enum Kind
 		{
@@ -232,7 +304,7 @@ namespace Myll.Core
 		}
 
 		public Kind                 kind;
-		public List<TplParam>       tplParams;
+		public List<TplParam>       TplParams { get; set; }
 		public List<TypespecNested> bases;
 		public List<TypespecNested> reqs;
 
