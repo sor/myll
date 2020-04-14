@@ -288,5 +288,5 @@ __pycache__/
 *.xsd.cs
 
 /Documentation/.~lock.Myll.odt#
-**/Grammar/**/*.tokens
-**/Grammar/**/*.interp
+**/*.tokens
+**/*.interp

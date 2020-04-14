@@ -14,10 +14,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Remove="Grammar\Myll\MyllLexer.interp" />
-	  <None Remove="Grammar\Myll\MyllLexer.tokens" />
-	  <None Remove="Grammar\Myll\MyllParser.interp" />
-	  <None Remove="Grammar\Myll\MyllParser.tokens" />
+	  <None Remove="Grammar\Generated\Myll\MyllLexer.interp" />
+	  <None Remove="Grammar\Generated\Myll\MyllLexer.tokens" />
+	  <None Remove="Grammar\Generated\Myll\MyllParser.interp" />
+	  <None Remove="Grammar\Generated\Myll\MyllParser.tokens" />
 	</ItemGroup>
 
 </Project>
