@@ -53,61 +53,8 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Antlr4.Runtime.Standard, Version=4.8.0.0, Culture=neutral, PublicKeyToken=e78b2c5abd1fcb3f">
-      <HintPath>packages\Antlr4.Runtime.Standard.4.8.0\lib\net35\Antlr4.Runtime.Standard.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Antlr\Myll\MyllLexer.cs" />
-    <Compile Include="Antlr\Myll\MyllParser.cs" />
-    <Compile Include="Antlr\Myll\MyllParserBaseVisitor.cs" />
-    <Compile Include="Antlr\Myll\MyllParserVisitor.cs" />
-    <Compile Include="Core\Decl.cs" />
-    <Compile Include="Core\Expr.cs" />
-    <Compile Include="Core\Id.cs" />
-    <Compile Include="Core\Scope.cs" />
-    <Compile Include="Core\Stmt.cs" />
-    <Compile Include="Core\Symbol.cs" />
-    <Compile Include="Core\Typespec.cs" />
-    <Compile Include="Generator\ExprFormatting.cs" />
-    <Compile Include="Generator\StmtFormatting.cs" />
-    <Compile Include="MyllLexer.cs" />
-    <Compile Include="MyllParser.cs" />
-    <Compile Include="MyllParserBaseVisitor.cs" />
-    <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Visitor\VDecl.cs" />
-    <Compile Include="Visitor\VExpr.cs" />
-    <Compile Include="Visitor\VExt.cs" />
-    <Compile Include="Visitor\VMain.cs" />
-    <Compile Include="Visitor\VStmt.cs" />
-    <Compile Include="Visitor\VTpl.cs" />
-    <Compile Include="Visitor\VTypes.cs" />
-    <EmbeddedResource Include="Properties\Resources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-      <SubType>Designer</SubType>
-    </EmbeddedResource>
-    <Compile Include="Properties\Resources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
-    <None Include="packages.config" />
-    <None Include="Properties\Settings.settings">
-      <Generator>SettingsSingleFileGenerator</Generator>
-      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
-    </None>
-    <Compile Include="Properties\Settings.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Settings.settings</DependentUpon>
-      <DesignTimeSharedInput>True</DesignTimeSharedInput>
-    </Compile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.6.1">
@@ -122,27 +69,7 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Antlr\MyllLexer.g4" />
-    <Content Include="Antlr\MyllParser.g4" />
-    <Content Include="stack.myll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="testcase.myll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="main.myll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Tests\Enum\01_basic.myll" />
-    <Content Include="Tests\Enum\02_basic_comma.myll" />
-    <Content Include="Tests\Enum\03_numbered.myll" />
-    <Content Include="Tests\Enum\04_numbered_comma.myll" />
-    <Content Include="Tests\Enum\05_numbered_partially.myll" />
-    <Content Include="Tests\Enum\21_flags.myll" />
-    <Content Include="Tests\Enum\22_flags_numbered.myll" />
-    <Content Include="Tests\Enum\23_flags_numbered_partially.myll" />
-    <Content Include="Tests\Int\01_basic.myll" />
-    <Content Include="Tests\Int\50_bint_basic.myll" />
+    <Folder Include="Properties" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

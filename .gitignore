@@ -287,6 +287,6 @@ __pycache__/
 *.odx.cs
 *.xsd.cs
 
-/Documentation/.~lock.Myll.odt#
-/Antlr/**/*.tokens
-/Antlr/**/*.interp
+/Doc/.~lock.Myll.odt#
+**/Antlr/**/*.tokens
+**/Antlr/**/*.interp
