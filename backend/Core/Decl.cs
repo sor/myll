@@ -111,6 +111,8 @@ namespace Myll.Core
 			set => base.scope = value;
 		}
 
+		public virtual Access defaultAccess { get => Access.Public; }
+
 		// the children add themselves through AddChild or PushScope
 		public void AddChild( Decl decl )
 		{
@@ -273,9 +275,19 @@ namespace Myll.Core
 		public class Entry : Decl
 		{
 			public Expr value;
+
+			public override void AddToGen( DeclGen gen )
+			{
+				gen.AddEntry( this );
+			}
 		}
 
 		public bool flags;
+
+		public override void AddToGen( DeclGen gen )
+		{
+			gen.AddStruct( this );
+		}
 	}
 
 	public class Namespace : Hierarchical
@@ -308,7 +320,12 @@ namespace Myll.Core
 		public List<TypespecNested> bases;
 		public List<TypespecNested> reqs;
 
-		public Access currentAccess;
+		//public Access currentAccess;
+
+		public override Access defaultAccess
+			=> kind == Kind.Class
+				? Access.Private
+				: Access.Public;
 
 		public override void AddToGen( DeclGen gen )
 		{

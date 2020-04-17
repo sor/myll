@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using Myll.Core;
 
 using static System.String;
+using Enum = Myll.Core.Enum;
 
 namespace Myll.Generator
 {
@@ -66,6 +67,7 @@ namespace Myll.Generator
 			"static ",
 			"typename ",
 			" = ",
+			"{0}{1}{2},", // 0 indent, 1 name, 2 init
 		};
 
 		public static readonly string[] FuncFormat = {
@@ -81,6 +83,7 @@ namespace Myll.Generator
 			"struct",
 			"class",
 			"union",
+			"enum class",
 		};
 
 		public static readonly IReadOnlyDictionary<TypespecBasic.Kind, IntToString>
@@ -164,9 +167,10 @@ namespace Myll.Generator
 			public abstract Strings GenImpl();
 
 			public abstract void AddNamespace( Namespace obj, Access access = Access.None );
+			public abstract void AddEntry( Enum.Entry    obj, Access access = Access.None );
 			public abstract void AddVar( Var             obj, Access access = Access.None );
 			public abstract void AddFunc( Func           obj, Access access = Access.None );
-			public abstract void AddStruct( Structural   obj, Access access = Access.None );
+			public abstract void AddStruct( Hierarchical obj, Access access = Access.None );
 
 			public virtual void AddCtorDtor( ConDestructor obj, Access access = Access.None )
 			{
@@ -226,6 +230,11 @@ namespace Myll.Generator
 				*/
 			}
 
+			public override void AddEntry( Enum.Entry obj, Access access = Access.None )
+			{
+				// only be called inside a structural
+			}
+
 			public override void AddVar( Var obj, Access access = Access.None )
 			{
 				string indentDecl = IndentDecl;
@@ -280,7 +289,7 @@ namespace Myll.Generator
 				AllImpl.AddRange( impl );
 			}
 
-			public override void AddStruct( Structural obj, Access access = Access.None )
+			public override void AddStruct( Hierarchical obj, Access access = Access.None )
 			{
 				// HACK: since reusing the class implementation, everything needs to be forced to public for now
 				access = Access.Public;
@@ -518,23 +527,32 @@ namespace Myll.Generator
 					Strings targetDecl  = structDecl.Target( access );
 					Strings targetImpl  = structImpl.Target( access );
 
-					List<TplParam> tplParams = gen.obj.TplParams;
-					if( tplParams.Count >= 1 ) {
+					if( gen.obj is ITplParams hierWithTpl
+					 && hierWithTpl.TplParams.Count >= 1 ) {
 						string tpl = Format(
 							"{0}template <{1}>",
 							indentDecl,
-							tplParams.Select( o => "typename " + o.name ).Join( ", " ) );
+							hierWithTpl.TplParams.Select( o => "typename " + o.name ).Join( ", " ) );
 
 						targetProto.Add( tpl );
 						targetDecl.Add( tpl );
 					}
+
+					string keyword =
+						gen.obj is Core.Enum    ? StructFormat[6] :
+						gen.obj is Structural s ? s.kind switch {
+							Structural.Kind.Struct => StructFormat[3],
+							Structural.Kind.Class  => StructFormat[4],
+							Structural.Kind.Union  => StructFormat[5],
+						} : "unknown kind of structural";
+
 					// "{0}{1}{2} {3}{4}{5}",
 					// 0 indent, 1 keyword, 2 attributes, 3 name, 4 final, 5 bases
 					targetProto.Add(
 						Format(
 							StructFormat[0],
 							indentDecl,
-							StructFormat[4], // TODO: is currently hardcoded to class
+							keyword,
 							"",
 							nameDecl,
 							"",
@@ -544,7 +562,7 @@ namespace Myll.Generator
 						Format(
 							StructFormat[0],
 							indentDecl,
-							StructFormat[4], // TODO: is currently hardcoded to class
+							keyword,
 							"",
 							nameDecl,
 							"",
@@ -566,17 +584,29 @@ namespace Myll.Generator
 					genListImpl = new AccessStrings();
 				}
 
+				public void AddEntry( Enum.Entry obj, Access access = Access.None )
+				{
+					string indent = parent.IndentDecl;
+					string name   = obj.name;
+					Strings ret = new Strings {
+						Format(
+							VarFormat[4],
+							indent,
+							name,
+							obj.value != null ? VarFormat[3] + obj.value.Gen() : "" )
+					};
+					genListDecl.Add( (access, ret) );
+				}
+
 				public void AddVar( Var obj, Access access = Access.None )
 				{
 					bool needsTypename = false; // TODO how to determine this
 
 					string indentDecl = parent.IndentDecl;
-					string indentImpl = parent.IndentImpl;
 					string nameDecl   = obj.name;
-					string nameImpl   = obj.FullyQualifiedName;
-
-					//"{0}{1}{2}{3};", // 0 indent, 1 typename, 2 type & name, 3 init
 					Strings retDecl = new Strings {
+						//"{0}{1}{2}{3};",
+						// 0 indent, 1 typename, 2 type & name, 3 init
 						Format(
 							VarFormat[0],
 							indentDecl,
@@ -590,6 +620,8 @@ namespace Myll.Generator
 					if( !obj.IsStatic )
 						return;
 
+					string indentImpl = parent.IndentImpl;
+					string nameImpl   = obj.FullyQualifiedName;
 					Strings retImpl = new Strings {
 						Format(
 							VarFormat[0],
@@ -807,16 +839,14 @@ namespace Myll.Generator
 			protected readonly Access defaultAccess;
 			protected          Access currentAccess;
 
-			protected Structural obj;
+			protected Hierarchical obj;
 
-			public StructuralGen( Structural obj, int LevelDecl, int LevelImpl )
+			public StructuralGen( Hierarchical obj, int LevelDecl, int LevelImpl )
 				: base( LevelDecl, LevelImpl )
 			{
 				this.obj = obj;
 
-				defaultAccess = (obj.kind == Structural.Kind.Class)
-					? Access.Private
-					: Access.Public;
+				defaultAccess = obj.defaultAccess;
 				currentAccess = defaultAccess;
 
 				allGens = new List<GenStructBase> {
@@ -869,7 +899,20 @@ namespace Myll.Generator
 				throw new NotImplementedException();
 			}
 
-			// Those need to be added and kept in order
+			// Those need to be kept in adding order
+			public override void AddEntry( Enum.Entry obj, Access access = Access.None )
+			{
+				ThrowOnInvalidAccess( ref access );
+
+				if( obj.IsStatic ) {
+					staticFields.AddEntry( obj, access );
+				}
+				else {
+					fields.AddEntry( obj, access );
+				}
+			}
+
+			// Those need to be kept in adding order
 			public override void AddVar( Var obj, Access access = Access.None )
 			{
 				ThrowOnInvalidAccess( ref access );
@@ -894,11 +937,11 @@ namespace Myll.Generator
 				}
 			}
 
-			public override void AddStruct( Structural obj, Access access = Access.None )
+			public override void AddStruct( Hierarchical obj, Access access = Access.None )
 			{
 				ThrowOnInvalidAccess( ref access );
 				if( obj.IsStatic )
-					throw new ArgumentOutOfRangeException( nameof( obj ), true, "Structurals can not be static" );
+					throw new ArgumentOutOfRangeException( nameof( obj ), true, "Structurals/Enums can not be static" );
 
 				StructuralGen gen = new StructuralGen( obj, LevelDecl + 1, LevelImpl );
 

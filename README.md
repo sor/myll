@@ -29,27 +29,34 @@ Created by Jan Reitz. Licence undecided (apparently its open source).
 ## TODO
 - Prio 1 Output:
     - [only-raw] pointer/array, output
-    - [done] common statements, output
-    - [done] common expressions, output
+    - prototypes for simple gen
+    - subclasses
+    - test cases for thesis: the_final_test.myll
 
 - Prio 2:
-    - [done?] split var/field/global, yes!
-    - [done?] static, input
+    - Benchmark the compiler
     - accessor, 100% concept, identify use cases and morph them
-    - [partly] manual includes (OR just do the common includes!)
-    - [partly] make attributes work
-    - [done] module
-    - [done] casting, output
 
 - Prio 3:
-    - [partly] inline, in/out
     - intelligent extra linespacing (between output groups)
     - automatic includes (e.g. recognize std::vector)
-    - [done] multiple files
 
 - fix:
-    - [done?] ppp in namespaces
     - ppp at end of struct
+    - imports having paths
+
+- done:
+    - [done] common statements, out
+    - [done] common expressions, out
+    - [done] module
+    - [done] casting, out
+    - [done] multiple files
+    - [done?] split var/field/global, yes!
+    - [done?] static, out
+    - [done?] make attributes work
+    - [done?] inline, out
+    - [done?] ppp in namespaces
+    - [partly] manual includes (OR just do the common includes!)
 
 - Don't forget high level ideas!
     - SOA attribute

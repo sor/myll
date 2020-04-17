@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,7 +11,9 @@ using Myll.Generator;
 
 namespace Myll
 {
-	using Strings = List<string>;
+	using Strings     = List<string>;
+	using IStrings    = IEnumerable<string>;
+	using ModuleGroup = IGrouping<string, MyllParser.ProgContext>;
 
 	static class Program
 	{
@@ -34,23 +37,22 @@ namespace Myll
 			return parser.prog();
 		}
 
-		static IEnumerable<IGrouping<string, MyllParser.ProgContext>> ClassifyModules( List<string> filenames )
+		static IEnumerable<ModuleGroup> ClassifyModules( List<string> filenames )
 		{
 			// prepare all ANTLR stages and then determine the modules
-			IEnumerable<IGrouping<string, MyllParser.ProgContext>> ret
-				= filenames
+			IEnumerable<ModuleGroup>
+				ret = filenames
 					.Select( GetProgContext )
 					.GroupBy( c => VisitorExtensions.DeclVis.ProbeModule( c ) );
 
 			return ret;
 		}
 
-		static List<(string, Strings)> Compile(
-			IEnumerable<IGrouping<string, MyllParser.ProgContext>> moduleGroups )
+		static List<(string, IStrings)> Compile( IEnumerable<ModuleGroup> moduleGroups )
 		{
-			List<(string, Strings)> ret = new List<(string, Strings)>();
+			List<(string, IStrings)> ret = new List<(string, IStrings)>();
 			// grouped by modules, generating decl and impl
-			foreach( IGrouping<string, MyllParser.ProgContext> progContext in moduleGroups ) {
+			foreach( ModuleGroup progContext in moduleGroups ) {
 				GlobalNamespace globalns = VisitorExtensions.DeclVis.VisitProgs( progContext );
 
 				StmtFormatting.SimpleGen gen = new StmtFormatting.SimpleGen( -1, 0 );
@@ -58,25 +60,25 @@ namespace Myll
 				// Instead AddToGen() is there to call the correct virtual method on the gen
 				globalns.AddToGen( gen );
 
-				Strings includes = globalns.imps
+				IStrings includes = globalns.imps
 					.Select(
 						i => i.StartsWith( "std_" )
-							? string.Format( "#include <{0}>",   i.Substring( 4 ) )
-							: string.Format( "#include \"{0}.h\"", i ) )
-					.ToList();
+							? string.Format( "#include <{0}>",     i.Substring( 4 ) )
+							: string.Format( "#include \"{0}.h\"", i ) );
 
-				Strings
-					decl = DefaultIncludes
-						.Concat( includes )
-						.Concat( gen.GenDecl() )
-						.ToList(),
-					impl = gen
-						.GenImpl()
-						.Prepend( string.Format( "#include \"{0}.h\"", progContext.Key ) )
-						.ToList();
+				Strings declList = gen.GenDecl();
+				IStrings decl = DefaultIncludes
+					.Concat( includes )
+					.Concat( declList );
 
-				ret.Add( (string.Format( "{0}.h",   progContext.Key ), decl) );
-				ret.Add( (string.Format( "{0}.cpp", progContext.Key ), impl) );
+				ret.Add( (string.Format( "{0}.h", progContext.Key ), decl) );
+
+
+				Strings implList = gen.GenImpl();
+				if( implList.Count != 0 ) {
+					IStrings impl = implList.Prepend( string.Format( "#include \"{0}.h\"", progContext.Key ) );
+					ret.Add( (string.Format( "{0}.cpp",                                    progContext.Key ), impl) );
+				}
 			}
 			return ret;
 		}
@@ -85,31 +87,38 @@ namespace Myll
 		/// The main entry point for the application.
 		/// </summary>
 		[STAThread]
-		static void Main()
+		public static void Main()
 		{
 			//StreamReader reader = new StreamReader(  );
 			//TextReader tr = new TextReader();
 			//string testcase = File.ReadAllText( "testcase.myll" );
+
+			//DirectoryInfo di = new DirectoryInfo( Directory.GetCurrentDirectory() );
+			//di = di.Parent.Parent.Parent.GetDirectories("tests").First();
+			//var tests_subdirs = di.EnumerateDirectories();
+			//Console.WriteLine( "// directory {0}", tests_subdirs.Select( d => d.FullName ).Join( ", " ) );
+
 			var moduleGroups = ClassifyModules(
 				new List<string> {
-					"main.myll",
-					"stack.myll",
-					//"testcase.myll",
-					//"testcase2.myll",
+					//"tests/mixed/main.myll",
+					//"tests/mixed/stack.myll",
+					"tests/mixed/testcase.myll",
 				} );
 
-			List<(string, Strings)> output = Compile( moduleGroups );
+			//      File, Content
+			List<(string, IStrings)> output = Compile( moduleGroups );
 
 			output.ForEach(
 				o => {
 					//var fs = File.Create( "output_" + o.Item1 );
-			// TODO
-			File.WriteAllLines( /*"output_" +*/ o.Item1, o.Item2 );
+
+					File.WriteAllLines( "./tests/mixed/generated/" + o.Item1, o.Item2 );
+
 					Console.WriteLine( "// {0}", o.Item1 );
 					Console.WriteLine( o.Item2.Join( "\n" ) );
 				} );
 
-			// TODO: multifile, either merge Namespaces for same module or merge in Generator
+			// TODO: multifile, merge Namespaces for same module or merge in Generator
 		}
 	}
 }

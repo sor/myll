@@ -15,15 +15,34 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Content Include="main.myll">
+	  <Content Include="tests\mixed\main.myll">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </Content>
-	  <Content Include="stack.myll">
+	  <Content Include="tests\mixed\stack.myll">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </Content>
-	  <Content Include="testcase.myll">
+	  <Content Include="tests\mixed\testcase.myll">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </Content>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="tests\mixed\validation" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="tests\mixed\validation\main.cpp">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="tests\mixed\validation\main.h">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="tests\mixed\validation\stack.cpp">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="tests\mixed\validation\stack.h">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
 	</ItemGroup>
 
 </Project>

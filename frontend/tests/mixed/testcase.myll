@@ -6,15 +6,15 @@ namespace MyNamespace
 {
 	/*
 	does not work yet:
-
+	*/
 	[operators(bitwise)]
-	enum Moep
+	enum MyEnum
 	{
 		A,
 		B = 3,
-		C
+		C,
 	}
-	*/
+	//*/
 	func foo() -> int
 	{
 		if(a+b|8==c)
