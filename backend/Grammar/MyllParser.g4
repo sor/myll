@@ -180,7 +180,9 @@ inDecl		:	NS id (SCOPE id)* SEMI						# Namespace // or better COLON
 				(COLON	typespecsNested)?
 						LCURLY	levDecl*	RCURLY	# ConceptDecl
 			// TODO aspect
-			|	ENUM id	LCURLY	idExprs		RCURLY	# EnumDecl
+			|	ENUM	id
+				(COLON	bases=typespecBasic)?
+				LCURLY	idExprs		RCURLY			# EnumDecl
 			|	v=( FUNC | PROC | METHOD )
 				(	LCURLY	funcDef*	RCURLY
 				|			funcDef				)	# FunctionDecl

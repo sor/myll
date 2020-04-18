@@ -84,6 +84,7 @@ namespace Myll.Generator
 			"class",
 			"union",
 			"enum class",
+			"namespace",
 		};
 
 		public static readonly IReadOnlyDictionary<TypespecBasic.Kind, IntToString>
@@ -170,7 +171,7 @@ namespace Myll.Generator
 			public abstract void AddEntry( Enum.Entry    obj, Access access = Access.None );
 			public abstract void AddVar( Var             obj, Access access = Access.None );
 			public abstract void AddFunc( Func           obj, Access access = Access.None );
-			public abstract void AddStruct( Hierarchical obj, Access access = Access.None );
+			public abstract void AddHierarchical( Hierarchical obj, Access access = Access.None );
 
 			public virtual void AddCtorDtor( ConDestructor obj, Access access = Access.None )
 			{
@@ -289,7 +290,7 @@ namespace Myll.Generator
 				AllImpl.AddRange( impl );
 			}
 
-			public override void AddStruct( Hierarchical obj, Access access = Access.None )
+			public override void AddHierarchical( Hierarchical obj, Access access = Access.None )
 			{
 				// HACK: since reusing the class implementation, everything needs to be forced to public for now
 				access = Access.Public;
@@ -310,7 +311,7 @@ namespace Myll.Generator
 				structs.parent = gen;
 
 				// they are all public
-				structs.AddStruct( gen, access );
+				structs.AddHierarchical( gen, access );
 
 				// TODO: do this later for prototypes to work properly
 				string accessIndent = DeIndentDecl;
@@ -519,9 +520,9 @@ namespace Myll.Generator
 						.AddPPPString( structImpl );
 				}
 
-				public void AddStruct( StructuralGen gen, Access access = Access.None )
+				public void AddHierarchical( StructuralGen gen, Access access = Access.None )
 				{
-					string  indentDecl  = gen.DeIndentDecl;
+					string  indent      = gen.DeIndentDecl;
 					string  nameDecl    = gen.obj.name;
 					Strings targetProto = protoDecl.Target( access );
 					Strings targetDecl  = structDecl.Target( access );
@@ -531,45 +532,74 @@ namespace Myll.Generator
 					 && hierWithTpl.TplParams.Count >= 1 ) {
 						string tpl = Format(
 							"{0}template <{1}>",
-							indentDecl,
+							indent,
 							hierWithTpl.TplParams.Select( o => "typename " + o.name ).Join( ", " ) );
 
 						targetProto.Add( tpl );
 						targetDecl.Add( tpl );
 					}
 
-					string keyword =
-						gen.obj is Core.Enum    ? StructFormat[6] :
-						gen.obj is Structural s ? s.kind switch {
+					var objNamespace = gen.obj as Namespace;
+					var objEnum      = gen.obj as Core.Enum;
+					var objStruct    = gen.obj as Structural;
+
+					bool isNamespace = objNamespace != null;
+					bool isEnum      = objEnum      != null;
+					bool isStruct    = objStruct    != null;
+
+					string keyword, bases;
+					if( isNamespace ) {
+						keyword = StructFormat[7];
+						bases   = "";
+					}
+					else if( isEnum ) {
+						keyword = StructFormat[6];
+						bases = (objEnum.basetype != null)
+							? " : " + objEnum.basetype.GenType()
+							: "";
+					}
+					else if( isStruct ) {
+						keyword = objStruct.kind switch {
 							Structural.Kind.Struct => StructFormat[3],
 							Structural.Kind.Class  => StructFormat[4],
 							Structural.Kind.Union  => StructFormat[5],
-						} : "unknown kind of structural";
+						};
+						bases = (objStruct.basetypes.Count < 1)
+							? ""
+							: " : " + objStruct.basetypes
+								.Select( t => t.GenType() )
+								.Join( ", " );
+					}
+					else {
+						throw new InvalidOperationException( "not an enum and not a struct" );
+					}
 
 					// "{0}{1}{2} {3}{4}{5}",
 					// 0 indent, 1 keyword, 2 attributes, 3 name, 4 final, 5 bases
-					targetProto.Add(
-						Format(
-							StructFormat[0],
-							indentDecl,
-							keyword,
-							"",
-							nameDecl,
-							"",
-							";" ) );
+					if( !isNamespace ) {
+						targetProto.Add(
+							Format(
+								StructFormat[0],
+								indent,
+								keyword,
+								"",
+								nameDecl,
+								"",
+								(objEnum != null ? bases : "") + ";" ) );
+					}
 
 					targetDecl.Add(
 						Format(
 							StructFormat[0],
-							indentDecl,
+							indent,
 							keyword,
 							"",
 							nameDecl,
 							"",
-							"" /*StructFormat[2]*/ ) );
-					targetDecl.Add( Format( CurlyOpen, indentDecl ) );
+							bases ) );
+					targetDecl.Add( Format( CurlyOpen, indent ) );
 					targetDecl.AddRange( gen.GenDecl() );
-					targetDecl.Add( Format( CurlyCloseSC, indentDecl ) );
+					targetDecl.Add( Format( CurlyCloseSC, indent ) );
 
 					targetImpl.AddRange( gen.GenImpl() );
 				}
@@ -610,7 +640,7 @@ namespace Myll.Generator
 						Format(
 							VarFormat[0],
 							indentDecl,
-							obj.IsStatic ? VarFormat[1] : "",
+							obj.IsStatic ? VarFormat[1] : "", // TODO add inline if initialized
 							needsTypename ? VarFormat[2] : "",
 							obj.type.Gen( nameDecl ),
 							obj.init != null ? VarFormat[3] + obj.init.Gen() : "" )
@@ -620,13 +650,14 @@ namespace Myll.Generator
 					if( !obj.IsStatic )
 						return;
 
+					// TODO prepend "template <typename ...>" if needed
 					string indentImpl = parent.IndentImpl;
 					string nameImpl   = obj.FullyQualifiedName;
 					Strings retImpl = new Strings {
 						Format(
 							VarFormat[0],
 							indentImpl,
-							obj.IsStatic ? VarFormat[1] : "",
+							"",
 							needsTypename ? VarFormat[2] : "",
 							obj.type.Gen( nameImpl ),
 							obj.init != null ? VarFormat[3] + obj.init.Gen() : "" )
@@ -648,28 +679,15 @@ namespace Myll.Generator
 
 				public GenStructFunc()
 				{
-					genListDecl = new AccessStrings {
-						(Access.Private,   accessorDecl.priv),
-						(Access.Protected, accessorDecl.prot),
-						(Access.Public,    accessorDecl.pub),
-						(Access.Private,   operatorDecl.priv),
-						(Access.Protected, operatorDecl.prot),
-						(Access.Public,    operatorDecl.pub),
-						(Access.Private,   methodDecl.priv),
-						(Access.Protected, methodDecl.prot),
-						(Access.Public,    methodDecl.pub),
-					};
-					genListImpl = new AccessStrings {
-						(Access.Private,   accessorImpl.priv),
-						(Access.Protected, accessorImpl.prot),
-						(Access.Public,    accessorImpl.pub),
-						(Access.Private,   operatorImpl.priv),
-						(Access.Protected, operatorImpl.prot),
-						(Access.Public,    operatorImpl.pub),
-						(Access.Private,   methodImpl.priv),
-						(Access.Protected, methodImpl.prot),
-						(Access.Public,    methodImpl.pub),
-					};
+					genListDecl = new AccessStrings( 9 )
+						.AddPPPString( accessorDecl )
+						.AddPPPString( operatorDecl )
+						.AddPPPString( methodDecl );
+
+					genListImpl = new AccessStrings(9)
+						.AddPPPString( accessorImpl )
+						.AddPPPString( operatorImpl )
+						.AddPPPString( methodImpl );
 				}
 
 				public void AddFunc( Func obj, Access access = Access.None )
@@ -876,20 +894,19 @@ namespace Myll.Generator
 
 			public override Strings GenDecl()
 			{
-				Strings ret          = new Strings();
 				Access  curAccess    = defaultAccess;
 				string  accessIndent = DeIndentDecl;
 
-				allGens.ForEach( o => ret.AddRange( o.GenDecl( ref curAccess, accessIndent ) ) );
+				// TODO: convert to IStrings if too slow
+				Strings ret = allGens.SelectMany( o => o.GenDecl( ref curAccess, accessIndent ) ).ToList();
 
 				return ret;
 			}
 
 			public override Strings GenImpl()
 			{
-				Strings ret = new Strings();
-
-				allGens.ForEach( o => ret.AddRange( o.GenImpl() ) );
+				// TODO: convert to IStrings if too slow
+				Strings ret = allGens.SelectMany( o => o.GenImpl() ).ToList();
 
 				return ret;
 			}
@@ -937,7 +954,7 @@ namespace Myll.Generator
 				}
 			}
 
-			public override void AddStruct( Hierarchical obj, Access access = Access.None )
+			public override void AddHierarchical( Hierarchical obj, Access access = Access.None )
 			{
 				ThrowOnInvalidAccess( ref access );
 				if( obj.IsStatic )
@@ -950,7 +967,7 @@ namespace Myll.Generator
 
 				obj.children.ForEach( c => c.AddToGen( gen ) );
 
-				structs.AddStruct( gen, access );
+				structs.AddHierarchical( gen, access );
 			}
 
 			public override void AddCtorDtor( ConDestructor obj, Access access = Access.None )

@@ -282,11 +282,12 @@ namespace Myll.Core
 			}
 		}
 
-		public bool flags;
+		public TypespecBasic basetype;
+		public bool flags; // TODO: most likely obsolete now
 
 		public override void AddToGen( DeclGen gen )
 		{
-			gen.AddStruct( this );
+			gen.AddHierarchical( this );
 		}
 	}
 
@@ -317,7 +318,7 @@ namespace Myll.Core
 
 		public Kind                 kind;
 		public List<TplParam>       TplParams { get; set; }
-		public List<TypespecNested> bases;
+		public List<TypespecNested> basetypes;
 		public List<TypespecNested> reqs;
 
 		//public Access currentAccess;
@@ -329,7 +330,7 @@ namespace Myll.Core
 
 		public override void AddToGen( DeclGen gen )
 		{
-			gen.AddStruct( this, access );
+			gen.AddHierarchical( this, access );
 		}
 	}
 }

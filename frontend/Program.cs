@@ -19,11 +19,13 @@ namespace Myll
 	{
 		private static readonly Strings DefaultIncludes = new Strings {
 			"#pragma once",
-			"#include <memory>",    // smart pointer
-			"#include <utility>",   // move, pair, swap
-			"#include <cmath>",     // math
+			"#include <memory>",      // smart pointer (expensive)
+			"#include <utility>",     // move, pair, swap
+			"#include <cmath>",       // math
+			"#include <type_traits>", // underlying_type
 		//	"#include <iostream>",  // in and output
 		//	"#include <vector>",    // dynamically sized array
+		//	"#include <map>",    	// hash map (expensive)
 		//	"#include <algorithm>", // algorithms
 		};
 
@@ -105,8 +107,10 @@ namespace Myll
 					"tests/mixed/testcase.myll",
 				} );
 
-			//      File, Content
+			//  Filename, Content
 			List<(string, IStrings)> output = Compile( moduleGroups );
+
+			Directory.CreateDirectory( "./tests/mixed/generated/" );
 
 			output.ForEach(
 				o => {

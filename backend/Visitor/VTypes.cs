@@ -208,8 +208,8 @@ namespace Myll
 			return ret;
 		}
 
-		public new List<TypespecNested> VisitTypespecsNested( TypespecsNestedContext c )
-			=> c?.typespecNested().Select( VisitTypespecNested ).ToList()
+		public new List<TypespecNested> VisitTypespecsNested( TypespecNestedContext[] c )
+			=> c?.Select( VisitTypespecNested ).ToList()
 			?? new List<TypespecNested>();
 	}
 }

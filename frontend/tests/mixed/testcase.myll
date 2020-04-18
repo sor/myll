@@ -4,17 +4,14 @@ module testcase;
 
 namespace MyNamespace
 {
-	/*
-	does not work yet:
-	*/
 	[operators(bitwise)]
-	enum MyEnum
+	enum MyEnum : u32
 	{
 		A,
 		B = 3,
 		C,
 	}
-	//*/
+
 	func foo() -> int
 	{
 		if(a+b|8==c)
@@ -54,7 +51,7 @@ namespace MyNamespace
 		}
 
 	protected:
-		class AnotherSubClass
+		class AnotherSubClass : SubClass
 		{
 			class SubSubClass{}
 		}

@@ -72,7 +72,7 @@ namespace Myll
 		{
 			UsingStmt ret = new UsingStmt {
 				srcPos = c.ToSrcPos(),
-				types  = VisitTypespecsNested( c.typespecsNested() ),
+				types  = 	VisitTypespecsNested( c.typespecsNested().typespecNested() ),
 			};
 			ret.types.ForEach( o => o.ptrs = new List<Pointer>() );
 			return ret;

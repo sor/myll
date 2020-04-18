@@ -68,9 +68,10 @@ namespace Myll
 		public override Decl VisitEnumDecl( EnumDeclContext c )
 		{
 			Enum ret = new Enum {
-				srcPos = c.ToSrcPos(),
-				name   = c.id().Visit(),
-				access = curAccess,
+				srcPos   = c.ToSrcPos(),
+				name     = c.id().Visit(),
+				basetype = VisitTypespecBasic( c.bases ),
+				access   = curAccess,
 			};
 			PushScope( ret );
 			VisitEnumEntrys( c.idExprs() );
@@ -224,8 +225,8 @@ namespace Myll
 				access    = curAccess,
 				kind      = c.v.ToStructuralKind(),
 				TplParams = VisitTplParams( c.tplParams() ),
-				bases     = VisitTypespecsNested( c.bases ),
-				reqs      = VisitTypespecsNested( c.reqs ),
+				basetypes = VisitTypespecsNested( c.bases?.typespecNested() ),
+				reqs      = VisitTypespecsNested( c.reqs?.typespecNested() ),
 			};
 			PushScope( ret );
 
