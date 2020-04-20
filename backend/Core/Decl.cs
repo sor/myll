@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using static System.String;
-
-using static Myll.Generator.StmtFormatting;
+using Myll.Generator;
 
 namespace Myll.Core
 {
+	using static String;
+
 	using Strings = List<string>;
 	using Attribs = Dictionary<string, List<string>>;
 
@@ -30,7 +30,7 @@ namespace Myll.Core
 	/// introduces a name (most of the time)
 	/// a Decl is a Stmt, do not question this for now
 	/// </summary>
-	public class Decl : Stmt
+	public abstract class Decl : Stmt
 	{
 		public string    name;
 		public Access    access;
@@ -99,10 +99,12 @@ namespace Myll.Core
 				return (ret as IEnumerable<string>).Reverse().Join( "::" );
 			}
 		}
+
+		public abstract void AddToGen( HierarchicalGen gen );
 	}
 
 	// has in-order list of decls, visible from outside
-	public class Hierarchical : Decl
+	public abstract class Hierarchical : Decl
 	{
 		public readonly List<Decl> children = new List<Decl>();
 
@@ -182,7 +184,7 @@ namespace Myll.Core
 
 		public bool IsReturningSomething => false; // TODO: analyze, for void or auto return type of funcs
 
-		public override void AddToGen( DeclGen gen )
+		public override void AddToGen( HierarchicalGen gen )
 		{
 			gen.AddFunc( this, access );
 		}
@@ -203,7 +205,7 @@ namespace Myll.Core
 
 		// TODO: initlist
 
-		public override void AddToGen( DeclGen gen )
+		public override void AddToGen( HierarchicalGen gen )
 		{
 			gen.AddCtorDtor( this, access );
 		}
@@ -212,6 +214,9 @@ namespace Myll.Core
 	public class Using : Decl
 	{
 		public List<TypespecNested> types;
+
+		public override void AddToGen( HierarchicalGen gen )
+			=> throw new NotImplementedException();
 	}
 
 	/**
@@ -244,7 +249,7 @@ namespace Myll.Core
 		public List<Accessor> accessor; // opt, structural or global
 		public Expr           init;     // opt
 
-		public override void AddToGen( DeclGen gen )
+		public override void AddToGen( HierarchicalGen gen )
 		{
 			gen.AddVar( this, access );
 		}
@@ -259,7 +264,7 @@ namespace Myll.Core
 			vars.ForEach( v => v.AssignAttribs( attribs ) );
 		}
 
-		public override void AddToGen( DeclGen gen )
+		public override void AddToGen( HierarchicalGen gen )
 		{
 			vars.ForEach( v => v.AddToGen( gen ) );
 		}
@@ -270,13 +275,13 @@ namespace Myll.Core
 		}
 	}
 
-	public class Enum : Hierarchical
+	public class Enumeration : Hierarchical
 	{
 		public class Entry : Decl
 		{
 			public Expr value;
 
-			public override void AddToGen( DeclGen gen )
+			public override void AddToGen( HierarchicalGen gen )
 			{
 				gen.AddEntry( this );
 			}
@@ -285,9 +290,9 @@ namespace Myll.Core
 		public TypespecBasic basetype;
 		public bool flags; // TODO: most likely obsolete now
 
-		public override void AddToGen( DeclGen gen )
+		public override void AddToGen( HierarchicalGen gen )
 		{
-			gen.AddHierarchical( this );
+			gen.AddHierarchical( this, access );
 		}
 	}
 
@@ -296,9 +301,10 @@ namespace Myll.Core
 		public bool withBody;
 
 		// TODO: what is needed here?
-		public override void AddToGen( DeclGen gen )
+		public override void AddToGen( HierarchicalGen gen )
 		{
-			gen.AddNamespace( this );
+			// can not be in a non-public context
+			gen.AddHierarchical( this, Access.Public );
 		}
 	}
 
@@ -328,7 +334,7 @@ namespace Myll.Core
 				? Access.Private
 				: Access.Public;
 
-		public override void AddToGen( DeclGen gen )
+		public override void AddToGen( HierarchicalGen gen )
 		{
 			gen.AddHierarchical( this, access );
 		}

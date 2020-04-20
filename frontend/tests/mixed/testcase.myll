@@ -23,6 +23,8 @@ namespace MyNamespace
 		//var int i = 9;
 	}
 
+	const float pi = 3.14;
+
 	class MyClass<T>
 	{
 		field T::X x; // typename
@@ -41,7 +43,10 @@ namespace MyNamespace
 		}
 
 		//[inline, const(ifneedbe)]
-		func a() -> int { return _a; }
+		func a() -> int {
+		 var int xx;
+		 10 times { cout << "blah\n"; }
+		 return _a; }
 
 	private:
 		class SubClass

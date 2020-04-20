@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-
 using Antlr4.Runtime;
 using Myll.Core;
 using Myll.Generator;
@@ -57,7 +54,7 @@ namespace Myll
 			foreach( ModuleGroup progContext in moduleGroups ) {
 				GlobalNamespace globalns = VisitorExtensions.DeclVis.VisitProgs( progContext );
 
-				StmtFormatting.SimpleGen gen = new StmtFormatting.SimpleGen( -1, 0 );
+				HierarchicalGen gen = new HierarchicalGen( globalns, -1, 0 );
 				// do NOT call gen.AddNamespace( ret ).
 				// Instead AddToGen() is there to call the correct virtual method on the gen
 				globalns.AddToGen( gen );

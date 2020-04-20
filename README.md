@@ -110,4 +110,4 @@ ptr<int(*)[]> a;
 (not to be mistakened with not-implemented features)
 - Non-type template parameters need a distinction.
 - Comments do not get passed through
-
+- Init of static data members, esp. with templates

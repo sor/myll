@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Antlr4.Runtime.Tree;
-
 using Myll.Core;
-
-using static Myll.MyllParser;
 
 namespace Myll
 {
+	using static MyllParser;
+
 	using Attribs = Dictionary<string, List<string>>;
 
 	/**
@@ -103,7 +102,7 @@ namespace Myll
 
 		public override Stmt VisitVariableDecl( VariableDeclContext c )
 		{
-			Decl ret = new VarsDecl {
+			Stmt ret = new VarsStmt {
 				vars = c.typedIdAcors()
 					.Select( VisitStmtVars )
 					.SelectMany( q => q )

@@ -4,11 +4,11 @@ using System.Linq;
 using System.Text;
 using Myll.Generator;
 
-using static System.String;
-using static Myll.Generator.StmtFormatting;
-
 namespace Myll.Core
 {
+	using static String;
+	using static StmtFormatting;
+
 	using Strings = List<string>;
 	using Attribs = Dictionary<string, List<string>>;
 
@@ -54,16 +54,7 @@ namespace Myll.Core
 		/// <returns>immediate generated lines of code</returns>
 		public virtual Strings Gen( int level/*, DeclGen gen*/ )
 		{
-			// TODO: fix levels
-			SimpleGen gen = new SimpleGen(level,level);
-			AddToGen( gen );
-			return gen.GenDecl();
-		}
-
-		public virtual void AddToGen( DeclGen gen )
-		{
-			// TODO: will become abstract once its overriden everywhere
-			throw new NotImplementedException( Format( "plx override Decl Gen @ {0}", GetType().Name) );
+			throw new NotImplementedException( Format( "plx implement in missing class: {0}", GetType().Name) );
 		}
 	}
 

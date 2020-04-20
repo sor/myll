@@ -2,15 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Antlr4.Runtime.Tree;
-
 using Myll.Core;
-
-using Enum = Myll.Core.Enum;
-
-using static Myll.MyllParser;
 
 namespace Myll
 {
+	using static MyllParser;
+
 	using Attribs = Dictionary<string, List<string>>;
 
 	public partial class ExtendedVisitor<Result>
@@ -33,9 +30,9 @@ namespace Myll
 			throw new NotImplementedException( "refactored away on 20-11-2019" );
 		}
 
-		public Enum.Entry VisitEnumEntry( IdExprContext c )
+		public Enumeration.Entry VisitEnumEntry( IdExprContext c )
 		{
-			Enum.Entry ret = new Enum.Entry {
+			Enumeration.Entry ret = new Enumeration.Entry {
 				srcPos = c.ToSrcPos(),
 				name   = c.id().Visit(),
 				value  = c.expr().Visit(),
@@ -44,7 +41,7 @@ namespace Myll
 			return ret;
 		}
 
-		public List<Enum.Entry> VisitEnumEntrys( IdExprsContext c )
+		public List<Enumeration.Entry> VisitEnumEntrys( IdExprsContext c )
 			=> c.idExpr().Select( VisitEnumEntry ).ToList();
 	}
 
@@ -67,7 +64,7 @@ namespace Myll
 
 		public override Decl VisitEnumDecl( EnumDeclContext c )
 		{
-			Enum ret = new Enum {
+			Enumeration ret = new Enumeration {
 				srcPos   = c.ToSrcPos(),
 				name     = c.id().Visit(),
 				basetype = VisitTypespecBasic( c.bases ),
@@ -231,9 +228,8 @@ namespace Myll
 			PushScope( ret );
 
 			// HACK: will be buggy. needs to move to ScopeStack, when ScopeStack works.
-			curAccess = (ret.kind == Structural.Kind.Class)
-				? Access.Private
-				: Access.Public;
+			curAccess = ret.defaultAccess;
+
 			c.levDecl().Select( Visit ).Exec();
 			PopScope();
 
