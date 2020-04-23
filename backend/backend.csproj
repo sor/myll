@@ -18,6 +18,7 @@
 	  <None Remove="Grammar\Generated\Myll\MyllLexer.tokens" />
 	  <None Remove="Grammar\Generated\Myll\MyllParser.interp" />
 	  <None Remove="Grammar\Generated\Myll\MyllParser.tokens" />
+	  <None Remove="Grammar\MyllLexer.tokens" />
 	</ItemGroup>
 
 </Project>

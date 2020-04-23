@@ -122,67 +122,16 @@ namespace Myll.Core
 		}
 	}
 
+	// functions, methods, operators, accessors (in the end)
 	public class Func : Decl, ITplParams
 	{
-		public class Param
-		{
-			public Typespec type;
-			public string   name;
-
-			public string Gen()
-			{
-				return type.Gen( name );
-			}
-		}
-
-		// fac(n: 1+2) // n is matching _name_ of param, 1+2 is _expr_
-		public class Arg // Decl
-		{
-			public string name; // opt
-			public Expr   expr;
-
-			public string Gen()
-			{
-				if( !IsNullOrEmpty( name ) )
-					throw new NotImplementedException( "named function arguments needs to be implemented" );
-
-				return expr.Gen();
-			}
-		}
-
-		public class Call
-		{
-			public List<Arg> args;
-			public bool      indexer;
-			public bool      nullCoal;
-
-			public string Gen()
-			{
-				if( nullCoal )
-					throw new NotImplementedException( "null coalescing for function calls needs to be implemented" );
-
-				if( indexer ) {
-					// TODO: call a different method that can handle more than one parameter
-					if( args.Count != 1 )
-						throw new TargetParameterCountException("indexer call with != 1 arguments");
-
-					return "[" + args.Select( a => a.Gen() ).Join( ", " ) + "]";
-				}
-				else {
-					if( args.Count == 0 )
-						return "()";
-
-					return "( " + args.Select( a => a.Gen() ).Join( ", " ) + " )";
-				}
-			}
-		}
-
 		public List<TplParam> TplParams { get; set; }
 		public List<Param>    paras;
 		public Stmt           block;
 		public Typespec       retType;
 
-		public bool IsReturningSomething => false; // TODO: analyze, for void or auto return type of funcs
+		// TODO: analyze, for void or auto return type of funcs
+		public bool IsReturningSomething => false;
 
 		public override void AddToGen( HierarchicalGen gen )
 		{
@@ -199,9 +148,9 @@ namespace Myll.Core
 			Destructor,
 		}
 
-		public Kind             kind;
-		public List<Func.Param> paras;
-		public Stmt             block;
+		public Kind        kind;
+		public List<Param> paras;
+		public Stmt        block;
 
 		// TODO: initlist
 
@@ -275,20 +224,52 @@ namespace Myll.Core
 		}
 	}
 
+	public class EnumEntry : Decl
+	{
+		public Expr value;
+
+		public override void AddToGen( HierarchicalGen gen )
+		{
+			gen.AddEntry( this, Access.Public );
+		}
+	}
+
 	public class Enumeration : Hierarchical
 	{
-		public class Entry : Decl
-		{
-			public Expr value;
+		public TypespecBasic basetype;
 
-			public override void AddToGen( HierarchicalGen gen )
-			{
-				gen.AddEntry( this );
+		public bool IsFlags => attribs?.ContainsKey( "flags" ) ?? false;
+
+		protected virtual void AttribsAssigned()
+		{
+			if( attribs == null )
+				return;
+
+			if( attribs.ContainsKey( "operators" ) ) {
+				var par = scope.parent;
+
+				// HACK: this should work for most, but is an incorrect Typespec
+				Typespec enum_typespec = new TypespecNested {
+					idTpls = new List<IdTpl> {
+						new IdTpl{ id = FullyQualifiedName }
+					}
+				};
+				Func ret = new Func {
+					srcPos    = srcPos,
+					name      = "operator|",
+					access    = Access.Public,
+					TplParams = new List<TplParam>(),
+					paras = new List<Param> {
+						new Param { name = "left", type  = enum_typespec },
+						new Param { name = "right", type = enum_typespec },
+					},
+					block   = new Block{},
+					retType = enum_typespec,
+				};
+
+				//hier muss weiter gemacht werden, adde den operator zum global scope
 			}
 		}
-
-		public TypespecBasic basetype;
-		public bool flags; // TODO: most likely obsolete now
 
 		public override void AddToGen( HierarchicalGen gen )
 		{
@@ -327,8 +308,7 @@ namespace Myll.Core
 		public List<TypespecNested> basetypes;
 		public List<TypespecNested> reqs;
 
-		//public Access currentAccess;
-
+		// default access for child elements
 		public override Access defaultAccess
 			=> kind == Kind.Class
 				? Access.Private

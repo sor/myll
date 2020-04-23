@@ -13,36 +13,26 @@ namespace Myll
 	public partial class ExtendedVisitor<Result>
 		: MyllParserBaseVisitor<Result>
 	{
-		public new Func.Param VisitParam( ParamContext c )
-		{
-			Func.Param ret = new Func.Param {
-				name = c.id().Visit(),
-				type = VisitTypespec( c.typespec() )
-			};
-			return ret;
-		}
-
-		public new List<Func.Param> VisitFuncTypeDef( FuncTypeDefContext c )
-			=> c.param().Select( VisitParam ).ToList();
+		protected new IEnumerable<Param> VisitFuncTypeDef( FuncTypeDefContext cs )
+			=> cs.param().Select(
+				c => new Param {
+					name = c.id().Visit(),
+					type = VisitTypespec( c.typespec() )
+				} );
 
 		public new Var.Accessor VisitAccessorDef( AccessorDefContext c )
 		{
 			throw new NotImplementedException( "refactored away on 20-11-2019" );
 		}
 
-		public Enumeration.Entry VisitEnumEntry( IdExprContext c )
-		{
-			Enumeration.Entry ret = new Enumeration.Entry {
-				srcPos = c.ToSrcPos(),
-				name   = c.id().Visit(),
-				value  = c.expr().Visit(),
-			};
-			AddChild( ret );
-			return ret;
-		}
-
-		public List<Enumeration.Entry> VisitEnumEntrys( IdExprsContext c )
-			=> c.idExpr().Select( VisitEnumEntry ).ToList();
+		protected IEnumerable<EnumEntry> VisitEnumEntrys( IdExprsContext cs )
+			=> cs.idExpr().Select(
+				c => new EnumEntry {
+					srcPos = c.ToSrcPos(),
+					name   = c.id().Visit(),
+					access = Access.Public,
+					value  = c.expr().Visit(),
+				} );
 	}
 
 	public class DeclVisitor
@@ -67,11 +57,12 @@ namespace Myll
 			Enumeration ret = new Enumeration {
 				srcPos   = c.ToSrcPos(),
 				name     = c.id().Visit(),
-				basetype = VisitTypespecBasic( c.bases ),
 				access   = curAccess,
+				basetype = VisitTypespecBasic( c.bases ),
 			};
+			// do not reset curAccess because there is no change inside enums
 			PushScope( ret );
-			VisitEnumEntrys( c.idExprs() );
+			AddChildren( VisitEnumEntrys( c.idExprs() ) );
 			PopScope();
 
 			return ret;
@@ -86,7 +77,7 @@ namespace Myll
 				name      = c.id().Visit(),
 				access    = curAccess,
 				TplParams = VisitTplParams( c.tplParams() ),
-				paras     = VisitFuncTypeDef( c.funcTypeDef() ),
+				paras     = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
 				block     = c.funcBody().Visit(),
 			};
 			ret.retType = c.typespec() != null ? VisitTypespec( c.typespec() ) :
@@ -108,6 +99,40 @@ namespace Myll
 
 		public new List<Decl> VisitFunctionDecl( FunctionDeclContext c )
 			=> c.funcDef().Select( VisitFuncDef ).ToList();
+
+		public override Decl VisitOpDef( OpDefContext c )
+		{
+			// TODO solve that better
+			string string_op = c.STRING_LIT().GetText();
+			string cleaned_op = "operator" + string_op.Substring( 1, string_op.Length - 2 );
+			PushScope();
+			Func ret = new Func {
+				srcPos    = c.ToSrcPos(),
+				name      = cleaned_op,
+				access    = curAccess,
+				TplParams = VisitTplParams( c.tplParams() ),
+				paras     = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
+				block     = c.funcBody().Visit(),
+			};
+			ret.retType = c.typespec() != null ? VisitTypespec( c.typespec() ) :
+				ret.IsReturningSomething ?
+					new TypespecBasic {
+						kind = TypespecBasic.Kind.Auto,
+						size = TypespecBasic.SizeUndetermined,
+						ptrs = new List<Pointer>(),
+					} :
+					new TypespecBasic {
+						kind = TypespecBasic.Kind.Void,
+						size = TypespecBasic.SizeInvalid,
+						ptrs = new List<Pointer>(),
+					};
+			PopScope();
+			AddChild( ret );
+			return ret;
+		}
+
+		public new List<Decl> VisitOpDecl( OpDeclContext c )
+			=> c.opDef().Select( VisitOpDef ).ToList();
 
 		public override Decl VisitAttribBlk( AttribBlkContext c )
 		{
@@ -194,7 +219,7 @@ namespace Myll
 				Namespace ns = new Namespace {
 					srcPos   = id.ToSrcPos(),
 					name     = id.Visit(),
-					access   = curAccess,
+					access   = Access.Public,
 					withBody = withBody,
 				};
 				PushScope( ns );
@@ -250,7 +275,7 @@ namespace Myll
 				name   = name,
 				access = curAccess,
 				kind   = ConDestructor.Kind.Constructor,
-				paras  = VisitFuncTypeDef( c.funcTypeDef() ),
+				paras  = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
 				block  = c.levStmt().Visit(),
 				// TODO: cc.initList(); // opt
 			};
@@ -273,7 +298,7 @@ namespace Myll
 				name   = name,
 				access = curAccess,
 				kind   = ConDestructor.Kind.Destructor,
-				paras  = new List<Func.Param>(),
+				paras  = new List<Param>(),
 				block  = c.levStmt().Visit(),
 				// TODO: cc.initList(); // opt
 			};
@@ -318,7 +343,7 @@ namespace Myll
 		}
 
 		// HACK: will be buggy. needs to move to ScopeStack, when ScopeStack works.
-		private Access curAccess = Access.None;
+		private Access curAccess = Access.Public;
 		public override Decl VisitAccessMod( AccessModContext c )
 		{
 			curAccess = c.Visit();

@@ -23,8 +23,7 @@ namespace Myll
 		{
 			TemplateArg ret;
 			if( c.typespec()  != null ) ret = new TemplateArg { typespec = VisitTypespec( c.typespec() ) };
-			else if( c.id()   != null ) ret = new TemplateArg { id       = c.id().Visit() };
-			else if( c.expr() != null ) ret = new TemplateArg { expr     = c.expr().Visit() };
+			else if( c.lit()  != null ) ret = new TemplateArg { lit      = c.lit().Visit() };
 			else throw new Exception( "unknown template arg kind" );
 			return ret;
 		}

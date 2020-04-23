@@ -26,6 +26,8 @@ nulCoalOP	:		'?:';
 
 memAccOP	:	v=(	'.'  | '?.'  | '->'  );
 memAccPtrOP	:	v=(	'.*' | '?.*' | '->*' );
+//memAccOP	:	v=(	'.'  | '..'  | '?.'  | '?..'  | '->'  );
+//memAccPtrOP	:	v=(	'.*' | '..*' | '?.*' | '?..*' | '->*' );
 
 // handled by ToAssignOp because of collisions
 assignOP	:		'=';
@@ -66,6 +68,7 @@ typespecBasic	:	specialType
 
 typespecFunc	:	FUNC funcTypeDef (RARROW typespec)?;
 
+// TODO different order than ScopedExpr
 typespecNested	:	idTplArgs (SCOPE idTplArgs)*;
 typespecsNested	:	typespecNested (COMMA typespecNested)* COMMA?;	// trailing COMMA here really possible?
 
@@ -79,9 +82,8 @@ indexCall	:	ary=( QM_LBRACK | LBRACK )	args	RBRACK;
 param		:	typespec id?;
 funcTypeDef	:	LPAREN (param (COMMA param)* COMMA?)? RPAREN;
 
-// this expr needs to be a constexpr and can be an id (from a surrounding template)
-// TODO evaluate if 'id' is really necessary/beneficial here or just let expr handle it
-tplArg		:	id | typespec | expr; //INTEGER_LIT | id; // change of order not fully tested 21 March 2020
+// can't contain expr, will fck up through idTplArgs with multiple templates (e.g. op | from enums)
+tplArg		:	lit | typespec;
 tplArgs		:	LT tplArg (COMMA tplArg)* COMMA? GT;
 
 tplParams	:	LT id (COMMA id)* COMMA? GT;
@@ -90,25 +92,29 @@ threeWay	:	(orderOP|equalOP)	COLON	expr;
 
 // Tier 3
 //cast: nothing = static, ? = dynamic, ! = const & reinterpret
-preOpExpr	:	preOP					expr;
-castExpr	:	(MOVE|LPAREN (QM|EM)? typespec RPAREN)	expr;
-sizeofExpr	:	SIZEOF					expr;
-newExpr		:	NEW		typespec?	funcCall?;
-deleteExpr	:	DELETE	(ary='['']')?	expr;
+// TODO REMOVE THEM ALL, IN CODE TOO
+//					xxx
+//preOpExpr	:	preOP;
+//castExpr	:	(MOVE|LPAREN (QM|EM)? typespec RPAREN);
+//sizeofExpr	:	SIZEOF;
+//deleteExpr	:	DELETE	(ary='['']')?;
 
 // The order here is significant, it determines the operator precedence
-expr		:	(idTplArgs	SCOPE)+		expr	# ScopedExpr
+expr		:	(idTplArgs	SCOPE)+	idTplArgs	# ScopedExpr
 			|	expr
-				(	postOP
-				|	funcCall
-				|	indexCall
-				|	memAccOP	idTplArgs)		# PostExpr
-			| <assoc=right>
-				(	preOpExpr
-				|	castExpr
-				|	sizeofExpr
-				|	newExpr
-				|	deleteExpr	)				# PreExpr // this visitor is unused
+					(	postOP
+					|	funcCall
+					|	indexCall
+					|	memAccOP	idTplArgs )	# PostExpr
+			| // can not even be associative without a contained expr
+				NEW	typespec?	funcCall?		# NewExpr
+			| // inherent <assoc=right>, so no need to tell ANTLR
+				(	(	MOVE
+					|	LPAREN (QM|EM)? typespec RPAREN)
+				|	SIZEOF
+				|	DELETE	( ary='['']' )?
+				|	preOP
+				)						expr	# PreExpr // this visitor is unused
 			|	expr	memAccPtrOP		expr	# MemPtrExpr
 			| <assoc=right>
 				expr	powOP			expr	# PowExpr
@@ -155,10 +161,10 @@ caseStmt	:	CASE expr (COMMA expr)*
 initList	:	COLON id funcCall (COMMA id funcCall)* COMMA?;
 
 // is just SEMI as well in levStmt->inStmt
-funcBody	:	PHATRARROW LCURLY expr RCURLY	// whatfor was this?
- 			|	PHATRARROW expr SEMI
+funcBody	:	PHATRARROW expr SEMI
 			|	levStmt;
-accessorDef	:	attribBlk? a=( PUB | PROT | PRIV )? qual* v=( GET | REFGET | SET ) funcBody;
+accessorDef	:	attribBlk? a=( PUB | PROT | PRIV )?
+				qual* v=( GET | REFGET | SET ) funcBody;
 funcDef		:	id			tplParams?	funcTypeDef (RARROW typespec)?
 				(REQUIRES typespecsNested)?		// TODO
 				funcBody;
@@ -194,8 +200,6 @@ inDecl		:	NS id (SCOPE id)* SEMI						# Namespace // or better COLON
 			|	v=( CTOR | COPYCTOR | MOVECTOR )
 				funcTypeDef	initList?	(SEMI | levStmt) # CtorDecl
 			|	DTOR	LPAREN RPAREN	(SEMI | levStmt) # DtorDecl
-		//	|	STATIC	LCURLY	levDecl* RCURLY		# StaticDecl
-		//	|	STATIC			levDecl				# StaticDecl
 			;
 
 // using, var, const: these are both Stmt and Decl
@@ -225,8 +229,7 @@ inStmt		:	SEMI								# EmptyStmt
 				(ELSE		levStmt)?				# WhileStmt
 			|	DO		levStmt
 				WHILE	LPAREN expr RPAREN			# DoWhileStmt
-			|	expr TIMES			id?	levStmt		# TimesStmt
-			|	expr DBL_POINT expr id?	levStmt		# EachStmt
+			|	DO expr TIMES		id?	levStmt		# TimesStmt
 		//	| <assoc=right>???
 			| 	(expr	assignOP)+		expr SEMI	# MultiAssignStmt
 			| 	expr	aggrAssignOP	expr SEMI	# AggrAssignStmt

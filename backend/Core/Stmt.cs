@@ -22,7 +22,12 @@ namespace Myll.Core
 		public virtual void AssignAttribs( Attribs attribs )
 		{
 			this.attribs = attribs;
+
+			AttribsAssigned();
 		}
+
+		// this is the analyze-for-dummies until analyze works
+		protected virtual void AttribsAssigned() {}
 
 		public override string ToString()
 		{
@@ -277,8 +282,9 @@ namespace Myll.Core
 		public Expr   countExpr;
 		public string name; // opt
 
-		public static int    random_number = 1000;                          // TODO: solve that better
-		public static string RandomName => "myll_times_" + ++random_number; // TODO: solve that better
+		// HACK: solve that better
+		public static int    random_number = 1000;
+		public static string RandomName => "myll_times_" + ++random_number;
 
 		public override Strings Gen( int level )
 		{
@@ -291,21 +297,6 @@ namespace Myll.Core
 			ret.Add( Format( CurlyClose, indent ) );
 			return ret;
 		}
-	}
-
-	// HACK: really waste this syntax on a from-to-loop?
-	// better idea is to use this to call methods on each entry in a collection
-	// e.g.
-	//   Vec<Entity> ve;
-	//   for( Entity& e : ve )
-	//     e.update();
-	// could be
-	//   ve..update();
-	public class EachStmt : LoopStmt
-	{
-		public Expr   fromExpr;
-		public Expr   toExpr;
-		public string name; // opt
 	}
 
 	public class MultiAssignStmt : Stmt

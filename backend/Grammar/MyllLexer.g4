@@ -129,7 +129,7 @@ IMPORT		: 'import';
 VOLATILE	: 'volatile';
 STABLE		: 'stable';
 CONST		: 'const';
-MUTABLE		: 'mutable';
+MUTABLE		: 'mutable|mut';
 //STATIC		: 'static';
 //EXTERN		: 'extern';
 PUB			: 'public'|'pub';

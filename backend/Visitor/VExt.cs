@@ -152,6 +152,10 @@ namespace Myll
 				: ExprVis.Visit( c );
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static Literal Visit( this Parser.LitContext c )
+			=> ExprVis.VisitLit( c );
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Stmt Visit( this Parser.LevStmtContext c )
 			=> c == null
 				? null

@@ -12,9 +12,24 @@ namespace Myll.Generator
 	using AccessStrings  = List<(Access access, List<string> gen)>;
 	using IAccessStrings = IEnumerable<(Access access, List<string> gen)>;
 
-	public static class Extensions
+	internal class PPPStrings
 	{
-		internal static IAccessStrings Concat( this IAccessStrings self, HierarchicalGen.PPPStrings pppStrings )
+		public readonly Strings
+			priv = new Strings(),
+			prot = new Strings(),
+			pub  = new Strings();
+
+		public Strings Target( Access access )
+			=> access switch {
+				Access.Private   => priv,
+				Access.Protected => prot,
+				_                => pub,
+			};
+	}
+
+	internal static class Extensions
+	{
+		internal static IAccessStrings Concat( this IAccessStrings self, PPPStrings pppStrings )
 			=> self.Concat(
 				new AccessStrings {
 					(Access.Private,   pppStrings.priv),
@@ -46,34 +61,18 @@ namespace Myll.Generator
 	*/
 	public class HierarchicalGen
 	{
-		internal class PPPStrings
-		{
-			public readonly Strings
-				priv = new Strings(),
-				prot = new Strings(),
-				pub  = new Strings();
-
-			public Strings Target( Access access )
-				=> access switch {
-					Access.Private   => priv,
-					Access.Protected => prot,
-					_                => pub,
-				};
-		}
-
 		/// Fields are special, they can not be grouped by ppp or sorted
 		private readonly AccessStrings
 			staticFieldDecl = new AccessStrings(),
 			staticFieldImpl = new AccessStrings(),
-			fieldDecl       = new AccessStrings(),
-			fieldImpl       = new AccessStrings();
+			fieldDecl       = new AccessStrings();
 
 		// Super memory inefficient but I don't care for the moment
 		private readonly PPPStrings
 			protoEarly         = new PPPStrings(),
 			protoLate          = new PPPStrings(),
-			structDecl         = new PPPStrings(),
-			structImpl         = new PPPStrings(),
+			hierarchicalDecl   = new PPPStrings(),
+			hierarchicalImpl   = new PPPStrings(),
 			staticAccessorDecl = new PPPStrings(),
 			staticAccessorImpl = new PPPStrings(),
 			staticOperatorDecl = new PPPStrings(),
@@ -92,7 +91,6 @@ namespace Myll.Generator
 			methodImpl         = new PPPStrings();
 
 		private readonly Access defaultAccess;
-		private Access currentAccess;
 
 		private Hierarchical obj;
 
@@ -111,13 +109,15 @@ namespace Myll.Generator
 			this.LevelImpl = LevelImpl;
 
 			defaultAccess = obj.defaultAccess;
-			currentAccess = defaultAccess;
 		}
 
 		private void ThrowOnInvalidAccess( ref Access access )
 		{
-			if( access == Access.None )
-				access = currentAccess;
+			if( access == Access.None ) {
+				throw new Exception( "should not happen anymore?!" );
+				//was access = currentAccess; before
+				//access = defaultAccess;
+			}
 
 			// Could be outside of the Enums valid values
 			if( !access.In( Access.Public, Access.Protected, Access.Private ) )
@@ -138,7 +138,7 @@ namespace Myll.Generator
 				listDecl = new AccessStrings()
 					.Concat( protoEarly )
 					.Concat( protoLate )
-					.Concat( structDecl )
+					.Concat( hierarchicalDecl )
 					.Concat( staticFieldDecl )
 					.Concat( staticAccessorDecl )
 					.Concat( staticOperatorDecl )
@@ -172,11 +172,11 @@ namespace Myll.Generator
 			Strings ret = new Strings();
 			IAccessStrings
 				listImpl = new AccessStrings()
-					.Concat( structImpl )
+					.Concat( hierarchicalImpl )
+					.Concat( staticFieldImpl )
 					.Concat( staticAccessorImpl )
 					.Concat( staticOperatorImpl )
 					.Concat( staticMethodImpl )
-					.Concat( fieldImpl )
 					.Concat( ctorImpl )
 					.Concat( dtorImpl )
 					.Concat( accessorImpl )
@@ -194,13 +194,13 @@ namespace Myll.Generator
 		}
 
 		// Those need to be kept in adding order
-		public void AddEntry( Enumeration.Entry obj, Access access = Access.None )
+		public void AddEntry( EnumEntry obj, Access access = Access.None )
 		{
 			ThrowOnInvalidAccess( ref access );
 
-			string indent     = IndentDecl;
-			string name       = obj.name;
-			var    targetDecl = obj.IsStatic ? staticFieldDecl : fieldDecl;
+			string        indent     = IndentDecl;
+			string        name       = obj.name;
+			AccessStrings targetDecl = obj.IsStatic ? staticFieldDecl : fieldDecl;
 			Strings ret = new Strings {
 				Format(
 					VarFormat[4],
@@ -216,6 +216,7 @@ namespace Myll.Generator
 		{
 			ThrowOnInvalidAccess( ref access );
 
+			bool isStatic      = obj.IsStatic;
 			bool needsTypename = false; // TODO how to determine this
 
 			string        indentDecl = IndentDecl;
@@ -227,20 +228,23 @@ namespace Myll.Generator
 				Format(
 					VarFormat[0],
 					indentDecl,
-					obj.IsStatic ? VarFormat[1] : "", // TODO add inline if initialized
+					isStatic ? VarFormat[1] : "", // TODO add inline if initialized
 					needsTypename ? VarFormat[2] : "",
 					obj.type.Gen( nameDecl ),
-					obj.init != null ? VarFormat[3] + obj.init.Gen() : "" )
+					(obj.init != null && !isStatic)
+						? VarFormat[3] + obj.init.Gen()
+						: "" )
 			};
 			targetDecl.Add( (access, retDecl) );
 
-			if( !obj.IsStatic )
+			if( !isStatic )
 				return;
 
+			// only static fields here
 			// TODO prepend "template <typename ...>" if needed
 			string        indentImpl = IndentImpl;
 			string        nameImpl   = obj.FullyQualifiedName;
-			AccessStrings targetImpl = obj.IsStatic ? staticFieldImpl : fieldImpl;
+			AccessStrings targetImpl = staticFieldImpl;
 			Strings retImpl = new Strings {
 				Format(
 					VarFormat[0],
@@ -328,8 +332,8 @@ namespace Myll.Generator
 			string  indent      = gen.DeIndentDecl;
 			string  nameDecl    = gen.obj.name;
 			Strings targetProto = protoEarly.Target( access );
-			Strings targetDecl  = structDecl.Target( access );
-			Strings targetImpl  = structImpl.Target( access );
+			Strings targetDecl  = hierarchicalDecl.Target( access );
+			Strings targetImpl  = hierarchicalImpl.Target( access );
 
 			if( gen.obj is ITplParams hierWithTpl
 			 && hierWithTpl.TplParams.Count >= 1 ) {

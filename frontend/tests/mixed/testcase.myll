@@ -4,6 +4,14 @@ module testcase;
 
 namespace MyNamespace
 {
+	operator "|" (MyEnum lhs, MyEnum rhs) -> FE
+	{
+		return (MyEnum) (
+			(std::underlying_type<MyEnum>::type)lhs |
+			(std::underlying_type<MyEnum>::type)rhs
+		);
+	}
+
 	[operators(bitwise)]
 	enum MyEnum : u32
 	{
@@ -23,13 +31,29 @@ namespace MyNamespace
 		//var int i = 9;
 	}
 
+	operator "|" ( int a, int b ) -> int => a | b;
+
 	const float pi = 3.14;
 
 	class MyClass<T>
 	{
-		field T::X x; // typename
-		field std::array<int*[],5>*[5] x;
-		field int _a, _b;
+		field T::X x_with_typename; // needs typename in C++
+		field int[5] ary;
+		// will just be generated as a common ptr in C++
+		field int[]* ptr_to_ary = &ary;
+		// this is a non-arithmetic pointer and will not allow ++, --, +, -, []
+		field int* ptr_to_int = &ary;
+		field std::vector<int> vec;
+
+		// creates a private backing field _a and getter and setter who use this backing field
+		field int a { get; set; };
+		// does not create _b, if one is implemented, all must be implemented manually
+		field int b { get => _b; set _b = value; };
+		field int _b;
+		// this makes it a one liner
+		field int _c, c { get => _c; set _c = value; };
+		// accessors can exist without a backing field
+		field int d { get => vec.count(); };
 	public:
 		[static]
 		{
@@ -44,9 +68,10 @@ namespace MyNamespace
 
 		//[inline, const(ifneedbe)]
 		func a() -> int {
-		 var int xx;
-		 10 times { cout << "blah\n"; }
-		 return _a; }
+		do 10 times { cout << "blah\n"; }
+		var int ten = 10;
+		do ten times { cout << "blah\n"; }
+		return _a; }
 
 	private:
 		class SubClass

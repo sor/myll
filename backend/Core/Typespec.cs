@@ -80,7 +80,7 @@ namespace Myll.Core
 			// TODO: do properly
 			return qual == Qualifier.None
 				? value
-				: qual.ToString().ToLower().Replace( ",", "" ) + " " + value;
+					: qual.ToString().ToLower().Replace( ",", "" ) + " " + value;
 		}
 	}
 
@@ -140,8 +140,8 @@ namespace Myll.Core
 	// In here the Template are Args and in the Parens are Params
 	public class TypespecFunc : Typespec
 	{
-		public List<Func.Param> paras;
-		public Typespec         retType; // opt
+		public List<Param> paras;
+		public Typespec    retType; // opt
 
 		public override string GenType()
 		{
@@ -192,15 +192,13 @@ namespace Myll.Core
 	// tplArg
 	public class TemplateArg // name OR literal OR type
 	{
-		public string   id; // id passed down through template
 		public Typespec typespec;
-		public Expr     expr; // must be a constexpr
+		public Literal  lit;
 
 		public string Gen()
 		{
-			return id
-			    ?? typespec?.Gen()
-			    ?? expr?.Gen();
+			return lit?.Gen()
+			    ?? typespec?.Gen();
 		}
 	}
 

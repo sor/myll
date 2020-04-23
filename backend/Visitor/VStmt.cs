@@ -38,18 +38,6 @@ namespace Myll
 			return ret;
 		}
 
-		/*public override Stmt VisitAttribStmtDef( AttribStmtDefContext c )
-		{
-			Stmt ret =
-				(c.inAnyStmt() != null) ? Visit( c.inAnyStmt() ) :
-				                          throw new ArgumentOutOfRangeException( "not inAnyStmt" );
-
-			Attribs attribs = c.attribBlk()?.Visit();
-			ret.AssignAttribs( attribs );
-
-			return ret;
-		}*/
-
 		public override Stmt VisitFuncBody( FuncBodyContext c )
 		{
 			// Scope already open?
@@ -237,19 +225,6 @@ namespace Myll
 				countExpr = c.expr().Visit(),
 				name      = c.id().Visit(), // TODO: check for null
 				bodyStmt  = c.levStmt().Visit(),
-			};
-			// TODO: add name to current scope
-			return ret;
-		}
-
-		public override Stmt VisitEachStmt( EachStmtContext c )
-		{
-			LoopStmt ret = new EachStmt {
-				srcPos   = c.ToSrcPos(),
-				fromExpr = c.expr( 0 ).Visit(),
-				toExpr   = c.expr( 1 ).Visit(),
-				name     = c.id().Visit(), // TODO: check for null
-				bodyStmt = c.levStmt().Visit(),
 			};
 			// TODO: add name to current scope
 			return ret;

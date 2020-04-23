@@ -12,41 +12,29 @@ namespace Myll
 	public partial class ExtendedVisitor<Result>
 		: MyllParserBaseVisitor<Result>
 	{
-		public new List<Func.Arg> VisitArgs( ArgsContext c )
-		{
-			List<Func.Arg> ret = c?.arg().Select( VisitArg ).ToList()
-			                  ?? new List<Func.Arg>();
-			return ret;
-		}
+		public new List<Arg> VisitArgs( ArgsContext c )
+			=> c?.arg().Select( VisitArg ).ToList()
+			?? new List<Arg>();
 
-		public new Func.Call VisitIndexCall( IndexCallContext c )
-		{
-			Func.Call ret = new Func.Call {
+		public new Arg VisitArg( ArgContext c )
+			=> new Arg {
+				name = c.id().Visit(),
+				expr = c.expr().Visit(),
+			};
+
+		public new FuncCall VisitIndexCall( IndexCallContext c )
+			=> new FuncCall {
 				args     = VisitArgs( c.args() ),
 				nullCoal = c.ary.Type == QM_LBRACK,
 				indexer  = true,
 			};
-			return ret;
-		}
 
-		public new Func.Call VisitFuncCall( FuncCallContext c )
-		{
-			Func.Call ret = new Func.Call {
+		public new FuncCall VisitFuncCall( FuncCallContext c )
+			=> new FuncCall {
 				args     = VisitArgs( c?.args() ),
 				nullCoal = c?.ary.Type == QM_LPAREN,
 				indexer  = false,
 			};
-			return ret;
-		}
-
-		public new Func.Arg VisitArg( ArgContext c )
-		{
-			Func.Arg ret = new Func.Arg {
-				name = c.id().Visit(),
-				expr = c.expr().Visit(),
-			};
-			return ret;
-		}
 	}
 
 	/**
@@ -69,7 +57,7 @@ namespace Myll
 			ScopedExpr ret = new ScopedExpr {
 				op     = Operand.Scoped,
 				idTpls = c.idTplArgs().Select( VisitIdTplArgs ).ToList(),
-				expr   = c.expr().Visit(),
+			//	expr   = c.expr().Visit(),
 			};
 			return ret;
 		}
@@ -116,52 +104,6 @@ namespace Myll
 			return ret;
 		}
 
-		public override Expr VisitPreOpExpr( PreOpExprContext c )
-		{
-			Expr ret = new UnOp {
-				op   = c.preOP().v.ToPreOp(),
-				expr = c.expr().Visit(),
-			};
-			return ret;
-		}
-
-		public override Expr VisitCastExpr( CastExprContext c )
-		{
-			Operand op =
-				c.QM()   != null ? Operand.DynamicCast :
-				c.EM()   != null ? Operand.AnyCast :
-				c.MOVE() != null ? Operand.MoveCast :
-				                   Operand.StaticCast;
-
-			Typespec t = (op != Operand.MoveCast)
-				? VisitTypespec( c.typespec() )
-				: new TypespecNested {
-					srcPos = c.ToSrcPos(),
-					ptrs   = new List<Pointer>(),
-					idTpls = new List<IdTpl> {
-						new IdTpl {
-							id      = "move", // TODO: support std::forward as well
-							tplArgs = new List<TemplateArg>(),
-						}
-					}
-				};
-			Expr ret = new CastExpr {
-				op   = op,
-				type = t,
-				expr = c.expr().Visit(),
-			};
-			return ret;
-		}
-
-		public override Expr VisitSizeofExpr( SizeofExprContext c )
-		{
-			Expr ret = new UnOp {
-				op   = Operand.SizeOf,
-				expr = c.expr().Visit(),
-			};
-			return ret;
-		}
-
 		public override Expr VisitNewExpr( NewExprContext c )
 		{
 			Expr ret = new NewExpr {
@@ -172,28 +114,58 @@ namespace Myll
 			return ret;
 		}
 
-		public override Expr VisitDeleteExpr( DeleteExprContext c )
-		{
-			Expr ret = new UnOp {
-				op   = c.ary != null ? Operand.DeleteAry : Operand.Delete,
-				expr = c.expr().Visit(),
-			};
-			return ret;
-		}
-
 		public override Expr VisitPreExpr( PreExprContext c )
 		{
-			IParseTree cc = c.preOpExpr()
-			             ?? c.castExpr()
-			             ?? c.sizeofExpr()
-			             ?? c.newExpr()
-			             ?? c.deleteExpr() as IParseTree;
+			Expr ret;
+			Expr expr = c.expr().Visit();
 
-			if( cc == null )
-				throw new Exception( "unknown pre op" );
+			if( c.typespec() != null
+			 || c.MOVE()     != null ) {
+				Operand op =
+					c.QM()   != null ? Operand.DynamicCast :
+					c.EM()   != null ? Operand.AnyCast :
+					c.MOVE() != null ? Operand.MoveCast :
+					                   Operand.StaticCast;
 
-			Expr ret = Visit( cc );
-
+				Typespec t = (op != Operand.MoveCast)
+					? VisitTypespec( c.typespec() )
+					: new TypespecNested {
+						srcPos = c.ToSrcPos(),
+						ptrs   = new List<Pointer>(),
+						idTpls = new List<IdTpl> {
+							new IdTpl {
+								id      = "move", // TODO: support std::forward as well
+								tplArgs = new List<TemplateArg>(),
+							}
+						}
+					};
+				ret = new CastExpr {
+					op   = op,
+					type = t,
+					expr = expr,
+				};
+			}
+			else if( c.preOP() != null ) {
+				ret = new UnOp {
+					op   = c.preOP().v.ToPreOp(),
+					expr = expr,
+				};
+			}
+			else if( c.SIZEOF() != null ) {
+				ret = new UnOp {
+					op   = Operand.SizeOf,
+					expr = expr,
+				};
+			}
+			else if( c.DELETE() != null ) {
+				ret = new UnOp {
+					op   = c.ary != null ? Operand.DeleteAry : Operand.Delete,
+					expr = expr,
+				};
+			}
+			else {
+				throw new InvalidOperationException( "unknown pre-op " + c );
+			}
 			return ret;
 		}
 
@@ -354,6 +326,16 @@ namespace Myll
 			return ret;
 		}
 
+		public new Literal VisitLit( LitContext c )
+		{
+			Literal ret = new Literal {
+				op   = Operand.Literal,
+				text = c.GetText() // TODO
+			};
+			return ret;
+		}
+
+		// TODO remove this or the other above?
 		public override Expr VisitLiteralExpr( LiteralExprContext c )
 		{
 			Literal ret = new Literal {

@@ -23,6 +23,7 @@ namespace Myll
 				name     = "",   // global
 				srcPos   = null, // no pos since it exists for multiple files
 				withBody = true,
+				access   = Access.Public,
 				imps     = new HashSet<string>(),
 			};
 			Scope scope = new Scope {
@@ -58,6 +59,18 @@ namespace Myll
 				decl   = leaf,
 			};
 			parent.AddChild( scopeLeaf );
+		}
+
+		public void AddChildren( IEnumerable<Decl> leafs )
+		{
+			Scope parent = ScopeStack.Peek();
+			foreach( Decl leaf in leafs ) {
+				ScopeLeaf scopeLeaf = new ScopeLeaf {
+					parent = parent,
+					decl   = leaf,
+				};
+				parent.AddChild( scopeLeaf );
+			}
 		}
 
 		public void PushScope( Hierarchical hierarchical )

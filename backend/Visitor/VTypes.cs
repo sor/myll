@@ -2,13 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Antlr4.Runtime;
-
 using Myll.Core;
-
-using static Myll.MyllParser;
 
 namespace Myll
 {
+	using static MyllParser;
+
 	public partial class ExtendedVisitor<Result>
 		: MyllParserBaseVisitor<Result>
 //	public partial class Visitor
@@ -193,7 +192,7 @@ namespace Myll
 			TypespecFunc ret = new TypespecFunc {
 				srcPos       = c.ToSrcPos(),
 				//templateArgs = VisitTplArgs( c.tplArgs() ),
-				paras        = VisitFuncTypeDef( c.funcTypeDef() ),
+				paras        = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
 				retType      = VisitTypespec( c.typespec() ),
 			};
 			return ret;

@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using Myll.Generator;
 
-using static System.String;
-
 namespace Myll.Core
 {
+	using static String;
+
 	static class Precedence
 	{
 		// Precedence Table in MYLL, will be filled with everything from Operand
@@ -276,13 +277,13 @@ namespace Myll.Core
 	public class ScopedExpr : Expr
 	{
 		public List<IdTpl> idTpls;
-		public Expr        expr;
+		//public Expr        expr;
 
 		public override string Gen( bool doBrace = false )
 		{
 			string ret = idTpls
 				.Select( s => s.Gen() )
-				.Append( expr.Gen() )
+				//.Append( expr.Gen() )
 				.Join( "::" );
 			return doBrace
 				? "(" + ret + ")"
@@ -325,10 +326,63 @@ namespace Myll.Core
 		}
 	}
 
+	public class Param
+	{
+		public Typespec type;
+		public string   name;
+
+		public string Gen()
+		{
+			return type.Gen( name );
+		}
+	}
+
+	// fac(n: 1+2) // n is matching _name_ of param, 1+2 is _expr_
+	public class Arg // Decl
+	{
+		public string name; // opt
+		public Expr   expr;
+
+		public string Gen()
+		{
+			if( !IsNullOrEmpty( name ) )
+				throw new NotImplementedException( "named function arguments needs to be implemented" );
+
+			return expr.Gen();
+		}
+	}
+
+	public class FuncCall
+	{
+		public List<Arg> args;
+		public bool      indexer;
+		public bool      nullCoal;
+
+		public string Gen()
+		{
+			if( nullCoal )
+				throw new NotImplementedException( "null coalescing for function calls needs to be implemented" );
+
+			if( indexer ) {
+				// TODO: call a different method that can handle more than one parameter
+				if( args.Count != 1 )
+					throw new TargetParameterCountException("indexer call with != 1 arguments");
+
+				return "[" + args.Select( a => a.Gen() ).Join( ", " ) + "]";
+			}
+			else {
+				if( args.Count == 0 )
+					return "()";
+
+				return "( " + args.Select( a => a.Gen() ).Join( ", " ) + " )";
+			}
+		}
+	}
+
 	public class FuncCallExpr : Expr
 	{
-		public Expr      left; // name and tpl args in here
-		public Func.Call funcCall;
+		public Expr     left; // name and tpl args in here
+		public FuncCall funcCall;
 
 		public override string Gen( bool doBrace = false )
 		{
@@ -360,8 +414,8 @@ namespace Myll.Core
 
 	public class NewExpr : Expr
 	{
-		public Typespec  type;
-		public Func.Call funcCall;
+		public Typespec type;
+		public FuncCall funcCall;
 
 		public override string Gen( bool doBrace = false )
 		{
