@@ -14,6 +14,11 @@ namespace Myll.Core
 		public string  file;
 		public LineCol from;
 		public LineCol to;
+
+		public override string ToString()
+		{
+			return string.Format( "[{0}:{1}:{2}]", file, @from.line, @from.col ) ;
+		}
 	}
 
 	public class IdDef

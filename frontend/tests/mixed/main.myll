@@ -2,7 +2,7 @@
 
 module main; // the name of this file "main.myll" would make it "module main" by default
 
-import std_iostream, std_string, stack;
+import std_iostream, std_string, stack, my_enum;
 
 func main( int argc, const char*[] argv ) -> int
 {

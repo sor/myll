@@ -58,7 +58,7 @@ namespace Myll
 				srcPos   = c.ToSrcPos(),
 				name     = c.id().Visit(),
 				access   = curAccess,
-				basetype = VisitTypespecBasic( c.bases ),
+				basetype = (c.bases != null) ? VisitTypespecBasic( c.bases ) : null,
 			};
 			// do not reset curAccess because there is no change inside enums
 			PushScope( ret );
@@ -165,7 +165,8 @@ namespace Myll
 			// PPP is null
 			if( ret != null ) {
 				Attribs attribs = c.attribBlk()?.Visit();
-				ret.AssignAttribs( attribs );
+				if( attribs != null )
+					ret.AssignAttribs( attribs );
 			}
 
 			return ret;
@@ -253,9 +254,13 @@ namespace Myll
 			PushScope( ret );
 
 			// HACK: will be buggy. needs to move to ScopeStack, when ScopeStack works.
+			Access savedAccess = curAccess;
 			curAccess = ret.defaultAccess;
 
 			c.levDecl().Select( Visit ).Exec();
+
+			curAccess = savedAccess;
+
 			PopScope();
 
 			return ret;

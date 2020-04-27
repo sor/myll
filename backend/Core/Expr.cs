@@ -326,10 +326,11 @@ namespace Myll.Core
 		}
 	}
 
+	// func blah(int a) // int is _type_, a is _name_
 	public class Param
 	{
 		public Typespec type;
-		public string   name;
+		public string   name; // opt
 
 		public string Gen()
 		{
@@ -337,7 +338,7 @@ namespace Myll.Core
 		}
 	}
 
-	// fac(n: 1+2) // n is matching _name_ of param, 1+2 is _expr_
+	// blah(n: 1+2) // n is matching _name_ of param, 1+2 is _expr_
 	public class Arg // Decl
 	{
 		public string name; // opt
@@ -400,10 +401,10 @@ namespace Myll.Core
 		public override string Gen( bool doBrace = false )
 		{
 			string format = op switch {
-				Operand.StaticCast  => "std::static_cast<{1}>( {0} )",
-				Operand.DynamicCast => "std::dynamic_cast<{1}>( {0} )",
-				Operand.AnyCast     => "std::reinterpret_cast<{1}>( {0} )", // TODO: identify const_cast
-				Operand.MoveCast    => "std::{1}( {0} )",                   // TODO: this can handle std::forward as well
+				Operand.StaticCast  => "static_cast<{1}>( {0} )",
+				Operand.DynamicCast => "dynamic_cast<{1}>( {0} )",
+				Operand.AnyCast     => "reinterpret_cast<{1}>( {0} )", // TODO: identify const_cast
+				Operand.MoveCast    => "std::{1}( {0} )",              // TODO: this can handle std::forward as well
 			};
 			string ret = Format( format, expr.Gen(), type.Gen() );
 			return doBrace

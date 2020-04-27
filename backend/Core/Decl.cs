@@ -37,7 +37,7 @@ namespace Myll.Core
 		public ScopeLeaf scope;
 
 		// recursive
-		public bool IsTemplate {
+		public bool IsTemplateUp {
 			get {
 				for( ScopeLeaf cur = scope; cur?.parent != null; cur = cur.parent )
 					if( cur.decl is ITplParams curStruct )
@@ -50,6 +50,8 @@ namespace Myll.Core
 
 		public bool IsInline {
 			get {
+				return IsAttrib( "inline" ) || IsTemplateUp;
+				// HACK do not support parameters for the moment
 				if( attribs != null && attribs.TryGetValue( "inline", out Strings val ) ) {
 					int count = val.Count;
 					return count switch {
@@ -59,10 +61,12 @@ namespace Myll.Core
 					};
 				}
 				else {
-					return IsTemplate;
+					return IsTemplateUp;
 				}
 			}
 		}
+
+		public bool IsInStruct => scope.parent.decl is Structural;
 
 		// TODO Symbol?
 
@@ -238,36 +242,194 @@ namespace Myll.Core
 	{
 		public TypespecBasic basetype;
 
-		public bool IsFlags => attribs?.ContainsKey( "flags" ) ?? false;
+		public bool IsFlags => IsAttrib( "flags" );
 
-		protected virtual void AttribsAssigned()
+		// TODO this needs to be in the Generator Folder
+		static readonly (string, Operand)[] BitwiseOps = {
+			("operator&", Operand.BitAnd),
+			("operator|", Operand.BitOr),
+			("operator^", Operand.BitXor),
+		};
+		static readonly (string, Operand)[] BitwiseEqualOps = {
+			("operator&=", Operand.BitAnd),
+			("operator|=", Operand.BitOr),
+			("operator^=", Operand.BitXor),
+		};
+
+		// 0 will return true as well, which is maybe not what you wanted
+		bool IsPowerOfTwo(uint x)
 		{
-			if( attribs == null )
-				return;
+			bool ret = (x & (x - 1)) == 0;
+			return ret;
+		}
 
-			if( attribs.ContainsKey( "operators" ) ) {
-				var par = scope.parent;
+		// TODO this needs to be in the Generator Folder
+		protected override void AttribsAssigned()
+		{
+			bool isFlags = IsAttrib( "flags" );
+			if( isFlags ) {
+				// HACK this is just written in a hurry, that might break at any user intervention
+				uint index = 1;
+				foreach( Decl child in children ) {
+					if(child is EnumEntry ee ) {
+						if( ee.value is Literal lit ) {
+							uint read_index = uint.Parse( lit.text );
+							if( read_index == 0 )
+								index = 1;
+							else
+								index = read_index * 2;
+						}
+						else {
+							if( !IsPowerOfTwo( index ) )
+								throw new Exception(
+									Format( "[flags]enum auto numbering not a power of two: {0} at {1}", index, ee.srcPos) );
+							ee.value =  new Literal { op = Operand.Literal, text = index.ToString() };
+							index    *= 2;
+						}
+					}
+				}
+			}
+
+			bool isOpBitwise = IsAttrib( "operators", "bitwise" );
+			if( isOpBitwise ) {
+				bool  isInline    = IsInline;
+				Scope namespaceUp = scope.UpToNamespace;
 
 				// HACK: this should work for most, but is an incorrect Typespec
-				Typespec enum_typespec = new TypespecNested {
+				Typespec
+					enum_typespec = new TypespecNested {
+						ptrs = new List<Pointer>(),
+						idTpls = new List<IdTpl> {
+							new IdTpl { id = FullyQualifiedName, tplArgs = new List<TemplateArg>() }
+						}
+					},
+					enum_typespec_ref = new TypespecNested {
+						ptrs = new List<Pointer> { new Pointer { kind = Pointer.Kind.LVRef } },
+						idTpls = new List<IdTpl> {
+							new IdTpl { id = FullyQualifiedName, tplArgs = new List<TemplateArg>() }
+						}
+					};
+
+				Typespec underlying = new TypespecNested {
+					ptrs = new List<Pointer>(),
 					idTpls = new List<IdTpl> {
-						new IdTpl{ id = FullyQualifiedName }
+						new IdTpl { id = "std", tplArgs = new List<TemplateArg>() },
+						new IdTpl {
+							id      = "underlying_type",
+							tplArgs = new List<TemplateArg> { new TemplateArg { typespec = enum_typespec } }
+						},
+						new IdTpl { id = "type", tplArgs = new List<TemplateArg>() },
 					}
 				};
-				Func ret = new Func {
-					srcPos    = srcPos,
-					name      = "operator|",
-					access    = Access.Public,
-					TplParams = new List<TplParam>(),
-					paras = new List<Param> {
-						new Param { name = "left", type  = enum_typespec },
-						new Param { name = "right", type = enum_typespec },
-					},
-					block   = new Block{},
-					retType = enum_typespec,
-				};
 
-				//hier muss weiter gemacht werden, adde den operator zum global scope
+				Expr
+					lhs = new IdExpr
+						{ op = Operand.Id, idTpl = new IdTpl { id = "lhs", tplArgs = new List<TemplateArg>() }, },
+					rhs = new IdExpr
+						{ op = Operand.Id, idTpl = new IdTpl { id = "rhs", tplArgs = new List<TemplateArg>() }, };
+
+				foreach( (string, Operand) tuple in BitwiseOps ) {
+					Func ret = new Func {
+						srcPos    = srcPos, // TODO should be the pos of the attribute
+						name      = tuple.Item1,
+						access    = Access.Public,
+						TplParams = new List<TplParam>(),
+						retType   = enum_typespec,
+						paras = new List<Param> {
+							new Param { name = "lhs", type = enum_typespec },
+							new Param { name = "rhs", type = enum_typespec },
+						},
+						block = new ReturnStmt {
+							srcPos = srcPos,
+							expr = new CastExpr {
+								op   = Operand.StaticCast,
+								type = enum_typespec,
+								expr = new BinOp {
+									op = tuple.Item2,
+									left = new CastExpr {
+										op   = Operand.StaticCast,
+										type = underlying,
+										expr = lhs,
+									},
+									right = new CastExpr {
+										op   = Operand.StaticCast,
+										type = underlying,
+										expr = rhs,
+									},
+								},
+							},
+						},
+					};
+
+					ret.AssignAttribs(
+						isInline
+							? new Attribs { { "ct", new Strings() }, { "inline", new Strings() } }
+							: new Attribs { { "ct", new Strings() } } );
+
+					ScopeLeaf scopeLeaf = new ScopeLeaf {
+						parent = namespaceUp,
+						decl   = ret,
+					};
+					// can not directly put these in an enumeration or structural (maybe as friend?)
+					namespaceUp.AddChild( scopeLeaf );
+				}
+
+				foreach( (string, Operand) tuple in BitwiseEqualOps ) {
+					Func ret = new Func {
+						srcPos    = srcPos, // TODO should be the pos of the attribute
+						name      = tuple.Item1,
+						access    = Access.Public,
+						TplParams = new List<TplParam>(),
+						retType   = enum_typespec_ref,
+						paras = new List<Param> {
+							new Param { name = "lhs", type = enum_typespec_ref },
+							new Param { name = "rhs", type = enum_typespec },
+						},
+						block = new Block {
+							srcPos = srcPos,
+							stmts = new List<Stmt> {
+								new MultiAssignStmt {
+									srcPos = srcPos,
+									exprs = new List<Expr> {
+										lhs,
+										new CastExpr {
+											op   = Operand.StaticCast,
+											type = enum_typespec,
+											expr = new BinOp {
+												op = tuple.Item2,
+												left = new CastExpr {
+													op   = Operand.StaticCast,
+													type = underlying,
+													expr = lhs,
+												},
+												right = new CastExpr {
+													op   = Operand.StaticCast,
+													type = underlying,
+													expr = rhs,
+												},
+											},
+										},
+									},
+								},
+								new ReturnStmt {
+									srcPos = srcPos,
+									expr = lhs,
+								},
+							},
+						},
+					};
+
+					if( isInline )
+						ret.AssignAttribs( new Attribs { { "inline", new Strings() } } );
+
+					ScopeLeaf scopeLeaf = new ScopeLeaf {
+						parent = namespaceUp,
+						decl   = ret,
+					};
+					// can not directly put these in an enumeration or structural (maybe as friend?)
+					namespaceUp.AddChild( scopeLeaf );
+				}
+
 			}
 		}
 

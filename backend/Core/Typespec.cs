@@ -37,7 +37,7 @@ namespace Myll.Core
 			// TODO: solve the pointer/array formatting
 			return BaseGen(
 				GenType()
-			  + (name == ""
+			  + (string.IsNullOrEmpty( name )
 					? PointerizeName()
 					: " " + PointerizeName( name )) );
 		}
@@ -143,18 +143,25 @@ namespace Myll.Core
 		public List<Param> paras;
 		public Typespec    retType; // opt
 
+		// bool (*hans)(int)
+		public override string Gen( string name = "" )
+		{
+			// decide if one * is there by default
+			return BaseGen(
+				Format(
+					"{0}({1})({2})",
+					GenType(),
+					PointerizeName( name ),
+					paras
+						.Select( p => p.Gen() )
+						.Join( ", " ) ) );
+		}
+
 		public override string GenType()
 		{
-			throw new NotImplementedException();
+			return retType.Gen();
 		}
 	}
-
-	// func blah(int a) // int is _type_, a is _name_
-	/*public class Param
-	{
-		public string   name; // opt
-		public Typespec type;
-	}*/
 
 	// was nestedType
 	public class TypespecNested : Typespec
@@ -180,7 +187,7 @@ namespace Myll.Core
 			if( tplArgs.Count == 0 )
 				return id;
 
-			return string.Format(
+			return Format(
 				"{0}<{1}>",
 				id,
 				tplArgs

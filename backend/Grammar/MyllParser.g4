@@ -55,9 +55,9 @@ typePtr		:	qual*	( ptr=( AT_BANG | AT_QUEST | AT_PLUS | DBL_AMP | AMP | STAR | P
 
 idTplArgs	:	id tplArgs?;
 
-typespec		:	qual*	( typespecBasic
-							| typespecFunc
-							| typespecNested )	typePtr*;
+typespec		:	qual*	( typespecBasic		typePtr*
+							| FUNC typePtr*	typespecFunc
+							| typespecNested	typePtr*);
 
 typespecBasic	:	specialType
 				|	charType
@@ -66,7 +66,7 @@ typespecBasic	:	specialType
 				|	signedIntType
 				|	unsignIntType;
 
-typespecFunc	:	FUNC funcTypeDef (RARROW typespec)?;
+typespecFunc	:	funcTypeDef (RARROW typespec)?;
 
 // TODO different order than ScopedExpr
 typespecNested	:	idTplArgs (SCOPE idTplArgs)*;

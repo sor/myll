@@ -28,7 +28,7 @@ private:
 	method increase() {
 		var T[]* t = new T[_size * 2];
 		// same as: for (int i = 0; i < _size; ++i)
-		_size times i
+		do _size times i
 			t[i] = _values[i];
 		_size *= 2;
 		// this could drop the [] once we know that _values is an array from analyze step

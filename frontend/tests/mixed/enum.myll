@@ -1,0 +1,26 @@
+#!/usr/bin/myll // ignored by the compiler
+
+module my_enum; // enum is a keyword...
+
+// prevents unnecessary nesting
+namespace MyLang;
+
+[inline, flags, operators(bitwise)]
+enum MyFlags
+{
+	None = 0,
+	Read,
+	Write,
+	Execute,
+}
+
+func EnumTester()
+{
+	var MyFlags a;
+	a = MyFlags::Read | MyFlags::Write;
+	if( a & MyFlags::Execute == MyFlags::Execute
+	 || a & MyFlags::Read == MyFlags::Read)
+	{
+		std::cout << "read or execute or both";
+	}
+}

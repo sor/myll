@@ -65,7 +65,8 @@ namespace Myll.Generator
 		private readonly AccessStrings
 			staticFieldDecl = new AccessStrings(),
 			staticFieldImpl = new AccessStrings(),
-			fieldDecl       = new AccessStrings();
+			fieldDecl       = new AccessStrings(),
+			fieldImpl       = new AccessStrings();
 
 		// Super memory inefficient but I don't care for the moment
 		private readonly PPPStrings
@@ -75,8 +76,6 @@ namespace Myll.Generator
 			hierarchicalImpl   = new PPPStrings(),
 			staticAccessorDecl = new PPPStrings(),
 			staticAccessorImpl = new PPPStrings(),
-			staticOperatorDecl = new PPPStrings(),
-			staticOperatorImpl = new PPPStrings(),
 			staticMethodDecl   = new PPPStrings(),
 			staticMethodImpl   = new PPPStrings(),
 			ctorDecl           = new PPPStrings(),
@@ -137,13 +136,12 @@ namespace Myll.Generator
 			IAccessStrings
 				listDecl = new AccessStrings()
 					.Concat( protoEarly )
-					.Concat( protoLate )
 					.Concat( hierarchicalDecl )
 					.Concat( staticFieldDecl )
 					.Concat( staticAccessorDecl )
-					.Concat( staticOperatorDecl )
 					.Concat( staticMethodDecl )
 					.Concat( fieldDecl )
+					.Concat( protoLate )
 					.Concat( ctorDecl )
 					.Concat( dtorDecl )
 					.Concat( accessorDecl )
@@ -175,8 +173,8 @@ namespace Myll.Generator
 					.Concat( hierarchicalImpl )
 					.Concat( staticFieldImpl )
 					.Concat( staticAccessorImpl )
-					.Concat( staticOperatorImpl )
 					.Concat( staticMethodImpl )
+					.Concat( fieldImpl )
 					.Concat( ctorImpl )
 					.Concat( dtorImpl )
 					.Concat( accessorImpl )
@@ -216,12 +214,16 @@ namespace Myll.Generator
 		{
 			ThrowOnInvalidAccess( ref access );
 
-			bool isStatic      = obj.IsStatic;
 			bool needsTypename = false; // TODO how to determine this
 
-			string        indentDecl = IndentDecl;
-			string        nameDecl   = obj.name;
-			AccessStrings targetDecl = obj.IsStatic ? staticFieldDecl : fieldDecl;
+			bool          isInsideStruct = obj.IsInStruct;
+			bool          isStatic       = obj.IsStatic;
+			string        indentDecl     = IndentDecl;
+			string        indentImpl     = IndentImpl;
+			string        nameDecl       = obj.name;
+			string        nameImpl       = obj.FullyQualifiedName;
+			AccessStrings targetDecl     = isStatic ? staticFieldDecl : fieldDecl;
+			AccessStrings targetImpl     = isStatic ? staticFieldImpl : fieldImpl;
 			Strings retDecl = new Strings {
 				//"{0}{1}{2}{3};",
 				// 0 indent, 1 typename, 2 type & name, 3 init
@@ -237,14 +239,11 @@ namespace Myll.Generator
 			};
 			targetDecl.Add( (access, retDecl) );
 
-			if( !isStatic )
+			if( !isStatic && isInsideStruct )
 				return;
 
 			// only static fields here
 			// TODO prepend "template <typename ...>" if needed
-			string        indentImpl = IndentImpl;
-			string        nameImpl   = obj.FullyQualifiedName;
-			AccessStrings targetImpl = staticFieldImpl;
 			Strings retImpl = new Strings {
 				Format(
 					VarFormat[0],
@@ -261,24 +260,18 @@ namespace Myll.Generator
 		{
 			ThrowOnInvalidAccess( ref access );
 
+			List<TplParam> tplParams = obj.TplParams;
+
+			bool    hasTpl      = tplParams.Count >= 1;
+			bool    isInline    = obj.IsInline;
+			bool    isInsideStruct  = obj.IsInStruct;
 			string  indentDecl  = IndentDecl;
 			string  indentImpl  = IndentImpl;
 			string  nameDecl    = obj.name;
 			string  nameImpl    = obj.FullyQualifiedName;
-			Strings targetProto = protoLate.Target( access );
 			Strings targetDecl  = (obj.IsStatic ? staticMethodDecl : methodDecl).Target( access );
 			Strings targetImpl  = (obj.IsStatic ? staticMethodImpl : methodImpl).Target( access );
-
-			List<TplParam> tplParams = obj.TplParams;
-			if( tplParams.Count >= 1 ) {
-				string tpl = Format(
-					"{0}template <{1}>",
-					indentDecl,
-					tplParams.Select( o => "typename " + o.name ).Join( ", " ) );
-
-				targetProto.Add( tpl );
-				targetDecl.Add( tpl );
-			}
+			Strings targetProto = isInsideStruct ? targetDecl : protoLate.Target( access );
 
 			string paramString = obj.paras
 				.Select( para => para.Gen() )
@@ -293,23 +286,59 @@ namespace Myll.Generator
 				paramString,
 				"" );
 
-			targetProto.Add( headlineDecl + ";" );
-			if( obj.IsInline ) {
+			// TODO add the surrounding templates as well for tplImpl
+			string tplDecl, tplImpl;
+			if( hasTpl ) {
+				string tplContent = tplParams
+					.Select( o => "typename " + o.name )
+					.Join( ", " );
+
+				tplDecl = Format(
+					"{0}template <{1}>",
+					indentDecl,
+					tplContent );
+
+				tplImpl = Format(
+					"{0}template <{1}>",
+					indentImpl,
+					tplContent );
+			}
+			else {
+				tplDecl = null;
+				tplImpl = null;
+			}
+
+			if( isInline ) {
+				if( !isInsideStruct ) {
+					if( hasTpl )
+						targetProto.Add( tplDecl );
+					targetProto.Add( headlineDecl + ";" );
+				}
+
+				if( hasTpl )
+					targetDecl.Add( tplDecl );
 				targetDecl.Add( headlineDecl );
 				targetDecl.Add( Format( CurlyOpen, indentDecl ) );
 				targetDecl.AddRange( obj.block.GenWithoutCurly( LevelDecl + 1 ) );
 				targetDecl.Add( Format( CurlyClose, indentDecl ) );
 			}
 			else {
-				targetImpl.Add(
-					Format(
-						FuncFormat[0],
-						indentImpl,
-						"",
-						obj.retType.Gen(),
-						nameImpl,
-						paramString,
-						"" ) );
+				string headlineImpl = Format(
+					FuncFormat[0],
+					indentImpl,
+					"",
+					obj.retType.Gen(),
+					nameImpl,
+					paramString,
+					"" );
+
+				if( hasTpl )
+					targetProto.Add( tplDecl );
+				targetProto.Add( headlineDecl + ";" );
+
+				if( hasTpl )
+					targetImpl.Add( tplImpl );
+				targetImpl.Add( headlineImpl );
 				targetImpl.Add( Format( CurlyOpen, indentImpl ) );
 				targetImpl.AddRange( obj.block.GenWithoutCurly( LevelImpl + 1 ) );
 				targetImpl.Add( Format( CurlyClose, indentImpl ) );
@@ -384,19 +413,18 @@ namespace Myll.Generator
 
 			// "{0}{1}{2} {3}{4}{5}",
 			// 0 indent, 1 keyword, 2 attributes, 3 name, 4 final, 5 bases
-			if( !isNamespace ) {
-				targetProto.Add(
-					Format(
-						StructFormat[0],
-						indent,
-						keyword,
-						"",
-						nameDecl,
-						"",
-						(objEnum != null ? bases : "") + ";" ) );
-			}
-
 			if( !isGlobal ) {
+				if( !isNamespace ) {
+					targetProto.Add(
+						Format(
+							StructFormat[0],
+							indent,
+							keyword,
+							"",
+							nameDecl,
+							"",
+							(isEnum ? bases : "") + ";" ) );
+				}
 				targetDecl.Add(
 					Format(
 						StructFormat[0],
@@ -410,7 +438,7 @@ namespace Myll.Generator
 			}
 			targetDecl.AddRange( gen.GenDecl() );
 			if( !isGlobal ) {
-				targetDecl.Add( Format( CurlyCloseSC, indent ) );
+				targetDecl.Add( Format( isNamespace ? CurlyClose : CurlyCloseSC, indent ) );
 			}
 
 			targetImpl.AddRange( gen.GenImpl() );
@@ -470,9 +498,9 @@ namespace Myll.Generator
 						nameImpl,
 						paramString,
 						"" ) );
-				targetImpl.Add( Format( CurlyOpen, indentDecl ) );
+				targetImpl.Add( Format( CurlyOpen, indentImpl ) );
 				targetImpl.AddRange( obj.block.GenWithoutCurly( LevelImpl + 1 ) );
-				targetImpl.Add( Format( CurlyClose, indentDecl ) );
+				targetImpl.Add( Format( CurlyClose, indentImpl ) );
 			}
 		}
 	}

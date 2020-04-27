@@ -16,6 +16,9 @@ namespace Myll.Core
 	// ELSE NOT visible from outside
 	public class Scope : ScopeLeaf
 	{
+		public Scope UpToGlobal    => parent?.UpToGlobal ?? this;
+		public Scope UpToNamespace => decl is Namespace ? this : parent.UpToNamespace;
+
 		// opt
 		public new Hierarchical decl {
 			get => base.decl as Hierarchical;

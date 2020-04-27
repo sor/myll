@@ -19,6 +19,15 @@ namespace Myll.Core
 
 		public bool IsStatic => attribs?.ContainsKey( "static" ) ?? false;
 
+		public bool IsAttrib( string key )
+			=> attribs != null
+			&& attribs.ContainsKey( key );
+
+		public bool IsAttrib( string key, string value )
+			=> attribs != null
+			&& attribs.TryGetValue( key, out List<string> values )
+			&& values.Contains( value );
+
 		public virtual void AssignAttribs( Attribs attribs )
 		{
 			this.attribs = attribs;
@@ -69,7 +78,8 @@ namespace Myll.Core
 
 		public override void AssignAttribs( Attribs attribs )
 		{
-			vars.ForEach( v => v.AssignAttribs( attribs ) );
+			if( attribs != null)
+				vars.ForEach( v => v.AssignAttribs( attribs ) );
 		}
 
 		public override Strings Gen( int level )

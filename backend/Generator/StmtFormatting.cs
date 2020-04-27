@@ -52,7 +52,6 @@ namespace Myll.Generator
 		public static readonly string[] FuncFormat = {
 			"{0}{1}{2} {3}({4}){5}", // function:  0 indent, 1 leading attributes, 2 return type, 3 name, 4 params, 5 trailing attributes
 			"{0}{1}{2}({3}){4}",     // ctor/dtor: 0 indent, 1 leading attributes, 2 name, 3 params, 4 trailing attributes
-			"{0}",
 		};
 
 		public static readonly string[] StructFormat = {

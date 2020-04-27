@@ -33,7 +33,8 @@ namespace Myll
 				                          throw new ArgumentOutOfRangeException( "neither inAnyStmt nor inStmt" );
 
 			Attribs attribs = c.attribBlk()?.Visit();
-			ret.AssignAttribs( attribs );
+			if( attribs != null )
+				ret.AssignAttribs( attribs );
 
 			return ret;
 		}
