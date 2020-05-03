@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -10,10 +9,62 @@ using Parser = Myll.MyllParser;
 
 namespace Myll
 {
+	using static MyllParser;
+
 	using Attribs = Dictionary<string, List<string>>;
+
+	public partial class MyllParserBaseVisitor<Result>
+		: AbstractParseTreeVisitor<Result>, IMyllParserVisitor<Result>
+	{
+		// TODO: all 'new'ed methods could be in here and then available in Decl, Stmt, Expr
+		// sometimes the problem is that the methods are already in here, therefore ExtendedVisitor is necessary
+		//protected Visitor AllVis => VisitorExtensions.AllVis;
+	}
+
+	public partial class ExtendedVisitor<Result>
+		: MyllParserBaseVisitor<Result>
+	{
+		protected new IEnumerable<Arg> VisitArgs( ArgsContext cs )
+			=> cs?.arg().Select(
+				   c => new Arg {
+					   name = c.id().Visit(),
+					   expr = c.expr().Visit(),
+				   } )
+			?? Enumerable.Empty<Arg>();
+
+		protected new FuncCall VisitIndexCall( IndexCallContext c )
+			=> new FuncCall {
+				args     = VisitArgs( c.args() ).ToList(),
+				nullCoal = c.ary.Type == QM_LBRACK,
+				indexer  = true,
+			};
+
+		protected new FuncCall VisitFuncCall( FuncCallContext c )
+			=> new FuncCall {
+				args     = VisitArgs( c?.args() ).ToList(),
+				nullCoal = c?.ary.Type == QM_LPAREN,
+				indexer  = false,
+			};
+
+		protected new IEnumerable<Param> VisitFuncTypeDef( FuncTypeDefContext cs )
+			=> cs.param().Select(
+				c => new Param {
+					name = c.id().Visit(),
+					type = VisitTypespec( c.typespec() )
+				} );
+
+		protected IEnumerable<EnumEntry> VisitEnumEntrys( IdExprsContext cs )
+			=> cs.idExpr().Select(
+				c => new EnumEntry {
+					srcPos = c.ToSrcPos(),
+					name   = c.id().Visit(),
+					value  = c.expr().Visit(),
+				} );
+	}
 
 	public static class VisitorExtensions
 	{
+		// HACK these must become non-static
 		private static readonly Stack<Scope> ScopeStack = new Stack<Scope>();
 		private static readonly ExprVisitor  ExprVis    = new ExprVisitor( ScopeStack );
 		private static readonly StmtVisitor  StmtVis    = new StmtVisitor( ScopeStack );
@@ -179,15 +230,15 @@ namespace Myll
 
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static Var.Accessor Visit( this Parser.AccessorDefContext c )
-			=> new Var.Accessor {
+		public static Accessor Visit( this Parser.AccessorDefContext c )
+			=> new Accessor {
 				body = c.funcBody().Visit(),
 				qual = c.qual().Visit(),
 				kind = c.v.ToAccessorKind(),
 			};
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static List<Var.Accessor> Visit( this Parser.AccessorDefContext[] c )
+		public static List<Accessor> Visit( this Parser.AccessorDefContext[] c )
 			=> c.Select( Visit ).ToList();
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
@@ -202,12 +253,15 @@ namespace Myll
 		}
 
 #pragma warning disable 8509
+
+		// To____Kind
+
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static Var.Accessor.Kind ToAccessorKind( this IToken tok )
+		public static Accessor.Kind ToAccessorKind( this IToken tok )
 			=> tok.Type switch {
-				Parser.GET    => Var.Accessor.Kind.Get,
-				Parser.REFGET => Var.Accessor.Kind.RefGet,
-				Parser.SET    => Var.Accessor.Kind.Set
+				Parser.GET    => Accessor.Kind.Get,
+				Parser.REFGET => Accessor.Kind.RefGet,
+				Parser.SET    => Accessor.Kind.Set
 			};
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
@@ -217,6 +271,8 @@ namespace Myll
 				Parser.CLASS  => Structural.Kind.Class,
 				Parser.UNION  => Structural.Kind.Union,
 			};
+
+		// Visit
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Qualifier Visit( this Parser.QualContext c )

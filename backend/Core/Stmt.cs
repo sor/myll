@@ -14,8 +14,8 @@ namespace Myll.Core
 
 	public class Stmt
 	{
-		public SrcPos  srcPos;
-		public Attribs attribs { get; private set; }
+		public  SrcPos  srcPos;
+		private Attribs attribs { get; set; }
 
 		public bool IsStatic => attribs?.ContainsKey( "static" ) ?? false;
 
@@ -25,12 +25,12 @@ namespace Myll.Core
 
 		public bool IsAttrib( string key, string value )
 			=> attribs != null
-			&& attribs.TryGetValue( key, out List<string> values )
+			&& attribs.TryGetValue( key, out Strings values )
 			&& values.Contains( value );
 
-		public virtual void AssignAttribs( Attribs attribs )
+		public virtual void AssignAttribs( Attribs inAttribs )
 		{
-			this.attribs = attribs;
+			attribs = inAttribs;
 
 			AttribsAssigned();
 		}
@@ -44,13 +44,13 @@ namespace Myll.Core
 			foreach( var info in GetType().GetProperties() ) {
 				object value = info.GetValue( this, null )
 				            ?? "(null)";
-				sb.Append( info.Name + ": " + value.ToString() + ", " );
+				sb.Append( info.Name + ": " + value + ", " );
 			}
 
 			sb.Length = Math.Max( sb.Length - 2, 0 );
 			return "{"
 			     + GetType().Name + " "
-			     + sb.ToString()  + "}";
+			     + sb             + "}";
 		}
 
 		// only override in Block
@@ -64,22 +64,30 @@ namespace Myll.Core
 		/// and inserts necessary declarations through the DeclGen parameter
 		/// </summary>
 		/// <param name="level">level of indentation</param>
-		/// <param name="gen">surrounding context</param>
 		/// <returns>immediate generated lines of code</returns>
-		public virtual Strings Gen( int level/*, DeclGen gen*/ )
+		public virtual Strings Gen( int level )
 		{
-			throw new NotImplementedException( Format( "plx implement in missing class: {0}", GetType().Name) );
+			throw new NotImplementedException(
+				Format(
+					"plx implement in missing class: {0}",
+					GetType().Name ) );
 		}
+	}
+
+	public class VarStmt : Stmt
+	{
+		public string   name;
+		public Typespec type; // contains Qualifier
+		public Expr     init; // opt
 	}
 
 	public class VarsStmt : Stmt
 	{
-		public List<Var> vars;
+		public List<VarStmt> vars;
 
-		public override void AssignAttribs( Attribs attribs )
+		public override void AssignAttribs( Attribs inAttribs )
 		{
-			if( attribs != null)
-				vars.ForEach( v => v.AssignAttribs( attribs ) );
+			vars.ForEach( v => v.AssignAttribs( inAttribs ) );
 		}
 
 		public override Strings Gen( int level )
@@ -157,6 +165,7 @@ namespace Myll.Core
 		}
 	}
 
+	// TODO move or remove?
 	public struct CondThen
 	{
 		public Expr condExpr;
@@ -289,19 +298,25 @@ namespace Myll.Core
 
 	public class TimesStmt : LoopStmt
 	{
+		// HACK: solve that better
+		public static int    randomNumber = 1000;
+		public static string randomName => "myll_times_" + ++randomNumber;
+
 		public Expr   countExpr;
 		public string name; // opt
 
-		// HACK: solve that better
-		public static int    random_number = 1000;
-		public static string RandomName => "myll_times_" + ++random_number;
-
 		public override Strings Gen( int level )
 		{
-			string  varname = name ?? RandomName;
+			string  varName = name ?? randomName;
 			string  indent  = IndentString.Repeat( level );
 			Strings ret     = new Strings();
-			ret.Add( Format( LoopFormat[0], indent, "int " + varname + " = 0;", varname + " < " + countExpr.Gen(), "++" + varname ) );
+			ret.Add(
+				Format(
+					LoopFormat[0],
+					indent,
+					"unsigned int " + varName + " = 0;",
+					varName + " < "           + countExpr.Gen(),
+					"++"                      + varName ) );
 			ret.Add( Format( CurlyOpen, indent ) );
 			ret.AddRange( bodyStmt.GenWithoutCurly( level + 1 ) );
 			ret.Add( Format( CurlyClose, indent ) );

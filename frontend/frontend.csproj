@@ -46,6 +46,7 @@
 	  <None Update="tests\mixed\validation\stack.h">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
+	  <None Remove="frontend.csproj.DotSettings" />
 	</ItemGroup>
 
 </Project>

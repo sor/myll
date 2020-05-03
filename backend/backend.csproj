@@ -9,6 +9,14 @@
 		<Description>Backend of the Myll Programming Language</Description>
 	</PropertyGroup>
 
+	<PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+	  <NoWarn>1701;1702;3021</NoWarn>
+	</PropertyGroup>
+
+	<PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+	  <NoWarn>1701;1702;3021</NoWarn>
+	</PropertyGroup>
+
 	<ItemGroup>
 	  <PackageReference Include="Antlr4.Runtime.Standard" Version="4.8.0" />
 	</ItemGroup>
@@ -19,6 +27,7 @@
 	  <None Remove="Grammar\Generated\Myll\MyllParser.interp" />
 	  <None Remove="Grammar\Generated\Myll\MyllParser.tokens" />
 	  <None Remove="Grammar\MyllLexer.tokens" />
+	  <None Remove="backend.csproj.DotSettings" />
 	</ItemGroup>
 
 </Project>

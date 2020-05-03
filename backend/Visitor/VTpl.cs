@@ -10,27 +10,27 @@ namespace Myll
 	public partial class ExtendedVisitor<Result>
 		: MyllParserBaseVisitor<Result>
 	{
-		public new IdTpl VisitIdTplArgs( IdTplArgsContext c )
+		public new IdTplArgs VisitIdTplArgs( IdTplArgsContext c )
 		{
-			IdTpl ret = new IdTpl {
+			IdTplArgs ret = new IdTplArgs {
 				id      = c.id().Visit(),
 				tplArgs = VisitTplArgs( c.tplArgs() )
 			};
 			return ret;
 		}
 
-		public new TemplateArg VisitTplArg( TplArgContext c )
+		public new TplArg VisitTplArg( TplArgContext c )
 		{
-			TemplateArg ret;
-			if( c.typespec()  != null ) ret = new TemplateArg { typespec = VisitTypespec( c.typespec() ) };
-			else if( c.lit()  != null ) ret = new TemplateArg { lit      = c.lit().Visit() };
+			TplArg ret;
+			if( c.typespec()  != null ) ret = new TplArg { typespec = VisitTypespec( c.typespec() ) };
+			else if( c.lit()  != null ) ret = new TplArg { lit      = c.lit().Visit() };
 			else throw new Exception( "unknown template arg kind" );
 			return ret;
 		}
 
-		public new List<TemplateArg> VisitTplArgs( TplArgsContext c )
+		public new List<TplArg> VisitTplArgs( TplArgsContext c )
 			=> c?.tplArg().Select( VisitTplArg ).ToList()
-			?? new List<TemplateArg>( 0 );
+			?? new List<TplArg>( 0 );
 
 		public TplParam VisitTplParam( IdContext c )
 		{

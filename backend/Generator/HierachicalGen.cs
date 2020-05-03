@@ -91,39 +91,23 @@ namespace Myll.Generator
 
 		private readonly Access defaultAccess;
 
-		private Hierarchical obj;
+		private readonly Hierarchical hierarchical;
 
-		private int LevelDecl { get; set; }
-		private int LevelImpl { get; set; }
+		private int LevelDecl { get; }
+		private int LevelImpl { get; }
 
 		private string IndentDecl   => IndentString.Repeat( LevelDecl );
 		private string IndentImpl   => IndentString.Repeat( LevelImpl );
 		private string DeIndentDecl => IndentString.Repeat( LevelDecl - 1 );
 		private string DeIndentImpl => IndentString.Repeat( LevelImpl - 1 );
 
-		public HierarchicalGen( Hierarchical obj, int LevelDecl, int LevelImpl )
+		public HierarchicalGen( Hierarchical obj, int levelDecl, int levelImpl )
 		{
-			this.obj       = obj;
-			this.LevelDecl = LevelDecl;
-			this.LevelImpl = LevelImpl;
+			hierarchical = obj;
+			LevelDecl    = levelDecl;
+			LevelImpl    = levelImpl;
 
 			defaultAccess = obj.defaultAccess;
-		}
-
-		private void ThrowOnInvalidAccess( ref Access access )
-		{
-			if( access == Access.None ) {
-				throw new Exception( "should not happen anymore?!" );
-				//was access = currentAccess; before
-				//access = defaultAccess;
-			}
-
-			// Could be outside of the Enums valid values
-			if( !access.In( Access.Public, Access.Protected, Access.Private ) )
-				throw new ArgumentOutOfRangeException(
-					nameof( access ),
-					access,
-					@"Encountered invalid Accessibility; needed to be Public, Protected or Private" );
 		}
 
 		// TODO: convert to IStrings if too slow
@@ -152,12 +136,11 @@ namespace Myll.Generator
 				if( gen.Count == 0 )
 					continue;
 
-				if( access != Access.Irrelevant ) {
-					if( access != curAccess )
-						ret.Add( Format( AccessFormat[access], accessIndent ) );
+				if( access != curAccess )
+					ret.Add( Format( AccessFormat[access], accessIndent ) );
 
-					curAccess = access;
-				}
+				curAccess = access;
+
 				ret.AddRange( gen );
 			}
 
@@ -192,10 +175,8 @@ namespace Myll.Generator
 		}
 
 		// Those need to be kept in adding order
-		public void AddEntry( EnumEntry obj, Access access = Access.None )
+		public void AddEntry( EnumEntry obj )
 		{
-			ThrowOnInvalidAccess( ref access );
-
 			string        indent     = IndentDecl;
 			string        name       = obj.name;
 			AccessStrings targetDecl = obj.IsStatic ? staticFieldDecl : fieldDecl;
@@ -206,14 +187,12 @@ namespace Myll.Generator
 					name,
 					obj.value != null ? VarFormat[3] + obj.value.Gen() : "" )
 			};
-			targetDecl.Add( (access, ret) );
+			targetDecl.Add( (obj.access, ret) );
 		}
 
 		// Those need to be kept in adding order
-		public void AddVar( Var obj, Access access = Access.None )
+		public void AddVar( Var obj )
 		{
-			ThrowOnInvalidAccess( ref access );
-
 			bool needsTypename = false; // TODO how to determine this
 
 			bool          isInsideStruct = obj.IsInStruct;
@@ -237,7 +216,7 @@ namespace Myll.Generator
 						? VarFormat[3] + obj.init.Gen()
 						: "" )
 			};
-			targetDecl.Add( (access, retDecl) );
+			targetDecl.Add( (obj.access, retDecl) );
 
 			if( !isStatic && isInsideStruct )
 				return;
@@ -253,28 +232,26 @@ namespace Myll.Generator
 					obj.type.Gen( nameImpl ),
 					obj.init != null ? VarFormat[3] + obj.init.Gen() : "" )
 			};
-			targetImpl.Add( (access, retImpl) );
+			targetImpl.Add( (obj.access, retImpl) );
 		}
 
-		public void AddFunc( Func obj, Access access = Access.None )
+		public void AddFunc( Func obj )
 		{
-			ThrowOnInvalidAccess( ref access );
-
 			List<TplParam> tplParams = obj.TplParams;
 
-			bool    hasTpl      = tplParams.Count >= 1;
-			bool    isInline    = obj.IsInline;
-			bool    isInsideStruct  = obj.IsInStruct;
-			string  indentDecl  = IndentDecl;
-			string  indentImpl  = IndentImpl;
-			string  nameDecl    = obj.name;
-			string  nameImpl    = obj.FullyQualifiedName;
-			Strings targetDecl  = (obj.IsStatic ? staticMethodDecl : methodDecl).Target( access );
-			Strings targetImpl  = (obj.IsStatic ? staticMethodImpl : methodImpl).Target( access );
-			Strings targetProto = isInsideStruct ? targetDecl : protoLate.Target( access );
+			bool    hasTpl         = tplParams.Count >= 1;
+			bool    isInline       = obj.IsInline;
+			bool    isInsideStruct = obj.IsInStruct;
+			string  indentDecl     = IndentDecl;
+			string  indentImpl     = IndentImpl;
+			string  nameDecl       = obj.name;
+			string  nameImpl       = obj.FullyQualifiedName;
+			Strings targetDecl     = (obj.IsStatic ? staticMethodDecl : methodDecl).Target( obj.access );
+			Strings targetImpl     = (obj.IsStatic ? staticMethodImpl : methodImpl).Target( obj.access );
+			Strings targetProto    = isInsideStruct ? targetDecl : protoLate.Target( obj.access );
 
 			string paramString = obj.paras
-				.Select( para => para.Gen() )
+				.Select( p => p.Gen() )
 				.Join( ", " );
 
 			string headlineDecl = Format(
@@ -345,11 +322,10 @@ namespace Myll.Generator
 			}
 		}
 
-		public void AddHierarchical( Hierarchical obj, Access access = Access.None )
+		public void AddHierarchical( Hierarchical obj )
 		{
-			ThrowOnInvalidAccess( ref access );
 			if( obj.IsStatic )
-				throw new ArgumentOutOfRangeException( nameof( obj ), true, "Structurals/Enums can not be static" );
+				throw new ArgumentOutOfRangeException( nameof( obj ), true, "Hierarchicals can not be static" );
 
 			HierarchicalGen gen = new HierarchicalGen( obj, LevelDecl + 1, LevelImpl );
 
@@ -359,12 +335,12 @@ namespace Myll.Generator
 			obj.children.ForEach( c => c.AddToGen( gen ) );
 
 			string  indent      = gen.DeIndentDecl;
-			string  nameDecl    = gen.obj.name;
-			Strings targetProto = protoEarly.Target( access );
-			Strings targetDecl  = hierarchicalDecl.Target( access );
-			Strings targetImpl  = hierarchicalImpl.Target( access );
+			string  nameDecl    = gen.hierarchical.name;
+			Strings targetProto = protoEarly.Target( obj.access );
+			Strings targetDecl  = hierarchicalDecl.Target( obj.access );
+			Strings targetImpl  = hierarchicalImpl.Target( obj.access );
 
-			if( gen.obj is ITplParams hierWithTpl
+			if( gen.hierarchical is ITplParams hierWithTpl
 			 && hierWithTpl.TplParams.Count >= 1 ) {
 				string tpl = Format(
 					"{0}template <{1}>",
@@ -375,11 +351,11 @@ namespace Myll.Generator
 				targetDecl.Add( tpl );
 			}
 
-			var objNamespace = gen.obj as Namespace;
-			var objEnum      = gen.obj as Enumeration;
-			var objStruct    = gen.obj as Structural;
+			var objNamespace = gen.hierarchical as Namespace;
+			var objEnum      = gen.hierarchical as Enumeration;
+			var objStruct    = gen.hierarchical as Structural;
 
-			bool isGlobal    = gen.obj is GlobalNamespace;
+			bool isGlobal    = gen.hierarchical is GlobalNamespace;
 			bool isNamespace = objNamespace != null;
 			bool isEnum      = objEnum      != null;
 			bool isStruct    = objStruct    != null;
@@ -400,7 +376,12 @@ namespace Myll.Generator
 					Structural.Kind.Struct => StructFormat[3],
 					Structural.Kind.Class  => StructFormat[4],
 					Structural.Kind.Union  => StructFormat[5],
+					_                      => null,
 				};
+
+				if( keyword == null )
+					throw new Exception( Format( "no correct keyword determined: {0}", objStruct ) );
+
 				bases = (objStruct.basetypes.Count < 1)
 					? ""
 					: " : " + objStruct.basetypes
@@ -436,7 +417,9 @@ namespace Myll.Generator
 						bases ) );
 				targetDecl.Add( Format( CurlyOpen, indent ) );
 			}
+
 			targetDecl.AddRange( gen.GenDecl() );
+
 			if( !isGlobal ) {
 				targetDecl.Add( Format( isNamespace ? CurlyClose : CurlyCloseSC, indent ) );
 			}
@@ -444,9 +427,8 @@ namespace Myll.Generator
 			targetImpl.AddRange( gen.GenImpl() );
 		}
 
-		public void AddCtorDtor( ConDestructor obj, Access access = Access.None )
+		public void AddCtorDtor( ConDestructor obj )
 		{
-			ThrowOnInvalidAccess( ref access );
 			if( obj.IsStatic )
 				throw new ArgumentOutOfRangeException( nameof( obj ), true, "Con/Destructor can not be static" );
 
@@ -455,8 +437,8 @@ namespace Myll.Generator
 			string  indentImpl = IndentImpl;
 			string  nameDecl   = obj.name;
 			string  nameImpl   = obj.FullyQualifiedName;
-			Strings targetDecl = (isCtor ? ctorDecl : dtorDecl).Target( access );
-			Strings targetImpl = (isCtor ? ctorImpl : dtorImpl).Target( access );
+			Strings targetDecl = (isCtor ? ctorDecl : dtorDecl).Target( obj.access );
+			Strings targetImpl = (isCtor ? ctorImpl : dtorImpl).Target( obj.access );
 
 			string paramString = obj.paras
 				.Select( para => para.Gen() )
@@ -464,40 +446,36 @@ namespace Myll.Generator
 
 			string leadingAttr = "";
 			if( obj.paras.Count == 1
-			 && (!obj.attribs?.ContainsKey( "implicit" ) ?? true) ) {
+			 && !obj.IsAttrib( "implicit" ) ) {
 				leadingAttr += "explicit ";
 			}
+
+			string headlineDecl = Format(
+				FuncFormat[1],
+				indentDecl,
+				leadingAttr,
+				nameDecl,
+				paramString,
+				"" );
+
 			if( obj.IsInline ) {
-				targetDecl.Add(
-					Format(
-						FuncFormat[1],
-						indentDecl,
-						leadingAttr,
-						nameDecl,
-						paramString,
-						"" ) );
+				targetDecl.Add( headlineDecl );
 				targetDecl.Add( Format( CurlyOpen, indentDecl ) );
 				targetDecl.AddRange( obj.block.GenWithoutCurly( LevelDecl + 1 ) );
 				targetDecl.Add( Format( CurlyClose, indentDecl ) );
 			}
 			else {
-				targetDecl.Add(
-					Format(
-						FuncFormat[1],
-						indentDecl,
-						leadingAttr,
-						nameDecl,
-						paramString,
-						";" ) );
+				string headlineImpl = Format(
+					FuncFormat[1],
+					indentImpl,
+					leadingAttr,
+					nameImpl,
+					paramString,
+					"" );
 
-				targetImpl.Add(
-					Format(
-						FuncFormat[1],
-						indentImpl,
-						leadingAttr,
-						nameImpl,
-						paramString,
-						"" ) );
+				targetDecl.Add( headlineDecl + ";" );
+
+				targetImpl.Add( headlineImpl );
 				targetImpl.Add( Format( CurlyOpen, indentImpl ) );
 				targetImpl.AddRange( obj.block.GenWithoutCurly( LevelImpl + 1 ) );
 				targetImpl.Add( Format( CurlyClose, indentImpl ) );

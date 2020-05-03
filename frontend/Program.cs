@@ -42,7 +42,13 @@ namespace Myll
 			IEnumerable<ModuleGroup>
 				ret = filenames
 					.Select( GetProgContext )
-					.GroupBy( c => VisitorExtensions.DeclVis.ProbeModule( c ) );
+					.GroupBy(
+						c => {
+							FileInfo fi = new FileInfo( c.Start.InputStream.SourceName );
+							string module = c.module()?.id().GetText()
+							             ?? Path.GetFileNameWithoutExtension( fi.Name );
+							return module;
+						} );
 
 			return ret;
 		}
@@ -72,7 +78,6 @@ namespace Myll
 
 				ret.Add( (string.Format( "{0}.h", progContext.Key ), decl) );
 
-
 				Strings implList = gen.GenImpl();
 				if( implList.Count != 0 ) {
 					IStrings impl = implList.Prepend( string.Format( "#include \"{0}.h\"", progContext.Key ) );
@@ -86,8 +91,12 @@ namespace Myll
 		/// The main entry point for the application.
 		/// </summary>
 		[STAThread]
-		public static void Main()
+		public static int Main( string[] args )
 		{
+			DateTime start = DateTime.Now;
+
+			bool hasConsoleOutput = args.Contains( "--stdout" );
+			bool hasFileOutput    = args.Contains( "--fileout" );
 			//StreamReader reader = new StreamReader(  );
 			//TextReader tr = new TextReader();
 			//string testcase = File.ReadAllText( "testcase.myll" );
@@ -97,29 +106,40 @@ namespace Myll
 			//var tests_subdirs = di.EnumerateDirectories();
 			//Console.WriteLine( "// directory {0}", tests_subdirs.Select( d => d.FullName ).Join( ", " ) );
 
-			var moduleGroups = ClassifyModules(
-				new List<string> {
-					//"tests/mixed/main.myll",
-					//"tests/mixed/stack.myll",
-					"tests/mixed/testcase.myll",
-				} );
+			Strings files = new Strings {
+				"tests/mixed/main.myll",
+				"tests/mixed/stack.myll",
+				"tests/mixed/enum.myll",
+				"tests/mixed/testcase.myll",
+			};
+
+			IEnumerable<ModuleGroup> moduleGroups = ClassifyModules( files );
 
 			//  Filename, Content
 			List<(string, IStrings)> output = Compile( moduleGroups );
 
-			Directory.CreateDirectory( "./tests/mixed/generated/" );
+			if( hasFileOutput )
+				Directory.CreateDirectory( "./tests/mixed/generated/" );
 
 			output.ForEach(
 				o => {
 					//var fs = File.Create( "output_" + o.Item1 );
 
-					File.WriteAllLines( "./tests/mixed/generated/" + o.Item1, o.Item2 );
+					if( hasFileOutput )
+						File.WriteAllLines( "./tests/mixed/generated/" + o.Item1, o.Item2 );
 
-					Console.WriteLine( "// {0}", o.Item1 );
-					Console.WriteLine( o.Item2.Join( "\n" ) );
+					if( hasConsoleOutput ) {
+						Console.WriteLine( "\n// {0}", o.Item1 );
+						Console.WriteLine( o.Item2.Join( "\n" ) );
+					}
 				} );
 
 			// TODO: multifile, merge Namespaces for same module or merge in Generator
+
+			DateTime end = DateTime.Now;
+
+			Console.WriteLine( "Time elapsed in main() {0}ms", (end - start).TotalMilliseconds );
+			return 0;
 		}
 	}
 }

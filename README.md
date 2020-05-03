@@ -87,6 +87,13 @@ static hat etliche Bedeutungen, const auch:
 ...Echte 'Konstanten' wurden aber sehr lange nicht etwa mit 'const float PI = 3.14f;'
 geschrieben, sondern mit '#define PI 3.14f'
 
+C#/Java/D/Rust argumentation erweitern
+
+Zu lesen: K&R, Stroustrup
+
+Leute kontaktieren:
+	Nic, BS, AH, JB, PV
+
 # Pointer / Array output
 
 int a;			declare a as int

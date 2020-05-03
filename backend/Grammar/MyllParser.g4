@@ -109,7 +109,7 @@ expr		:	(idTplArgs	SCOPE)+	idTplArgs	# ScopedExpr
 			| // can not even be associative without a contained expr
 				NEW	typespec?	funcCall?		# NewExpr
 			| // inherent <assoc=right>, so no need to tell ANTLR
-				(	(	MOVE
+				(	(	MOVE // parens included
 					|	LPAREN (QM|EM)? typespec RPAREN)
 				|	SIZEOF
 				|	DELETE	( ary='['']' )?

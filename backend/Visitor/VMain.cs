@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using Myll.Core;
 
 using Parser = Myll.MyllParser;
@@ -10,11 +9,11 @@ namespace Myll
 	public partial class ExtendedVisitor<Result>
 		: MyllParserBaseVisitor<Result>
 	{
-		protected readonly Stack<Scope> ScopeStack;
+		protected readonly Stack<Scope> scopeStack;
 
-		public ExtendedVisitor( Stack<Scope> ScopeStack )
+		public ExtendedVisitor( Stack<Scope> scopeStack )
 		{
-			this.ScopeStack = ScopeStack;
+			this.scopeStack = scopeStack;
 		}
 
 		public GlobalNamespace GenerateGlobalScope()
@@ -23,21 +22,20 @@ namespace Myll
 				name     = "",   // global
 				srcPos   = null, // no pos since it exists for multiple files
 				withBody = true,
-				access   = Access.Public,
 				imps     = new HashSet<string>(),
 			};
 			Scope scope = new Scope {
 				parent = null,
 				decl   = global,
 			};
-			ScopeStack.Push( scope );
+			scopeStack.Push( scope );
 			return global;
 		}
 
 		public void CleanBodylessNamespace()
 		{
 			// TODO: This needs to be mentioned in the THESIS, unreadable SHIT!
-			while( !((Namespace) ScopeStack.Peek().decl).withBody )
+			while( !((Namespace) scopeStack.Peek().decl).withBody )
 				PopScope();
 		}
 
@@ -47,13 +45,13 @@ namespace Myll
 
 			PopScope();
 
-			if( ScopeStack.Count != 0 )
+			if( scopeStack.Count != 0 )
 				throw new Exception( "ScopeStack was not empty" );
 		}
 
 		public void AddChild( Decl leaf )
 		{
-			Scope parent = ScopeStack.Peek();
+			Scope parent = scopeStack.Peek();
 			ScopeLeaf scopeLeaf = new ScopeLeaf {
 				parent = parent,
 				decl   = leaf,
@@ -63,7 +61,7 @@ namespace Myll
 
 		public void AddChildren( IEnumerable<Decl> leafs )
 		{
-			Scope parent = ScopeStack.Peek();
+			Scope parent = scopeStack.Peek();
 			foreach( Decl leaf in leafs ) {
 				ScopeLeaf scopeLeaf = new ScopeLeaf {
 					parent = parent,
@@ -75,29 +73,29 @@ namespace Myll
 
 		public void PushScope( Hierarchical hierarchical )
 		{
-			Scope parent = ScopeStack.Peek();
+			Scope parent = scopeStack.Peek();
 			Scope scope = new Scope {
 				parent = parent,
 				decl   = hierarchical,
 			};
 			parent.AddChild( scope );
-			ScopeStack.Push( scope );
+			scopeStack.Push( scope );
 		}
 
 		// pushing a scope which can't be addressed from the outside
 		public void PushScope()
 		{
-			Scope parent = ScopeStack.Peek();
+			Scope parent = scopeStack.Peek();
 			Scope scope = new Scope {
 				parent = parent,
 				decl   = null,
 			};
-			ScopeStack.Push( scope );
+			scopeStack.Push( scope );
 		}
 
 		public void PopScope()
 		{
-			ScopeStack.Pop();
+			scopeStack.Pop();
 		}
 	}
 }

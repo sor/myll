@@ -10,35 +10,11 @@ namespace Myll
 
 	using Attribs = Dictionary<string, List<string>>;
 
-	public partial class ExtendedVisitor<Result>
-		: MyllParserBaseVisitor<Result>
-	{
-		protected new IEnumerable<Param> VisitFuncTypeDef( FuncTypeDefContext cs )
-			=> cs.param().Select(
-				c => new Param {
-					name = c.id().Visit(),
-					type = VisitTypespec( c.typespec() )
-				} );
-
-		public new Var.Accessor VisitAccessorDef( AccessorDefContext c )
-		{
-			throw new NotImplementedException( "refactored away on 20-11-2019" );
-		}
-
-		protected IEnumerable<EnumEntry> VisitEnumEntrys( IdExprsContext cs )
-			=> cs.idExpr().Select(
-				c => new EnumEntry {
-					srcPos = c.ToSrcPos(),
-					name   = c.id().Visit(),
-					access = Access.Public,
-					value  = c.expr().Visit(),
-				} );
-	}
-
 	public class DeclVisitor
 		: ExtendedVisitor<Decl>
 	{
-		public DeclVisitor( Stack<Scope> ScopeStack ) : base( ScopeStack ) {}
+		public DeclVisitor( Stack<Scope> scopeStack )
+			: base( scopeStack ) {}
 
 		public string ProbeModule( ProgContext c )
 		{
@@ -103,12 +79,12 @@ namespace Myll
 		public override Decl VisitOpDef( OpDefContext c )
 		{
 			// TODO solve that better
-			string string_op = c.STRING_LIT().GetText();
-			string cleaned_op = "operator" + string_op.Substring( 1, string_op.Length - 2 );
+			string stringOp  = c.STRING_LIT().GetText();
+			string cleanedOp = "operator" + stringOp.Substring( 1, stringOp.Length - 2 );
 			PushScope();
 			Func ret = new Func {
 				srcPos    = c.ToSrcPos(),
-				name      = cleaned_op,
+				name      = cleanedOp,
 				access    = curAccess,
 				TplParams = VisitTplParams( c.tplParams() ),
 				paras     = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
@@ -134,20 +110,13 @@ namespace Myll
 		public new List<Decl> VisitOpDecl( OpDeclContext c )
 			=> c.opDef().Select( VisitOpDef ).ToList();
 
-		public override Decl VisitAttribBlk( AttribBlkContext c )
-		{
-			Attribs attribs = c.Visit();
-
-			// TODO: how to store and attach to following decl
-			return base.VisitAttribBlk( c );
-		}
-
 		public override Decl VisitAttribDeclBlock( AttribDeclBlockContext c )
 		{
 			List<Decl> decls = c.levDecl()
 				.Select( o => o?.Visit() )
 				.ToList();
 
+			// always has attribs
 			Attribs attribs = c.attribBlk().Visit();
 			decls.ForEach( o => o.AssignAttribs( attribs ) );
 
@@ -160,7 +129,8 @@ namespace Myll
 			Decl ret =
 				(c.inAnyStmt() != null) ? Visit( c.inAnyStmt() ) :
 				(c.inDecl()    != null) ? Visit( c.inDecl() ) :
-				                          throw new ArgumentOutOfRangeException( "neither inAnyStmt nor inDecl" );
+				                          throw new ArgumentOutOfRangeException(
+					                          nameof( c ), c, "neither inAnyStmt nor inDecl" );
 
 			// PPP is null
 			if( ret != null ) {
@@ -220,7 +190,6 @@ namespace Myll
 				Namespace ns = new Namespace {
 					srcPos   = id.ToSrcPos(),
 					name     = id.Visit(),
-					access   = Access.Public,
 					withBody = withBody,
 				};
 				PushScope( ns );
@@ -268,7 +237,7 @@ namespace Myll
 
 		public override Decl VisitCtorDecl( CtorDeclContext c )
 		{
-			Scope parent = ScopeStack.Peek();
+			Scope parent = scopeStack.Peek();
 			if( !parent.HasDecl || !(parent.decl is Structural) )
 				throw new Exception( "parent of c/dtor has no decl or is not a structural" );
 
@@ -291,7 +260,7 @@ namespace Myll
 
 		public override Decl VisitDtorDecl( DtorDeclContext c )
 		{
-			Scope parent = ScopeStack.Peek();
+			Scope parent = scopeStack.Peek();
 			if( !parent.HasDecl || !(parent.decl is Structural) )
 				throw new Exception( "parent of c/dtor has no decl or is not a structural" );
 
@@ -315,7 +284,7 @@ namespace Myll
 		// list of typed and initialized vars
 		public List<Var> VisitVars( TypedIdAcorsContext c )
 		{
-			Scope scope = ScopeStack.Peek();
+			Scope scope = scopeStack.Peek();
 			// determine if only scope or container
 			Typespec type = VisitTypespec( c.typespec() );
 			List<Var> ret = c.idAccessors()
@@ -331,7 +300,7 @@ namespace Myll
 						// TODO: Accessors, is this still valid?
 					} )
 				.ToList();
-			ret.ForEach( var => AddChild( var ) );
+			AddChildren( ret );
 			return ret;
 		}
 

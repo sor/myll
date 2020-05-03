@@ -10,7 +10,7 @@ namespace Myll.Core
 		public bool HasDecl => decl != null;
 	}
 
-	// has fast indexable decls
+	// has fast index-able decls
 	// IF hierarchical
 	// THEN visible from outside
 	// ELSE NOT visible from outside
@@ -49,8 +49,7 @@ namespace Myll.Core
 
 		private void AddToDict( ScopeLeaf scopeLeaf, Decl child )
 		{
-			List<ScopeLeaf> list;
-			if( !children.TryGetValue( child.name, out list ) ) {
+			if( !children.TryGetValue( child.name, out List<ScopeLeaf> list ) ) {
 				list = new List<ScopeLeaf>( 1 );
 				children.Add( child.name, list );
 			}

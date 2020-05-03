@@ -6,15 +6,15 @@ namespace Myll.Generator
 	using Strings     = List<string>;
 	using IntToString = Dictionary<int, string>;
 
-	public static class StmtFormatting
+	internal static class StmtFormatting
 	{
-		//public static readonly string IndentString = "\t";
-		public static readonly string IndentString = "    ";
-		public static readonly string ThrowFormat  = "{0}throw {1};";
-		public static readonly string BreakFormat  = "{0}break;";
-		public static readonly string CurlyOpen    = "{0}{{";
-		public static readonly string CurlyClose   = "{0}}}";
-		public static readonly string CurlyCloseSC = "{0}}};";
+		//internal static readonly string IndentString = "\t";
+		internal const string IndentString = "    ";
+		internal const string ThrowFormat = "{0}throw {1};";
+		internal const string BreakFormat = "{0}break;";
+		internal const string CurlyOpen = "{0}{{";
+		internal const string CurlyClose = "{0}}}";
+		internal const string CurlyCloseSC = "{0}}};";
 
 		public static readonly Dictionary<Access, string>
 			AccessFormat = new Dictionary<Access, string> {

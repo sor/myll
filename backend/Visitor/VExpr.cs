@@ -9,34 +9,6 @@ using static Myll.MyllParser;
 
 namespace Myll
 {
-	public partial class ExtendedVisitor<Result>
-		: MyllParserBaseVisitor<Result>
-	{
-		public new List<Arg> VisitArgs( ArgsContext c )
-			=> c?.arg().Select( VisitArg ).ToList()
-			?? new List<Arg>();
-
-		public new Arg VisitArg( ArgContext c )
-			=> new Arg {
-				name = c.id().Visit(),
-				expr = c.expr().Visit(),
-			};
-
-		public new FuncCall VisitIndexCall( IndexCallContext c )
-			=> new FuncCall {
-				args     = VisitArgs( c.args() ),
-				nullCoal = c.ary.Type == QM_LBRACK,
-				indexer  = true,
-			};
-
-		public new FuncCall VisitFuncCall( FuncCallContext c )
-			=> new FuncCall {
-				args     = VisitArgs( c?.args() ),
-				nullCoal = c?.ary.Type == QM_LPAREN,
-				indexer  = false,
-			};
-	}
-
 	/**
 	 * Only Visit can receive null and will return null, the
 	 * other Visit... methods do not support null parameters
@@ -88,8 +60,8 @@ namespace Myll
 			}
 			else if( c.memAccOP() != null ) {
 				IdExpr right = new IdExpr {
-					op    = Operand.Id,
-					idTpl = VisitIdTplArgs( c.idTplArgs() ),
+					op        = Operand.Id,
+					idTplArgs = VisitIdTplArgs( c.idTplArgs() ),
 				};
 				ret = new BinOp {
 					op    = c.memAccOP().v.ToOp(),
@@ -132,10 +104,10 @@ namespace Myll
 					: new TypespecNested {
 						srcPos = c.ToSrcPos(),
 						ptrs   = new List<Pointer>(),
-						idTpls = new List<IdTpl> {
-							new IdTpl {
+						idTpls = new List<IdTplArgs> {
+							new IdTplArgs {
 								id      = "move", // TODO: support std::forward as well
-								tplArgs = new List<TemplateArg>(),
+								tplArgs = new List<TplArg>(),
 							}
 						}
 					};
@@ -310,13 +282,13 @@ namespace Myll
 				};
 			}
 			else if( cc.AUTOINDEX() != null ) {
-				IdTpl idTpl = new IdTpl {
-					id           = cc.AUTOINDEX().GetText(),
-					tplArgs = new List<TemplateArg>( 0 ),
+				IdTplArgs idTplArgs = new IdTplArgs {
+					id      = cc.AUTOINDEX().GetText(),
+					tplArgs = new List<TplArg>( 0 ),
 				};
 				ret = new IdExpr {
-					op    = Operand.WildId,
-					idTpl = idTpl,
+					op        = Operand.WildId,
+					idTplArgs = idTplArgs,
 				};
 			}
 			else {
@@ -348,8 +320,8 @@ namespace Myll
 		public override Expr VisitIdTplExpr( IdTplExprContext c )
 		{
 			Expr ret = new IdExpr {
-				op    = Operand.Id,
-				idTpl = VisitIdTplArgs( c.idTplArgs() ),
+				op        = Operand.Id,
+				idTplArgs = VisitIdTplArgs( c.idTplArgs() ),
 			};
 			return ret;
 		}

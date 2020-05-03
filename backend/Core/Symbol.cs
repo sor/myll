@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Myll.Core
 {
 	// basically any kind of declaration
 	// things which introduce a name
+	[Obsolete( "not used ATM, properly check before using" )]
 	public class Symbol
 	{
 		public enum Kind
@@ -18,15 +20,15 @@ namespace Myll.Core
 			Method,      // class::func, class::op
 		}
 
-		public const int UNRESOLVED = -2;
-		public const int RESOLVING  = -1;
-		public const int RESOLVED   = 0;
+		public const int Unresolved = -2;
+		public const int Resolving  = -1;
+		public const int Resolved   = 0;
 
-		public int unresolvedCount = UNRESOLVED;
+		public int unresolvedCount = Unresolved;
 
-		public bool IsUnResolved => unresolvedCount == UNRESOLVED;
-		public bool IsResolving  => unresolvedCount == RESOLVING;
-		public bool IsResolved   => unresolvedCount == RESOLVED;
+		public bool IsUnResolved => unresolvedCount == Unresolved;
+		public bool IsResolving  => unresolvedCount == Resolving;
+		public bool IsResolved   => unresolvedCount == Resolved;
 
 		public Kind         kind;
 		public string       name;
@@ -40,15 +42,17 @@ namespace Myll.Core
 		public MultiDict<string, Symbol> children      = new MultiDict<string, Symbol>();
 	}
 
+	[Obsolete( "not used ATM, properly check before using" )]
 	public class PairList<TKey, TValue> : List<KeyValuePair<TKey, TValue>> {}
 
+	[Obsolete( "not used ATM, properly check before using" )]
 	public class MultiDict<TKey, TValue> : Dictionary<TKey, List<TValue>>
 	{
 		public void Add( TKey key, TValue value )
 		{
 			List<TValue> list;
 
-			if( !base.TryGetValue( key, out list ) ) {
+			if( !TryGetValue( key, out list ) ) {
 				list = new List<TValue>( 1 );
 				base.Add( key, list );
 			}

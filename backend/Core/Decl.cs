@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using Myll.Generator;
 
@@ -14,11 +13,9 @@ namespace Myll.Core
 
 	public enum Access
 	{
-		None,
 		Private,
 		Protected,
 		Public,
-		Irrelevant,
 	}
 
 	interface ITplParams
@@ -33,7 +30,7 @@ namespace Myll.Core
 	public abstract class Decl : Stmt
 	{
 		public string    name;
-		public Access    access;
+		public Access    access = Access.Public;
 		public ScopeLeaf scope;
 
 		// recursive
@@ -48,24 +45,7 @@ namespace Myll.Core
 			}
 		}
 
-		public bool IsInline {
-			get {
-				return IsAttrib( "inline" ) || IsTemplateUp;
-				// HACK do not support parameters for the moment
-				if( attribs != null && attribs.TryGetValue( "inline", out Strings val ) ) {
-					int count = val.Count;
-					return count switch {
-						0 => true,
-						1 => val[0].In( "force", "yes", "preferred", "maybe" ), // TODO: centralize these attribute-keywords
-						_ => throw new NotSupportedException( "[inline(...)] with more than one parameter" ),
-					};
-				}
-				else {
-					return IsTemplateUp;
-				}
-			}
-		}
-
+		public bool IsInline   => IsAttrib( "inline" ) || IsTemplateUp;
 		public bool IsInStruct => scope.parent.decl is Structural;
 
 		// TODO Symbol?
@@ -76,31 +56,31 @@ namespace Myll.Core
 			foreach( var info in GetType().GetProperties() ) {
 				object value = info.GetValue( this, null )
 				            ?? "(null)";
-				sb.Append( info.Name + ": " + value.ToString() + ", " );
+				sb.Append( info.Name + ": " + value + ", " );
 			}
 
 			sb.Length = Math.Max( sb.Length - 2, 0 );
 			return "{"
 			     + GetType().Name + " '"
 			     + name           + "' "
-			     + sb.ToString()  + "}";
+			     + sb             + "}";
 		}
 
 		public string FullyQualifiedName {
 			get {
 				Strings ret = new Strings();
 				for( ScopeLeaf cur = scope; cur?.parent != null; cur = cur.parent ) {
-					Decl decl = cur.decl;
-					string       name = decl?.name ?? "unknown_fix_me";
+					Decl   decl     = cur.decl;
+					string declName = decl?.name ?? "unknown_fix_me";
 					if( decl is ITplParams curStruct )
 						if( curStruct.TplParams.Count >= 1 )
-							name += "<" + curStruct.TplParams
+							declName += "<" + curStruct.TplParams
 								.Select( t => t.name )
 								.Join( ", " ) + ">";
-					ret.Add( name );
+					ret.Add( declName );
 				}
 				// WTF dot net framework?
-				return (ret as IEnumerable<string>).Reverse().Join( "::" );
+				return ((IEnumerable<string>) ret).Reverse().Join( "::" );
 			}
 		}
 
@@ -117,7 +97,7 @@ namespace Myll.Core
 			set => base.scope = value;
 		}
 
-		public virtual Access defaultAccess { get => Access.Public; }
+		public virtual Access defaultAccess => Access.Public;
 
 		// the children add themselves through AddChild or PushScope
 		public void AddChild( Decl decl )
@@ -139,7 +119,7 @@ namespace Myll.Core
 
 		public override void AddToGen( HierarchicalGen gen )
 		{
-			gen.AddFunc( this, access );
+			gen.AddFunc( this );
 		}
 	}
 
@@ -160,7 +140,7 @@ namespace Myll.Core
 
 		public override void AddToGen( HierarchicalGen gen )
 		{
-			gen.AddCtorDtor( this, access );
+			gen.AddCtorDtor( this );
 		}
 	}
 
@@ -184,37 +164,24 @@ namespace Myll.Core
 	*/
 	public class Var : Decl
 	{
-		public class Accessor
-		{
-			public enum Kind
-			{
-				Get,
-				RefGet,
-				Set,
-			}
-
-			public Kind      kind;
-			public Qualifier qual;
-			public Stmt      body; // opt
-		}
-
 		public Typespec       type;     // contains Qualifier
 		public List<Accessor> accessor; // opt, structural or global
 		public Expr           init;     // opt
 
 		public override void AddToGen( HierarchicalGen gen )
 		{
-			gen.AddVar( this, access );
+			gen.AddVar( this );
 		}
 	}
 
+	// TODO make a generic MultiDecl?
 	public class VarsDecl : Decl
 	{
 		public List<Var> vars;
 
-		public override void AssignAttribs( Attribs attribs )
+		public override void AssignAttribs( Attribs inAttribs )
 		{
-			vars.ForEach( v => v.AssignAttribs( attribs ) );
+			vars.ForEach( v => v.AssignAttribs( inAttribs ) );
 		}
 
 		public override void AddToGen( HierarchicalGen gen )
@@ -234,7 +201,7 @@ namespace Myll.Core
 
 		public override void AddToGen( HierarchicalGen gen )
 		{
-			gen.AddEntry( this, Access.Public );
+			gen.AddEntry( this );
 		}
 	}
 
@@ -250,6 +217,7 @@ namespace Myll.Core
 			("operator|", Operand.BitOr),
 			("operator^", Operand.BitXor),
 		};
+
 		static readonly (string, Operand)[] BitwiseEqualOps = {
 			("operator&=", Operand.BitAnd),
 			("operator|=", Operand.BitOr),
@@ -257,7 +225,7 @@ namespace Myll.Core
 		};
 
 		// 0 will return true as well, which is maybe not what you wanted
-		bool IsPowerOfTwo(uint x)
+		bool IsPowerOfTwo( uint x )
 		{
 			bool ret = (x & (x - 1)) == 0;
 			return ret;
@@ -271,18 +239,21 @@ namespace Myll.Core
 				// HACK this is just written in a hurry, that might break at any user intervention
 				uint index = 1;
 				foreach( Decl child in children ) {
-					if(child is EnumEntry ee ) {
+					if( child is EnumEntry ee ) {
 						if( ee.value is Literal lit ) {
-							uint read_index = uint.Parse( lit.text );
-							if( read_index == 0 )
+							uint readIndex = uint.Parse( lit.text );
+							if( readIndex == 0 )
 								index = 1;
 							else
-								index = read_index * 2;
+								index = readIndex * 2;
 						}
 						else {
 							if( !IsPowerOfTwo( index ) )
 								throw new Exception(
-									Format( "[flags]enum auto numbering not a power of two: {0} at {1}", index, ee.srcPos) );
+									Format(
+										"[flags]enum auto numbering not a power of two: {0} at {1}",
+										index,
+										ee.srcPos ) );
 							ee.value =  new Literal { op = Operand.Literal, text = index.ToString() };
 							index    *= 2;
 						}
@@ -297,53 +268,52 @@ namespace Myll.Core
 
 				// HACK: this should work for most, but is an incorrect Typespec
 				Typespec
-					enum_typespec = new TypespecNested {
+					enumTypespec = new TypespecNested {
 						ptrs = new List<Pointer>(),
-						idTpls = new List<IdTpl> {
-							new IdTpl { id = FullyQualifiedName, tplArgs = new List<TemplateArg>() }
+						idTpls = new List<IdTplArgs> {
+							new IdTplArgs { id = FullyQualifiedName, tplArgs = new List<TplArg>() }
 						}
 					},
-					enum_typespec_ref = new TypespecNested {
+					enumTypespecRef = new TypespecNested {
 						ptrs = new List<Pointer> { new Pointer { kind = Pointer.Kind.LVRef } },
-						idTpls = new List<IdTpl> {
-							new IdTpl { id = FullyQualifiedName, tplArgs = new List<TemplateArg>() }
+						idTpls = new List<IdTplArgs> {
+							new IdTplArgs { id = FullyQualifiedName, tplArgs = new List<TplArg>() }
 						}
 					};
 
 				Typespec underlying = new TypespecNested {
 					ptrs = new List<Pointer>(),
-					idTpls = new List<IdTpl> {
-						new IdTpl { id = "std", tplArgs = new List<TemplateArg>() },
-						new IdTpl {
+					idTpls = new List<IdTplArgs> {
+						new IdTplArgs { id = "std", tplArgs = new List<TplArg>() },
+						new IdTplArgs {
 							id      = "underlying_type",
-							tplArgs = new List<TemplateArg> { new TemplateArg { typespec = enum_typespec } }
+							tplArgs = new List<TplArg> { new TplArg { typespec = enumTypespec } }
 						},
-						new IdTpl { id = "type", tplArgs = new List<TemplateArg>() },
+						new IdTplArgs { id = "type", tplArgs = new List<TplArg>() },
 					}
 				};
 
 				Expr
 					lhs = new IdExpr
-						{ op = Operand.Id, idTpl = new IdTpl { id = "lhs", tplArgs = new List<TemplateArg>() }, },
+						{ op = Operand.Id, idTplArgs = new IdTplArgs { id = "lhs", tplArgs = new List<TplArg>() }, },
 					rhs = new IdExpr
-						{ op = Operand.Id, idTpl = new IdTpl { id = "rhs", tplArgs = new List<TemplateArg>() }, };
+						{ op = Operand.Id, idTplArgs = new IdTplArgs { id = "rhs", tplArgs = new List<TplArg>() }, };
 
 				foreach( (string, Operand) tuple in BitwiseOps ) {
 					Func ret = new Func {
 						srcPos    = srcPos, // TODO should be the pos of the attribute
 						name      = tuple.Item1,
-						access    = Access.Public,
 						TplParams = new List<TplParam>(),
-						retType   = enum_typespec,
+						retType   = enumTypespec,
 						paras = new List<Param> {
-							new Param { name = "lhs", type = enum_typespec },
-							new Param { name = "rhs", type = enum_typespec },
+							new Param { name = "lhs", type = enumTypespec },
+							new Param { name = "rhs", type = enumTypespec },
 						},
 						block = new ReturnStmt {
 							srcPos = srcPos,
 							expr = new CastExpr {
 								op   = Operand.StaticCast,
-								type = enum_typespec,
+								type = enumTypespec,
 								expr = new BinOp {
 									op = tuple.Item2,
 									left = new CastExpr {
@@ -378,12 +348,11 @@ namespace Myll.Core
 					Func ret = new Func {
 						srcPos    = srcPos, // TODO should be the pos of the attribute
 						name      = tuple.Item1,
-						access    = Access.Public,
 						TplParams = new List<TplParam>(),
-						retType   = enum_typespec_ref,
+						retType   = enumTypespecRef,
 						paras = new List<Param> {
-							new Param { name = "lhs", type = enum_typespec_ref },
-							new Param { name = "rhs", type = enum_typespec },
+							new Param { name = "lhs", type = enumTypespecRef },
+							new Param { name = "rhs", type = enumTypespec },
 						},
 						block = new Block {
 							srcPos = srcPos,
@@ -394,7 +363,7 @@ namespace Myll.Core
 										lhs,
 										new CastExpr {
 											op   = Operand.StaticCast,
-											type = enum_typespec,
+											type = enumTypespec,
 											expr = new BinOp {
 												op = tuple.Item2,
 												left = new CastExpr {
@@ -413,7 +382,7 @@ namespace Myll.Core
 								},
 								new ReturnStmt {
 									srcPos = srcPos,
-									expr = lhs,
+									expr   = lhs,
 								},
 							},
 						},
@@ -435,7 +404,7 @@ namespace Myll.Core
 
 		public override void AddToGen( HierarchicalGen gen )
 		{
-			gen.AddHierarchical( this, access );
+			gen.AddHierarchical( this );
 		}
 	}
 
@@ -447,7 +416,7 @@ namespace Myll.Core
 		public override void AddToGen( HierarchicalGen gen )
 		{
 			// can not be in a non-public context
-			gen.AddHierarchical( this, Access.Public );
+			gen.AddHierarchical( this );
 		}
 	}
 
@@ -478,7 +447,7 @@ namespace Myll.Core
 
 		public override void AddToGen( HierarchicalGen gen )
 		{
-			gen.AddHierarchical( this, access );
+			gen.AddHierarchical( this );
 		}
 	}
 }

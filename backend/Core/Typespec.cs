@@ -37,23 +37,25 @@ namespace Myll.Core
 			// TODO: solve the pointer/array formatting
 			return BaseGen(
 				GenType()
-			  + (string.IsNullOrEmpty( name )
+			  + (IsNullOrEmpty( name )
 					? PointerizeName()
 					: " " + PointerizeName( name )) );
 		}
 
 		public string PointerizeName( string name = "" )
 		{
-			bool work_on_name = true;
+			bool workOnName = true;
 			foreach( Pointer ptr in ptrs?.AsEnumerable().Reverse() ) {
-				if( ptr.kind < Pointer.Kind.NoNeedForBracketing_Begin ) {
+				// when this is false once, it will remain false
+				workOnName &= ptr.kind < Pointer.Kind.NoNeedForBracketing_Begin;
+				if( workOnName ) {
 					// TODO bracketing works for the moment, but ugly since it always brackets subscript operators
 					if( ptr.kind == Pointer.Kind.RawArray ) {
 						if( name == "" ) {
-							name = String.Format( "[{0}]", ptr.expr?.Gen() ?? "" );
+							name = Format( "[{0}]", ptr.expr?.Gen() ?? "" );
 						}
 						else {
-							name = String.Format( "({0})[{1}]", name, ptr.expr?.Gen() ?? "" );
+							name = Format( "({0})[{1}]", name, ptr.expr?.Gen() ?? "" );
 						}
 					}
 					else {
@@ -68,7 +70,7 @@ namespace Myll.Core
 					}
 				}
 				else {
-					work_on_name = false;
+					throw new NotImplementedException( "smartpointers and containers as pointers not working yet" );
 					// TODO: get smartpointers and containers working as well
 				}
 			}
@@ -80,7 +82,7 @@ namespace Myll.Core
 			// TODO: do properly
 			return qual == Qualifier.None
 				? value
-					: qual.ToString().ToLower().Replace( ",", "" ) + " " + value;
+				: qual.ToString().ToLower().Replace( ",", "" ) + " " + value;
 		}
 	}
 
@@ -120,7 +122,7 @@ namespace Myll.Core
 		{
 			return BaseGen(
 				GenType()
-			  + (string.IsNullOrEmpty( name )
+			  + (IsNullOrEmpty( name )
 					? PointerizeName()
 					: " " + PointerizeName( name )) );
 		}
@@ -166,7 +168,7 @@ namespace Myll.Core
 	// was nestedType
 	public class TypespecNested : Typespec
 	{
-		public List<IdTpl> idTpls;
+		public List<IdTplArgs> idTpls;
 
 		public override string GenType()
 		{
@@ -174,44 +176,6 @@ namespace Myll.Core
 				.Select( s => s.Gen() )
 				.Join( "::" );
 		}
-	}
-
-	// idTplArgs
-	public class IdTpl
-	{
-		public string            id;
-		public List<TemplateArg> tplArgs; // opt
-
-		public string Gen()
-		{
-			if( tplArgs.Count == 0 )
-				return id;
-
-			return Format(
-				"{0}<{1}>",
-				id,
-				tplArgs
-					.Select( t => t.Gen() )
-					.Join( ", " ) );
-		}
-	}
-
-	// tplArg
-	public class TemplateArg // name OR literal OR type
-	{
-		public Typespec typespec;
-		public Literal  lit;
-
-		public string Gen()
-		{
-			return lit?.Gen()
-			    ?? typespec?.Gen();
-		}
-	}
-
-	public class TplParam
-	{
-		public string name;
 	}
 
 	public class Pointer
@@ -252,28 +216,6 @@ namespace Myll.Core
 				{ Kind.MultiSet,	"std::unordered_multiset<{0}> {1}" },
 				{ Kind.OrderedMultiSet, "std::multiset<{0}> {1}" },
 			};
-
-		string Gen( string inner )
-		{
-			// TODO with qualifiers
-			if( kind < Kind.NoNeedForBracketing_Begin ) {
-				// TODO bracketing works for the moment, but ugly since it always brackets subscript operators
-				if( kind == Kind.RawArray )
-					return String.Format( "({0})[{1}]", inner, expr?.Gen() ?? "" );
-
-				string a = kind switch {
-					Kind.RawPtr   => "*{0}",
-					Kind.PtrToAry => "*{0}",
-					Kind.LVRef    => "&{0}",
-					Kind.RVRef    => "&&{0}",
-					_             => "{0}"
-				};
-				return "";
-			}
-			else {
-				return "";
-			}
-		}
 
 		public Qualifier qual;
 		public Kind      kind;

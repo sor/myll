@@ -10,18 +10,8 @@ namespace Myll
 
 	public partial class ExtendedVisitor<Result>
 		: MyllParserBaseVisitor<Result>
-//	public partial class Visitor
-//		: MyllParserBaseVisitor<object>
 	{
-		static readonly Dictionary<int, Qualifier>
-			ToQual = new Dictionary<int, Qualifier> {
-				{ MyllParser.CONST,		Qualifier.Const		},
-				{ MyllParser.MUTABLE,	Qualifier.Mutable	},
-				{ MyllParser.VOLATILE,	Qualifier.Volatile	},
-				{ MyllParser.STABLE,	Qualifier.Stable	},
-			};
-
-		static readonly Dictionary<int, Pointer.Kind>
+		private static readonly Dictionary<int, Pointer.Kind>
 			ToPtr = new Dictionary<int, Pointer.Kind> {
 				{ MyllParser.AT_BANG,	Pointer.Kind.Unique	},
 				{ MyllParser.AT_PLUS,	Pointer.Kind.Shared	},
@@ -71,15 +61,15 @@ namespace Myll
 					size = TypespecBasic.SizeUndetermined,
 					ptrs = new List<Pointer>(),
 				};
-				//return null; // TypespecBasic Auto might make sense
 
 			Typespec ret;
 			if( c.typespecBasic()       != null ) ret = VisitTypespecBasic( c.typespecBasic() );
 			else if( c.typespecFunc()   != null ) ret = VisitTypespecFunc( c.typespecFunc() );
 			else if( c.typespecNested() != null ) ret = VisitTypespecNested( c.typespecNested() );
 			else throw new Exception( "unknown typespec" );
-			ret.qual = c.qual().Visit();
-			ret.ptrs = c.typePtr().Select( VisitTypePtr ).ToList();
+			ret.srcPos = c.ToSrcPos();
+			ret.qual   = c.qual().Visit();
+			ret.ptrs   = c.typePtr().Select( VisitTypePtr ).ToList();
 			return ret;
 		}
 
@@ -106,7 +96,6 @@ namespace Myll
 		public new TypespecBasic VisitTypespecBasic( TypespecBasicContext c )
 		{
 			TypespecBasic ret = new TypespecBasic {
-				srcPos = c.ToSrcPos(),
 				align  = -1,
 				size   = TypespecBasic.SizeUndetermined,
 			};
@@ -190,7 +179,6 @@ namespace Myll
 		public new TypespecFunc VisitTypespecFunc( TypespecFuncContext c )
 		{
 			TypespecFunc ret = new TypespecFunc {
-				srcPos       = c.ToSrcPos(),
 				//templateArgs = VisitTplArgs( c.tplArgs() ),
 				paras        = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
 				retType      = VisitTypespec( c.typespec() ),
@@ -201,13 +189,12 @@ namespace Myll
 		public new TypespecNested VisitTypespecNested( TypespecNestedContext c )
 		{
 			TypespecNested ret = new TypespecNested {
-				srcPos = c.ToSrcPos(),
 				idTpls = c.idTplArgs().Select( VisitIdTplArgs ).ToList()
 			};
 			return ret;
 		}
 
-		public new List<TypespecNested> VisitTypespecsNested( TypespecNestedContext[] c )
+		public List<TypespecNested> VisitTypespecsNested( TypespecNestedContext[] c )
 			=> c?.Select( VisitTypespecNested ).ToList()
 			?? new List<TypespecNested>();
 	}

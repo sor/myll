@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using Myll.Generator;
 
@@ -9,7 +8,7 @@ namespace Myll.Core
 {
 	using static String;
 
-	static class Precedence
+	internal static class Precedence
 	{
 		// Precedence Table in MYLL, will be filled with everything from Operand
 		// The original C++ levels are times 10 here to enable insertion of new in-between levels
@@ -44,7 +43,7 @@ namespace Myll.Core
 		static Precedence()
 		{
 			int currentLevel = 0;
-			foreach( Operand op in System.Enum.GetValues( typeof( Operand ) ) ) {
+			foreach( Operand op in Enum.GetValues( typeof( Operand ) ) ) {
 				if( PrecedenceLevel.TryGetValue( op, out int level ) ) {
 					currentLevel = level;
 				}
@@ -63,11 +62,11 @@ namespace Myll.Core
 		PostIncr,
 		PostDecr,
 		FuncCall,
-		NCFuncCall, // new, special
+		NCFuncCall, // new, special null coalescing = NC
 		IndexCall,
-		NCIndexCall, // new, special
+		NCIndexCall, // new, special null coalescing = NC
 		MemberAccess,
-		NCMemberAccess, // new, special
+		NCMemberAccess, // new, special null coalescing = NC
 		MemberPtrAccess,
 		PostOps_End,
 
@@ -143,7 +142,7 @@ namespace Myll.Core
 		Or,
 		BooleanOps_End,
 
-		NullCoalesce, // new, special
+		NullCoalesce, // new, special general null coalescing
 
 		Conditional, // a ? b : c
 
@@ -173,14 +172,15 @@ namespace Myll.Core
 		{
 			var sb = new StringBuilder();
 			foreach( var info in GetType().GetProperties() ) {
-				var value = info.GetValue( this, null ) ?? "(null)";
-				sb.Append( info.Name + ": " + value.ToString() + ", " );
+				object value = info.GetValue( this, null )
+				            ?? "(null)";
+				sb.Append( info.Name + ": " + value + ", " );
 			}
 
 			sb.Length = Math.Max( sb.Length - 2, 0 );
 			return "{"
 			     + GetType().Name + " "
-			     + sb.ToString()  + "}";
+			     + sb             + "}";
 		}
 
 		public virtual string Gen( bool doBrace = false )
@@ -227,7 +227,7 @@ namespace Myll.Core
 			// myll: a * b | c == d
 			// c++: (a * b | c) == d
 			// myll: 100 / 60 / 50
-			//      eq / binor / mult
+			//      eq / binOr / mult
 			// c++: 100 / *110* / 50
 
 			bool divPrecedence = IsDivergentPrecedence;
@@ -276,15 +276,14 @@ namespace Myll.Core
 
 	public class ScopedExpr : Expr
 	{
-		public List<IdTpl> idTpls;
-		//public Expr        expr;
+		public List<IdTplArgs> idTpls;
 
 		public override string Gen( bool doBrace = false )
 		{
 			string ret = idTpls
 				.Select( s => s.Gen() )
-				//.Append( expr.Gen() )
 				.Join( "::" );
+
 			return doBrace
 				? "(" + ret + ")"
 				: ret;
@@ -296,10 +295,11 @@ namespace Myll.Core
 	 	Happens along with the generation of the symbols, so SKIP for later as well
 
 		This Code:
-			// tryget is func(int, int&) {...}
+			func tryget(int, int&) {...}
 			tryget( c, _ ); // we don't care about 2nd param
 		Needs to Gen this:
-	 		[[maybe_unused]] int temp_4711; // non colliding name, up and down the line
+	 		[[maybe_unused]]
+	 		int temp_4711; // non colliding name, up and down the line
 	 		tryget( c, temp_4711 );
 
 	 	Assignment case:
@@ -315,68 +315,14 @@ namespace Myll.Core
 	*/
 	public class IdExpr : Expr
 	{
-		public IdTpl idTpl;
+		public IdTplArgs idTplArgs;
 
 		public override string Gen( bool doBrace = false )
 		{
 			if( op.In( Operand.WildId, Operand.DiscardId ) )
-				throw new InvalidOperationException( "These should have already been replaced by now" );
+				throw new Exception( "These should have already been replaced by now" );
 
-			return idTpl.Gen();
-		}
-	}
-
-	// func blah(int a) // int is _type_, a is _name_
-	public class Param
-	{
-		public Typespec type;
-		public string   name; // opt
-
-		public string Gen()
-		{
-			return type.Gen( name );
-		}
-	}
-
-	// blah(n: 1+2) // n is matching _name_ of param, 1+2 is _expr_
-	public class Arg // Decl
-	{
-		public string name; // opt
-		public Expr   expr;
-
-		public string Gen()
-		{
-			if( !IsNullOrEmpty( name ) )
-				throw new NotImplementedException( "named function arguments needs to be implemented" );
-
-			return expr.Gen();
-		}
-	}
-
-	public class FuncCall
-	{
-		public List<Arg> args;
-		public bool      indexer;
-		public bool      nullCoal;
-
-		public string Gen()
-		{
-			if( nullCoal )
-				throw new NotImplementedException( "null coalescing for function calls needs to be implemented" );
-
-			if( indexer ) {
-				// TODO: call a different method that can handle more than one parameter
-				if( args.Count != 1 )
-					throw new TargetParameterCountException("indexer call with != 1 arguments");
-
-				return "[" + args.Select( a => a.Gen() ).Join( ", " ) + "]";
-			}
-			else {
-				if( args.Count == 0 )
-					return "()";
-
-				return "( " + args.Select( a => a.Gen() ).Join( ", " ) + " )";
-			}
+			return idTplArgs.Gen();
 		}
 	}
 
@@ -405,8 +351,16 @@ namespace Myll.Core
 				Operand.DynamicCast => "dynamic_cast<{1}>( {0} )",
 				Operand.AnyCast     => "reinterpret_cast<{1}>( {0} )", // TODO: identify const_cast
 				Operand.MoveCast    => "std::{1}( {0} )",              // TODO: this can handle std::forward as well
+				_                   => null,
 			};
-			string ret = Format( format, expr.Gen(), type.Gen() );
+			string
+				exprText = expr.Gen(),
+				typeText = type.Gen();
+
+			if( format == null )
+				throw new Exception( Format( "Invalid cast of {0} to {1}", exprText, typeText ) );
+
+			string ret = Format( format, exprText, typeText );
 			return doBrace
 				? "(" + ret + ")"
 				: ret;

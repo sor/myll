@@ -18,7 +18,7 @@ namespace Myll
 	public class StmtVisitor
 		: ExtendedVisitor<Stmt>
 	{
-		public StmtVisitor( Stack<Scope> ScopeStack ) : base( ScopeStack ) {}
+		public StmtVisitor( Stack<Scope> scopeStack ) : base( scopeStack ) {}
 
 		public override Stmt Visit( IParseTree c )
 			=> c == null
@@ -30,7 +30,8 @@ namespace Myll
 			Stmt ret =
 				(c.inAnyStmt() != null) ? Visit( c.inAnyStmt() ) :
 				(c.inStmt()    != null) ? Visit( c.inStmt() ) :
-				                          throw new ArgumentOutOfRangeException( "neither inAnyStmt nor inStmt" );
+				                          throw new ArgumentOutOfRangeException(
+					                          nameof( c ), c, "neither inAnyStmt nor inStmt" );
 
 			Attribs attribs = c.attribBlk()?.Visit();
 			if( attribs != null )
@@ -60,39 +61,39 @@ namespace Myll
 		{
 			UsingStmt ret = new UsingStmt {
 				srcPos = c.ToSrcPos(),
-				types  = 	VisitTypespecsNested( c.typespecsNested().typespecNested() ),
+				types  = VisitTypespecsNested( c.typespecsNested().typespecNested() ),
 			};
 			ret.types.ForEach( o => o.ptrs = new List<Pointer>() );
 			return ret;
 		}
 
 		// list of typed and initialized vars
-		public List<Var> VisitStmtVars( TypedIdAcorsContext c )
+		public List<VarStmt> VisitStmtVars( TypedIdAcorsContext c )
 		{
-			Scope scope = ScopeStack.Peek();
+			//Scope scope = ScopeStack.Peek();
 			// determine if only scope or container
 			Typespec type = VisitTypespec( c.typespec() );
-			List<Var> ret = c.idAccessors()
+			List<VarStmt> ret = c
+				.idAccessors()
 				.idAccessor()
 				.Select(
-					q => new Var {
+					q => new VarStmt {
 						srcPos   = c.ToSrcPos(),
 						name     = q.id().GetText(),
-						access   = Access.Irrelevant,
 						type     = type,
 						init     = q.expr().Visit(),
-						accessor = q.accessorDef().Visit(),
-						// TODO: Accessors, is this still valid?
+						// no accessors as Stmt
 					} )
 				.ToList();
-			ret.ForEach( var => AddChild( var ) );
+			// TODO ??? AddChildren( ret );
 			return ret;
 		}
 
 		public override Stmt VisitVariableDecl( VariableDeclContext c )
 		{
 			Stmt ret = new VarsStmt {
-				vars = c.typedIdAcors()
+				vars = c
+					.typedIdAcors()
 					.Select( VisitStmtVars )
 					.SelectMany( q => q )
 					.ToList(),
