@@ -23,7 +23,7 @@ func main( int argc, const char*[] argv ) -> int
 
 	while( !message.isEmpty() )
 	{
-		cout << message.top();
+		cout << (move) message.top();
 		message.pop();
 	}
 	cout.flush();

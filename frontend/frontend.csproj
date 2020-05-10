@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net48;netcoreapp3.1</TargetFrameworks>
+		<TargetFrameworks>netcoreapp3.1</TargetFrameworks>
 		<LangVersion>8</LangVersion>
+		<Nullable>enable</Nullable>
 		<AssemblyName>myll</AssemblyName>
 		<RootNamespace>Myll</RootNamespace>
 		<Authors>Jan "SoRDiD" Reitz</Authors>
@@ -27,6 +28,9 @@
 	  <Content Include="tests\mixed\testcase.myll">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </Content>
+	  <Content Include="tests\mixed\stack_big*.myll">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -38,9 +42,6 @@
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
 	  <None Update="tests\mixed\validation\main.h">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
-	  <None Update="tests\mixed\validation\stack.cpp">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
 	  <None Update="tests\mixed\validation\stack.h">

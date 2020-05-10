@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -139,11 +140,18 @@ namespace Myll
 			};
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static void Exec<TSource>( this IEnumerable<TSource> s )
+		public static void Exec<T>( this IEnumerable<T> s )
 		{
 			if( s == null ) return;
-			using( IEnumerator<TSource> e = s.GetEnumerator() )
+			using( IEnumerator<T> e = s.GetEnumerator() )
 				while( e.MoveNext() ) {}
+		}
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static void ForAll<T>( this IEnumerable<T> s, Action<T> action )
+		{
+			foreach( T item in s )
+				action( item );
 		}
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]

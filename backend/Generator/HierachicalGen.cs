@@ -9,6 +9,7 @@ namespace Myll.Generator
 	using static StmtFormatting;
 
 	using Strings        = List<string>;
+	using IStrings       = IEnumerable<string>;
 	using AccessStrings  = List<(Access access, List<string> gen)>;
 	using IAccessStrings = IEnumerable<(Access access, List<string> gen)>;
 
@@ -103,15 +104,33 @@ namespace Myll.Generator
 
 		public HierarchicalGen( Hierarchical obj, int levelDecl, int levelImpl )
 		{
-			hierarchical = obj;
+			hierarchical = obj; // this is 'myself'
 			LevelDecl    = levelDecl;
 			LevelImpl    = levelImpl;
 
 			defaultAccess = obj.defaultAccess;
 		}
 
+		public IStrings GenDeclGlobal()
+		{
+			// throw if not global
+			GlobalNamespace globalNS = (GlobalNamespace) hierarchical;
+			IStrings includes = globalNS.imps
+				.Select(
+					i => i.StartsWith( "std_" )
+						? Format( "#include <{0}>",     i.Substring( 4 ) )
+						: Format( "#include \"{0}.h\"", i ) );
+
+			IStrings declList = GenDecl();
+			IStrings decl = DefaultIncludes
+				.Concat( includes )
+				.Concat( declList );
+
+			return decl;
+		}
+
 		// TODO: convert to IStrings if too slow
-		public Strings GenDecl()
+		private Strings GenDecl()
 		{
 			Access curAccess    = defaultAccess;
 			string accessIndent = DeIndentDecl;
@@ -147,8 +166,21 @@ namespace Myll.Generator
 			return ret;
 		}
 
+		public IStrings GenImplGlobal()
+		{
+			Strings implList = GenImpl();
+			if( implList.Count != 0 ) {
+				GlobalNamespace globalNS = (GlobalNamespace) hierarchical;
+				IStrings        impl     = implList.Prepend( Format( "#include \"{0}.h\"", globalNS.module ) );
+				return impl;
+			}
+			else {
+				return null; // do not generate file
+			}
+		}
+
 		// TODO: convert to IStrings if too slow
-		public Strings GenImpl()
+		private Strings GenImpl()
 		{
 			Strings ret = new Strings();
 			IAccessStrings
@@ -322,11 +354,13 @@ namespace Myll.Generator
 			}
 		}
 
+		// this adds an hierarchical as child
 		public void AddHierarchical( Hierarchical obj )
 		{
 			if( obj.IsStatic )
 				throw new ArgumentOutOfRangeException( nameof( obj ), true, "Hierarchicals can not be static" );
 
+			// this is a sub-gen for the child-hierarchical obj
 			HierarchicalGen gen = new HierarchicalGen( obj, LevelDecl + 1, LevelImpl );
 
 			// this happens inside the children, each knows which method to call

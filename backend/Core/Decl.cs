@@ -422,6 +422,7 @@ namespace Myll.Core
 
 	public class GlobalNamespace : Namespace
 	{
+		public string          module;
 		public HashSet<string> imps;
 	}
 

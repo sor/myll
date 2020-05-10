@@ -16,13 +16,14 @@ namespace Myll
 			this.scopeStack = scopeStack;
 		}
 
-		public GlobalNamespace GenerateGlobalScope()
+		public GlobalNamespace GenerateGlobalScope( string module )
 		{
 			GlobalNamespace global = new GlobalNamespace {
 				name     = "",   // global
 				srcPos   = null, // no pos since it exists for multiple files
 				withBody = true,
 				imps     = new HashSet<string>(),
+				module   = module,
 			};
 			Scope scope = new Scope {
 				parent = null,
@@ -41,8 +42,6 @@ namespace Myll
 
 		public void CloseGlobalScope()
 		{
-			//CleanBodylessNamespace();
-
 			PopScope();
 
 			if( scopeStack.Count != 0 )

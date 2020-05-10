@@ -142,9 +142,9 @@ namespace Myll
 			return ret;
 		}
 
-		public GlobalNamespace VisitProgs( IEnumerable<ProgContext> cs )
+		public GlobalNamespace VisitProgs( IGrouping<string, ProgContext> cs )
 		{
-			GlobalNamespace global = GenerateGlobalScope();
+			GlobalNamespace global = GenerateGlobalScope( cs.Key );
 
 			foreach( ProgContext c in cs ) {
 				global.imps.UnionWith(
@@ -152,7 +152,9 @@ namespace Myll
 						.SelectMany( i => i.id() )
 						.Select( i => i.GetText() )
 						.ToList() );
+
 				c.levDecl().Select( Visit ).Exec();
+
 				CleanBodylessNamespace();
 			}
 
@@ -161,29 +163,13 @@ namespace Myll
 			return global;
 		}
 
-		public override Decl VisitProg( ProgContext c )
-		{
-			throw new NotImplementedException();
-
-			/*
-			Namespace global = GenerateGlobalScope( c.ToSrcPos() );
-
-			global.module = c.module()?.id().GetText()
-			             ?? c.Start.InputStream.SourceName.Replace( ".myll", "" );
-
-			c.levDecl().Select( Visit ).Exec();
-
-			CloseGlobalScope();
-
-			return global;*/
-		}
-
 		public override Decl VisitNamespace( NamespaceContext c )
 		{
 			Namespace ret = null;
 
 			CleanBodylessNamespace();
 
+			// TODO: check if Namespace already exists
 			// add new namespaces to hierarchy
 			bool withBody = (c.levDecl().Length >= 1);
 			foreach( IdContext id in c.id() ) {

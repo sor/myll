@@ -8,6 +8,18 @@ namespace Myll.Generator
 
 	internal static class StmtFormatting
 	{
+		internal static readonly Strings DefaultIncludes = new Strings {
+			"#pragma once",
+			"#include <memory>",      // smart pointer (expensive)
+			"#include <utility>",     // move, pair, swap
+			"#include <cmath>",       // math
+			"#include <type_traits>", // underlying_type
+			//	"#include <iostream>",  // in and output
+			//	"#include <vector>",    // dynamically sized array
+			//	"#include <map>",    	// hash map (expensive)
+			//	"#include <algorithm>", // algorithms
+		};
+
 		//internal static readonly string IndentString = "\t";
 		internal const string IndentString = "    ";
 		internal const string ThrowFormat = "{0}throw {1};";
