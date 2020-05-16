@@ -1,4 +1,7 @@
-﻿using System;
+﻿// HACK to disable all PLINQ have the following line be active
+//#define DISABLE_PLINQ
+
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
@@ -6,6 +9,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Antlr4.Runtime;
+using Antlr4.Runtime.Atn;
 using Myll.Core;
 using Myll.Generator;
 
@@ -15,28 +19,50 @@ namespace Myll
 	using IStrings    = IEnumerable<string>;
 	using ModuleGroup = IGrouping<string, MyllParser.ProgContext>;
 
-	// HACK comment this out disable all PLINQ, see Program AsParallel too
+	#if !DISABLE_PLINQ
 	using static ParallelEnumerable;
+	#endif
 
 	static class Program
 	{
 		private static DateTime start;
 
-		// HACK to disable all PLINQ: enable this and comment out "using static ParallelEnumerable"
-		//[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		//public static IEnumerable<T> AsParallel<T>( this IEnumerable<T> s ) => s;
+		#if DISABLE_PLINQ
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static IEnumerable<T> AsParallel<T>( this IEnumerable<T> s ) => s;
+		#endif
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static IEnumerable<T> AsSequential<T>( this IEnumerable<T> s ) => s;
 
-		private static MyllParser CreateMyllParser( string filename )
+		private static MyllParser CreateParser( string filename )
 		{
-			StreamReader      reader            = new StreamReader( filename );
-			AntlrInputStream  inputStream       = new AntlrInputStream( reader ) { name = filename };
-			MyllLexer         lexer             = new MyllLexer( inputStream );
-			CommonTokenStream commonTokenStream = new CommonTokenStream( lexer );
-			MyllParser        parser            = new MyllParser( commonTokenStream );
+			StreamReader      reader      = new StreamReader( filename );
+			AntlrInputStream  inputStream = new AntlrInputStream( reader ) { name = filename };
+			MyllLexer         lexer       = new MyllLexer( inputStream );
+			CommonTokenStream tokenStream = new CommonTokenStream( lexer );
+			MyllParser        parser      = new MyllParser( tokenStream );
 			return parser;
+		}
+
+		private static MyllParser.ProgContext ParseCST( MyllParser parser )
+		{
+			// if exceptions happen, comment this out
+			parser.Interpreter.PredictionMode = PredictionMode.SLL;
+
+			try {
+				return parser.prog(); // STAGE 1
+			}
+			catch( Exception ex ) { // STAGE 2
+				Console.Error.WriteLine(
+					"First Stage failed of {0} with exception {1}",
+					parser.RuleContext.Start.InputStream.SourceName,
+					ex );
+				((CommonTokenStream) parser.TokenStream).Reset(); // rewind input stream
+				parser.Reset();
+				parser.Interpreter.PredictionMode = PredictionMode.LL;
+				return parser.prog();
+			}
 		}
 
 		private static string ClassifyModule( MyllParser.ProgContext c )
@@ -44,11 +70,6 @@ namespace Myll
 			FileInfo fi = new FileInfo( c.Start.InputStream.SourceName );
 			return c.module()?.id().GetText()
 			    ?? Path.GetFileNameWithoutExtension( fi.Name );
-		}
-
-		private static MyllParser.ProgContext ParseAST( MyllParser c )
-		{
-			return c.prog();
 		}
 
 		private static GlobalNamespace CompileModule( ModuleGroup progContext )
@@ -76,18 +97,18 @@ namespace Myll
 
 		public static int Main( string[] args )
 		{
-			bool hasConsoleOutput = args.Contains( "--stdout" );
+			bool hasConsoleOutput = false&&args.Contains( "--stdout" );
 			bool hasFileOutput    = args.Contains( "--fileout" );
 
 			Strings files = new Strings {
 			/*	"tests/mixed/stack_big.myll",
-				"tests/mixed/stack_big2.myll",
-				"tests/mixed/stack_big3.myll",
-				"tests/mixed/stack_big4.myll",
-				"tests/mixed/stack_big5.myll",
-				"tests/mixed/stack_big6.myll",
-				"tests/mixed/stack_big7.myll",
-				"tests/mixed/stack_big8.myll",//*/
+				"tests/mixed/stack_big_2.myll",
+				"tests/mixed/stack_big_3.myll",
+				"tests/mixed/stack_big_4.myll",
+				"tests/mixed/stack_big_5.myll",
+				"tests/mixed/stack_big_6.myll",
+				"tests/mixed/stack_big_7.myll",
+				"tests/mixed/stack_big_8.myll",//*/
 				"tests/mixed/main.myll",
 				"tests/mixed/stack.myll",
 				"tests/mixed/enum.myll",
@@ -106,9 +127,9 @@ namespace Myll
 			// OR IEnumerable<(string, IStrings)>
 			var output
 					= files
-						.Select( CreateMyllParser )
+						.Select( CreateParser )
 						.AsParallel()
-						.Select( ParseAST )
+						.Select( ParseCST )
 						.AsSequential()
 						.GroupBy( ClassifyModule )
 						.ToImmutableArray()

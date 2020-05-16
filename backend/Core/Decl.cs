@@ -251,7 +251,7 @@ namespace Myll.Core
 							if( !IsPowerOfTwo( index ) )
 								throw new Exception(
 									Format(
-										"[flags]enum auto numbering not a power of two: {0} at {1}",
+										"'[flags]enum' auto numbering not a power of two: {0} at {1}",
 										index,
 										ee.srcPos ) );
 							ee.value =  new Literal { op = Operand.Literal, text = index.ToString() };
