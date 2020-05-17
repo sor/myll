@@ -6097,27 +6097,21 @@ public partial class MyllParser : Parser {
 				_localctx = new MultiAssignStmtContext(_localctx);
 				EnterOuterAlt(_localctx, 13);
 				{
-				State = 927;
+				State = 924; expr(0);
+				State = 928;
 				ErrorHandler.Sync(this);
-				_alt = 1;
+				_la = TokenStream.LA(1);
 				do {
-					switch (_alt) {
-					case 1:
-						{
-						{
-						State = 924; expr(0);
-						State = 925; assignOP();
-						}
-						}
-						break;
-					default:
-						throw new NoViableAltException(this);
+					{
+					{
+					State = 925; assignOP();
+					State = 926; expr(0);
 					}
-					State = 929;
+					}
+					State = 930;
 					ErrorHandler.Sync(this);
-					_alt = Interpreter.AdaptivePredict(TokenStream,109,Context);
-				} while ( _alt!=2 && _alt!=global::Antlr4.Runtime.Atn.ATN.INVALID_ALT_NUMBER );
-				State = 931; expr(0);
+					_la = TokenStream.LA(1);
+				} while ( _la==ASSIGN );
 				State = 932; Match(SEMI);
 				}
 				break;
@@ -6823,8 +6817,8 @@ public partial class MyllParser : Parser {
 		'\x41', '\x3', '\x41', '\x3', '\x41', '\x3', '\x41', '\x3', '\x41', '\x3', 
 		'\x41', '\x3', '\x41', '\x3', '\x41', '\x3', '\x41', '\x3', '\x41', '\x3', 
 		'\x41', '\x3', '\x41', '\x5', '\x41', '\x39B', '\n', '\x41', '\x3', '\x41', 
-		'\x3', '\x41', '\x3', '\x41', '\x3', '\x41', '\x3', '\x41', '\x6', '\x41', 
-		'\x3A2', '\n', '\x41', '\r', '\x41', '\xE', '\x41', '\x3A3', '\x3', '\x41', 
+		'\x3', '\x41', '\x3', '\x41', '\x3', '\x41', '\x3', '\x41', '\x3', '\x41', 
+		'\x6', '\x41', '\x3A3', '\n', '\x41', '\r', '\x41', '\xE', '\x41', '\x3A4', 
 		'\x3', '\x41', '\x3', '\x41', '\x3', '\x41', '\x3', '\x41', '\x3', '\x41', 
 		'\x3', '\x41', '\x3', '\x41', '\x3', '\x41', '\x3', '\x41', '\x3', '\x41', 
 		'\x5', '\x41', '\x3B1', '\n', '\x41', '\x3', '\x42', '\x3', '\x42', '\x3', 
@@ -7478,12 +7472,12 @@ public partial class MyllParser : Parser {
 		'(', '\x15', '\x2', '\x39A', '\x399', '\x3', '\x2', '\x2', '\x2', '\x39A', 
 		'\x39B', '\x3', '\x2', '\x2', '\x2', '\x39B', '\x39C', '\x3', '\x2', '\x2', 
 		'\x2', '\x39C', '\x39D', '\x5', '\x84', '\x43', '\x2', '\x39D', '\x3B1', 
-		'\x3', '\x2', '\x2', '\x2', '\x39E', '\x39F', '\x5', '\\', '/', '\x2', 
-		'\x39F', '\x3A0', '\x5', ' ', '\x11', '\x2', '\x3A0', '\x3A2', '\x3', 
-		'\x2', '\x2', '\x2', '\x3A1', '\x39E', '\x3', '\x2', '\x2', '\x2', '\x3A2', 
-		'\x3A3', '\x3', '\x2', '\x2', '\x2', '\x3A3', '\x3A1', '\x3', '\x2', '\x2', 
-		'\x2', '\x3A3', '\x3A4', '\x3', '\x2', '\x2', '\x2', '\x3A4', '\x3A5', 
-		'\x3', '\x2', '\x2', '\x2', '\x3A5', '\x3A6', '\x5', '\\', '/', '\x2', 
+		'\x3', '\x2', '\x2', '\x2', '\x39E', '\x3A2', '\x5', '\\', '/', '\x2', 
+		'\x39F', '\x3A0', '\x5', ' ', '\x11', '\x2', '\x3A0', '\x3A1', '\x5', 
+		'\\', '/', '\x2', '\x3A1', '\x3A3', '\x3', '\x2', '\x2', '\x2', '\x3A2', 
+		'\x39F', '\x3', '\x2', '\x2', '\x2', '\x3A3', '\x3A4', '\x3', '\x2', '\x2', 
+		'\x2', '\x3A4', '\x3A2', '\x3', '\x2', '\x2', '\x2', '\x3A4', '\x3A5', 
+		'\x3', '\x2', '\x2', '\x2', '\x3A5', '\x3A6', '\x3', '\x2', '\x2', '\x2', 
 		'\x3A6', '\x3A7', '\a', ')', '\x2', '\x2', '\x3A7', '\x3B1', '\x3', '\x2', 
 		'\x2', '\x2', '\x3A8', '\x3A9', '\x5', '\\', '/', '\x2', '\x3A9', '\x3AA', 
 		'\x5', '\"', '\x12', '\x2', '\x3AA', '\x3AB', '\x5', '\\', '/', '\x2', 
@@ -7497,7 +7491,7 @@ public partial class MyllParser : Parser {
 		'\x3', '\x2', '\x2', '\x2', '\x3B0', '\x37B', '\x3', '\x2', '\x2', '\x2', 
 		'\x3B0', '\x37D', '\x3', '\x2', '\x2', '\x2', '\x3B0', '\x389', '\x3', 
 		'\x2', '\x2', '\x2', '\x3B0', '\x38F', '\x3', '\x2', '\x2', '\x2', '\x3B0', 
-		'\x396', '\x3', '\x2', '\x2', '\x2', '\x3B0', '\x3A1', '\x3', '\x2', '\x2', 
+		'\x396', '\x3', '\x2', '\x2', '\x2', '\x3B0', '\x39E', '\x3', '\x2', '\x2', 
 		'\x2', '\x3B0', '\x3A8', '\x3', '\x2', '\x2', '\x2', '\x3B0', '\x3AD', 
 		'\x3', '\x2', '\x2', '\x2', '\x3B1', '\x81', '\x3', '\x2', '\x2', '\x2', 
 		'\x3B2', '\x3B3', '\x5', 'l', '\x37', '\x2', '\x3B3', '\x3B5', '\a', '\x1D', 
@@ -7555,7 +7549,7 @@ public partial class MyllParser : Parser {
 		'\x2D7', '\x2DD', '\x2E5', '\x2E9', '\x2EF', '\x2F8', '\x303', '\x308', 
 		'\x30F', '\x314', '\x31B', '\x31F', '\x326', '\x328', '\x339', '\x33E', 
 		'\x340', '\x347', '\x34D', '\x356', '\x360', '\x365', '\x36F', '\x375', 
-		'\x377', '\x387', '\x38D', '\x39A', '\x3A3', '\x3B0', '\x3B7', '\x3BC', 
+		'\x377', '\x387', '\x38D', '\x39A', '\x3A4', '\x3B0', '\x3B7', '\x3BC', 
 		'\x3C0', '\x3C2', '\x3C5', '\x3C9', '\x3D5', '\x3D9', '\x3DE', '\x3E3', 
 		'\x3E9',
 	};

@@ -230,8 +230,7 @@ inStmt		:	SEMI								# EmptyStmt
 			|	DO		levStmt
 				WHILE	LPAREN expr RPAREN			# DoWhileStmt
 			|	DO expr TIMES		id?	levStmt		# TimesStmt
-		//	| <assoc=right>???
-			| 	(expr	assignOP)+		expr SEMI	# MultiAssignStmt
+			| 	expr	(assignOP		expr)+ SEMI	# MultiAssignStmt
 			| 	expr	aggrAssignOP	expr SEMI	# AggrAssignStmt
 			|	expr SEMI							# ExpressionStmt
 			;
