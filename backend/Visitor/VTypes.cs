@@ -13,9 +13,12 @@ namespace Myll
 	{
 		private static readonly Dictionary<int, Pointer.Kind>
 			ToPtr = new Dictionary<int, Pointer.Kind> {
-				{ MyllParser.AT_BANG,	Pointer.Kind.Unique	},
+				/*{ MyllParser.AT_BANG,	Pointer.Kind.Unique	},
 				{ MyllParser.AT_PLUS,	Pointer.Kind.Shared	},
 				{ MyllParser.AT_QUEST,	Pointer.Kind.Weak	},
+				{ MyllParser.STAR_BANG,	Pointer.Kind.Unique	},
+				{ MyllParser.STAR_PLUS,	Pointer.Kind.Shared	},
+				{ MyllParser.STAR_QUEST,Pointer.Kind.Weak	},*/
 				{ MyllParser.STAR,		Pointer.Kind.RawPtr	},
 				{ MyllParser.PTR_TO_ARY,Pointer.Kind.PtrToAry},
 				{ MyllParser.AMP,		Pointer.Kind.LVRef	},
@@ -77,9 +80,31 @@ namespace Myll
 		{
 			Pointer ret;
 			if( c.ptr != null ) {
-				ret = new Pointer {
-					kind = ToPtr[c.ptr.Type],
-				};
+				if(c.suffix == null)
+					ret = new Pointer {
+						kind = ToPtr[c.ptr.Type],
+					};
+				else if( c.ptr.Type == MyllParser.STAR ) {
+					ret = new Pointer {
+						kind = c.suffix.Type switch {
+							MyllParser.EM   => Pointer.Kind.Unique,
+							MyllParser.PLUS => Pointer.Kind.Shared,
+							MyllParser.QM   => Pointer.Kind.Weak,
+						}
+					};
+				}
+				else if( c.ptr.Type == MyllParser.PTR_TO_ARY ) {
+					ret = new Pointer {
+						kind = c.suffix.Type switch {
+							MyllParser.EM   => Pointer.Kind.UniqueArray,
+							MyllParser.PLUS => Pointer.Kind.SharedArray,
+							MyllParser.QM   => Pointer.Kind.WeakArray,
+						}
+					};
+				}
+				else {
+					throw new Exception( String.Format( "unknown type for smart-pointer-ization {0}", c.ptr.Type ) );
+				}
 			}
 			else if( c.ary != null ) {
 				ret = new Pointer {

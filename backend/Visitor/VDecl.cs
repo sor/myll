@@ -268,12 +268,12 @@ namespace Myll
 		}
 
 		// list of typed and initialized vars
-		public List<Var> VisitVars( TypedIdAcorsContext c )
+		public List<Decl> VisitVars( TypedIdAcorsContext c )
 		{
 			Scope scope = scopeStack.Peek();
 			// determine if only scope or container
 			Typespec type = VisitTypespec( c.typespec() );
-			List<Var> ret = c.idAccessors()
+			List<Decl> ret = c.idAccessors()
 				.idAccessor()
 				.Select(
 					q => new Var {
@@ -284,7 +284,7 @@ namespace Myll
 						init     = q.expr().Visit(),
 						accessor = q.accessorDef().Visit(),
 						// TODO: Accessors, is this still valid?
-					} )
+					} as Decl )
 				.ToList();
 			AddChildren( ret );
 			return ret;
@@ -292,10 +292,9 @@ namespace Myll
 
 		public override Decl VisitVariableDecl( VariableDeclContext c )
 		{
-			Decl ret = new VarsDecl {
-				vars = c.typedIdAcors()
-					.Select( VisitVars )
-					.SelectMany( q => q )
+			Decl ret = new MultiDecl {
+				decls = c.typedIdAcors()
+					.SelectMany( VisitVars )
 					.ToList(),
 			};
 			// TODO save the constness

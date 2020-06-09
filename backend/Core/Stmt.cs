@@ -79,30 +79,36 @@ namespace Myll.Core
 		public string   name;
 		public Typespec type; // contains Qualifier
 		public Expr     init; // opt
-	}
-
-	public class VarsStmt : Stmt
-	{
-		public List<VarStmt> vars;
-
-		public override void AssignAttribs( Attribs inAttribs )
-		{
-			vars.ForEach( v => v.AssignAttribs( inAttribs ) );
-		}
 
 		public override Strings Gen( int level )
 		{
 			string indent        = IndentString.Repeat( level );
 			bool   needsTypename = false; // TODO how to determine this
-			Strings ret = vars
-				.Select(
-					obj => Format(
-						VarFormat[0],
-						indent,
-						obj.IsStatic ? VarFormat[1] : "",
-						needsTypename ? VarFormat[2] : "",
-						obj.type.Gen( obj.name ),
-						obj.init != null ? VarFormat[3] + obj.init.Gen() : "" ) )
+			return new Strings {
+				Format(
+					VarFormat[0],
+					indent,
+					IsStatic ? VarFormat[1] : "",
+					needsTypename ? VarFormat[2] : "",
+					type.Gen( name ),
+					init != null ? VarFormat[3] + init.Gen() : "" )
+			};
+		}
+	}
+
+	public class MultiStmt : Stmt
+	{
+		public List<Stmt> stmts;
+
+		public override void AssignAttribs( Attribs inAttribs )
+		{
+			stmts.ForEach( v => v.AssignAttribs( inAttribs ) );
+		}
+
+		public override Strings Gen( int level )
+		{
+			Strings ret = stmts
+				.SelectMany( obj => obj.Gen( level ) )
 				.ToList();
 			return ret;
 		}

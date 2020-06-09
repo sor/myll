@@ -326,14 +326,16 @@ namespace Myll.Core
 		}
 	}
 
-	public class FuncCallExpr : Expr
+	// Synopsis:
+	//  obj.myMethod<int> (arg1, arg2)
+	// ^    UnOp.expr    ^  funcCall  ^
+	public class FuncCallExpr : UnOp
 	{
-		public Expr     left; // name and tpl args in here
 		public FuncCall funcCall;
 
 		public override string Gen( bool doBrace = false )
 		{
-			string ret = left.Gen() + funcCall.Gen();
+			string ret = expr.Gen() + funcCall.Gen();
 			return doBrace
 				? "(" + ret + ")"
 				: ret;

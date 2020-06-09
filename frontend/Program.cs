@@ -1,4 +1,4 @@
-﻿// HACK to disable all PLINQ have the following line be active
+// HACK to disable all PLINQ have the following line be active
 //#define DISABLE_PLINQ
 
 using System;
@@ -97,7 +97,7 @@ namespace Myll
 
 		public static int Main( string[] args )
 		{
-			bool hasConsoleOutput = false&&args.Contains( "--stdout" );
+			bool hasConsoleOutput = args.Contains( "--stdout" );
 			bool hasFileOutput    = args.Contains( "--fileout" );
 
 			Strings files = new Strings {
@@ -142,23 +142,30 @@ namespace Myll
 
 			Console.WriteLine( "Time elapsed after last ToArray call {0:0}ms\n", (DateTime.Now - start).TotalMilliseconds );
 
+			// if output is needed more than once, then this must be pre-calculated else its gonna Compile multiple times
+			if( hasFileOutput && hasConsoleOutput ) {
+				output = output.ToImmutableArray();
+			}
+
 			if( hasFileOutput ) {
 				Directory.CreateDirectory( "./tests/mixed/generated/" );
 
-				output.ForAll( o => File.WriteAllLines( "./tests/mixed/generated/" + o.Item1, o.Item2 ) );
+				output.ForAll( o=> File.WriteAllLines( "./tests/mixed/generated/" + o.Item1, o.Item2 ) );
 			}
 
 			if( hasConsoleOutput ) {
+				output.ForAll( o => {
+					Console.WriteLine( "// {0}", o.Item1 );
+					Console.WriteLine( o.Item2.Join( "\n" ) );
+					Console.WriteLine();
+				});
+				/*
 				foreach( var o in output ) {
 					Console.WriteLine( "// {0}", o.Item1 );
 					Console.WriteLine( o.Item2.Join( "\n" ) );
 					Console.WriteLine();
 				}
-				foreach( var o in output ) {
-					Console.WriteLine( "// {0}", o.Item1 );
-					Console.WriteLine( o.Item2.Join( "\n" ) );
-					Console.WriteLine();
-				}
+				*/
 			}
 
 			if( !hasConsoleOutput && !hasFileOutput ) {

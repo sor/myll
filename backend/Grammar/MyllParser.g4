@@ -49,15 +49,17 @@ unsignIntType:  v=( UINT | USIZE | U64 | U32 | U16 | U8 );
 
 qual		:	v=( CONST | MUTABLE | VOLATILE | STABLE );
 
-typePtr		:	qual*	( ptr=( AT_BANG | AT_QUEST | AT_PLUS | DBL_AMP | AMP | STAR | PTR_TO_ARY )
-						| ary=( AT_LBRACK | LBRACK ) expr? RBRACK )
-			;
+typePtr		:	qual*
+				( ptr=( DBL_AMP | AMP | STAR | PTR_TO_ARY )
+				| ary=( AT_LBRACK | LBRACK ) expr? RBRACK )
+				suffix=( EM | PLUS | QM )?;
 
 idTplArgs	:	id tplArgs?;
 
-typespec		:	qual*	( typespecBasic		typePtr*
-							| FUNC typePtr*	typespecFunc
-							| typespecNested	typePtr*);
+typespec	:	qual*
+				( typespecBasic		typePtr*
+				| FUNC typePtr*	typespecFunc
+				| typespecNested	typePtr*);
 
 typespecBasic	:	specialType
 				|	charType
@@ -84,9 +86,8 @@ funcTypeDef	:	LPAREN (param (COMMA param)* COMMA?)? RPAREN;
 
 // can't contain expr, will fck up through idTplArgs with multiple templates (e.g. op | from enums)
 tplArg		:	lit | typespec;
-tplArgs		:	LT tplArg (COMMA tplArg)* COMMA? GT;
-
-tplParams	:	LT id (COMMA id)* COMMA? GT;
+tplArgs		:	LT tplArg	(COMMA tplArg)*	COMMA? GT;
+tplParams	:	LT id		(COMMA id)*		COMMA? GT;
 
 threeWay	:	(orderOP|equalOP)	COLON	expr;
 

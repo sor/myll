@@ -47,14 +47,14 @@ namespace Myll
 			else if( c.funcCall() != null ) {
 				ret = new FuncCallExpr {
 					op       = c.funcCall().ary.ToOp(),
-					left     = left,
+					expr     = left,
 					funcCall = VisitFuncCall( c.funcCall() ),
 				};
 			}
 			else if( c.indexCall() != null ) {
 				ret = new FuncCallExpr {
 					op       = c.indexCall().ary.ToOp(),
-					left     = left,
+					expr     = left,
 					funcCall = VisitIndexCall( c.indexCall() ),
 				};
 			}

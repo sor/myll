@@ -174,24 +174,23 @@ namespace Myll.Core
 		}
 	}
 
-	// TODO make a generic MultiDecl?
-	public class VarsDecl : Decl
+	public class MultiDecl : Decl
 	{
-		public List<Var> vars;
+		public List<Decl> decls;
 
 		public override void AssignAttribs( Attribs inAttribs )
 		{
-			vars.ForEach( v => v.AssignAttribs( inAttribs ) );
+			decls.ForEach( v => v.AssignAttribs( inAttribs ) );
 		}
 
 		public override void AddToGen( HierarchicalGen gen )
 		{
-			vars.ForEach( v => v.AddToGen( gen ) );
+			decls.ForEach( v => v.AddToGen( gen ) );
 		}
 
 		public override Strings Gen( int level )
 		{
-			return vars.SelectMany( v => v.Gen( level ) ).ToList();
+			return decls.SelectMany( v => v.Gen( level ) ).ToList();
 		}
 	}
 
