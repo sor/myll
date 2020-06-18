@@ -5,6 +5,7 @@ Created by Jan Reitz. Licence undecided (apparently its open source).
 
 ## Goals
 Give newcomers an easy onboarding with less bad surprises.
+
 Give professionals the comfort of known semantics with less repetition and fewer accidents.
 
 ## Principles
