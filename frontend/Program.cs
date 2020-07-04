@@ -101,14 +101,16 @@ namespace Myll
 			bool hasFileOutput    = args.Contains( "--fileout" );
 
 			Strings files = new Strings {
-			/*	"tests/mixed/stack_big.myll",
+				/*
+				"tests/mixed/stack_big_0.myll",
+				"tests/mixed/stack_big_1.myll",
 				"tests/mixed/stack_big_2.myll",
 				"tests/mixed/stack_big_3.myll",
 				"tests/mixed/stack_big_4.myll",
 				"tests/mixed/stack_big_5.myll",
 				"tests/mixed/stack_big_6.myll",
 				"tests/mixed/stack_big_7.myll",
-				"tests/mixed/stack_big_8.myll",//*/
+				//*/
 				"tests/mixed/main.myll",
 				"tests/mixed/stack.myll",
 				"tests/mixed/enum.myll",

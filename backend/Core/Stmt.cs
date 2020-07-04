@@ -17,7 +17,7 @@ namespace Myll.Core
 		public  SrcPos  srcPos;
 		private Attribs attribs { get; set; }
 
-		public bool IsStatic => attribs?.ContainsKey( "static" ) ?? false;
+		public bool IsStatic => IsAttrib( "static" );
 
 		public bool IsAttrib( string key )
 			=> attribs != null
@@ -330,7 +330,7 @@ namespace Myll.Core
 		}
 	}
 
-	public class MultiAssignStmt : Stmt
+	public class MultiAssign : Stmt
 	{
 		public List<Expr> exprs;
 
@@ -343,7 +343,7 @@ namespace Myll.Core
 		}
 	}
 
-	public class AggrAssignStmt : Stmt
+	public class AggrAssign : Stmt
 	{
 		public Operand op;
 		public Expr    leftExpr;

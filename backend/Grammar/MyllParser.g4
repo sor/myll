@@ -128,7 +128,7 @@ expr		:	(idTplArgs	SCOPE)+	idTplArgs	# ScopedExpr
 			|	expr	andOP			expr	# AndExpr
 			|	expr	orOP			expr	# OrExpr
 			|	expr	nulCoalOP		expr	# NullCoalesceExpr
-			// TODO: cond and throw were in the same level, test if this still works fine
+			// TODO: 2-way-cond and throw were in the same level, test if this still works fine
 			| <assoc=right>
 				expr	QM expr COLON	expr	# ConditionalExpr
 			| <assoc=right>

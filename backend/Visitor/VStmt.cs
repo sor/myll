@@ -233,7 +233,7 @@ namespace Myll
 
 		public override Stmt VisitAggrAssignStmt( AggrAssignStmtContext c )
 		{
-			AggrAssignStmt ret = new AggrAssignStmt {
+			AggrAssign ret = new AggrAssign {
 				srcPos    = c.ToSrcPos(),
 				op        = c.aggrAssignOP().v.ToAssignOp(),
 				leftExpr  = c.expr( 0 ).Visit(),
@@ -244,7 +244,7 @@ namespace Myll
 
 		public override Stmt VisitMultiAssignStmt( MultiAssignStmtContext c )
 		{
-			MultiAssignStmt ret = new MultiAssignStmt {
+			MultiAssign ret = new MultiAssign {
 				srcPos = c.ToSrcPos(),
 				exprs  = c.expr().Select( q => q.Visit() ).ToList(),
 			};

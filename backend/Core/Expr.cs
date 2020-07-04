@@ -32,7 +32,7 @@ namespace Myll.Core
 			};
 
 		// Only the deviating levels for moved operators
-		// If there is too much difference in precedence, this check might not make sense anymore
+		// If there are too many changes in precedence, this pre-check might not make sense anymore
 		public static readonly IDictionary<Operand, int>
 			OriginalPrecedenceLevel = new Dictionary<Operand, int> {
 				{ Operand.BitAnd, 110 },

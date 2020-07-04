@@ -356,7 +356,7 @@ namespace Myll.Core
 						block = new Block {
 							srcPos = srcPos,
 							stmts = new List<Stmt> {
-								new MultiAssignStmt {
+								new MultiAssign {
 									srcPos = srcPos,
 									exprs = new List<Expr> {
 										lhs,
