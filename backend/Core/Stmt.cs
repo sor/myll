@@ -320,7 +320,7 @@ namespace Myll.Core
 				Format(
 					LoopFormat[0],
 					indent,
-					"unsigned int " + varName + " = 0;",
+					"int " + varName + " = 0;",
 					varName + " < "           + countExpr.Gen(),
 					"++"                      + varName ) );
 			ret.Add( Format( CurlyOpen, indent ) );
@@ -375,10 +375,10 @@ namespace Myll.Core
 		{
 			// Block to Block needs to indent further else it's ok to remain same level
 			// The curly braces need to be outdentented one level
-			string  indent = IndentString.Repeat( level - 1 );
+			string  indent = IndentString.Repeat( level /*- 1*/ );
 			Strings ret    = new Strings();
 			ret.Add( Format( CurlyOpen, indent ) );
-			ret.AddRange( stmts.SelectMany( s => s.Gen( level + (s is Block ? 1 : 0) ) ) );
+			ret.AddRange( stmts.SelectMany( s => s.Gen( level + 1 /*(s is Block ? 1 : 0)*/ ) ) );
 			ret.Add( Format( CurlyClose, indent ) );
 			return ret;
 		}

@@ -91,13 +91,15 @@ namespace Myll
 
 		public override Stmt VisitVariableDecl( VariableDeclContext c )
 		{
-			Stmt ret = new MultiStmt {
+			MultiStmt ret = new MultiStmt {
 				stmts = c
 					.typedIdAcors()
 					.SelectMany( VisitStmtVars )
 					.ToList(),
 			};
-			// TODO save the constness
+			if( c.v.ToQualifier() == Qualifier.Const ) {
+				ret.stmts.ForEach( decl => ((VarStmt) decl).type.qual |= Qualifier.Const );
+			}
 			return ret;
 		}
 

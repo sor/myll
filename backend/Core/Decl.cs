@@ -114,6 +114,10 @@ namespace Myll.Core
 		public Stmt           block;
 		public Typespec       retType;
 
+		public bool IsVirtual  => IsAttrib( "virtual" );
+		public bool IsConst    => IsAttrib( "const" );
+		public bool IsOverride => IsAttrib( "override" );
+
 		// TODO: analyze, for void or auto return type of funcs
 		public bool IsReturningSomething => false;
 
@@ -208,7 +212,8 @@ namespace Myll.Core
 	{
 		public TypespecBasic basetype;
 
-		public bool IsFlags => IsAttrib( "flags" );
+		public bool IsFlags     => IsAttrib( "flags" );
+		public bool IsOpBitwise => IsAttrib( "operators", "bitwise" );
 
 		// TODO this needs to be in the Generator Folder
 		static readonly (string, Operand)[] BitwiseOps = {
@@ -233,7 +238,7 @@ namespace Myll.Core
 		// TODO this needs to be in the Generator Folder
 		protected override void AttribsAssigned()
 		{
-			bool isFlags = IsAttrib( "flags" );
+			bool isFlags = IsFlags;
 			if( isFlags ) {
 				// HACK this is just written in a hurry, that might break at any user intervention
 				uint index = 1;
@@ -260,7 +265,7 @@ namespace Myll.Core
 				}
 			}
 
-			bool isOpBitwise = IsAttrib( "operators", "bitwise" );
+			bool isOpBitwise = IsOpBitwise;
 			if( isOpBitwise ) {
 				bool  isInline    = IsInline;
 				Scope namespaceUp = scope.UpToNamespace;

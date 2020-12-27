@@ -1,0 +1,61 @@
+module sheets;
+
+import global, gamebase, std_vector;
+
+class Sheet : GameState
+{
+protected:
+	//[static] GCC internal compiler error, einen Tag vor dem Kolloq, lol
+	const {
+		Color white = Color( 255, 255, 255 );
+		Color black = Color(   0,   0,   0 );
+	}
+	field i32   state    = 0;
+	const char* bodyText = "";
+
+	method RenderWithOutline(Texture& text, const Point pos, const Color& textColor, const Color& outlineColor, const int outlineSize, const int outlineSizeDiagonal)
+	{
+		var Point[8] posOffsets;
+		posOffsets[0] = Point(-outlineSizeDiagonal, -outlineSizeDiagonal);
+		posOffsets[1] = Point(outlineSizeDiagonal, -outlineSizeDiagonal);
+		posOffsets[2] = Point(-outlineSizeDiagonal, outlineSizeDiagonal);
+		posOffsets[3] = Point(outlineSizeDiagonal, outlineSizeDiagonal);
+		posOffsets[4] = Point(0, outlineSize);
+		posOffsets[5] = Point(outlineSize, 0);
+		posOffsets[6] = Point(0, -outlineSize);
+		posOffsets[7] = Point(-outlineSize, 0);
+
+		text.SetColorMod(outlineColor);
+		do 8 times i
+		{
+			text.Draw(pos + posOffsets[i]);
+		}
+		text.SetColorMod(textColor);
+		text.Draw(pos);
+	}
+
+public:
+	// ctor
+	// C++:  using GameState::GameState;
+	// MYLL: using base::ctor;
+
+	method Events( const int frame, const float deltaT )
+	{
+		Event::Pump();
+		var Event evt;
+		while (Event::Poll(evt))
+		{
+			if (!game.HandleEvent(evt))
+			{
+				if( evt.type() == Event::Type::KEYDOWN ) {
+					var auto        kd       = evt.Keyboard();
+					var SDL::Keysym what_key = kd.keysym;
+					if (what_key.scancode() == SDL::Scancode::LEFT)
+						--state;
+					else if (what_key.scancode() == SDL::Scancode::RIGHT)
+						++state;
+				}
+			}
+		}
+	}
+}

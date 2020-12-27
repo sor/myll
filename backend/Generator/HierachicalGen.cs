@@ -289,11 +289,12 @@ namespace Myll.Generator
 			string headlineDecl = Format(
 				FuncFormat[0],
 				indentDecl,
-				"",
+				(obj.IsVirtual ? "virtual " : ""),
 				obj.retType.Gen(),
 				nameDecl,
 				paramString,
-				"" );
+				(obj.IsConst ? " const" : "") +
+				(obj.IsOverride ? " override" : "") );
 
 			// TODO add the surrounding templates as well for tplImpl
 			string tplDecl, tplImpl;
@@ -418,9 +419,9 @@ namespace Myll.Generator
 
 				bases = (objStruct.basetypes.Count < 1)
 					? ""
-					: " : " + objStruct.basetypes
+					: " : public " + objStruct.basetypes
 						.Select( t => t.GenType() )
-						.Join( ", " );
+						.Join( ", public " );
 			}
 			else {
 				throw new InvalidOperationException( "not an enum and not a struct" );

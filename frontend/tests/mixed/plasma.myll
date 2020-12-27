@@ -1,0 +1,15 @@
+module plasma;
+
+//[inline]
+func plasma(f32 x, f32 y, f32 time) -> f32
+{
+	const f32 cx = x * 0.1f + 0.5f * sin(time / 5.0f);
+	const f32 cy = y * 0.1f + 0.5f * cos(time / 3.0f);
+	var f32 v = 0.0f;
+	v += sin((x + time));
+	v += sin((y + time) / 2.0f);
+	v += sin((x + y + time) / 2.0f);
+	v += sin(sqrt((cx*cx + cy*cy) * 100.0f + 1.0f) + time);
+	v = v / 2.0f;
+	return v;
+}

@@ -2,6 +2,7 @@
 //#define DISABLE_PLINQ
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
@@ -49,6 +50,7 @@ namespace Myll
 		{
 			// if exceptions happen, comment this out
 			parser.Interpreter.PredictionMode = PredictionMode.SLL;
+			//parser.Interpreter.PredictionMode = PredictionMode.LL_EXACT_AMBIG_DETECTION;
 
 			try {
 				return parser.prog(); // STAGE 1
@@ -98,7 +100,7 @@ namespace Myll
 		public static int Main( string[] args )
 		{
 			bool hasConsoleOutput = args.Contains( "--stdout" );
-			bool hasFileOutput    = args.Contains( "--fileout" );
+			bool hasFileOutput    = true||args.Contains( "--fileout" );
 
 			Strings files = new Strings {
 				/*
@@ -111,10 +113,16 @@ namespace Myll
 				"tests/mixed/stack_big_6.myll",
 				"tests/mixed/stack_big_7.myll",
 				//*/
-				"tests/mixed/main.myll",
+				/*"tests/mixed/main.myll",
 				"tests/mixed/stack.myll",
 				"tests/mixed/enum.myll",
-				"tests/mixed/testcase.myll",
+				"tests/mixed/testcase.myll",*/
+				"tests/mixed/sheet.myll",
+				"tests/mixed/sheet1.myll",
+				"tests/mixed/sheet2.myll",
+				"tests/mixed/sheet3.myll",
+				"tests/mixed/sheet4.myll",
+				"tests/mixed/plasma.myll",
 			};
 
 			Console.WriteLine( "Myll compiler. Version 0.01\n" );
@@ -146,7 +154,8 @@ namespace Myll
 
 			// if output is needed more than once, then this must be pre-calculated else its gonna Compile multiple times
 			if( hasFileOutput && hasConsoleOutput ) {
-				output = output.ToImmutableArray();
+				//output = output.ToArray();
+				var a = output.ToImmutableArray();
 			}
 
 			if( hasFileOutput ) {
@@ -175,7 +184,6 @@ namespace Myll
 
 				output.Exec();
 			}
-
 
 			DateTime end = DateTime.Now;
 

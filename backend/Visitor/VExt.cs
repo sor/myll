@@ -280,6 +280,15 @@ namespace Myll
 				Parser.UNION  => Structural.Kind.Union,
 			};
 
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static Qualifier ToQualifier( this IToken tok )
+			=> tok.Type switch {
+				Parser.VAR   => Qualifier.None,
+				Parser.FIELD => Qualifier.None,
+				Parser.CONST => Qualifier.Const,
+				Parser.LET   => Qualifier.Const,
+			};
+
 		// Visit
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]

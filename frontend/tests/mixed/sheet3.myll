@@ -1,0 +1,101 @@
+module sheets;
+
+import global, gamebase;
+
+class Sheet3 : Sheet
+{
+	field {
+		Font
+			fontHead,
+			fontBody;
+		Texture
+			blendedHead,
+			blendedBody;
+	}
+	field i32 old_state  = 0;
+
+public:
+	// ctor
+	// C++:  using Sheet::Sheet;
+	// MYLL: using base::ctor;
+
+	[override]
+	{
+		method Init() {
+			fontHead = TTF::Font( "../assets/fonts/RobotoSlab-Bold.ttf", 64 );
+			fontBody = TTF::Font( "../assets/fonts/RobotoSlab-Bold.ttf", 40 );
+		}
+		method Uninit() {
+			fontHead = TTF::Font();
+			fontBody = TTF::Font();
+		}
+		method Update( const int frame, const float deltaT ) {
+			if(state != old_state)
+			{
+				if (state == 0)
+				{
+					bodyText = "";
+				}
+				else if (state == 1)
+				{
+					bodyText = "Inspiration";
+				}
+				else if (state == 2)
+				{
+					bodyText = "Inspiration\n  * Jonathan Blows JAI";
+				}
+				else if (state == 3)
+				{
+					bodyText = "Inspiration\n * Jonathan Blows JAI\n  * Per Vognsens ION";
+				}
+				else if (state == 4)
+				{
+					bodyText = "Inspiration\n * Jonathan Blows JAI\n * Per Vognsens ION\n  * aber auch C#";
+				}
+				else if (state == 5)
+				{
+					bodyText = "Inspiration\n * Jonathan Blows JAI\n * Per Vognsens ION\n * aber auch C#\n\nUmsetzung";
+				}
+				else if( state == 6 )
+				{
+					bodyText = "Inspiration\n * Jonathan Blows JAI\n * Per Vognsens ION\n * aber auch C#\n\nUmsetzung\n  * Transpiler";
+				}
+				else if( state == 7 )
+				{
+					bodyText = "Inspiration\n * Jonathan Blows JAI\n * Per Vognsens ION\n * aber auch C#\n\nUmsetzung\n * Transpiler\n  * C# + ANTLR 4";
+				}
+				else if( state == 8 )
+				{
+					bodyText = "Inspiration\n * Jonathan Blows JAI\n * Per Vognsens ION\n * aber auch C#\n\nUmsetzung\n * Transpiler\n * C# + ANTLR 4";
+				}
+
+				// reset the cached Texture
+				blendedBody = Texture();
+				old_state = state;
+			}
+		}
+		method Render( const int frame, const float deltaT ) {
+			renderer.ClearColor(224, 224, 224);
+
+			if (!blendedHead) {
+				const char *text = "Design und Umsetzung";
+
+				var Surface surf = fontHead.RenderUTF8_Blended_Wrapped( text, white, 1160 );
+				blendedHead = Texture( renderer, surf );
+			}
+
+			if (!blendedBody) {
+				var Surface surf = fontBody.RenderUTF8_Blended_Wrapped( bodyText, white, 1160 );
+				blendedBody = Texture( renderer, surf );
+			}
+
+			const Point p = Point( 60, 150 );
+			RenderWithOutline( blendedHead, p, black, white, 2, 1 );
+
+			const Point pb = Point( 60, 250 );
+			RenderWithOutline( blendedBody, pb, black, white, 2, 1 );
+
+			renderer.Present();
+		}
+	}
+}

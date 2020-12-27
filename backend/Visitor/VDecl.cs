@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Antlr4.Runtime;
 using Antlr4.Runtime.Tree;
 using Myll.Core;
 
@@ -70,6 +71,12 @@ namespace Myll
 					};
 			PopScope();
 			AddChild( ret );
+
+			// what was that for?
+			//bool wasOK = NotifyObservers( ret );
+			// validator
+			//ret.IsAttrib( "blah" );
+
 			return ret;
 		}
 
@@ -209,6 +216,7 @@ namespace Myll
 			PushScope( ret );
 
 			// HACK: will be buggy. needs to move to ScopeStack, when ScopeStack works.
+			// turns out to be not so buggy after all...
 			Access savedAccess = curAccess;
 			curAccess = ret.defaultAccess;
 
@@ -292,12 +300,14 @@ namespace Myll
 
 		public override Decl VisitVariableDecl( VariableDeclContext c )
 		{
-			Decl ret = new MultiDecl {
+			MultiDecl ret = new MultiDecl {
 				decls = c.typedIdAcors()
 					.SelectMany( VisitVars )
 					.ToList(),
 			};
-			// TODO save the constness
+			if( c.v.ToQualifier() == Qualifier.Const ) {
+				ret.decls.ForEach( decl => ((Var) decl).type.qual |= Qualifier.Const );
+			}
 			return ret;
 		}
 

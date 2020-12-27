@@ -1,0 +1,82 @@
+module sheets;
+
+import global, gamebase;
+
+[blah]
+class Sheet1 : Sheet
+{
+	field {
+		Font
+			fontHead,
+			fontBody;
+		Texture
+			blendedHead,
+			blendedBody;
+	}
+	field f32 bgColor = 160.0f;
+
+public:
+	// ctor
+	// C++:  using Sheet::Sheet;
+	// MYLL: using base::ctor;
+
+	[override]
+	{
+		method Init()
+		{
+			fontHead = TTF::Font( "../assets/fonts/RobotoSlab-Bold.ttf", 64 );
+			fontBody = TTF::Font( "../assets/fonts/RobotoSlab-Bold.ttf", 24 );
+		}
+
+		method Uninit()
+		{
+			fontHead = TTF::Font();
+			fontBody = TTF::Font();
+		}
+
+		method Update( const int frame, const float deltaT )
+		{
+			if( state == 0 )
+			{
+				if( bgColor > 161.0f)
+					bgColor -= deltaT * 40;
+				else if ( bgColor < 159.0f)
+					bgColor *= 1 + (deltaT*2);
+			}
+			else if (state == 1)
+			{
+				if (bgColor < 250.0f)
+					bgColor += deltaT * 20;
+			}
+			else if (state == 2)
+			{
+				if (bgColor > 5.0f)
+					bgColor *= 1 - (deltaT);
+			}
+		}
+
+		method Render( const int frame, const float deltaT )
+		{
+			renderer.ClearColor(160, 160, 160);
+
+			if (!blendedHead) {
+				const char *text = "        Kolloquium zur Masterarbeit\n\n  The MYLL Programming Language:\n       C++ Resyntaxed and Extended\n\n\n                               von\n                         Jan Reitz";
+
+				var Surface surf = fontHead.RenderUTF8_Blended_Wrapped( text, white, 1160 );
+				blendedHead = Texture( renderer, surf );
+			}
+
+			if (!blendedBody) {
+				const char *text = "";
+
+				var Surface surf = fontBody.RenderUTF8_Blended_Wrapped( text, white, 1160 );
+				blendedBody = Texture( renderer, surf );
+			}
+
+			const Point p = Point( 60, 150 );
+			RenderWithOutline( blendedHead, p, black, white, 2, 1 );
+
+			renderer.Present();
+		}
+	}
+}

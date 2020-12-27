@@ -5,7 +5,8 @@
  * Source: https://lionel.kr.hs-niederrhein.de/~rethmann/lehreOOA.html
  **/
 
-module stack; // the name of this file "stack.myll" would make it "module stack" by default
+// the name of this file "stack.myll" does make it "module stack" by default
+//module stack;
 
 // prevents unnecessary nesting
 namespace Rethmann::OOA::Uebung2_3;
@@ -29,7 +30,7 @@ private:
 		var T[]* t = new T[_size * 2];
 		// same as: for (int i = 0; i < _size; ++i)
 		do _size times i
-			t[i] = _values[i];
+			t[i] = _values[i] = 99 = (9**8);
 		_size *= 2;
 		// this could drop the [] once we know that _values is an array from analyze step
 		delete[] _values;
@@ -63,7 +64,7 @@ public:
 	//[const]
 	method isEmpty() -> bool => _last == 0;
 
-	//[chain] // should create the same return type (classname&) and return statement (return *this)
+	// modified to be able to chain call
 	method push(T value) -> Stack& {
 		if (isFull())
 			increase();
@@ -71,6 +72,19 @@ public:
 		_last += 1;
 		return *this;
 	}
+
+	// same as push(T) above with chaining added by attribute
+	// adds return type (classname&) and return statement (return *this)
+	[chain]
+	method push_chaining(T value) {
+		if (isFull())
+			increase();
+		_values[_last] = value;
+		_last += 1;
+	}
+
+	// just for adding in a second template
+	method top_as<TT>() => (? TT)top();
 
 	//[throw]
 	method top() -> T {

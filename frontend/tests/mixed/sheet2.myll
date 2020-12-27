@@ -1,0 +1,104 @@
+module sheets;
+
+import global, gamebase;
+
+class Sheet2 : Sheet
+{
+	field {
+		Font
+			fontHead,
+			fontBody;
+		Texture
+			blendedHead,
+			blendedBody;
+	}
+	field i32 old_state  = 0;
+
+public:
+	// ctor
+	// C++:  using Sheet::Sheet;
+	// MYLL: using base::ctor;
+
+	[override]
+	{
+		method Init()
+		{
+			fontHead = TTF::Font( "../assets/fonts/RobotoSlab-Bold.ttf", 64 );
+			fontBody = TTF::Font( "../assets/fonts/RobotoSlab-Bold.ttf", 40 );
+		}
+
+		method Uninit()
+		{
+			fontHead = TTF::Font();
+			fontBody = TTF::Font();
+		}
+
+		method Update( const int frame, const float deltaT )
+		{
+			if(state != old_state)
+			{
+				if (state == 0)
+				{
+					bodyText = "";
+				}
+				else if (state == 1)
+				{
+					bodyText = "Hauptziele";
+				}
+				else if (state == 2)
+				{
+					bodyText = "Hauptziele\n  * Erfahrende C++ Programmierer abholen";
+				}
+				else if (state == 3)
+				{
+					bodyText = "Hauptziele\n * Erfahrende C++ Programmierer abholen\n  * Anfängern den Einstieg erleichtern";
+				}
+				else if (state == 4)
+				{
+					bodyText = "Hauptziele\n * Erfahrende C++ Programmierer abholen\n * Anfängern den Einstieg erleichtern\n  * Häufige Fehler zu vermeiden";
+				}
+				else if (state == 5)
+				{
+					bodyText = "Hauptziele\n * Erfahrende C++ Programmierer abholen\n * Anfängern den Einstieg erleichtern\n * Häufige Fehler zu vermeiden\n  * Wiederholung zu vermeiden";
+				}
+				else if( state == 6 )
+				{
+					bodyText = "Hauptziele\n * Erfahrende C++ Programmierer abholen\n * Anfängern den Einstieg erleichtern\n * Häufige Fehler zu vermeiden\n * Wiederholung zu vermeiden\n  * Sich selbst Validierungen aufzuerlegen";
+				}
+				else if( state == 7 )
+				{
+					bodyText = "Hauptziele\n * Erfahrende C++ Programmierer abholen\n * Anfängern den Einstieg erleichtern\n * Häufige Fehler zu vermeiden\n * Wiederholung zu vermeiden\n * Sich selbst Validierungen aufzuerlegen";
+				}
+
+				// reset the cached Texture
+				blendedBody = Texture();
+				old_state = state;
+			}
+		}
+
+		method Render( const int frame, const float deltaT )
+		{
+			renderer.ClearColor(224, 224, 224);
+
+			if (!blendedHead) {
+				const char *text = "Übersicht der Arbeit";
+
+				var Surface surf = fontHead.RenderUTF8_Blended_Wrapped( text, white, 1160 );
+				blendedHead = Texture( renderer, surf );
+			}
+
+			if (!blendedBody) {
+				var Surface surf = fontBody.RenderUTF8_Blended_Wrapped( bodyText, white, 1160 );
+				blendedBody = Texture( renderer, surf );
+			}
+
+			const Point p = Point( 60, 150 );
+			RenderWithOutline( blendedHead, p, black, white, 2, 1 );
+
+			const Point pb = Point( 60, 250 );
+			RenderWithOutline( blendedBody, pb, black, white, 2, 1 );
+
+			renderer.Present();
+		}
+	}
+}

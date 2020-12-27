@@ -1,0 +1,142 @@
+module sheets;
+
+import global, gamebase, plasma;
+
+class Sheet4 : Sheet
+{
+	field {
+		Font
+			fontHead,
+			fontBody;
+		Texture
+			blendedHead,
+			blendedBody;
+
+		Surface plasmaSrf;
+		Texture plasmaTex;
+	}
+	field i32 old_state  = 0;
+	field i32 brightness = 320; // 63
+	const i32 scale      = 4;
+
+public:
+	// ctor
+	// C++:  using Sheet::Sheet;
+	// MYLL: using base::ctor;
+
+	[override]
+	{
+		method Init()
+		{
+			fontHead = TTF::Font( "../assets/fonts/RobotoSlab-Bold.ttf", 64 );
+			fontBody = TTF::Font( "../assets/fonts/MonkeyIsland-1991-refined.ttf", 48 );
+
+			if( !plasmaSrf ) {
+				if (scale != 1)
+					SDL::SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
+				plasmaSrf = Surface(1280 / scale, 960 / scale);
+				plasmaTex = Texture(renderer, 1280 / scale, 960 / scale);
+
+				SDL::SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+			}
+		}
+
+		method Uninit()
+		{
+			fontHead = TTF::Font();
+			fontBody = TTF::Font();
+		}
+
+		method Update( const int frame, const float deltaT )
+		{
+			const u8* key_array = SDL::GetKeyboardState(nullptr);
+			if( key_array[SDL::Scancode::DOWN] ) brightness -= 1;
+			if( key_array[SDL::Scancode::UP  ] ) brightness += 1;
+
+			var   u8* px    = plasmaSrf.pixels<u8>();
+			const int pitch = plasmaSrf.pitch();
+			const int h     = plasmaSrf.h();
+			const int w     = plasmaSrf.w();
+
+			const f32 xy_scale = scale * 0.015f;
+			const f32 xy_frame = frame * 0.05f;
+
+			[parallel]
+			do h times y {
+				do w times x {
+					const f32 v = plasma(
+						(x - w / 2) * xy_scale,
+						(y - h / 2) * xy_scale,
+						xy_frame );
+
+					const int offset = x * 4 + y * pitch;
+					px[offset + 0] = std::max<int>(0, std::min<int>(255, 4 * brightness * (.5f + .5f * sin(M_PI*v))+brightness-64));
+					px[offset + 1] = std::max<int>(0, std::min<int>(255, 4 * brightness * (.5f + .5f * cos(M_PI*v))+brightness-64));
+					px[offset + 2] = std::max<int>(0, std::min<int>(255, 4 * brightness - 255));
+					px[offset + 3] = 255;
+				}
+			}
+
+			if(state != old_state) {
+				if (state == 0) {
+					bodyText = "";
+				}
+				else if (state == 1) {
+					bodyText = "\n     Diese Präsentation hier\n\n      ist in MYLL geschrieben";
+				}
+				else if (state == 2) {
+					bodyText = "\n   Natürlich würde man heute\n\n  einen solchen Plasmaeffekt...";
+				}
+				else if (state == 3) {
+					bodyText = "\n\n als Shader\n          auf der GPU umsetzen...";
+				}
+				else if (state == 4) {
+					bodyText = "aber dank der Performance von\n\n nativem Code funktioniert es\n\n   selbst auf diesem güstigen\n\n Laptop ruckelfrei auf der CPU";
+				}
+				else if (state == 5) {
+					bodyText = "\n\n\n\n ...und dass sogar ohne die\n\n                Tricks der 16bit Aera";
+				}
+				else if (state == 6) {
+					bodyText = " Und nun werfen wir einen Blick\n\n       unter die Motorhaube";
+				}
+				else if (state == 7) {
+					bodyText = "";
+				}
+
+				// reset the cached Texture
+				blendedBody = Texture();
+				old_state = state;
+			}
+		}
+
+		method Render( const int frame, const float deltaT )
+		{
+			plasmaTex.Update(plasmaSrf);
+			plasmaTex.Draw(Point(0,0), scale);
+
+			if( !blendedHead ) {
+				const char *text = "Und nun ein Beispiel";
+
+				var Surface surf = fontHead.RenderUTF8_Blended_Wrapped( text, white, 1160 );
+				blendedHead = Texture( renderer, surf );
+			}
+
+			if( !blendedBody ) {
+				var Surface surf = fontBody.RenderUTF8_Blended_Wrapped( bodyText, white, 1260 );
+				blendedBody = Texture( renderer, surf );
+			}
+
+			if( state < 2 ) {
+				const Point p = Point( 60, 150 );
+				RenderWithOutline( blendedHead, p, black, white, 2, 1 );
+			}
+
+			const Point pb = Point(
+				60  + sin( frame * 0.02 + 1 ) * 25,
+				350 + sin( frame * 0.05 )     * 50 );
+			RenderWithOutline( blendedBody, pb, white, black, 6, 6 );
+
+			renderer.Present();
+		}
+	}
+}
