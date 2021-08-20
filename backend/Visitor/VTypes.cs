@@ -12,7 +12,7 @@ namespace Myll
 		: MyllParserBaseVisitor<Result>
 	{
 		private static readonly Dictionary<int, Pointer.Kind>
-			ToPtr = new Dictionary<int, Pointer.Kind> {
+			ToPtr = new() {
 				/*{ MyllParser.AT_BANG,	Pointer.Kind.Unique	},
 				{ MyllParser.AT_PLUS,	Pointer.Kind.Shared	},
 				{ MyllParser.AT_QUEST,	Pointer.Kind.Weak	},
@@ -29,7 +29,7 @@ namespace Myll
 			};
 
 		private static readonly Dictionary<int, int>
-			ToSize = new Dictionary<int, int> {
+			ToSize = new() {
 				{ MyllParser.FLOAT, 4 }, // HACK: native best float, min 32 bit
 				{ MyllParser.F128, 16 },
 				{ MyllParser.F64, 8 },
@@ -120,7 +120,7 @@ namespace Myll
 
 		public new TypespecBasic VisitTypespecBasic( TypespecBasicContext c )
 		{
-			TypespecBasic ret = new TypespecBasic {
+			TypespecBasic ret = new() {
 				align  = -1,
 				size   = TypespecBasic.SizeUndetermined,
 			};
@@ -203,7 +203,7 @@ namespace Myll
 
 		public new TypespecFunc VisitTypespecFunc( TypespecFuncContext c )
 		{
-			TypespecFunc ret = new TypespecFunc {
+			TypespecFunc ret = new() {
 				//templateArgs = VisitTplArgs( c.tplArgs() ),
 				paras        = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
 				retType      = VisitTypespec( c.typespec() ),
@@ -213,9 +213,19 @@ namespace Myll
 
 		public new TypespecNested VisitTypespecNested( TypespecNestedContext c )
 		{
-			TypespecNested ret = new TypespecNested {
-				idTpls = c.idTplArgs().Select( VisitIdTplArgs ).ToList()
+			IEnumerable<IdTplArgs> idTplArgs = c.idTplArgs().Select( VisitIdTplArgs );
+
+			if( c.v != null )
+				idTplArgs = idTplArgs.Append(
+					new IdTplArgs {
+						id      = c.v.Text,
+						tplArgs = VisitTplArgs( null )
+					} );
+
+			TypespecNested ret = new() {
+				idTpls = idTplArgs.ToList()
 			};
+
 			return ret;
 		}
 

@@ -8,7 +8,7 @@ namespace Myll.Generator
 
 	internal static class StmtFormatting
 	{
-		internal static readonly Strings DefaultIncludes = new Strings {
+		internal static readonly Strings DefaultIncludes = new() {
 			"#pragma once",
 			"#include <memory>",      // smart pointer (expensive)
 			"#include <utility>",     // move, pair, swap
@@ -29,7 +29,7 @@ namespace Myll.Generator
 		internal const string CurlyCloseSC = "{0}}};";
 
 		public static readonly Dictionary<Access, string>
-			AccessFormat = new Dictionary<Access, string> {
+			AccessFormat = new() {
 				{ Access.Private,   "{0}  private:" },
 				{ Access.Protected, "{0}  protected:" },
 				{ Access.Public,    "{0}  public:" },

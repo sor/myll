@@ -59,7 +59,7 @@ namespace Myll
 
 		public override Stmt VisitUsing( UsingContext c )
 		{
-			UsingStmt ret = new UsingStmt {
+			UsingStmt ret = new() {
 				srcPos = c.ToSrcPos(),
 				types  = VisitTypespecsNested( c.typespecsNested().typespecNested() ),
 			};
@@ -91,7 +91,7 @@ namespace Myll
 
 		public override Stmt VisitVariableDecl( VariableDeclContext c )
 		{
-			MultiStmt ret = new MultiStmt {
+			MultiStmt ret = new() {
 				stmts = c
 					.typedIdAcors()
 					.SelectMany( VisitStmtVars )
@@ -139,7 +139,7 @@ namespace Myll
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public new CondThen VisitCondThen( CondThenContext c )
-			=> new CondThen {
+			=> new() {
 				condExpr = c.expr().Visit(),
 				thenStmt = c.levStmt().Visit(),
 			};
@@ -157,7 +157,7 @@ namespace Myll
 
 		public new CaseStmt VisitCaseStmt( CaseStmtContext c )
 		{
-			CaseStmt ret = new CaseStmt {
+			CaseStmt ret = new() {
 				srcPos    = c.ToSrcPos(),
 				caseExprs = c.expr().Select( q => q.Visit() ).ToList(),
 				bodyStmts = c.levStmt().Select( Visit ).ToList(),
@@ -179,7 +179,7 @@ namespace Myll
 
 		public override Stmt VisitLoopStmt( LoopStmtContext c )
 		{
-			LoopStmt ret = new LoopStmt {
+			LoopStmt ret = new() {
 				srcPos   = c.ToSrcPos(),
 				bodyStmt = c.levStmt().Visit(),
 			};
@@ -235,7 +235,7 @@ namespace Myll
 
 		public override Stmt VisitAggrAssignStmt( AggrAssignStmtContext c )
 		{
-			AggrAssign ret = new AggrAssign {
+			AggrAssign ret = new() {
 				srcPos    = c.ToSrcPos(),
 				op        = c.aggrAssignOP().v.ToAssignOp(),
 				leftExpr  = c.expr( 0 ).Visit(),
@@ -246,7 +246,7 @@ namespace Myll
 
 		public override Stmt VisitMultiAssignStmt( MultiAssignStmtContext c )
 		{
-			MultiAssign ret = new MultiAssign {
+			MultiAssign ret = new() {
 				srcPos = c.ToSrcPos(),
 				exprs  = c.expr().Select( q => q.Visit() ).ToList(),
 			};
@@ -255,7 +255,7 @@ namespace Myll
 
 		public override Stmt VisitBlockStmt( BlockStmtContext c )
 		{
-			Block ret = new Block {
+			Block ret = new() {
 				srcPos = c.ToSrcPos(),
 				stmts  = c.levStmt()?.Select( Visit ).ToList()
 				      ?? new List<Stmt>()

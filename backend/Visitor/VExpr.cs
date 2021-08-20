@@ -26,7 +26,7 @@ namespace Myll
 
 		public override Expr VisitScopedExpr( ScopedExprContext c )
 		{
-			ScopedExpr ret = new ScopedExpr {
+			ScopedExpr ret = new() {
 				op     = Operand.Scoped,
 				idTpls = c.idTplArgs().Select( VisitIdTplArgs ).ToList(),
 			//	expr   = c.expr().Visit(),
@@ -59,7 +59,7 @@ namespace Myll
 				};
 			}
 			else if( c.memAccOP() != null ) {
-				IdExpr right = new IdExpr {
+				IdExpr right = new() {
 					op        = Operand.Id,
 					idTplArgs = VisitIdTplArgs( c.idTplArgs() ),
 				};
@@ -105,7 +105,7 @@ namespace Myll
 						srcPos = c.ToSrcPos(),
 						ptrs   = new List<Pointer>(),
 						idTpls = new List<IdTplArgs> {
-							new IdTplArgs {
+							new() {
 								id      = "move", // TODO: support std::forward as well
 								tplArgs = new List<TplArg>(),
 							}
@@ -144,7 +144,7 @@ namespace Myll
 		// TODO: check if this really works
 		public override Expr VisitMemPtrExpr( MemPtrExprContext c )
 		{
-			BinOp ret = new BinOp {
+			BinOp ret = new() {
 				op    = c.memAccPtrOP().v.ToOp(),
 				left  = c.expr( 0 ).Visit(),
 				right = c.expr( 1 ).Visit(),
@@ -154,7 +154,7 @@ namespace Myll
 
 		public override Expr VisitPowExpr( PowExprContext c )
 		{
-			BinOp ret = new BinOp {
+			BinOp ret = new() {
 				op    = Operand.Pow,
 				left  = c.expr( 0 ).Visit(),
 				right = c.expr( 1 ).Visit(),
@@ -164,7 +164,7 @@ namespace Myll
 
 		public override Expr VisitMultExpr( MultExprContext c )
 		{
-			BinOp ret = new BinOp {
+			BinOp ret = new() {
 				op    = c.multOP().v.ToOp(),
 				left  = c.expr( 0 ).Visit(),
 				right = c.expr( 1 ).Visit(),
@@ -174,7 +174,7 @@ namespace Myll
 
 		public override Expr VisitAddExpr( AddExprContext c )
 		{
-			BinOp ret = new BinOp {
+			BinOp ret = new() {
 				op    = c.addOP().v.ToOp(),
 				left  = c.expr( 0 ).Visit(),
 				right = c.expr( 1 ).Visit(),
@@ -184,7 +184,7 @@ namespace Myll
 
 		public override Expr VisitShiftExpr( ShiftExprContext c )
 		{
-			BinOp ret = new BinOp {
+			BinOp ret = new() {
 				op    = c.shiftOP().LSHIFT() != null ? Operand.LeftShift : Operand.RightShift,
 				left  = c.expr( 0 ).Visit(),
 				right = c.expr( 1 ).Visit(),
@@ -194,7 +194,7 @@ namespace Myll
 
 		public override Expr VisitComparisonExpr( ComparisonExprContext c )
 		{
-			BinOp ret = new BinOp {
+			BinOp ret = new() {
 				op    = Operand.Comparison,
 				left  = c.expr( 0 ).Visit(),
 				right = c.expr( 1 ).Visit(),
@@ -204,7 +204,7 @@ namespace Myll
 
 		public override Expr VisitRelationExpr( RelationExprContext c )
 		{
-			BinOp ret = new BinOp {
+			BinOp ret = new() {
 				op    = c.orderOP().v.ToOp(),
 				left  = c.expr( 0 ).Visit(),
 				right = c.expr( 1 ).Visit(),
@@ -214,7 +214,7 @@ namespace Myll
 
 		public override Expr VisitEqualityExpr( EqualityExprContext c )
 		{
-			BinOp ret = new BinOp {
+			BinOp ret = new() {
 				op    = c.equalOP().v.ToOp(),
 				left  = c.expr( 0 ).Visit(),
 				right = c.expr( 1 ).Visit(),
@@ -224,7 +224,7 @@ namespace Myll
 
 		public override Expr VisitAndExpr( AndExprContext c )
 		{
-			BinOp ret = new BinOp {
+			BinOp ret = new() {
 				op    = Operand.And,
 				left  = c.expr( 0 ).Visit(),
 				right = c.expr( 1 ).Visit(),
@@ -234,7 +234,7 @@ namespace Myll
 
 		public override Expr VisitOrExpr( OrExprContext c )
 		{
-			BinOp ret = new BinOp {
+			BinOp ret = new() {
 				op    = Operand.Or,
 				left  = c.expr( 0 ).Visit(),
 				right = c.expr( 1 ).Visit(),
@@ -244,7 +244,7 @@ namespace Myll
 
 		public override Expr VisitNullCoalesceExpr( NullCoalesceExprContext c )
 		{
-			BinOp ret = new BinOp {
+			BinOp ret = new() {
 				op    = Operand.NullCoalesce,
 				left  = c.expr( 0 ).Visit(),
 				right = c.expr( 1 ).Visit(),
@@ -254,7 +254,7 @@ namespace Myll
 
 		public override Expr VisitConditionalExpr( ConditionalExprContext c )
 		{
-			TernOp ret = new TernOp {
+			TernOp ret = new() {
 				op    = Operand.Conditional,
 				left  = c.expr( 0 ).Visit(),
 				mid   = c.expr( 1 ).Visit(),
@@ -265,7 +265,7 @@ namespace Myll
 
 		public override Expr VisitParenExpr( ParenExprContext c )
 		{
-			UnOp ret = new UnOp {
+			UnOp ret = new() {
 				op   = Operand.Parens,
 				expr = c.expr().Visit(),
 			};
@@ -282,7 +282,7 @@ namespace Myll
 				};
 			}
 			else if( cc.AUTOINDEX() != null ) {
-				IdTplArgs idTplArgs = new IdTplArgs {
+				IdTplArgs idTplArgs = new() {
 					id      = cc.AUTOINDEX().GetText(),
 					tplArgs = new List<TplArg>( 0 ),
 				};
@@ -300,7 +300,7 @@ namespace Myll
 
 		public new Literal VisitLit( LitContext c )
 		{
-			Literal ret = new Literal {
+			Literal ret = new() {
 				op   = Operand.Literal,
 				text = c.GetText() // TODO
 			};
@@ -310,7 +310,7 @@ namespace Myll
 		// TODO remove this or the other above?
 		public override Expr VisitLiteralExpr( LiteralExprContext c )
 		{
-			Literal ret = new Literal {
+			Literal ret = new() {
 				op   = Operand.Literal,
 				text = c.lit().GetText() // TODO
 			};

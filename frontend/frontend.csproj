@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>netcoreapp3.1</TargetFrameworks>
-		<LangVersion>8</LangVersion>
+		<TargetFramework>net5.0</TargetFramework>
+		<LangVersion>9</LangVersion>
 		<Nullable>enable</Nullable>
 		<AssemblyName>myll</AssemblyName>
 		<RootNamespace>Myll</RootNamespace>

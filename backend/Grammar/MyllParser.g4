@@ -71,7 +71,8 @@ typespecBasic	:	specialType
 typespecFunc	:	funcTypeDef (RARROW typespec)?;
 
 // TODO different order than ScopedExpr
-typespecNested	:	idTplArgs (SCOPE idTplArgs)*;
+typespecNested	:	idTplArgs	(SCOPE idTplArgs)*
+								(SCOPE v=( CTOR | DTOR | COPYCTOR | MOVECTOR ))?;
 typespecsNested	:	typespecNested (COMMA typespecNested)* COMMA?;	// trailing COMMA here really possible?
 
 // --- handled
@@ -199,8 +200,8 @@ inDecl		:	NS id (SCOPE id)* SEMI						# Namespace // or better COLON
 // class only:
 			|	v=( PUB | PROT | PRIV ) COLON		# AccessMod
 			|	v=( CTOR | COPYCTOR | MOVECTOR )
-				funcTypeDef	initList?	(SEMI | levStmt) # CtorDecl
-			|	DTOR	LPAREN RPAREN	(SEMI | levStmt) # DtorDecl
+				funcTypeDef	initList?		(SEMI | levStmt) # CtorDecl
+			|	DTOR	(LPAREN RPAREN)?	(SEMI | levStmt) # DtorDecl
 			;
 
 // using, var, const: these are both Stmt and Decl
@@ -214,7 +215,9 @@ inAnyStmt	:	USING			typespecsNested	SEMI	# Using
 inStmt		:	SEMI								# EmptyStmt
 			|	LCURLY	levStmt*	RCURLY			# BlockStmt
 			|	RETURN	expr?		SEMI			# ReturnStmt
-			|	THROW	expr		SEMI			# ThrowStmt
+			|	DO RETURN expr?
+				IF LPAREN expr RPAREN	SEMI		# ReturnIfStmt
+			|	THROW	expr			SEMI		# ThrowStmt
 			|	BREAK	INTEGER_LIT?	SEMI		# BreakStmt
 			|	IF			condThen
 				(ELSE IF	condThen)*	// helps with formatting properly and de-nesting the AST

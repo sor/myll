@@ -168,6 +168,7 @@ namespace Myll.Core
 	// was nestedType
 	public class TypespecNested : Typespec
 	{
+		// TODO remember if a Ctor/Dtor was in the last spot, eg *::ctor
 		public List<IdTplArgs> idTpls;
 
 		public override string GenType()

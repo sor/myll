@@ -1,0 +1,145 @@
+
+* Myll general
+
+No narrowing conversion allowed
+For initialization default ctor should do the same as an empty init-list.
+
+
+* Value initialization, more like "Default initialization"
+
+	3,4,5,6,7 invalid.
+	additional "new ()" like 2, which deduces the type from the receiver
+		only usable in contexts where this deduction is possible.
+Direct initialization
+	2 invalid, init-list only copy-init.
+	6 only base or delegating ctors here.
+	7 invalid, lambda syntax is different.
+	additional "new (args, ...) like 5, which deduces the type from the receiver
+		only usable in contexts where this deduction is possible.
+Copy initialization
+	//already gone... 2 not calling ctor, only init-list
+	//additional "T obj = [args, ...]", like 2, only for array like containers
+	additional "T ary[N] = [args, ...]", like 6, only for array like containers
+List initialization
+	In general: curlies never call the ctor, call ctors with parens and lists with
+		"T obj = {}" or "T obj = T{}" depening on if you want explicit ctors or not.
+		"T obj = T{}" translates to "T obj{}", no performance is lost.
+		"T obj = T{}" can be shortened to "T obj = auto{}" or "T obj = (auto){}".
+	1,4 invalid, see general comment.
+	5 only base or delegating ctors here.
+	additional new {args, ...}, like 3, which deduces the type from the receiver
+		only usable in contexts where this deduction is possible.
+	additional "object[ arg1, arg2, ... ]" is automatically translated to
+		"object[ { arg1, arg2, ... } ]"
+	additional "[]" for all valid entries, relevant only for array types.
+Aggregate initialization
+	2,4,5 invalid.
+	3 changed to "T obj { designator1: arg1, designator2: arg2 };"
+Reference initialization
+	1.3, 1.4, 2.3, 2.4, 5 invalid
+
+
+* Constructor convertability and User-defined conversion function
+
+[convert(ing)=auto] is the default, which means its "explicit" in all cases which I thought of already. Not overwriting it with "explicit" or "implicit" might produce a warning or even an error in later development, for cases which I not yet thought of.
+
+[convert=implicit OR implicit OR convert OR convert=yes]
+ctor() {...}
+
+[convert=explicit OR explicit OR !convert OR convert=no] // or not mentioned at all, explicit by default
+ctor() {...}
+
+[convert=implicit]
+convert -> int {...}
+
+[convert=explicit] // again unnecessary, the default
+convert -> int {...}
+
+[virtual, abstract OR virtual=abstract OR virtual=pure OR abstract] // abstract implies virtual
+convert -> int
+
+// deduce type from returns
+convert -> auto {...}
+
+
+* Disclaimer
+
+Myll does not want to dictate any style over your personal preference. You decide your tabs/spaces/depth-of-indentation/if-you-indent-at-all, where you put the opening curly braces, if you like to omit curlies on simple ifs or always write them. Do you want to use automatically typed variables a lot or do you not use them at all? Your choice.
+There is however a coding style that I prefer to use. The design of Myll aims to support that and related styles. In situations where there is no tradeoff, it even tries to enable and support a coding styles which I do not prefer. Everyone is welcome here.
+
+
+* Code is read way more often than it is written.
+
+This is the case because it is evolving: extended, improved and fixed. For all of these cases the readability of the code matters, if the code is not fully understood, then it's likely to be broken/made-worse by a change. Also time matters; there is rarely time to inspect every function call that is employed. So the ease of reading does not only affect the speed, but might also influence quality.
+There are cases where this might not be applicable. Prototype and other throw-away code is written once and possibly never read again, but these are huge exceptions in my field of work. For example: The code which I've written for most university courses is throw-away-code IMO.
+
+
+* Initialization/Construction via curly braces.
+
+Because of bad decisions in the past, C++ ran out of sane options to initialize (and construct) objects. Therefore the (also already overused) curly braces where deemed to be the new go-to replacement.
+
+This is initialization, not assignment
+	int i1 = 5;
+This is assignment
+	i2 = 5;
+How is the following more readable than the above? Ok, it is not mistakened with assignment anymore, but it's also not recognizable at all by many people who come from other languages.
+	int i3{ 5 };
+The question is, does it really matter to anyone who starts their journey with a programming language that i1 and i2 are something slightly different? It just works. And all those who are already deep into C++ know the difference and in many cases it does not even matter there.
+
+Solution in Myll:
+Curlies are only used for initializer-list and aggregate initialization. In fact they must be used, round brackets (parens) are invalid for aggregate initialization. If a ctor will be called at all, only implicit ctors may be called. Implicit conversion is already reduced in Myll.
+var vector<int>
+	vec1,			// default ctor
+	vec2(99),		// vector with 99 default initialized ints
+	vec3(99,99),	// vector with 99 ints set to 99
+	vec4{99},		// vector with a single 99 inside	(maybe not those)
+	vec5{99,99},	// vector with two 99 inside		(maybe not those)
+	// (like c++, c#, java, go, zig)
+	vec6 = {99},	// vector with a single 99 inside
+	vec7 = {99,99},	// vector with two 99 inside
+	// (like ruby, python, d, rust, swift, julia, js, haskell, groovy, nim)
+	vec8 = [99],	// vector with a single 99 inside
+	vec9 = [99,99],	// vector with two 99 inside
+
+	vector<int> (99);	// init a temporary, 1 param ctor
+	vector<int> {99};	// init a temporary, list with 1 elem
+
+var map<int,int>
+	map1,			// default ctor
+
+
+
+* Very Rarely Auto
+
+	auto someCount = CountActiveLinks();
+	if( someCount < 5 )
+		doSomething();
+
+Before auto, you need to write the long classname twice:
+	MyFancyClassWithLongName* ptrToSomething = new MyFancyClassWithLongName();
+Here
+
+Less to read in total, but you need to find the classname far to the right, possibly very unaligned with the surrounding code:
+	auto ptrToSomething1 = new MyFancyClassWithLongName();
+OR
+	auto* ptrToSomething2 = new MyFancyClassWithLongName();
+
+Also consider that there might not just be a raw-new there, you might have smart pointers, facories or macros which might make the situation even less readable.
+	auto ptrToSomething3 = MyFactory::produce<MyFancyClassWithLongName>();
+	auto ptrToSomething4 = std::make_shared<MyFancyClassWithLongName>();
+	auto ptrToSomething5 = myNewMacro(MyFancyClassWithLongName, "additional info for debugging allocations");
+These 3 lines might all return different types. Every raw and smart pointer has a different behavior and interface, if you want to make sure that you treat them right you need to look up which type they are, many times by inspecting the function that returns them. You might even call a wrong function or macro by accident and receive something that is not a pointer at all and as long as this type supports all the calls made, your program will at least compile.
+	auto ptrToSomething6 = myMeowMacro(MyFancyClassWithLongName, "additional info for debugging allocations");
+	if( ptrToSomething6 ) ...
+So whatever type my-MEOW-Macro returned (not NEW, just for demonstrating that it might not even be a pointer that is returned, could be anything), it just needs to be implicitly convertible to a bool.
+In C++ the left side of an initialisation or assignment can not communicate its type to the right side. The both following are not possible in C++
+	MyClass myC = new;
+	myC = new;
+This exact thing is possible in C# 9.0 and is IMO a far better solution to the problem that writing the typename twice is not nice to ask from the programmer.
+
+auto does one good thing for readability, it's very easy to spot variable declarations with the left aligned auto. Myll provides a similar easy-to-spot keyword for identifying variable declarations/definitions "var" (or "const").
+
+	Solution in Myll
+Contrary to C++, the initialization with the = sign can now communicate its type to the right side.
+	MyClass myC = new();
+The new can not deduce ...??

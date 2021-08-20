@@ -13,7 +13,7 @@ namespace Myll
 					int a = Start.StartIndex,
 					    b = Stop.StopIndex;
 					if( a > b ) (a, b) = (b, a);
-					Interval interval  = new Interval( a, b );
+					Interval interval  = new( a, b );
 					String   text      = Start.InputStream.GetText( interval );
 					return text;
 				}
@@ -27,7 +27,7 @@ namespace Myll
 					int a = Start.StartIndex,
 					    b = Stop.StopIndex;
 					if( a > b ) (a, b) = (b, a);
-					Interval interval  = new Interval( a, b );
+					Interval interval  = new( a, b );
 					String   text      = Start.InputStream.GetText( interval );
 					return text;
 				}

@@ -18,14 +18,14 @@ namespace Myll
 
 		public GlobalNamespace GenerateGlobalScope( string module )
 		{
-			GlobalNamespace global = new GlobalNamespace {
+			GlobalNamespace global = new() {
 				name     = "",   // global
 				srcPos   = null, // no pos since it exists for multiple files
 				withBody = true,
 				imps     = new HashSet<string>(),
 				module   = module,
 			};
-			Scope scope = new Scope {
+			Scope scope = new() {
 				parent = null,
 				decl   = global,
 			};
@@ -51,7 +51,7 @@ namespace Myll
 		public void AddChild( Decl leaf )
 		{
 			Scope parent = scopeStack.Peek();
-			ScopeLeaf scopeLeaf = new ScopeLeaf {
+			ScopeLeaf scopeLeaf = new() {
 				parent = parent,
 				decl   = leaf,
 			};
@@ -62,7 +62,7 @@ namespace Myll
 		{
 			Scope parent = scopeStack.Peek();
 			foreach( Decl leaf in leafs ) {
-				ScopeLeaf scopeLeaf = new ScopeLeaf {
+				ScopeLeaf scopeLeaf = new() {
 					parent = parent,
 					decl   = leaf,
 				};
@@ -73,7 +73,7 @@ namespace Myll
 		public void PushScope( Hierarchical hierarchical )
 		{
 			Scope parent = scopeStack.Peek();
-			Scope scope = new Scope {
+			Scope scope = new() {
 				parent = parent,
 				decl   = hierarchical,
 			};
@@ -85,7 +85,7 @@ namespace Myll
 		public void PushScope()
 		{
 			Scope parent = scopeStack.Peek();
-			Scope scope = new Scope {
+			Scope scope = new() {
 				parent = parent,
 				decl   = null,
 			};

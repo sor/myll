@@ -26,7 +26,7 @@ namespace Myll.Core
 		}
 
 		public readonly Dictionary<string, List<ScopeLeaf>>
-			children = new Dictionary<string, List<ScopeLeaf>>();
+			children = new();
 
 		// unresolved???
 		public List<Scope> importedScopes; // (base) Class(es) and (using) Namespaces

@@ -38,8 +38,8 @@ namespace Myll.Core
 		public List<Symbol> overlays; // using's and parent class'es
 		public Symbol       parent;
 
-		public PairList<string, Symbol>  funcParameter = new PairList<string, Symbol>();
-		public MultiDict<string, Symbol> children      = new MultiDict<string, Symbol>();
+		public PairList<string, Symbol>  funcParameter = new();
+		public MultiDict<string, Symbol> children      = new();
 	}
 
 	[Obsolete( "not used ATM, properly check before using" )]

@@ -31,7 +31,7 @@ namespace Myll
 
 		public override Decl VisitEnumDecl( EnumDeclContext c )
 		{
-			Enumeration ret = new Enumeration {
+			Enumeration ret = new() {
 				srcPos   = c.ToSrcPos(),
 				name     = c.id().Visit(),
 				access   = curAccess,
@@ -49,7 +49,7 @@ namespace Myll
 		{
 			// ist das hier richtig?
 			PushScope();
-			Func ret = new Func {
+			Func ret = new() {
 				srcPos    = c.ToSrcPos(),
 				name      = c.id().Visit(),
 				access    = curAccess,
@@ -89,7 +89,7 @@ namespace Myll
 			string stringOp  = c.STRING_LIT().GetText();
 			string cleanedOp = "operator" + stringOp.Substring( 1, stringOp.Length - 2 );
 			PushScope();
-			Func ret = new Func {
+			Func ret = new() {
 				srcPos    = c.ToSrcPos(),
 				name      = cleanedOp,
 				access    = curAccess,
@@ -180,7 +180,7 @@ namespace Myll
 			// add new namespaces to hierarchy
 			bool withBody = (c.levDecl().Length >= 1);
 			foreach( IdContext id in c.id() ) {
-				Namespace ns = new Namespace {
+				Namespace ns = new() {
 					srcPos   = id.ToSrcPos(),
 					name     = id.Visit(),
 					withBody = withBody,
@@ -204,7 +204,7 @@ namespace Myll
 
 		public override Decl VisitStructDecl( StructDeclContext c )
 		{
-			Structural ret = new Structural {
+			Structural ret = new() {
 				srcPos    = c.ToSrcPos(),
 				name      = c.id().Visit(),
 				access    = curAccess,
@@ -238,7 +238,7 @@ namespace Myll
 			string name = parent.decl.name; //.FullyQualifiedName;
 
 			PushScope();
-			ConDestructor ret = new ConDestructor {
+			ConDestructor ret = new() {
 				srcPos = c.ToSrcPos(),
 				name   = name,
 				access = curAccess,
@@ -261,7 +261,7 @@ namespace Myll
 			string name = "~" + parent.decl.name;
 
 			PushScope();
-			ConDestructor ret = new ConDestructor {
+			ConDestructor ret = new() {
 				srcPos = c.ToSrcPos(),
 				name   = name,
 				access = curAccess,
@@ -300,7 +300,7 @@ namespace Myll
 
 		public override Decl VisitVariableDecl( VariableDeclContext c )
 		{
-			MultiDecl ret = new MultiDecl {
+			MultiDecl ret = new() {
 				decls = c.typedIdAcors()
 					.SelectMany( VisitVars )
 					.ToList(),

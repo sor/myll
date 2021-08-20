@@ -135,7 +135,7 @@ namespace Myll.Core
 
 		public override Strings Gen( int level )
 		{
-			return new Strings {
+			return new() {
 				expr == null
 					? Format( ReturnFormat[0], IndentString.Repeat( level ) )
 					: Format( ReturnFormat[1], IndentString.Repeat( level ), expr.Gen() )
@@ -149,7 +149,7 @@ namespace Myll.Core
 
 		public override Strings Gen( int level )
 		{
-			return new Strings {
+			return new() {
 				Format( ThrowFormat, IndentString.Repeat( level ), expr.Gen() )
 			};
 		}

@@ -34,14 +34,14 @@ namespace Myll
 			?? Enumerable.Empty<Arg>();
 
 		protected new FuncCall VisitIndexCall( IndexCallContext c )
-			=> new FuncCall {
+			=> new() {
 				args     = VisitArgs( c.args() ).ToList(),
 				nullCoal = c.ary.Type == QM_LBRACK,
 				indexer  = true,
 			};
 
 		protected new FuncCall VisitFuncCall( FuncCallContext c )
-			=> new FuncCall {
+			=> new() {
 				args     = VisitArgs( c?.args() ).ToList(),
 				nullCoal = c?.ary.Type == QM_LPAREN,
 				indexer  = false,
@@ -66,13 +66,13 @@ namespace Myll
 	public static class VisitorExtensions
 	{
 		// HACK these must become non-static
-		private static readonly Stack<Scope> ScopeStack = new Stack<Scope>();
-		private static readonly ExprVisitor  ExprVis    = new ExprVisitor( ScopeStack );
-		private static readonly StmtVisitor  StmtVis    = new StmtVisitor( ScopeStack );
-		public static readonly  DeclVisitor  DeclVis    = new DeclVisitor( ScopeStack );
+		private static readonly Stack<Scope> ScopeStack = new();
+		private static readonly ExprVisitor  ExprVis    = new( ScopeStack );
+		private static readonly StmtVisitor  StmtVis    = new( ScopeStack );
+		public static readonly  DeclVisitor  DeclVis    = new( ScopeStack );
 
 		private static readonly Dictionary<int, Operand>
-			ToOperand = new Dictionary<int, Operand> {
+			ToOperand = new() {
 				{ Parser.DBL_PLUS, Operand.PostIncr },
 				{ Parser.DBL_MINUS, Operand.PostDecr },
 				{ Parser.LPAREN, Operand.FuncCall },
@@ -109,7 +109,7 @@ namespace Myll
 			};
 
 		private static readonly Dictionary<int, Operand>
-			ToPreOperand = new Dictionary<int, Operand> {
+			ToPreOperand = new() {
 				{ Parser.DBL_PLUS, Operand.PreIncr },
 				{ Parser.DBL_MINUS, Operand.PreDecr },
 				{ Parser.PLUS, Operand.PrePlus },
@@ -121,7 +121,7 @@ namespace Myll
 			};
 
 		private static readonly Dictionary<int, Operand>
-			ToAssignOperand = new Dictionary<int, Operand> {
+			ToAssignOperand = new() {
 				{ Parser.ASSIGN,	Operand.Equal },
 				{ Parser.AS_POW,	Operand.Pow },
 				{ Parser.AS_MUL,	Operand.Multiply },
@@ -174,7 +174,7 @@ namespace Myll
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static SrcPos ToSrcPos( this ParserRuleContext c )
-			=> new SrcPos {
+			=> new() {
 				file = c.Start.InputStream.SourceName,
 				from = {
 					line = c.Start.Line,
@@ -239,7 +239,7 @@ namespace Myll
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Accessor Visit( this Parser.AccessorDefContext c )
-			=> new Accessor {
+			=> new() {
 				body = c.funcBody().Visit(),
 				qual = c.qual().Visit(),
 				kind = c.v.ToAccessorKind(),

@@ -12,7 +12,7 @@ namespace Myll
 	{
 		public new IdTplArgs VisitIdTplArgs( IdTplArgsContext c )
 		{
-			IdTplArgs ret = new IdTplArgs {
+			IdTplArgs ret = new() {
 				id      = c.id().Visit(),
 				tplArgs = VisitTplArgs( c.tplArgs() )
 			};
@@ -34,7 +34,7 @@ namespace Myll
 
 		public TplParam VisitTplParam( IdContext c )
 		{
-			TplParam tp = new TplParam {
+			TplParam tp = new() {
 				name = c.Visit(),
 			};
 			return tp;

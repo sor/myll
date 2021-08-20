@@ -16,9 +16,9 @@ namespace Myll.Generator
 	internal class PPPStrings
 	{
 		public readonly Strings
-			priv = new Strings(),
-			prot = new Strings(),
-			pub  = new Strings();
+			priv = new(),
+			prot = new(),
+			pub  = new();
 
 		public Strings Target( Access access )
 			=> access switch {
@@ -64,31 +64,31 @@ namespace Myll.Generator
 	{
 		/// Fields are special, they can not be grouped by ppp or sorted
 		private readonly AccessStrings
-			staticFieldDecl = new AccessStrings(),
-			staticFieldImpl = new AccessStrings(),
-			fieldDecl       = new AccessStrings(),
-			fieldImpl       = new AccessStrings();
+			staticFieldDecl = new(),
+			staticFieldImpl = new(),
+			fieldDecl       = new(),
+			fieldImpl       = new();
 
 		// Super memory inefficient but I don't care for the moment
 		private readonly PPPStrings
-			protoEarly         = new PPPStrings(),
-			protoLate          = new PPPStrings(),
-			hierarchicalDecl   = new PPPStrings(),
-			hierarchicalImpl   = new PPPStrings(),
-			staticAccessorDecl = new PPPStrings(),
-			staticAccessorImpl = new PPPStrings(),
-			staticMethodDecl   = new PPPStrings(),
-			staticMethodImpl   = new PPPStrings(),
-			ctorDecl           = new PPPStrings(),
-			ctorImpl           = new PPPStrings(),
-			dtorDecl           = new PPPStrings(), // you can only have one DTor,
-			dtorImpl           = new PPPStrings(), // but this makes it simpler to generate the code
-			accessorDecl       = new PPPStrings(),
-			accessorImpl       = new PPPStrings(),
-			operatorDecl       = new PPPStrings(),
-			operatorImpl       = new PPPStrings(),
-			methodDecl         = new PPPStrings(),
-			methodImpl         = new PPPStrings();
+			protoEarly         = new(),
+			protoLate          = new(),
+			hierarchicalDecl   = new(),
+			hierarchicalImpl   = new(),
+			staticAccessorDecl = new(),
+			staticAccessorImpl = new(),
+			staticMethodDecl   = new(),
+			staticMethodImpl   = new(),
+			ctorDecl           = new(),
+			ctorImpl           = new(),
+			dtorDecl           = new(), // you can only have one DTor,
+			dtorImpl           = new(), // but this makes it simpler to generate the code
+			accessorDecl       = new(),
+			accessorImpl       = new(),
+			operatorDecl       = new(),
+			operatorImpl       = new(),
+			methodDecl         = new(),
+			methodImpl         = new();
 
 		private readonly Access defaultAccess;
 
@@ -362,7 +362,7 @@ namespace Myll.Generator
 				throw new ArgumentOutOfRangeException( nameof( obj ), true, "Hierarchicals can not be static" );
 
 			// this is a sub-gen for the child-hierarchical obj
-			HierarchicalGen gen = new HierarchicalGen( obj, LevelDecl + 1, LevelImpl );
+			HierarchicalGen gen = new( obj, LevelDecl + 1, LevelImpl );
 
 			// this happens inside the children, each knows which method to call
 			// e.g.: g.AddAccessor( ... );

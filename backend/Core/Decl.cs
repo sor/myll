@@ -90,7 +90,7 @@ namespace Myll.Core
 	// has in-order list of decls, visible from outside
 	public abstract class Hierarchical : Decl
 	{
-		public readonly List<Decl> children = new List<Decl>();
+		public readonly List<Decl> children = new();
 
 		public new Scope scope {
 			get => base.scope as Scope;
@@ -150,6 +150,8 @@ namespace Myll.Core
 
 	public class Using : Decl
 	{
+		// in locations where C++ does not support "using (namespace)" this must not be printed
+		// but instead the unqualified types need to be changed to qualified ones
 		public List<TypespecNested> types;
 
 		public override void AddToGen( HierarchicalGen gen )
@@ -275,25 +277,23 @@ namespace Myll.Core
 					enumTypespec = new TypespecNested {
 						ptrs = new List<Pointer>(),
 						idTpls = new List<IdTplArgs> {
-							new IdTplArgs { id = FullyQualifiedName, tplArgs = new List<TplArg>() }
+							new() { id = FullyQualifiedName, tplArgs = new List<TplArg>() }
 						}
 					},
 					enumTypespecRef = new TypespecNested {
-						ptrs = new List<Pointer> { new Pointer { kind = Pointer.Kind.LVRef } },
-						idTpls = new List<IdTplArgs> {
-							new IdTplArgs { id = FullyQualifiedName, tplArgs = new List<TplArg>() }
-						}
+						ptrs   = new List<Pointer> { new() { kind = Pointer.Kind.LVRef } },
+						idTpls = new List<IdTplArgs> { new() { id = FullyQualifiedName, tplArgs = new List<TplArg>() } }
 					};
 
 				Typespec underlying = new TypespecNested {
 					ptrs = new List<Pointer>(),
 					idTpls = new List<IdTplArgs> {
-						new IdTplArgs { id = "std", tplArgs = new List<TplArg>() },
-						new IdTplArgs {
+						new() { id = "std", tplArgs = new List<TplArg>() },
+						new() {
 							id      = "underlying_type",
-							tplArgs = new List<TplArg> { new TplArg { typespec = enumTypespec } }
+							tplArgs = new List<TplArg> { new() { typespec = enumTypespec } }
 						},
-						new IdTplArgs { id = "type", tplArgs = new List<TplArg>() },
+						new() { id = "type", tplArgs = new List<TplArg>() },
 					}
 				};
 
@@ -304,14 +304,14 @@ namespace Myll.Core
 						{ op = Operand.Id, idTplArgs = new IdTplArgs { id = "rhs", tplArgs = new List<TplArg>() }, };
 
 				foreach( (string, Operand) tuple in BitwiseOps ) {
-					Func ret = new Func {
+					Func ret = new() {
 						srcPos    = srcPos, // TODO should be the pos of the attribute
 						name      = tuple.Item1,
 						TplParams = new List<TplParam>(),
 						retType   = enumTypespec,
 						paras = new List<Param> {
-							new Param { name = "lhs", type = enumTypespec },
-							new Param { name = "rhs", type = enumTypespec },
+							new() { name = "lhs", type = enumTypespec },
+							new() { name = "rhs", type = enumTypespec },
 						},
 						block = new ReturnStmt {
 							srcPos = srcPos,
@@ -340,7 +340,7 @@ namespace Myll.Core
 							? new Attribs { { "ct", new Strings() }, { "inline", new Strings() } }
 							: new Attribs { { "ct", new Strings() } } );
 
-					ScopeLeaf scopeLeaf = new ScopeLeaf {
+					ScopeLeaf scopeLeaf = new() {
 						parent = namespaceUp,
 						decl   = ret,
 					};
@@ -349,14 +349,14 @@ namespace Myll.Core
 				}
 
 				foreach( (string, Operand) tuple in BitwiseEqualOps ) {
-					Func ret = new Func {
+					Func ret = new() {
 						srcPos    = srcPos, // TODO should be the pos of the attribute
 						name      = tuple.Item1,
 						TplParams = new List<TplParam>(),
 						retType   = enumTypespecRef,
 						paras = new List<Param> {
-							new Param { name = "lhs", type = enumTypespecRef },
-							new Param { name = "rhs", type = enumTypespec },
+							new() { name = "lhs", type = enumTypespecRef },
+							new() { name = "rhs", type = enumTypespec },
 						},
 						block = new Block {
 							srcPos = srcPos,
@@ -395,7 +395,7 @@ namespace Myll.Core
 					if( isInline )
 						ret.AssignAttribs( new Attribs { { "inline", new Strings() } } );
 
-					ScopeLeaf scopeLeaf = new ScopeLeaf {
+					ScopeLeaf scopeLeaf = new() {
 						parent = namespaceUp,
 						decl   = ret,
 					};
