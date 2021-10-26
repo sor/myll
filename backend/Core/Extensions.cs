@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
 
@@ -42,5 +44,8 @@ namespace Myll.Core
 			// there is a specialized string.Join with string[]
 			return string.Join( delimiter, values );
 		}
+
+		[Pure]
+		public static bool IsEmpty<T>( [NotNull] this IEnumerable<T> values ) => !values.Any();
 	}
 }

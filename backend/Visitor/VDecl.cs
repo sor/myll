@@ -127,8 +127,26 @@ namespace Myll
 			Attribs attribs = c.attribBlk().Visit();
 			decls.ForEach( o => o.AssignAttribs( attribs ) );
 
-			// HACK: can only return one here, is this really a problem? Workaround could be a Decl that contains a Decl[]
+			// HACK: can only return one here, is this really a problem? Workaround could be a Decl that contains a Decl array
 			return decls[0];
+		}
+
+		// HACK: will be buggy like VisitAccessMod needs to move to ScopeStack, when ScopeStack works.
+		public override Decl VisitAttribState( AttribStateContext c )
+		{
+			// HACK: only works for pub, prot & priv now, with optional "access=" prefix
+			// always has attribs
+			Attribs          attribs = c.attribBlk().Visit();
+			string access = attribs.ContainsKey( "access" )
+				? attribs["access"].First()
+				: attribs.First().Key;
+			curAccess = access switch {
+				"pub"  => Access.Public,
+				"prot" => Access.Protected,
+				"priv" => Access.Private,
+				_      => throw new NotSupportedException( "Got unsupported attribute in AttribState: " + access ),
+			};
+			return null;
 		}
 
 		public override Decl VisitAttribDecl( AttribDeclContext c )
@@ -226,6 +244,17 @@ namespace Myll
 
 			PopScope();
 
+			return ret;
+		}
+
+		public override Decl VisitUsing( UsingContext c )
+		{
+			UsingDecl ret = new() {
+				srcPos = c.ToSrcPos(),
+				types  = VisitTypespecsNested( c.typespecsNested().typespecNested() ),
+			};
+			ret.types.ForEach( o => o.ptrs = new List<Pointer>() );
+			AddChild( ret );
 			return ret;
 		}
 

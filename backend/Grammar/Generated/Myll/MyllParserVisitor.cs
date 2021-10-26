@@ -652,6 +652,13 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitReturnStmt([NotNull] MyllParser.ReturnStmtContext context);
 	/// <summary>
+	/// Visit a parse tree produced by the <c>ReturnIfStmt</c>
+	/// labeled alternative in <see cref="MyllParser.inStmt"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitReturnIfStmt([NotNull] MyllParser.ReturnIfStmtContext context);
+	/// <summary>
 	/// Visit a parse tree produced by the <c>ThrowStmt</c>
 	/// labeled alternative in <see cref="MyllParser.inStmt"/>.
 	/// </summary>
@@ -742,6 +749,13 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitAttribDeclBlock([NotNull] MyllParser.AttribDeclBlockContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>AttribState</c>
+	/// labeled alternative in <see cref="MyllParser.levDecl"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitAttribState([NotNull] MyllParser.AttribStateContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>AttribDecl</c>
 	/// labeled alternative in <see cref="MyllParser.levDecl"/>.

@@ -4,7 +4,8 @@ import global, gamebase, std_vector;
 
 class Sheet : GameState
 {
-protected:
+[prot]:
+//protected:
 	//[static] GCC internal compiler error, einen Tag vor dem Kolloq, lol
 	const {
 		Color white = Color( 255, 255, 255 );
@@ -34,13 +35,17 @@ protected:
 		text.Draw(pos);
 	}
 
-public:
+[access=pub]:
+//public:
 	// ctor
 	// C++:  using GameState::GameState;
 	// MYLL: using base::ctor;
 
+	//using base::ctor;
+
 	method Events( const int frame, const float deltaT )
 	{
+	using base::ctor;
 		Event::Pump();
 		var Event evt;
 		while (Event::Poll(evt))

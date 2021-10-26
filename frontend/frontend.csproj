@@ -9,6 +9,14 @@
 		<Authors>Jan "SoRDiD" Reitz</Authors>
 		<Description>Frontend of the Myll Programming Language</Description>
 		<OutputType>Exe</OutputType>
+		<PackageVersion>0.0.1</PackageVersion>
+		<Title></Title>
+		<Copyright></Copyright>
+		<PackageProjectUrl>https://github.com/sor/myll</PackageProjectUrl>
+		<Product>Myll compiler frontend</Product>
+		<AssemblyVersion>0.0.1</AssemblyVersion>
+		<NeutralLanguage>en</NeutralLanguage>
+		<FileVersion></FileVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -66,6 +74,10 @@
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
 	  <None Remove="frontend.csproj.DotSettings" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="CommandLineParser" Version="2.9.0-preview1" />
 	</ItemGroup>
 
 </Project>

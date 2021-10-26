@@ -451,6 +451,16 @@ namespace Myll.Generator
 						"",
 						bases ) );
 				targetDecl.Add( Format( CurlyOpen, indent ) );
+
+				// TODO: wrong spot? move towards the inside or create an alias-decl beforehand
+				if( isStruct && objStruct.basetypes.Count >= 1 ) {
+					targetDecl.Add(
+						Format(
+							UsingFormat[0],
+							gen.IndentDecl,
+							"base",
+							objStruct.basetypes[0].GenType() ) );
+				}
 			}
 
 			targetDecl.AddRange( gen.GenDecl() );

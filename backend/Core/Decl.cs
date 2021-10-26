@@ -148,7 +148,7 @@ namespace Myll.Core
 		}
 	}
 
-	public class Using : Decl
+	public class UsingDecl : Decl
 	{
 		// in locations where C++ does not support "using (namespace)" this must not be printed
 		// but instead the unqualified types need to be changed to qualified ones

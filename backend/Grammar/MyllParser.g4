@@ -241,7 +241,7 @@ inStmt		:	SEMI								# EmptyStmt
 
 // ONLY refer to these lev* levels, NOT the in*
 levDecl		:	attribBlk	LCURLY	levDecl+ RCURLY	# AttribDeclBlock // must be in here, since it MUST have an attrib block
-		//	|	attribBlk	COLON // everything needs an antonym to make this work
+			|	attribBlk	COLON 					# AttribState     // everything needs an antonym to make this work
 			|	attribBlk?	( inAnyStmt | inDecl )	# AttribDecl;
 levStmt		:	attribBlk?	( inAnyStmt | inStmt )	# AttribStmt;
 

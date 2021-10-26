@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Mime;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Atn;
@@ -26,9 +27,9 @@ namespace Myll
 	using static ParallelEnumerable;
 	#endif
 
-	public sealed class MyllConsoleErrorListener : IAntlrErrorListener<IToken>
+	public sealed class ConsoleErrorListener : IAntlrErrorListener<IToken>
 	{
-		public static readonly MyllConsoleErrorListener Instance = new MyllConsoleErrorListener();
+		public static readonly ConsoleErrorListener Instance = new();
 
 		public void SyntaxError(
 			TextWriter           output,
@@ -47,15 +48,16 @@ namespace Myll
 		}
 	}
 
-	static class Program
+	static partial class Program
 	{
+		private const  string   Version = "0.01 (Alpha)";
 		private static DateTime start;
-		private static bool     keepGoing = false;
+		private static Options  opt;
 
 #if DISABLE_PLINQ
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static IEnumerable<T> AsParallel<T>( this IEnumerable<T> s ) => s;
-		#endif
+#endif
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static IEnumerable<T> AsSequential<T>( this IEnumerable<T> s ) => s;
@@ -68,7 +70,7 @@ namespace Myll
 			CommonTokenStream tokenStream = new( lexer );
 			MyllParser        parser      = new( tokenStream );
 			parser.RemoveErrorListeners();
-			parser.AddErrorListener( MyllConsoleErrorListener.Instance );
+			parser.AddErrorListener( ConsoleErrorListener.Instance );
 			// This will exit after the first problem
 			//parser.ErrorHandler = new BailErrorStrategy();
 			return parser;
@@ -82,7 +84,7 @@ namespace Myll
 
 			try {
 				MyllParser.ProgContext prog = parser.prog();
-				if( !keepGoing && parser.NumberOfSyntaxErrors > 0 ) {
+				if( !opt.IsKeepGoing && parser.NumberOfSyntaxErrors > 0 ) {
 					Console.Error.WriteLine(
 						"\nThere were syntactical errors in {0}, aborting execution",
 						parser.SourceName );
@@ -90,7 +92,7 @@ namespace Myll
 				}
 				return prog; // STAGE 1
 			}
-			// This might never be reached since the error handling abov
+			// This might never be reached since the error handling above
 			catch( Exception ex ) { // STAGE 2
 				Console.Error.WriteLine(
 					"First Stage failed of {0} with exception {1}",
@@ -115,31 +117,34 @@ namespace Myll
 			return VisitorExtensions.DeclVis.VisitProgs( progContext );
 		}
 
-		private static List<(string, IStrings)> GenerateFiles( GlobalNamespace globalns )
+		private static List<(string, IStrings)> GenerateFiles( GlobalNamespace global_ns )
 		{
 			List<(string, IStrings)> ret = new();
 
-			HierarchicalGen gen = new( globalns, -1, 0 );
+			HierarchicalGen gen = new( global_ns, -1, 0 );
 			// do NOT call gen.AddNamespace( ret ).
 			// Instead AddToGen() is there to call the correct virtual method on the gen
 			// TODO why is it adding itself as a child?
-			globalns.AddToGen( gen );
+			global_ns.AddToGen( gen );
 
 			IStrings decl = gen.GenDeclGlobal();
 			IStrings impl = gen.GenImplGlobal();
-			if( decl != null ) ret.Add( (string.Format( "{0}.h",   globalns.module ), decl) );
-			if( impl != null ) ret.Add( (string.Format( "{0}.cpp", globalns.module ), impl) );
+			if( decl != null ) ret.Add( (string.Format( "{0}.h",   global_ns.module ), decl) );
+			if( impl != null ) ret.Add( (string.Format( "{0}.cpp", global_ns.module ), impl) );
 
 			return ret;
 		}
 
 		public static int Main( string[] args )
 		{
-			bool hasConsoleOutput = args.Contains( "--stdout" );
-			bool hasFileOutput    = args.Contains( "--fileout" );
+			Console.WriteLine( "Myll compiler. Version {0}\n", Version );
 
+			opt = ParseCommandLine( args );
+
+			start = DateTime.Now;
+
+			/*
 			Strings files = new Strings {
-				/*
 				"tests/mixed/stack_big_0.myll",
 				"tests/mixed/stack_big_1.myll",
 				"tests/mixed/stack_big_2.myll",
@@ -148,11 +153,10 @@ namespace Myll
 				"tests/mixed/stack_big_5.myll",
 				"tests/mixed/stack_big_6.myll",
 				"tests/mixed/stack_big_7.myll",
-				//*/
-				/*"tests/mixed/main.myll",
+				"tests/mixed/main.myll",
 				"tests/mixed/stack.myll",
 				"tests/mixed/enum.myll",
-				"tests/mixed/testcase.myll",*/
+				"tests/mixed/testcase.myll",
 				"tests/mixed/sheet.myll",
 				//"tests/mixed/sheet1.myll",
 				//"tests/mixed/sheet2.myll",
@@ -160,19 +164,16 @@ namespace Myll
 				//"tests/mixed/sheet4.myll",
 				//"tests/mixed/plasma.myll",
 			};
-
-			Console.WriteLine( "Myll compiler. Version 0.01 (Alpha)\n" );
+			*/
 
 			int cpus = Environment.ProcessorCount;
 			ThreadPool.SetMinThreads( cpus*2, cpus*2 );
 			//ThreadPool.SetMaxThreads( cpus*2, 1000 );
 
-			start = DateTime.Now;
-
 			//  ParallelQuery<(string, IStrings)>
 			// OR IEnumerable<(string, IStrings)>
 			IEnumerable<(string, IStrings)> output
-					= files
+					= opt.InFiles.ToList()
 						.Select( CreateParser )
 						.AsParallel()
 						.Select( ParseCST )
@@ -188,42 +189,60 @@ namespace Myll
 
 			Console.WriteLine( "Time elapsed after last ToArray call {0:0}ms\n", (DateTime.Now - start).TotalMilliseconds );
 
-			if( !hasFileOutput && !hasConsoleOutput ) {
+			if (opt.IsFileOut || opt.IsStdOut) { // Any output
+				// if output is needed more than once, then this must be pre-calculated else its gonna Compile multiple times
+				if( opt.IsFileOut && opt.IsStdOut )
+					output = output.ToImmutableArray();
+
+				if( opt.IsFileOut ) {
+					Directory.CreateDirectory( opt.OutPath );
+					output.ForAll( o => File.WriteAllLines( Path.Combine( opt.OutPath, o.Item1 ), o.Item2 ) );
+				}
+
+				if( opt.IsStdOut ) {
+					output.ForAll( o => Console.WriteLine( "// {0}\n{1}\n", o.Item1, o.Item2.Join( "\n" ) ) );
+				}
+			}
+			else {
 				Console.WriteLine( "\nNO OUTPUT wanted, just burning CPU time then!" );
 
 				output.Exec();
-			}
-			else { // Any output
-				// if output is needed more than once, then this must be pre-calculated else its gonna Compile multiple times
-				if( hasFileOutput && hasConsoleOutput )
-					output = output.ToImmutableArray();
-
-				if( hasFileOutput ) {
-					Directory.CreateDirectory( "./tests/mixed/generated/" );
-
-					output.ForAll( o => File.WriteAllLines( "./tests/mixed/generated/" + o.Item1, o.Item2 ) );
-				}
-
-				if( hasConsoleOutput ) {
-					output.ForAll(
-						o => {
-							Console.WriteLine( "// {0}", o.Item1 );
-							Console.WriteLine( o.Item2.Join( "\n" ) );
-							Console.WriteLine();
-						} );
-					/*
-					foreach( var o in output ) {
-						Console.WriteLine( "// {0}", o.Item1 );
-						Console.WriteLine( o.Item2.Join( "\n" ) );
-						Console.WriteLine();
-					}
-					*/
-				}
 			}
 
 			DateTime end = DateTime.Now;
 
 			Console.WriteLine( "Time elapsed from start to finish: {0:0}ms\n", (end - start).TotalMilliseconds );
+
+			if( opt.IsFileOut && opt.IsCompile ) {
+
+				Directory.SetCurrentDirectory( opt.OutPath );
+
+				string executable = RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows)
+					? "a.exe"
+					: "a.out";
+
+				File.Delete( executable );
+
+				System.Diagnostics.Process process = new();
+				process.StartInfo = new() {
+					WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
+					FileName    = "clang++",                                      //"cmd.exe",
+					Arguments   = Directory.GetFiles( ".", "*.cpp" ).Join( " " ), //"/C touch Hans"
+				};
+				process.Start();
+				process.WaitForExit();
+
+				if( process.ExitCode == 0 && opt.IsRun ) {
+					System.Diagnostics.Process process2 = new();
+					process2.StartInfo = new() {
+						//WindowStyle      = System.Diagnostics.ProcessWindowStyle.Hidden,
+						FileName  = executable, //"cmd.exe",
+						Arguments = "",         //"/C touch Hans"
+					};
+					process2.Start();
+				}
+			}
+
 			return 0;
 		}
 	}

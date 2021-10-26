@@ -53,6 +53,10 @@ namespace Myll.Generator
 			"{0}while( {1} );",
 		};
 
+		public static readonly string[] UsingFormat = {
+			"{0}using {1} = {2};",
+		};
+
 		public static readonly string[] VarFormat = {
 			"{0}{1}{2}{3}{4};", // 0 indent, 1 static , 2 typename, 3 type & name, 4 init
 			"static ",
