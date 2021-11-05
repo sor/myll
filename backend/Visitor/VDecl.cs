@@ -249,11 +249,27 @@ namespace Myll
 
 		public override Decl VisitUsing( UsingContext c )
 		{
+			MultiDecl ret = new();
+			foreach( TypespecNestedContext tc in c.typespecsNested().typespecNested() ) {
+				UsingDecl usingDecl = new() {
+					srcPos = c.ToSrcPos(),
+					type   = VisitTypespecNested( tc ),
+				};
+				// Is this still necessary?
+				usingDecl.type.ptrs = new List<Pointer>();
+				AddChild( usingDecl );
+				ret.decls.Add( usingDecl );
+			}
+			return ret;
+		}
+
+		public override Decl VisitAliasDecl( AliasDeclContext c )
+		{
 			UsingDecl ret = new() {
 				srcPos = c.ToSrcPos(),
-				types  = VisitTypespecsNested( c.typespecsNested().typespecNested() ),
+				name   = c.id().GetText(),
+				type   = VisitTypespec( c.typespec() ),
 			};
-			ret.types.ForEach( o => o.ptrs = new List<Pointer>() );
 			AddChild( ret );
 			return ret;
 		}

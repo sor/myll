@@ -115,7 +115,7 @@ namespace Myll.Core
 		public Typespec       retType;
 
 		public bool IsVirtual  => IsAttrib( "virtual" );
-		public bool IsConst    => IsAttrib( "const" );
+		public bool IsConst    => IsAttrib( "const" ) || IsAttrib( "pure" );
 		public bool IsOverride => IsAttrib( "override" );
 
 		// TODO: analyze, for void or auto return type of funcs
@@ -152,10 +152,15 @@ namespace Myll.Core
 	{
 		// in locations where C++ does not support "using (namespace)" this must not be printed
 		// but instead the unqualified types need to be changed to qualified ones
-		public List<TypespecNested> types;
+		//public List<TypespecNested> types;
+		// TODO: add distinction to alias and using ns decls
+		public Typespec type;
 
 		public override void AddToGen( HierarchicalGen gen )
-			=> throw new NotImplementedException();
+		{
+			gen.AddUsing( this );
+		}
+		//=> throw new NotImplementedException();
 	}
 
 	/**

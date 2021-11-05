@@ -32,6 +32,15 @@ namespace Myll
 		[Option( 'c', "compile", HelpText = "Pass the generated .cpp files to a C++ compiler", Default = false )]
 		public bool IsCompile { get; init; } = false;
 
+		[Option( 'C', "clear", HelpText = "Clear the target directory of old *.cpp, *.h, and a.out/a.exe files", Default = false )]
+		public bool IsClear { get; init; } = false;
+
+		[Option( 'g', "debug", HelpText = "Let the C++ compiler generate a debug executable", Default = false )]
+		public bool IsDebug { get; init; } = false;
+
+		[Option( 'O', "optimize", HelpText = "Set C++ compiler optimization level", Default = 0 )]
+		public int OptimizationLevel { get; init; } = 0;
+
 		[Option( 'r', "run", HelpText = "Run the generated binary", Default = false )]
 		public bool IsRun { get; init; } = false;
 	}

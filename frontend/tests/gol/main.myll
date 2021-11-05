@@ -1,0 +1,40 @@
+module game_of_life;
+
+import game_of_life, std_iostream, c_stdlib;
+
+alias milliseconds	= std::chrono::milliseconds;
+
+func main() -> int
+{
+	// the literals themselves do not work e.g. 200ms
+	//using std::chrono_literals;
+
+	let auto sleepTime = milliseconds( 200 );
+	var GameOfLife gol = GameOfLife();
+
+	loop
+	{
+		gol.output( std::cout );
+		std::cout.flush();
+		gol.iterate();
+
+		if( gol.hasConverged() )
+			return 0;
+
+		std::this_thread::sleep_for( sleepTime );
+
+		clear();
+	}
+
+	return 42;
+}
+
+func clear()
+{
+	//[os=linux] std::system("clear");
+	//[os=win32] std::system("cls");
+
+	// poor man's clear screen
+	do 30 times
+		std::cout << "\n";
+}

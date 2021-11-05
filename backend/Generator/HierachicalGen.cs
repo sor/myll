@@ -118,7 +118,9 @@ namespace Myll.Generator
 			IStrings includes = globalNS.imps
 				.Select(
 					i => i.StartsWith( "std_" )
-						? Format( "#include <{0}>",     i.Substring( 4 ) )
+						? Format( "#include <{0}>", i.Substring( 4 ) )
+						: i.StartsWith( "c_" )
+						? Format( "#include <c{0}>", i.Substring( 2 ) )
 						: Format( "#include \"{0}.h\"", i ) );
 
 			IStrings declList = GenDecl();
@@ -222,6 +224,19 @@ namespace Myll.Generator
 			targetDecl.Add( (obj.access, ret) );
 		}
 
+		public void AddUsing( UsingDecl obj )
+		{
+			string indentDecl = IndentDecl;
+			string nameDecl   = obj.name;
+			string retDecl = Format(
+				UsingFormat[0],
+				indentDecl,
+				nameDecl,
+				obj.type.Gen() );
+
+			protoEarly.Target( obj.access ).Add( retDecl );
+		}
+
 		// Those need to be kept in adding order
 		public void AddVar( Var obj )
 		{
@@ -235,7 +250,7 @@ namespace Myll.Generator
 			string        nameImpl       = obj.FullyQualifiedName;
 			AccessStrings targetDecl     = isStatic ? staticFieldDecl : fieldDecl;
 			AccessStrings targetImpl     = isStatic ? staticFieldImpl : fieldImpl;
-			Strings retDecl = new Strings {
+			Strings retDecl = new() {
 				//"{0}{1}{2}{3};",
 				// 0 indent, 1 typename, 2 type & name, 3 init
 				Format(
@@ -255,7 +270,7 @@ namespace Myll.Generator
 
 			// only static fields here
 			// TODO prepend "template <typename ...>" if needed
-			Strings retImpl = new Strings {
+			Strings retImpl = new() {
 				Format(
 					VarFormat[0],
 					indentImpl,
@@ -340,7 +355,7 @@ namespace Myll.Generator
 					obj.retType.Gen(),
 					nameImpl,
 					paramString,
-					"" );
+					(obj.IsConst ? " const" : "") );
 
 				if( hasTpl )
 					targetProto.Add( tplDecl );

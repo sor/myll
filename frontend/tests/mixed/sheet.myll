@@ -2,6 +2,8 @@ module sheets;
 
 import global, gamebase, std_vector;
 
+// parameter: -i tests/mixed/sheet*.myll -o tests/mixed/generated -cr
+
 class Sheet : GameState
 {
 [prot]:

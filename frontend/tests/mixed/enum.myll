@@ -1,6 +1,6 @@
 #!/usr/bin/myll // ignored by the compiler
 
-module my_enum; // enum is a keyword...
+module my_enum; // enum is a keyword ;)...
 
 // prevents unnecessary nesting
 namespace MyLang;

@@ -45,7 +45,8 @@ namespace Myll.Core
 		public string PointerizeName( string name = "" )
 		{
 			bool workOnName = true;
-			foreach( Pointer ptr in ptrs?.AsEnumerable().Reverse() ) {
+			// this was reversed, why?
+			foreach( Pointer ptr in ptrs?.AsEnumerable()/*.Reverse()*/ ) {
 				// when this is false once, it will remain false
 				workOnName &= ptr.kind < Pointer.Kind.NoNeedForBracketing_Begin;
 				if( workOnName ) {

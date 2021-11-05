@@ -20,9 +20,11 @@ private:
 		T[]* _values;
 		int  _size, _last;
 	}
+	// the compiler could feed some info backwards here,
+	// like the size and alignment of this class
 
 	// this could be a getter, allowing to call it without ()
-	//[const] // not supported yet, would make the method const
+	[const]
 	method isFull() -> bool => _last == _size;
 
 	//[throw] // not supported yet, would make the method not noexcept, currently no method is noexcept but all but [throw] should be
@@ -84,7 +86,7 @@ public:
 	}
 
 	// just for adding in a second template
-	method top_as<TT>() => (? TT)top();
+	method top_as<TT>() => (? TT) top();
 
 	//[throw]
 	method top() -> T {

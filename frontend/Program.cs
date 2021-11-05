@@ -54,6 +54,10 @@ namespace Myll
 		private static DateTime start;
 		private static Options  opt;
 
+		private static readonly string Executable = RuntimeInformation.IsOSPlatform( OSPlatform.Windows )
+			? "a.exe"
+			: "a.out";
+
 #if DISABLE_PLINQ
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static IEnumerable<T> AsParallel<T>( this IEnumerable<T> s ) => s;
@@ -189,57 +193,74 @@ namespace Myll
 
 			Console.WriteLine( "Time elapsed after last ToArray call {0:0}ms\n", (DateTime.Now - start).TotalMilliseconds );
 
-			if (opt.IsFileOut || opt.IsStdOut) { // Any output
-				// if output is needed more than once, then this must be pre-calculated else its gonna Compile multiple times
-				if( opt.IsFileOut && opt.IsStdOut )
-					output = output.ToImmutableArray();
+			if( opt.IsClear ) {
+				bool OldFileFilter( string s ) => s.EndsWith( Path.DirectorySeparatorChar + Executable )
+				                               || s.EndsWith( ".cpp" )
+				                               || s.EndsWith( ".h" );
 
-				if( opt.IsFileOut ) {
-					Directory.CreateDirectory( opt.OutPath );
-					output.ForAll( o => File.WriteAllLines( Path.Combine( opt.OutPath, o.Item1 ), o.Item2 ) );
+				Directory
+					.EnumerateFiles( opt.OutPath )
+					.Where( OldFileFilter )
+					.ForAll( File.Delete );
+			}
+
+			if( !opt.IsFileOut && !opt.IsStdOut ) {
+				Console.WriteLine( "\nNO OUTPUT wanted, just burning CPU time then!" );
+
+				output.Exec();
+			}
+			else {
+				if( opt.IsFileOut && opt.IsStdOut ) {
+					// if more than one output is requested,
+					// then this must be pre-executed,
+					// else its gonna Compile multiple times
+					output = output.ToImmutableArray();
 				}
 
 				if( opt.IsStdOut ) {
 					output.ForAll( o => Console.WriteLine( "// {0}\n{1}\n", o.Item1, o.Item2.Join( "\n" ) ) );
 				}
-			}
-			else {
-				Console.WriteLine( "\nNO OUTPUT wanted, just burning CPU time then!" );
 
-				output.Exec();
+				// NOT else if
+				if( opt.IsFileOut ) {
+					Directory.CreateDirectory( opt.OutPath );
+
+					output.ForAll( o => File.WriteAllLines( Path.Combine( opt.OutPath, o.Item1 ), o.Item2 ) );
+				}
 			}
 
 			DateTime end = DateTime.Now;
-
 			Console.WriteLine( "Time elapsed from start to finish: {0:0}ms\n", (end - start).TotalMilliseconds );
 
+			// compile the generated C++ code into a binary
 			if( opt.IsFileOut && opt.IsCompile ) {
 
 				Directory.SetCurrentDirectory( opt.OutPath );
 
-				string executable = RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows)
-					? "a.exe"
-					: "a.out";
+				string cppFiles = Directory.GetFiles( ".", "*.cpp" ).Join( " " );
+				string cxxFlags = "-std=c++17 "
+				                + (opt.IsDebug ? "-g " : "")
+				                + (opt.OptimizationLevel > 0 ? "-O " + opt.OptimizationLevel : "");
 
-				File.Delete( executable );
-
-				System.Diagnostics.Process process = new();
+				Process process = new();
 				process.StartInfo = new() {
-					WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
-					FileName    = "clang++",                                      //"cmd.exe",
-					Arguments   = Directory.GetFiles( ".", "*.cpp" ).Join( " " ), //"/C touch Hans"
+					WindowStyle = ProcessWindowStyle.Hidden,
+					FileName    = "clang++",			//"cmd.exe",
+					Arguments   = cxxFlags + cppFiles,	//"/C touch Hans"
 				};
 				process.Start();
 				process.WaitForExit();
 
+				// execute the generated binary
 				if( process.ExitCode == 0 && opt.IsRun ) {
-					System.Diagnostics.Process process2 = new();
+					Process process2 = new();
 					process2.StartInfo = new() {
 						//WindowStyle      = System.Diagnostics.ProcessWindowStyle.Hidden,
-						FileName  = executable, //"cmd.exe",
+						FileName  = Executable, //"cmd.exe",
 						Arguments = "",         //"/C touch Hans"
 					};
 					process2.Start();
+					process2.WaitForExit();
 				}
 			}
 

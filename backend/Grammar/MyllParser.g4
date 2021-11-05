@@ -4,7 +4,7 @@ options { tokenVocab = MyllLexer; }
 
 comment		:	COMMENT;
 
-// all operators handled by ToOp except mentioned
+// =!= all operators handled by ToOp except those mentioned =!=
 postOP		:	v=(	'++' | '--' );
 
 // handled by ToPreOp because of collisions
@@ -110,7 +110,7 @@ expr		:	(idTplArgs	SCOPE)+	idTplArgs	# ScopedExpr
 					|	memAccOP	idTplArgs )	# PostExpr
 			| // can not even be associative without a contained expr
 				NEW	typespec?	funcCall?		# NewExpr
-			| // inherent <assoc=right>, so no need to tell ANTLR
+			| // inherently <assoc=right>, so no need to tell ANTLR
 				(	(	MOVE // parens included
 					|	LPAREN (QM|EM)? typespec RPAREN)
 				|	SIZEOF
@@ -124,7 +124,7 @@ expr		:	(idTplArgs	SCOPE)+	idTplArgs	# ScopedExpr
 			|	expr	addOP			expr	# AddExpr
 			|	expr	shiftOP			expr	# ShiftExpr
 			|	expr	cmpOp			expr	# ComparisonExpr
-			|	expr	orderOP			expr	# RelationExpr
+			|	expr	orderOP			expr	# RelationExpr // TODO: support 0 < x < 100
 			|	expr	equalOP			expr	# EqualityExpr
 			|	expr	andOP			expr	# AndExpr
 			|	expr	orOP			expr	# OrExpr
@@ -206,6 +206,7 @@ inDecl		:	NS id (SCOPE id)* SEMI						# Namespace // or better COLON
 
 // using, var, const: these are both Stmt and Decl
 inAnyStmt	:	USING			typespecsNested	SEMI	# Using
+			// TODO: alias needs template support
 			|	ALIAS id ASSIGN	typespec 		SEMI	# AliasDecl
 			|	v=( VAR | FIELD | CONST | LET )
 				(	LCURLY	typedIdAcors*	RCURLY
