@@ -1,8 +1,11 @@
-// this is game_of_life by default
-//module game_of_life;
+//#! myll -Ccri tests/gol/*.myll -o tests/gol/generated
+
+//module game_of_life; // this is game_of_life by default
 
 import std_thread;
 //import std_iostream;
+
+namespace JanSordid;
 
 class GameOfLife
 {
@@ -11,7 +14,7 @@ class GameOfLife
 	const i32		sizeX = 40,
 					sizeY = 16;
 	field u8		currentIndex = 0;
-	field Map2D[2]	doubleBufferedMap;
+	field Map2D[2]	doubleBufferedMap; // = {{{0}}};
 
 [pub]:
 	ctor()
@@ -93,8 +96,8 @@ class GameOfLife
 	[pure]
 	func hasConverged() -> bool
 	{
-		let Map2D&	zeroMap	= doubleBufferedMap[0];
-		let Map2D&	oneMap	= doubleBufferedMap[1];
+		let Map2D&	zeroMap	= doubleBufferedMap[0],
+					oneMap	= doubleBufferedMap[1];
 
 		do sizeY times y
 			do sizeX times x
@@ -107,7 +110,6 @@ class GameOfLife
 
 /*
 TODO:
-- ACHTUNG: neue .myll-files müssen "Content" und "Copy if newer" sein
 - abstrahieren von den doppel loops und den üblichen Zugriffen darauf
 	- Lösung via der vereinfachten lambda syntax?
 - do-times offsetbar z.B. i+1 loopt nicht von 0 bis n-1 sondern von 1 bis n

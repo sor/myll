@@ -59,6 +59,7 @@ namespace Myll.Core
 			return Gen( level );
 		}
 
+		// Shouldn't this be abstract?
 		/// <summary>
 		/// This outputs immediate generated code
 		/// and inserts necessary declarations through the DeclGen parameter

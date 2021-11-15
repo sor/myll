@@ -305,8 +305,7 @@ namespace Myll.Generator
 				FuncFormat[0],
 				indentDecl,
 				(obj.IsVirtual ? "virtual " : ""),
-				obj.retType.Gen(),
-				nameDecl,
+				obj.retType.Gen( nameDecl ),
 				paramString,
 				(obj.IsConst ? " const" : "") +
 				(obj.IsOverride ? " override" : "") );
@@ -352,8 +351,7 @@ namespace Myll.Generator
 					FuncFormat[0],
 					indentImpl,
 					"",
-					obj.retType.Gen(),
-					nameImpl,
+					obj.retType.Gen( nameImpl ),
 					paramString,
 					(obj.IsConst ? " const" : "") );
 

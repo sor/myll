@@ -2,14 +2,16 @@ module game_of_life;
 
 import game_of_life, std_iostream, c_stdlib;
 
-alias milliseconds	= std::chrono::milliseconds;
+alias milliseconds = std::chrono::milliseconds;
 
 func main() -> int
 {
+	using JanSordid;
+
 	// the literals themselves do not work e.g. 200ms
 	//using std::chrono_literals;
 
-	let auto sleepTime = milliseconds( 200 );
+	let auto sleepTime = milliseconds( 166 );
 	var GameOfLife gol = GameOfLife();
 
 	loop

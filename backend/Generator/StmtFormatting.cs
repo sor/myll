@@ -22,10 +22,10 @@ namespace Myll.Generator
 
 		//internal static readonly string IndentString = "\t";
 		internal const string IndentString = "    ";
-		internal const string ThrowFormat = "{0}throw {1};";
-		internal const string BreakFormat = "{0}break;";
-		internal const string CurlyOpen = "{0}{{";
-		internal const string CurlyClose = "{0}}}";
+		internal const string ThrowFormat  = "{0}throw {1};";
+		internal const string BreakFormat  = "{0}break;";
+		internal const string CurlyOpen    = "{0}{{";
+		internal const string CurlyClose   = "{0}}}";
 		internal const string CurlyCloseSC = "{0}}};";
 
 		public static readonly Dictionary<Access, string>
@@ -66,8 +66,8 @@ namespace Myll.Generator
 		};
 
 		public static readonly string[] FuncFormat = {
-			"{0}{1}{2} {3}({4}){5}", // function:  0 indent, 1 leading attributes, 2 return type, 3 name, 4 params, 5 trailing attributes
-			"{0}{1}{2}({3}){4}",     // ctor/dtor: 0 indent, 1 leading attributes, 2 name, 3 params, 4 trailing attributes
+			"{0}{1}{2}({3}){4}", // function:  0 indent, 1 leading attributes, 2 return type and name, 3 params, 4 trailing attributes
+			"{0}{1}{2}({3}){4}", // ctor/dtor: 0 indent, 1 leading attributes, 2 name, 3 params, 4 trailing attributes
 		};
 
 		public static readonly string[] StructFormat = {

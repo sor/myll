@@ -90,7 +90,7 @@ namespace Myll
 							MyllParser.EM   => Pointer.Kind.Unique,
 							MyllParser.PLUS => Pointer.Kind.Shared,
 							MyllParser.QM   => Pointer.Kind.Weak,
-						}
+						},
 					};
 				}
 				else if( c.ptr.Type == MyllParser.PTR_TO_ARY ) {
@@ -99,7 +99,7 @@ namespace Myll
 							MyllParser.EM   => Pointer.Kind.UniqueArray,
 							MyllParser.PLUS => Pointer.Kind.SharedArray,
 							MyllParser.QM   => Pointer.Kind.WeakArray,
-						}
+						},
 					};
 				}
 				else {
@@ -107,10 +107,23 @@ namespace Myll
 				}
 			}
 			else if( c.ary != null ) {
-				ret = new Pointer {
-					expr = c.expr().Visit(),
-					kind = ToPtr[c.ary.Type],
-				};
+				if( c.suffix != null ) {
+					// TODO: add support for smartpointed containers
+					ret = new Pointer {
+						expr = c.expr().Visit(),
+						kind = c.suffix.Type switch {
+							MyllParser.EM   => Pointer.Kind.UniqueArray,
+							MyllParser.PLUS => Pointer.Kind.SharedArray,
+							MyllParser.QM   => Pointer.Kind.WeakArray,
+						},
+					};
+				}
+				else {
+					ret = new Pointer {
+						expr = c.expr().Visit(),
+						kind = ToPtr[c.ary.Type],
+					};
+				}
 			}
 			else throw new Exception( "unknown ptr type" );
 

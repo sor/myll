@@ -63,8 +63,9 @@
 	  <Content Include="tests\mixed\stack_big*.myll">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </Content>
-	  <None Remove="tests\mixed\gameoflife.myll" />
-	  <None Remove="tests\mixed\golmain.myll" />
+	  <Content Include="tests\thesis\main.myll">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
 	</ItemGroup>
 
 	<ItemGroup>

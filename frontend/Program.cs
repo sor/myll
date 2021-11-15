@@ -147,29 +147,6 @@ namespace Myll
 
 			start = DateTime.Now;
 
-			/*
-			Strings files = new Strings {
-				"tests/mixed/stack_big_0.myll",
-				"tests/mixed/stack_big_1.myll",
-				"tests/mixed/stack_big_2.myll",
-				"tests/mixed/stack_big_3.myll",
-				"tests/mixed/stack_big_4.myll",
-				"tests/mixed/stack_big_5.myll",
-				"tests/mixed/stack_big_6.myll",
-				"tests/mixed/stack_big_7.myll",
-				"tests/mixed/main.myll",
-				"tests/mixed/stack.myll",
-				"tests/mixed/enum.myll",
-				"tests/mixed/testcase.myll",
-				"tests/mixed/sheet.myll",
-				//"tests/mixed/sheet1.myll",
-				//"tests/mixed/sheet2.myll",
-				//"tests/mixed/sheet3.myll",
-				//"tests/mixed/sheet4.myll",
-				//"tests/mixed/plasma.myll",
-			};
-			*/
-
 			int cpus = Environment.ProcessorCount;
 			ThreadPool.SetMinThreads( cpus*2, cpus*2 );
 			//ThreadPool.SetMaxThreads( cpus*2, 1000 );
@@ -193,7 +170,7 @@ namespace Myll
 
 			Console.WriteLine( "Time elapsed after last ToArray call {0:0}ms\n", (DateTime.Now - start).TotalMilliseconds );
 
-			if( opt.IsClear ) {
+			if( opt.IsClear && Directory.Exists( opt.OutPath ) ) {
 				bool OldFileFilter( string s ) => s.EndsWith( Path.DirectorySeparatorChar + Executable )
 				                               || s.EndsWith( ".cpp" )
 				                               || s.EndsWith( ".h" );

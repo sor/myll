@@ -1,0 +1,60 @@
+import std_iostream, c_stdlib, std_chrono, std_vector;
+
+func stuff() -> int[]! {
+	var int*[] @[] * asd;
+	var int*!	iup2, jup2;
+	var int@[] a;
+}
+
+func main() -> int
+{
+	problem_3311(); // clang++ error: use of undeclared identifier 'problem_3311'
+
+	return 42;
+}
+
+func problem_3311() {}
+
+class problem_3312 {
+	field int*[4][8] myArray1;	// declare myArray1 as pointer to array 4 of int
+	field int[8][4]* myArray2;	// declare myArray2 as array 4 of pointer to int
+	field int**! myArray3;	// declare myArray2 as array 4 of pointer to int
+	field int myField1;
+	field int myField2;
+	field int myField3 = 3;
+	[static] field int myStatic = 1;
+public:
+	ctor() {
+		myField1 = 1;
+		myField2 = 2;
+	}
+	method myMethod1() -> int => 1;
+	[inline]		method myMethod2() -> int => 2;
+	[inline,const]	method myMethod3() -> int => 3;
+	[virtual]		method myVirtual() -> int => 4;
+}
+
+func problem_3313_1<T>() -> int => 0;
+func problem_3313_2() -> int => 0;
+
+namespace problem_3321 {
+	alias a = int;
+	alias c = int;
+	func problem_3321() {
+		var a * b;
+		const a * b1;
+		var int a2, b2;
+		a2 * b2;	// clang++ warning: expression result unused [-Wunused-value]
+		var c d;
+		var c e1 = c();
+	}
+	// TODO: problem_3321::c should just be c
+	func e2() -> problem_3321::c {}
+}
+
+func problem_3322() {
+	var int		i, j;
+	var int*	ip = &i, jp = &j;
+	var int&	ir =  i, jr =  j;
+	var int[4]	ia, ja;
+}

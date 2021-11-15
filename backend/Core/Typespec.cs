@@ -32,50 +32,60 @@ namespace Myll.Core
 
 		public abstract string GenType();
 
+		// should replace GenType and BaseGen()
+		public string TargetGen()
+		{
+			string genType = GenType();
+			return qual == Qualifier.None
+				? genType
+				// TODO: do properly
+				: qual.ToString().ToLower().Replace( ",", "" ) + " " + genType;
+		}
+
 		public virtual string Gen( string name = "" )
 		{
 			// TODO: solve the pointer/array formatting
-			return BaseGen(
-				GenType()
-			  + (IsNullOrEmpty( name )
-					? PointerizeName()
-					: " " + PointerizeName( name )) );
+			return PointerizeName( name );
+				/*IsNullOrEmpty( name )
+				? PointerizeName()
+				: " " + PointerizeName( name );
+				*/
 		}
 
 		public string PointerizeName( string name = "" )
 		{
-			bool workOnName = true;
-			// this was reversed, why?
-			foreach( Pointer ptr in ptrs?.AsEnumerable()/*.Reverse()*/ ) {
-				// when this is false once, it will remain false
-				workOnName &= ptr.kind < Pointer.Kind.NoNeedForBracketing_Begin;
-				if( workOnName ) {
-					// TODO bracketing works for the moment, but ugly since it always brackets subscript operators
-					if( ptr.kind == Pointer.Kind.RawArray ) {
-						if( name == "" ) {
-							name = Format( "[{0}]", ptr.expr?.Gen() ?? "" );
-						}
-						else {
-							name = Format( "({0})[{1}]", name, ptr.expr?.Gen() ?? "" );
-						}
-					}
-					else {
-						string fmt = ptr.kind switch {
-							Pointer.Kind.RawPtr   => "*{0}",
-							Pointer.Kind.PtrToAry => "*{0}",
-							Pointer.Kind.LVRef    => "&{0}",
-							Pointer.Kind.RVRef    => "&&{0}",
-							_                     => "{0}"
-						};
-						name = Format( fmt, name );
-					}
+			name = (" " + name).TrimEnd();
+			//bool   isNameEmpty = (name == "");
+			string leftOfName   = TargetGen();
+
+			if( ptrs == null || ptrs.IsEmpty() )
+				return leftOfName + name;
+
+			bool   wasArray    = false;
+			string rightOfName = "";
+			foreach( Pointer ptr in ptrs?.AsEnumerable() ) {
+				if( ptr.kind == Pointer.Kind.RawArray ) {
+					rightOfName = Format( "{0}[{1}]", rightOfName, ptr.expr?.Gen() ?? "" );
+					wasArray    = true;
 				}
 				else {
-					throw new NotImplementedException( "smartpointers and containers as pointers not working yet" );
-					// TODO: get smartpointers and containers working as well
+					bool needParens = ptr.kind.Between( Pointer.Kind.NeedParens_Begin,
+					                                    Pointer.Kind.NeedParens_End );
+					if( !needParens ) {
+						leftOfName  = leftOfName + rightOfName;
+						rightOfName = "";
+					}
+					else if( wasArray ) {
+						leftOfName  = leftOfName + "(";
+						rightOfName = ")"        + rightOfName;
+					}
+					string tpl = Pointer.template[ptr.kind];
+					leftOfName = Format( tpl, leftOfName, "" );
+					wasArray   = false;
 				}
 			}
-			return name;
+
+			return leftOfName + name + rightOfName;
 		}
 
 		protected string BaseGen( string value )
@@ -118,16 +128,6 @@ namespace Myll.Core
 		public       int  size;  // in bytes, -1 not yet determined, -2 invalid
 		public       int  align; // in bytes
 		public       Kind kind;
-
-		public override string Gen( string name = "" )
-		{
-			return BaseGen(
-				GenType()
-			  + (IsNullOrEmpty( name )
-					? PointerizeName()
-					: " " + PointerizeName( name )) );
-		}
-
 
 		public override string GenType()
 		{
@@ -184,12 +184,14 @@ namespace Myll.Core
 	{
 		public enum Kind
 		{
+			NeedParens_Begin,
 			RawPtr,
 			PtrToAry,
 			LVRef, // Ref
 			RVRef,
 			RawArray,
-			NoNeedForBracketing_Begin, // Sentinel
+			NeedParens_End,
+			NoNeedForParens_Begin, // Sentinel
 			Unique,
 			Shared,
 			Weak,
@@ -202,24 +204,32 @@ namespace Myll.Core
 			OrderedSet,
 			MultiSet,
 			OrderedMultiSet,
+			Map,	// TODO: add below
+			OrderedMap,
+			MultiMap,
+			OrderedMultiMap,
+			NoNeedForParens_End,
 		}
 
-		private readonly IDictionary<Kind, string>
+		public static readonly IReadOnlyDictionary<Kind, string>
 			template = new Dictionary<Kind, string> {
-				{ Kind.RawPtr,		"{0} *{1}" },
-				{ Kind.PtrToAry,	"{0} *{1}" },
-				{ Kind.LVRef,		"{0} &{1}" },
-				{ Kind.RVRef,		"{0} &&{1}" },
-				{ Kind.RawArray,	"{0} ({1})[{2}]" }, // TODO: named types must be embedded
-				{ Kind.Unique,		"std::unique_ptr<{0}> {1}" },
-				{ Kind.Shared,		"std::shared_ptr<{0}> {1}" },
-				{ Kind.Weak,		"std::weak_ptr<{0}> {1}" },
-				{ Kind.Array,		"std::array<{0},{2}> {1}" },
-				{ Kind.Vector,		"std::vector<{0}> {1}" },
-				{ Kind.Set,			"std::unordered_set<{0}> {1}" },
-				{ Kind.OrderedSet,	"std::set<{0}> {1}" },
-				{ Kind.MultiSet,	"std::unordered_multiset<{0}> {1}" },
-				{ Kind.OrderedMultiSet, "std::multiset<{0}> {1}" },
+				{ Kind.RawPtr,			"{0}*{1}" },
+				{ Kind.PtrToAry,		"{0}*{1}" },
+				{ Kind.LVRef,			"{0}&{1}" },
+				{ Kind.RVRef,			"{0}&&{1}" },
+				{ Kind.RawArray,		"{0}({1})[{2}]" }, // TODO: named types must be embedded
+				{ Kind.Unique,			"std::unique_ptr<{0}>{1}" },
+				{ Kind.UniqueArray,		"std::unique_ptr<{0}[]>{1}" },
+				{ Kind.Shared,			"std::shared_ptr<{0}>{1}" },
+				{ Kind.SharedArray,		"std::shared_ptr<{0}[]>{1}" },
+				{ Kind.Weak,			"std::weak_ptr<{0}>{1}" },
+				{ Kind.WeakArray,		"std::weak_ptr<{0}[]>{1}" },
+				{ Kind.Array,			"std::array<{0},{2}>{1}" }, // TODO: named types must be embedded
+				{ Kind.Vector,			"std::vector<{0}>{1}" },
+				{ Kind.Set,				"std::unordered_set<{0}>{1}" },
+				{ Kind.OrderedSet,		"std::set<{0}>{1}" },
+				{ Kind.MultiSet,		"std::unordered_multiset<{0}>{1}" },
+				{ Kind.OrderedMultiSet, "std::multiset<{0}>{1}" },
 			};
 
 		public Qualifier qual;
