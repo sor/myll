@@ -12,7 +12,7 @@ alias belanna = func(int)->bool*;
 
 func test()->int
 {
-	using std;
+	using std; // does not work as decl, only stmt
 
 	var int* blubb, blabb, blebb;
 

@@ -140,14 +140,14 @@ namespace Myll.Core
 		public List<Param> paras;
 		public Stmt        block;
 
-		public bool IsVirtual => IsAttrib( "virtual" );
+		public bool IsVirtual  => IsAttrib( "virtual" );
 		public bool IsImplicit => IsAttrib( "implicit" );
 
 		// TODO: initlist
 
 		public override void AddToGen( HierarchicalGen gen )
 		{
-			gen.AddCtorDtor( this );
+			gen.AddStructor( this );
 		}
 	}
 
@@ -163,7 +163,6 @@ namespace Myll.Core
 		{
 			gen.AddUsing( this );
 		}
-		//=> throw new NotImplementedException();
 	}
 
 	/**
@@ -190,7 +189,7 @@ namespace Myll.Core
 
 	public class MultiDecl : Decl
 	{
-		public List<Decl> decls;
+		public List<Decl> decls = new();
 
 		public override void AssignAttribs( Attribs inAttribs )
 		{

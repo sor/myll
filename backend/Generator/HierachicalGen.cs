@@ -226,15 +226,14 @@ namespace Myll.Generator
 
 		public void AddUsing( UsingDecl obj )
 		{
-			string indentDecl = IndentDecl;
-			string nameDecl   = obj.name;
-			string retDecl = Format(
-				UsingFormat[0],
-				indentDecl,
-				nameDecl,
+			string indent = IndentDecl;
+			string ret = Format(
+				UsingFormat[obj.name == null ? 1 : 0],
+				indent,
+				obj.name,
 				obj.type.Gen() );
 
-			protoEarly.Target( obj.access ).Add( retDecl );
+			protoEarly.Target( obj.access ).Add( ret );
 		}
 
 		// Those need to be kept in adding order
@@ -485,7 +484,7 @@ namespace Myll.Generator
 			targetImpl.AddRange( gen.GenImpl() );
 		}
 
-		public void AddCtorDtor( Structor obj )
+		public void AddStructor( Structor obj )
 		{
 			if( obj.IsStatic )
 				throw new ArgumentOutOfRangeException( nameof( obj ), true, "Con/Destructor can not be static" );

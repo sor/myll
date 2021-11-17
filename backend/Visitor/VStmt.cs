@@ -59,9 +59,23 @@ namespace Myll
 
 		public override Stmt VisitUsing( UsingContext c )
 		{
+			MultiStmt ret = new();
+			foreach( TypespecNestedContext tc in c.typespecsNested().typespecNested() ) {
+				UsingStmt usingStmt = new() {
+					srcPos = c.ToSrcPos(),
+					type   = VisitTypespecNested( tc ), // TODO: still Nested?
+				};
+				ret.stmts.Add( usingStmt );
+			}
+			return ret;
+		}
+
+		public override Stmt VisitAliasDecl( AliasDeclContext c )
+		{
 			UsingStmt ret = new() {
 				srcPos = c.ToSrcPos(),
-				types  = VisitTypespecsNested( c.typespecsNested().typespecNested() ),
+				name   = c.id().GetText(),
+				type   = VisitTypespec( c.typespec() ),
 			};
 			return ret;
 		}

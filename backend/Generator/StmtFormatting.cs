@@ -55,6 +55,7 @@ namespace Myll.Generator
 
 		public static readonly string[] UsingFormat = {
 			"{0}using {1} = {2};",
+			"{0}using namespace {2};",
 		};
 
 		public static readonly string[] VarFormat = {

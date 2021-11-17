@@ -99,7 +99,7 @@ namespace Myll.Core
 
 	public class MultiStmt : Stmt
 	{
-		public List<Stmt> stmts;
+		public List<Stmt> stmts = new();
 
 		public override void AssignAttribs( Attribs inAttribs )
 		{
@@ -117,16 +117,21 @@ namespace Myll.Core
 
 	public class UsingStmt : Stmt
 	{
-		public List<TypespecNested> types;
+		public Typespec type;
+		public string   name;
 
 		// in locations where C++ does not support "using namespace" this must not be printed
 		// but instead the unqualified types need to be changed to qualified ones
 		public override Strings Gen( int level )
 		{
 			string indent = IndentString.Repeat( level );
-			return types
-				.Select( o => Format( "{0}using namespace {1};", indent, o.Gen() ) )
-				.ToList();
+			string ret = Format(
+				UsingFormat[name == null ? 1 : 0],
+				indent,
+				name,
+				type.Gen() );
+
+			return new Strings { ret };
 		}
 	}
 
