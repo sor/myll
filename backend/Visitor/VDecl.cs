@@ -251,8 +251,6 @@ namespace Myll
 					srcPos = c.ToSrcPos(),
 					type   = VisitTypespecNested( tc ),
 				};
-				// Is this still necessary?
-				//usingDecl.type.ptrs = new List<Pointer>();
 				AddChild( usingDecl );
 				ret.decls.Add( usingDecl );
 			}
@@ -279,11 +277,11 @@ namespace Myll
 			string name = parent.decl.name; //.FullyQualifiedName;
 
 			PushScope();
-			ConDestructor ret = new() {
+			Structor ret = new() {
 				srcPos = c.ToSrcPos(),
 				name   = name,
 				access = curAccess,
-				kind   = ConDestructor.Kind.Constructor,
+				kind   = Structor.Kind.Constructor,
 				paras  = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
 				block  = c.levStmt().Visit(),
 				// TODO: cc.initList(); // opt
@@ -302,11 +300,11 @@ namespace Myll
 			string name = "~" + parent.decl.name;
 
 			PushScope();
-			ConDestructor ret = new() {
+			Structor ret = new() {
 				srcPos = c.ToSrcPos(),
 				name   = name,
 				access = curAccess,
-				kind   = ConDestructor.Kind.Destructor,
+				kind   = Structor.Kind.Destructor,
 				paras  = new List<Param>(),
 				block  = c.levStmt().Visit(),
 				// TODO: cc.initList(); // opt

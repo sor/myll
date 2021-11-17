@@ -128,7 +128,7 @@ namespace Myll.Core
 	}
 
 	// Constructor / Destructor
-	public class ConDestructor : Decl
+	public class Structor : Decl
 	{
 		public enum Kind
 		{

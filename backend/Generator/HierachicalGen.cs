@@ -485,13 +485,13 @@ namespace Myll.Generator
 			targetImpl.AddRange( gen.GenImpl() );
 		}
 
-		public void AddCtorDtor( ConDestructor obj )
+		public void AddCtorDtor( Structor obj )
 		{
 			if( obj.IsStatic )
 				throw new ArgumentOutOfRangeException( nameof( obj ), true, "Con/Destructor can not be static" );
 
-			bool    isCtor     = obj.kind == ConDestructor.Kind.Constructor;
-			bool    isDtor     = obj.kind == ConDestructor.Kind.Destructor;
+			bool    isCtor     = obj.kind == Structor.Kind.Constructor;
+			bool    isDtor     = obj.kind == Structor.Kind.Destructor;
 			string  indentDecl = IndentDecl;
 			string  indentImpl = IndentImpl;
 			string  nameDecl   = obj.name;
