@@ -57,9 +57,9 @@ typePtr		:	qual*
 idTplArgs	:	id tplArgs?;
 
 typespec	:	qual*
-				( typespecBasic		typePtr*
-				| FUNC typePtr*	typespecFunc
-				| typespecNested	typePtr*);
+				( typespecBasic	 typePtr*
+				| FUNC			 typePtr* typespecFunc
+				| typespecNested typePtr*);
 
 typespecBasic	:	specialType
 				|	charType

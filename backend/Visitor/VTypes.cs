@@ -62,7 +62,6 @@ namespace Myll
 					//size = TypespecBasic.SizeInvalid,
 					kind = TypespecBasic.Kind.Auto,
 					size = TypespecBasic.SizeUndetermined,
-					ptrs = new List<Pointer>(),
 				};
 
 			Typespec ret;
@@ -235,8 +234,9 @@ namespace Myll
 						tplArgs = VisitTplArgs( null )
 					} );
 
+			// only idTpls is filled, is this correct?
 			TypespecNested ret = new() {
-				idTpls = idTplArgs.ToList()
+				idTpls = idTplArgs.ToList(),
 			};
 
 			return ret;

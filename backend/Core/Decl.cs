@@ -140,6 +140,9 @@ namespace Myll.Core
 		public List<Param> paras;
 		public Stmt        block;
 
+		public bool IsVirtual => IsAttrib( "virtual" );
+		public bool IsImplicit => IsAttrib( "implicit" );
+
 		// TODO: initlist
 
 		public override void AddToGen( HierarchicalGen gen )
@@ -280,7 +283,6 @@ namespace Myll.Core
 				// HACK: this should work for most, but is an incorrect Typespec
 				Typespec
 					enumTypespec = new TypespecNested {
-						ptrs = new List<Pointer>(),
 						idTpls = new List<IdTplArgs> {
 							new() { id = FullyQualifiedName, tplArgs = new List<TplArg>() }
 						}
@@ -291,7 +293,6 @@ namespace Myll.Core
 					};
 
 				Typespec underlying = new TypespecNested {
-					ptrs = new List<Pointer>(),
 					idTpls = new List<IdTplArgs> {
 						new() { id = "std", tplArgs = new List<TplArg>() },
 						new() {

@@ -103,7 +103,6 @@ namespace Myll
 					? VisitTypespec( c.typespec() )
 					: new TypespecNested {
 						srcPos = c.ToSrcPos(),
-						ptrs   = new List<Pointer>(),
 						idTpls = new List<IdTplArgs> {
 							new() {
 								id      = "move", // TODO: support std::forward as well

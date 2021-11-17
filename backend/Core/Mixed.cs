@@ -19,9 +19,7 @@ namespace Myll.Core
 		public LineCol to;
 
 		public override string ToString()
-		{
-			return Format( "[{0}:{1}:{2}]", file, from.line, from.col );
-		}
+			=> Format( "[{0}:{1}:{2}]", file, from.line, from.col );
 	}
 
 	public class Accessor
@@ -45,9 +43,7 @@ namespace Myll.Core
 		public string   name; // opt
 
 		public string Gen()
-		{
-			return type.Gen( name );
-		}
+			=> type.Gen( name );
 	}
 
 	// blah(n: 1+2) // n is matching _name_ of param, 1+2 is _expr_
@@ -81,19 +77,21 @@ namespace Myll.Core
 				if( args.Count != 1 )
 					throw new Exception( "indexer call with != 1 arguments" );
 
-				return "["
-				     + args.Select( a => a.Gen() )
-					       .Join( ", " )
-				     + "]";
+				return Format(
+					"[{0}]",
+					args
+						.Select( a => a.Gen() )
+						.Join( ", " ) );
 			}
 			else {
 				if( args.Count == 0 )
 					return "()";
 
-				return "( "
-				     + args.Select( a => a.Gen() )
-					       .Join( ", " )
-				     + " )";
+				return Format(
+					"( {0} )",
+					args
+						.Select( a => a.Gen() )
+						.Join( ", " ) );
 			}
 		}
 	}
@@ -123,10 +121,8 @@ namespace Myll.Core
 		public Literal  lit;
 
 		public string Gen()
-		{
-			return lit?.Gen()
-			    ?? typespec?.Gen();
-		}
+			=> lit?.Gen()
+			?? typespec?.Gen();
 	}
 
 	public class TplParam

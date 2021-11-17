@@ -4,29 +4,43 @@ module testcase;
 
 import std_iostream;
 
+class Base { [pub]: ctor(int a){} [virtual]dtor(){} }
+class Derived : Base { [pub]: [virtual]dtor(){}}
+class Unrelated {}
+
+alias belanna = func(int)->bool*;
 
 func test()->int
 {
+	using std;
+
 	var int* blubb, blabb, blebb;
 
-	using std;
 	var int a;
 	var int* aptr = &a;
 	*aptr = 13;
 
-	var func*(int)->bool hansptr = &hans;
+	var belanna* belannaptr = hansX;
+	var func*(int)->bool hansptr = hans;
 	var func**(int)->bool hansptrptr = &hansptr;
+	var func*[4](int)->bool hansptrary;
+	hansptrary[0] = hansptr;
 
-	(move)(a)(?b)(!c)my_var;
+	var Derived* my_var;
+	(move)(!Unrelated*)(?Derived*)(Base*)my_var;
 	//var int*! blubb;
 
 	cout << hansptr(23);
 	cout << (*hansptrptr)(42);
+
+	return 42;
 }
 
 [moep]
 func hans(int a) -> bool => a == 42;
+func hansX(int a) -> bool* => new bool();
 
+func main()->int {}
 /*
 operator "|" (MyEnum lhs, MyEnum rhs) -> MyEnum
 {

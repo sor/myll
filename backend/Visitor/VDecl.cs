@@ -62,12 +62,10 @@ namespace Myll
 					new TypespecBasic {
 						kind = TypespecBasic.Kind.Auto,
 						size = TypespecBasic.SizeUndetermined,
-						ptrs = new List<Pointer>(),
 					} :
 					new TypespecBasic {
 						kind = TypespecBasic.Kind.Void,
 						size = TypespecBasic.SizeInvalid,
-						ptrs = new List<Pointer>(),
 					};
 			PopScope();
 			AddChild( ret );
@@ -102,12 +100,10 @@ namespace Myll
 					new TypespecBasic {
 						kind = TypespecBasic.Kind.Auto,
 						size = TypespecBasic.SizeUndetermined,
-						ptrs = new List<Pointer>(),
 					} :
 					new TypespecBasic {
 						kind = TypespecBasic.Kind.Void,
 						size = TypespecBasic.SizeInvalid,
-						ptrs = new List<Pointer>(),
 					};
 			PopScope();
 			AddChild( ret );
@@ -256,7 +252,7 @@ namespace Myll
 					type   = VisitTypespecNested( tc ),
 				};
 				// Is this still necessary?
-				usingDecl.type.ptrs = new List<Pointer>();
+				//usingDecl.type.ptrs = new List<Pointer>();
 				AddChild( usingDecl );
 				ret.decls.Add( usingDecl );
 			}

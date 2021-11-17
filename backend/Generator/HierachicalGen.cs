@@ -491,6 +491,7 @@ namespace Myll.Generator
 				throw new ArgumentOutOfRangeException( nameof( obj ), true, "Con/Destructor can not be static" );
 
 			bool    isCtor     = obj.kind == ConDestructor.Kind.Constructor;
+			bool    isDtor     = obj.kind == ConDestructor.Kind.Destructor;
 			string  indentDecl = IndentDecl;
 			string  indentImpl = IndentImpl;
 			string  nameDecl   = obj.name;
@@ -502,16 +503,20 @@ namespace Myll.Generator
 				.Select( para => para.Gen() )
 				.Join( ", " );
 
-			string leadingAttr = "";
-			if( obj.paras.Count == 1
-			 && !obj.IsAttrib( "implicit" ) ) {
-				leadingAttr += "explicit ";
+			string leadingAttrDecl = "";
+			if( obj.paras.Count == 1 // TODO: 0, 1 or more parameterizable
+					&& !obj.IsImplicit ) {
+				leadingAttrDecl += "explicit ";
+			}
+
+			if( isDtor && obj.IsVirtual ) {
+				leadingAttrDecl += "virtual ";
 			}
 
 			string headlineDecl = Format(
 				FuncFormat[1],
 				indentDecl,
-				leadingAttr,
+				leadingAttrDecl,
 				nameDecl,
 				paramString,
 				"" );
@@ -526,7 +531,7 @@ namespace Myll.Generator
 				string headlineImpl = Format(
 					FuncFormat[1],
 					indentImpl,
-					leadingAttr,
+					"", //leadingAttrImpl,
 					nameImpl,
 					paramString,
 					"" );

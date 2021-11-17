@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
 
 using static System.String;
@@ -7,7 +8,7 @@ using static Myll.Generator.StmtFormatting;
 
 namespace Myll.Core
 {
-	// TODO precompile all permutation strings for performance
+	// TODO: precompute all permutations for performance
 	[Flags]
 	public enum Qualifier
 	{
@@ -26,52 +27,44 @@ namespace Myll.Core
 	{
 		public SrcPos        srcPos;
 		public Qualifier     qual;
-		public List<Pointer> ptrs;	// TODO: these are needed in reverse order, maybe store them reversed
+		public List<Pointer> ptrs; // TODO: these are needed in reverse order, maybe store them reversed
 
 		// Type resolvedType;
 
 		public abstract string GenType();
 
-		// should replace GenType and BaseGen()
-		public string TargetGen()
-		{
-			string genType = GenType();
-			return qual == Qualifier.None
-				? genType
-				// TODO: do properly
-				: qual.ToString().ToLower().Replace( ",", "" ) + " " + genType;
-		}
-
 		public virtual string Gen( string name = "" )
-		{
-			// TODO: solve the pointer/array formatting
-			return PointerizeName( name );
-				/*IsNullOrEmpty( name )
-				? PointerizeName()
-				: " " + PointerizeName( name );
-				*/
-		}
+			=> PointerizeName( TargetGen(), name );
 
-		public string PointerizeName( string name = "" )
+		// r-padded qualifiers TODO: do properly
+		[Pure]
+		private string GenQualifiers()
+			=> (qual == Qualifier.None)
+				? ""
+				: qual.ToString().ToLower().Replace( ",", "" ) + " ";
+
+		protected string TargetGen()
+			=> GenQualifiers() + GenType();
+
+		protected string PointerizeName(string leftOfName, string name = "" )
 		{
-			name = (" " + name).TrimEnd();
-			//bool   isNameEmpty = (name == "");
-			string leftOfName   = TargetGen();
+			name = (" " + name).TrimEnd(); // empty name will result in empty string
+			//string leftOfName   = TargetGen();
 
 			if( ptrs == null || ptrs.IsEmpty() )
 				return leftOfName + name;
 
 			bool   wasArray    = false;
 			string rightOfName = "";
-			foreach( Pointer ptr in ptrs?.AsEnumerable() ) {
+			foreach( Pointer ptr in ptrs.AsEnumerable() ) {
 				if( ptr.kind == Pointer.Kind.RawArray ) {
 					rightOfName = Format( "{0}[{1}]", rightOfName, ptr.expr?.Gen() ?? "" );
 					wasArray    = true;
 				}
 				else {
-					bool needParens = ptr.kind.Between( Pointer.Kind.NeedParens_Begin,
-					                                    Pointer.Kind.NeedParens_End );
-					if( !needParens ) {
+					bool needNoParens = ptr.kind.Between( Pointer.Kind.NoNeedForParens_Begin,
+					                                      Pointer.Kind.NoNeedForParens_End );
+					if( needNoParens ) {
 						leftOfName  = leftOfName + rightOfName;
 						rightOfName = "";
 					}
@@ -86,14 +79,6 @@ namespace Myll.Core
 			}
 
 			return leftOfName + name + rightOfName;
-		}
-
-		protected string BaseGen( string value )
-		{
-			// TODO: do properly
-			return qual == Qualifier.None
-				? value
-				: qual.ToString().ToLower().Replace( ",", "" ) + " " + value;
 		}
 	}
 
@@ -112,8 +97,7 @@ namespace Myll.Core
 			Unsigned,
 		}
 
-		// deprecated, never used, maybe for dynamically sized integer in the future
-		[Flags]
+		[Flags, Obsolete( "never used, maybe for dynamically sized integer in the future" )]
 		public enum Modifier
 		{
 			None     = 0,
@@ -130,9 +114,7 @@ namespace Myll.Core
 		public       Kind kind;
 
 		public override string GenType()
-		{
-			return BasicFormat[kind][size];
-		}
+			=> BasicFormat[kind][size];
 	}
 
 	// myll:
@@ -146,23 +128,21 @@ namespace Myll.Core
 		public List<Param> paras;
 		public Typespec    retType; // opt
 
+		public override string GenType()
+			=> retType.Gen();
+
 		// bool (*hans)(int)
 		public override string Gen( string name = "" )
 		{
-			// decide if one * is there by default
-			return BaseGen(
-				Format(
-					"{0}({1})({2})",
-					GenType(),
-					PointerizeName( name ),
-					paras
-						.Select( p => p.Gen() )
-						.Join( ", " ) ) );
-		}
-
-		public override string GenType()
-		{
-			return retType.Gen();
+			string center = PointerizeName( "", name );
+			center = (center == "") ? "" : Format( "({0})", center );
+			return Format(
+				"{0}{1}({2})",
+				TargetGen(),
+				center,
+				paras
+					.Select( p => p.Gen() )
+					.Join( ", " ) );
 		}
 	}
 
@@ -173,11 +153,9 @@ namespace Myll.Core
 		public List<IdTplArgs> idTpls;
 
 		public override string GenType()
-		{
-			return idTpls
+			=> idTpls
 				.Select( s => s.Gen() )
 				.Join( "::" );
-		}
 	}
 
 	public class Pointer

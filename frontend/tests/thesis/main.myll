@@ -1,5 +1,7 @@
 import std_iostream, c_stdlib, std_chrono, std_vector;
 
+//#line 68 "../main.myll"
+
 func stuff() -> int[]! {
 	var int*[] @[] * asd;
 	var int*!	iup2, jup2;
@@ -53,8 +55,22 @@ namespace problem_3321 {
 }
 
 func problem_3322() {
-	var int		i, j;
-	var int*	ip = &i, jp = &j;
-	var int&	ir =  i, jr =  j;
-	var int[4]	ia, ja;
+	var int		i,			j;
+	var int*	ip = &i,	jp = &j;
+	var int&	ir =  i,	jr =  j;
+	var int[4]	ia,			ja;
+}
+
+func problem_3323() {
+	var int[4]* ptr_to_ary_of_4;
+	var int*[4] ary_of_4_ptrs;
+}
+
+namespace problem_3324 {
+	func f( int a, int b ) -> void {}
+	func ff( func*(int,int)->int f) -> void {}
+	func func_ptr_fun() {
+		var func(int,int)->void fp = f;
+		var func*(func*(int,int)->int)->void ffp = ff;
+	}
 }
