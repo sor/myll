@@ -137,7 +137,7 @@ namespace Myll.Generator
 			Access curAccess    = defaultAccess;
 			string accessIndent = DeIndentDecl;
 
-			Strings ret = new Strings();
+			Strings ret = new();
 			IAccessStrings
 				listDecl = new AccessStrings()
 					.Concat( protoEarly )
@@ -184,7 +184,7 @@ namespace Myll.Generator
 		// TODO: convert to IStrings if too slow
 		private Strings GenImpl()
 		{
-			Strings ret = new Strings();
+			Strings ret = new();
 			IAccessStrings
 				listImpl = new AccessStrings()
 					.Concat( hierarchicalImpl )
@@ -214,7 +214,7 @@ namespace Myll.Generator
 			string        indent     = IndentDecl;
 			string        name       = obj.name;
 			AccessStrings targetDecl = obj.IsStatic ? staticFieldDecl : fieldDecl;
-			Strings ret = new Strings {
+			Strings ret = new() {
 				Format(
 					VarFormat[4],
 					indent,
@@ -237,7 +237,7 @@ namespace Myll.Generator
 		}
 
 		// Those need to be kept in adding order
-		public void AddVar( Var obj )
+		public void AddVar( VarDecl obj )
 		{
 			bool needsTypename = false; // TODO how to determine this
 

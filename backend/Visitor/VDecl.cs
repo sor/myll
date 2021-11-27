@@ -314,7 +314,7 @@ namespace Myll
 		}
 
 		// list of typed and initialized vars
-		public List<Decl> VisitVars( TypedIdAcorsContext c )
+		public List<Decl> VisitVarDecls( TypedIdAcorsContext c )
 		{
 			Scope scope = scopeStack.Peek();
 			// determine if only scope or container
@@ -322,7 +322,7 @@ namespace Myll
 			List<Decl> ret = c.idAccessors()
 				.idAccessor()
 				.Select(
-					q => new Var {
+					q => new VarDecl {
 						srcPos   = c.ToSrcPos(),
 						name     = q.id().GetText(),
 						access   = curAccess,
@@ -340,11 +340,11 @@ namespace Myll
 		{
 			MultiDecl ret = new() {
 				decls = c.typedIdAcors()
-					.SelectMany( VisitVars )
+					.SelectMany( VisitVarDecls )
 					.ToList(),
 			};
 			if( c.v.ToQualifier() == Qualifier.Const ) {
-				ret.decls.ForEach( decl => ((Var) decl).type.qual |= Qualifier.Const );
+				ret.decls.ForEach( decl => ((VarDecl) decl).type.qual |= Qualifier.Const );
 			}
 			return ret;
 		}

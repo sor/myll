@@ -67,6 +67,7 @@ namespace MyNS
 			B,
 			C,
 		}
+
 	[priv]:
 		method testEnums(MyEnum a)
 		{

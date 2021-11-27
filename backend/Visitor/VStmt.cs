@@ -121,7 +121,7 @@ namespace Myll
 
 		public override Stmt VisitReturnStmt( ReturnStmtContext c )
 		{
-			Stmt ret = new ReturnStmt {
+			ReturnStmt ret = new() {
 				srcPos = c.ToSrcPos(),
 				expr   = c.expr().Visit(),
 			};
@@ -130,7 +130,7 @@ namespace Myll
 
 		public override Stmt VisitThrowStmt( ThrowStmtContext c )
 		{
-			Stmt ret = new ThrowStmt {
+			ThrowStmt ret = new() {
 				srcPos = c.ToSrcPos(),
 				expr   = c.expr().Visit(),
 			};
@@ -139,7 +139,7 @@ namespace Myll
 
 		public override Stmt VisitBreakStmt( BreakStmtContext c )
 		{
-			Stmt ret = new BreakStmt {
+			BreakStmt ret = new() {
 				srcPos = c.ToSrcPos(),
 				depth  = c.INTEGER_LIT().ToInt( 1 ),
 			};
@@ -155,7 +155,7 @@ namespace Myll
 
 		public override Stmt VisitIfStmt( IfStmtContext c )
 		{
-			Stmt ret = new IfStmt {
+			IfStmt ret = new() {
 				srcPos   = c.ToSrcPos(),
 				ifThens  = c.condThen().Select( VisitCondThen ).ToList(),
 				elseStmt = c.levStmt().Visit(),
@@ -177,7 +177,7 @@ namespace Myll
 
 		public override Stmt VisitSwitchStmt( SwitchStmtContext c )
 		{
-			Stmt ret = new SwitchStmt {
+			SwitchStmt ret = new() {
 				srcPos    = c.ToSrcPos(),
 				condExpr  = c.expr().Visit(),
 				caseStmts = c.caseStmt().Select( VisitCaseStmt ).ToList(),
@@ -197,7 +197,7 @@ namespace Myll
 
 		public override Stmt VisitForStmt( ForStmtContext c )
 		{
-			LoopStmt ret = new ForStmt {
+			ForStmt ret = new() {
 				srcPos   = c.ToSrcPos(),
 				initStmt = c.levStmt(0).Visit(),
 				condExpr = c.expr( 0 ).Visit(),
@@ -211,7 +211,7 @@ namespace Myll
 		public override Stmt VisitWhileStmt( WhileStmtContext c )
 		{
 			CondThen condThen = VisitCondThen( c.condThen() );
-			LoopStmt ret = new WhileStmt {
+			WhileStmt ret = new() {
 				srcPos   = c.ToSrcPos(),
 				condExpr = condThen.condExpr,
 				bodyStmt = condThen.thenStmt,
@@ -222,7 +222,7 @@ namespace Myll
 
 		public override Stmt VisitDoWhileStmt( DoWhileStmtContext c )
 		{
-			LoopStmt ret = new DoWhileStmt {
+			DoWhileStmt ret = new() {
 				srcPos   = c.ToSrcPos(),
 				condExpr = c.expr().Visit(),
 				bodyStmt = c.levStmt().Visit(),
@@ -232,7 +232,7 @@ namespace Myll
 
 		public override Stmt VisitTimesStmt( TimesStmtContext c )
 		{
-			LoopStmt ret = new TimesStmt {
+			TimesStmt ret = new() {
 				srcPos    = c.ToSrcPos(),
 				countExpr = c.expr().Visit(),
 				name      = c.id().Visit(), // TODO: check for null
@@ -274,7 +274,7 @@ namespace Myll
 
 		public override Stmt VisitExpressionStmt( ExpressionStmtContext c )
 		{
-			Stmt ret = new ExprStmt {
+			ExprStmt ret = new() {
 				srcPos = c.ToSrcPos(),
 				expr   = c.expr().Visit(),
 			};

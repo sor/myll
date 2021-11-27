@@ -52,7 +52,7 @@ namespace Myll.Core
 
 		public override string ToString()
 		{
-			var sb = new StringBuilder();
+			StringBuilder sb = new();
 			foreach( var info in GetType().GetProperties() ) {
 				object value = info.GetValue( this, null )
 				            ?? "(null)";
@@ -68,7 +68,7 @@ namespace Myll.Core
 
 		public string FullyQualifiedName {
 			get {
-				Strings ret = new Strings();
+				Strings ret = new();
 				for( ScopeLeaf cur = scope; cur?.parent != null; cur = cur.parent ) {
 					Decl   decl     = cur.decl;
 					string declName = decl?.name ?? "unknown_fix_me";
@@ -175,7 +175,7 @@ namespace Myll.Core
 		var int i { [inline] get; [inline] set; } = 99;
 	</example>
 	*/
-	public class Var : Decl
+	public class VarDecl : Decl
 	{
 		public Typespec       type;     // contains Qualifier
 		public List<Accessor> accessor; // opt, structural or global

@@ -170,7 +170,7 @@ namespace Myll.Core
 
 		public override string ToString()
 		{
-			var sb = new StringBuilder();
+			StringBuilder sb = new();
 			foreach( var info in GetType().GetProperties() ) {
 				object value = info.GetValue( this, null )
 				            ?? "(null)";
