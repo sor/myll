@@ -2,7 +2,7 @@
 
 module testcase;
 
-import std_iostream;
+import std_iostream, stack;
 
 class Base { [pub]: ctor(int a){} [virtual]dtor(){} }
 class Derived : Base { [pub]: [virtual]dtor(){}}
@@ -10,7 +10,7 @@ class Unrelated {}
 
 alias belanna = func(int)->bool*;
 
-func test()->int
+func test() -> int
 {
 	using std; // does not work as decl, only stmt
 
@@ -41,7 +41,7 @@ func test()->int
 }
 
 [moep]
-func hans(int a) -> bool => a == 42;
+func hans (int a) -> bool  => a == 42;
 func hansX(int a) -> bool* => new bool();
 
 // TODO: find a way to select which main is gonna be build by module

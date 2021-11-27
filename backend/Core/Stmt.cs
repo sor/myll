@@ -17,9 +17,9 @@ namespace Myll.Core
 		public  SrcPos  srcPos;
 		private Attribs attribs { get; set; }
 
-		public bool IsStatic => IsAttrib( "static" );
+		public bool IsStatic => HasAttrib( "static" );
 
-		public bool IsAttrib( string key )
+		public bool HasAttrib( string key )
 			=> attribs != null
 			&& attribs.ContainsKey( key );
 
@@ -40,7 +40,7 @@ namespace Myll.Core
 
 		public override string ToString()
 		{
-			var sb = new StringBuilder();
+			StringBuilder sb = new();
 			foreach( var info in GetType().GetProperties() ) {
 				object value = info.GetValue( this, null )
 				            ?? "(null)";
@@ -171,7 +171,7 @@ namespace Myll.Core
 				throw new NotImplementedException(
 					"no depth except 1 supported directly, analyze step must take care of this!" );
 
-			return new Strings {
+			return new() {
 				Format( BreakFormat, IndentString.Repeat( level ) )
 			};
 		}
@@ -192,8 +192,8 @@ namespace Myll.Core
 
 		public override Strings Gen( int level )
 		{
+			Strings ret    = new();
 			string  indent = IndentString.Repeat( level );
-			Strings ret    = new Strings();
 			int     index  = 0;
 			foreach( CondThen ifThen in ifThens ) {
 				ret.Add( Format( IfFormat[index], indent, ifThen.condExpr.Gen() ) );
@@ -233,8 +233,8 @@ namespace Myll.Core
 
 		public override Strings Gen( int level )
 		{
+			Strings ret    = new();
 			string  indent = IndentString.Repeat( level );
-			Strings ret    = new Strings();
 			ret.Add( Format( LoopFormat[1], indent, "true" ) );
 			ret.Add( Format( CurlyOpen,     indent ) );
 			ret.AddRange( bodyStmt.GenWithoutCurly( level + 1 ) );
@@ -260,8 +260,8 @@ namespace Myll.Core
 			if( inits.Count > 1 )
 				throw new NotImplementedException( "for statement does not support more than one initializer yet" );
 
+			Strings ret    = new();
 			string  indent = IndentString.Repeat( level );
-			Strings ret    = new Strings();
 			ret.Add( Format( LoopFormat[0], indent, inits.Count == 0 ? ";" : inits.First(), condExpr.Gen(), iterExpr.Gen() ) );
 			ret.Add( Format( CurlyOpen,     indent ) );
 			ret.AddRange( bodyStmt.GenWithoutCurly( level + 1 ) );
@@ -281,8 +281,8 @@ namespace Myll.Core
 			if( elseStmt != null )
 				throw new NotImplementedException( "implement else for while-loop" );
 
+			Strings ret    = new();
 			string  indent = IndentString.Repeat( level );
-			Strings ret    = new Strings();
 			ret.Add( Format( LoopFormat[1], indent, condExpr.Gen() ) );
 			ret.Add( Format( CurlyOpen,     indent ) );
 			ret.AddRange( bodyStmt.GenWithoutCurly( level + 1 ) );
@@ -297,8 +297,8 @@ namespace Myll.Core
 
 		public override Strings Gen( int level )
 		{
+			Strings ret    = new();
 			string  indent = IndentString.Repeat( level );
-			Strings ret    = new Strings();
 			ret.Add( Format( LoopFormat[2], indent ) );
 			ret.Add( Format( CurlyOpen,     indent ) );
 			ret.AddRange( bodyStmt.GenWithoutCurly( level + 1 ) );
@@ -319,9 +319,9 @@ namespace Myll.Core
 
 		public override Strings Gen( int level )
 		{
+			Strings ret     = new();
 			string  varName = name ?? randomName;
 			string  indent  = IndentString.Repeat( level );
-			Strings ret     = new Strings();
 			ret.Add(
 				Format(
 					LoopFormat[0],
@@ -381,8 +381,8 @@ namespace Myll.Core
 		{
 			// Block to Block needs to indent further else it's ok to remain same level
 			// The curly braces need to be outdentented one level
+			Strings ret    = new();
 			string  indent = IndentString.Repeat( level /*- 1*/ );
-			Strings ret    = new Strings();
 			ret.Add( Format( CurlyOpen, indent ) );
 			ret.AddRange( stmts.SelectMany( s => s.Gen( level + 1 /*(s is Block ? 1 : 0)*/ ) ) );
 			ret.Add( Format( CurlyClose, indent ) );

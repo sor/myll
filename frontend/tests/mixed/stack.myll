@@ -24,15 +24,15 @@ class Stack<T> {
 	// like the size and alignment of this class
 
 	// this could be a getter, allowing to call it without ()
-	[const]
+	[pure]
 	method isFull() -> bool => _last == _size;
 
-	//[throw] // not supported yet, would make the method not noexcept, currently no method is noexcept but all but [throw] should be
+	[throw] // not supported yet, would make the method not noexcept, currently no method is noexcept but all but [throw] should be
 	method increase() {
 		var T[]* t = new T[_size * 2];
 		// same as: for (int i = 0; i < _size; ++i)
 		do _size times i
-			t[i] = _values[i] = 99 = (9**8);
+			t[i] = _values[i] = (9**8);
 		_size *= 2;
 		// this could drop the [] once we know that _values is an array from analyze step
 		delete[] _values;
@@ -63,10 +63,12 @@ class Stack<T> {
 
 	// this could be a getter, allowing to call it without ()
 	// assignment mistake not possible anymore
-	//[const]
+	[pure]
 	method isEmpty() -> bool => _last == 0;
 
-	// modified to be able to chain call
+//[throw]:
+	// manually made to be able to chain call
+	[throw] // throw because increase() is also throw
 	method push(T value) -> Stack& {
 		if (isFull())
 			increase();
@@ -77,7 +79,8 @@ class Stack<T> {
 
 	// same as push(T) above with chaining added by attribute
 	// adds return type (classname&) and return statement (return *this)
-	[chain]
+	// throw because increase() is also throw
+	[chain, throw]
 	method push_chaining(T value) {
 		if (isFull())
 			increase();
@@ -86,16 +89,17 @@ class Stack<T> {
 	}
 
 	// just for adding in a second template
+	[throw] // top is throw, therefore this needs to be too
 	method top_as<TT>() => (? TT) top();
 
-	//[throw]
+	[throw]
 	method top() -> T {
 		if (isEmpty())
 			throw StackEmptyException();
 		return _values[_last - 1];
 	}
 
-	//[throw]
+	[throw]
 	method pop() {
 		if (isEmpty())
 			throw StackEmptyException();

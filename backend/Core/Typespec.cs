@@ -135,11 +135,10 @@ namespace Myll.Core
 		public override string Gen( string name = "" )
 		{
 			string center = PointerizeName( "", name );
-			center = (center == "") ? "" : Format( "({0})", center );
 			return Format(
 				"{0}{1}({2})",
 				TargetGen(),
-				center,
+				center.Brace( center != "" ),
 				paras
 					.Select( p => p.Gen() )
 					.Join( ", " ) );

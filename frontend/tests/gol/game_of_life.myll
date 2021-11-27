@@ -25,10 +25,8 @@ class GameOfLife
 		{
 			do sizeX times x
 			{
-				//if( 0 < y < sizeY-1
-				// && 0 < x < sizeX-1 )
-				if( 0 < y && y < sizeY-1
-				 && 0 < x && x < sizeX-1 )
+				if( 0 < y < sizeY-1
+				 && 0 < x < sizeX-1 )
 				{
 					dstMap[y][x] = (rand() % 4 == 0) ? 'o' : ' ';
 				}

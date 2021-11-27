@@ -197,7 +197,7 @@ namespace Myll.Core
 		public override string Gen( bool doBrace = false )
 		{
 			if( op == Operand.Parens )
-				return Format( "({0})", expr.Gen() );
+				return expr.Gen().Brace( true );
 
 			bool isPreOp       = op.Between( Operand.PreOps_Begin,  Operand.PreOps_End );
 			bool isPostOp      = op.Between( Operand.PostOps_Begin, Operand.PostOps_End );
@@ -205,9 +205,7 @@ namespace Myll.Core
 			bool doBraceExpr = (divPrecedence || expr.IsDivergentPrecedence)
 			                && OriginalPrecedenceLevel < expr.OriginalPrecedenceLevel;
 
-			string opFormat = doBrace
-				? "(" + op.GetFormat() + ")"
-				: op.GetFormat();
+			string opFormat = op.GetFormat().Brace( doBrace );
 
 			return Format(
 				opFormat,
@@ -236,9 +234,7 @@ namespace Myll.Core
 			bool doBraceRight = (divPrecedence || right.IsDivergentPrecedence)
 			                 && OriginalPrecedenceLevel < right.OriginalPrecedenceLevel;
 
-			string opFormat = doBrace
-				? "(" + op.GetFormat() + ")"
-				: op.GetFormat();
+			string opFormat = op.GetFormat().Brace( doBrace );
 
 			return Format(
 				opFormat,
@@ -247,7 +243,7 @@ namespace Myll.Core
 		}
 	}
 
-	/// Ternary Operation - three operands, right now only: if ? then : else
+	/// Ternary Operation - three operands, currently only: if ? then : else
 	public class TernOp : Expr
 	{
 		public Expr left  { get; set; }
@@ -264,10 +260,10 @@ namespace Myll.Core
 			bool doBraceRight = (divPrecedence || right.IsDivergentPrecedence)
 			                 && OriginalPrecedenceLevel < right.OriginalPrecedenceLevel;
 
+			string opFormat = "{0} ? {1} : {2}".Brace( doBrace );
+
 			return Format(
-				doBrace
-					? "({0} ? {1} : {2})"
-					: "{0} ? {1} : {2}",
+				opFormat,
 				left.Gen( doBraceLeft ),
 				mid.Gen( doBraceMid ),
 				right.Gen( doBraceRight ) );
@@ -284,9 +280,7 @@ namespace Myll.Core
 				.Select( s => s.Gen() )
 				.Join( "::" );
 
-			return doBrace
-				? "(" + ret + ")"
-				: ret;
+			return ret.Brace( doBrace );
 		}
 	}
 
@@ -336,9 +330,7 @@ namespace Myll.Core
 		public override string Gen( bool doBrace = false )
 		{
 			string ret = expr.Gen() + funcCall.Gen();
-			return doBrace
-				? "(" + ret + ")"
-				: ret;
+			return ret.Brace( doBrace );
 		}
 	}
 
@@ -363,9 +355,7 @@ namespace Myll.Core
 				throw new Exception( Format( "Invalid cast of {0} to {1}", exprText, typeText ) );
 
 			string ret = Format( format, exprText, typeText );
-			return doBrace
-				? "(" + ret + ")"
-				: ret;
+			return ret.Brace( doBrace );
 		}
 	}
 
@@ -377,9 +367,7 @@ namespace Myll.Core
 		public override string Gen( bool doBrace = false )
 		{
 			string ret = "new " + type.Gen() + funcCall.Gen();
-			return doBrace
-				? "(" + ret + ")"
-				: ret;
+			return ret.Brace( doBrace );
 		}
 	}
 
@@ -390,7 +378,7 @@ namespace Myll.Core
 
 		public override string Gen( bool doBrace = false )
 		{
-			return /*doBrace ? "(" + text + ")" :*/ text;
+			return text; //.Brace( doBrace )
 		}
 	}
 }

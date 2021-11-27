@@ -45,7 +45,7 @@ namespace Myll.Core
 			}
 		}
 
-		public bool IsInline   => IsAttrib( "inline" ) || IsTemplateUp;
+		public bool IsInline   => HasAttrib( "inline" ) || IsTemplateUp;
 		public bool IsInStruct => scope.parent.decl is Structural;
 
 		// TODO Symbol?
@@ -114,9 +114,9 @@ namespace Myll.Core
 		public Stmt           block;
 		public Typespec       retType;
 
-		public bool IsVirtual  => IsAttrib( "virtual" );
-		public bool IsConst    => IsAttrib( "const" ) || IsAttrib( "pure" );
-		public bool IsOverride => IsAttrib( "override" );
+		public bool IsVirtual  => HasAttrib( "virtual" );
+		public bool IsConst    => HasAttrib( "const" ) || HasAttrib( "pure" );
+		public bool IsOverride => HasAttrib( "override" );
 
 		// TODO: analyze, for void or auto return type of funcs
 		public bool IsReturningSomething => false;
@@ -140,8 +140,8 @@ namespace Myll.Core
 		public List<Param> paras;
 		public Stmt        block;
 
-		public bool IsVirtual  => IsAttrib( "virtual" );
-		public bool IsImplicit => IsAttrib( "implicit" );
+		public bool IsVirtual  => HasAttrib( "virtual" );
+		public bool IsImplicit => HasAttrib( "implicit" );
 
 		// TODO: initlist
 
@@ -221,7 +221,7 @@ namespace Myll.Core
 	{
 		public TypespecBasic basetype;
 
-		public bool IsFlags     => IsAttrib( "flags" );
+		public bool IsFlags     => HasAttrib( "flags" );
 		public bool IsOpBitwise => IsAttrib( "operators", "bitwise" );
 
 		// TODO this needs to be in the Generator Folder

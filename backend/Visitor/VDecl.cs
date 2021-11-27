@@ -76,7 +76,7 @@ namespace Myll
 			// what was that for?
 			//bool wasOK = NotifyObservers( ret );
 			// validator
-			//ret.IsAttrib( "blah" );
+			//ret.HasAttrib( "blah" );
 
 			return ret;
 		}

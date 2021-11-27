@@ -65,9 +65,9 @@ namespace Myll
 				};
 
 			Typespec ret;
-			if( c.typespecBasic()       != null ) ret = VisitTypespecBasic( c.typespecBasic() );
-			else if( c.typespecFunc()   != null ) ret = VisitTypespecFunc( c.typespecFunc() );
-			else if( c.typespecNested() != null ) ret = VisitTypespecNested( c.typespecNested() );
+			if(		 c.typespecBasic()	!= null ) ret = VisitTypespecBasic( c.typespecBasic() );
+			else if( c.typespecFunc()	!= null ) ret = VisitTypespecFunc( c.typespecFunc() );
+			else if( c.typespecNested()	!= null ) ret = VisitTypespecNested( c.typespecNested() );
 			else throw new Exception( "unknown typespec" );
 			ret.srcPos = c.ToSrcPos();
 			ret.qual   = c.qual().Visit();
