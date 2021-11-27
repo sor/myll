@@ -81,11 +81,11 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitCmpOp([NotNull] MyllParser.CmpOpContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.orderOP"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.relOP"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitOrderOP([NotNull] MyllParser.OrderOPContext context);
+	Result VisitRelOP([NotNull] MyllParser.RelOPContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.equalOP"/>.
 	/// </summary>

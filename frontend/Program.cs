@@ -52,7 +52,7 @@ namespace Myll
 	{
 		private const  string   Version = "0.01 (Alpha)";
 		private static DateTime start;
-		private static Options  opt;
+		private static Options  opt = new(); // PERF: new() necessary to let it be not-null
 
 		private static readonly string Executable = RuntimeInformation.IsOSPlatform( OSPlatform.Windows )
 			? "a.exe"
@@ -238,6 +238,10 @@ namespace Myll
 					};
 					process2.Start();
 					process2.WaitForExit();
+
+					Console.WriteLine("Executable finished with exit code {0}", process2.ExitCode);
+
+					return process2.ExitCode;
 				}
 			}
 

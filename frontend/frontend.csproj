@@ -19,6 +19,10 @@
 		<FileVersion></FileVersion>
 	</PropertyGroup>
 
+	<PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+	  <WarningsAsErrors>;NU1605;Nullable</WarningsAsErrors>
+	</PropertyGroup>
+
 	<ItemGroup>
 	  <ProjectReference Include="..\backend\backend.csproj" />
 	</ItemGroup>

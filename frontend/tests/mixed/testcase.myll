@@ -14,6 +14,10 @@ func test()->int
 {
 	using std; // does not work as decl, only stmt
 
+	var i8 value = 50;
+	if( 0 < value <= 100 )
+		cout << "value in range\n";
+
 	var int* blubb, blabb, blebb;
 
 	var int a;
@@ -40,7 +44,8 @@ func test()->int
 func hans(int a) -> bool => a == 42;
 func hansX(int a) -> bool* => new bool();
 
-func main()->int {}
+// TODO: find a way to select which main is gonna be build by module
+func main()->int { return test(); }
 /*
 operator "|" (MyEnum lhs, MyEnum rhs) -> MyEnum
 {

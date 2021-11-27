@@ -1,6 +1,7 @@
 ﻿using System;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
+using Myll.Core;
 
 namespace Myll
 {
@@ -32,6 +33,22 @@ namespace Myll
 					return text;
 				}
 			}
+		}
+
+		public interface IRelEqExprContext
+		{
+			public ExprContext expr( int i );
+			public Operand     Op { get; }
+		}
+
+		public partial class RelationExprContext : ExprContext, IRelEqExprContext
+		{
+			public Operand Op => relOP().v.ToOp();
+		}
+
+		public partial class EqualityExprContext : ExprContext, IRelEqExprContext
+		{
+			public Operand Op => equalOP().v.ToOp();
 		}
 	}
 }

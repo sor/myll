@@ -201,23 +201,63 @@ namespace Myll
 			return ret;
 		}
 
+		private class FlattenRelational
+		{
+			private readonly List<Expr>    exprs = new( 4 );
+			private readonly List<Operand> ops   = new( 4 );
+
+			public FlattenRelational(IRelEqExprContext c) => Descent( c );
+			private void Descent( IRelEqExprContext c )
+			{
+				{
+					ExprContext l = c.expr( 0 );
+					if( l is IRelEqExprContext lre ) Descent( lre );
+					else exprs.Add( l.Visit() );
+				}
+				ops.Add( c.Op );
+				{
+					ExprContext r = c.expr( 1 );
+					if( r is IRelEqExprContext rre ) Descent( rre );
+					else exprs.Add( r.Visit() );
+				}
+			}
+
+			public BinOp VisitWithAnd()
+			{
+				BinOp left = new() {
+					op    = ops[0],
+					left  = exprs[0],
+					right = exprs[1],
+				};
+
+				for( int i = 1; i < ops.Count; ++i ) {
+					BinOp right = new() {
+						op    = ops[i],
+						left  = exprs[i],
+						right = exprs[i +1],
+					};
+					left = new() {
+						op    = Operand.And,
+						left  = left,
+						right = right,
+					};
+				}
+
+				return left;
+			}
+		}
+
 		public override Expr VisitRelationExpr( RelationExprContext c )
 		{
-			BinOp ret = new() {
-				op    = c.orderOP().v.ToOp(),
-				left  = c.expr( 0 ).Visit(),
-				right = c.expr( 1 ).Visit(),
-			};
+			FlattenRelational flat = new( c );
+			Expr              ret  = flat.VisitWithAnd();
 			return ret;
 		}
 
 		public override Expr VisitEqualityExpr( EqualityExprContext c )
 		{
-			BinOp ret = new() {
-				op    = c.equalOP().v.ToOp(),
-				left  = c.expr( 0 ).Visit(),
-				right = c.expr( 1 ).Visit(),
-			};
+			FlattenRelational flat = new( c );
+			Expr              ret  = flat.VisitWithAnd();
 			return ret;
 		}
 

@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -11,7 +10,7 @@ namespace Myll
 	public class Options
 	{
 		[Option( 'i', "in", HelpText = "List of input files, searches *.myll deeply by default")]
-		public IEnumerable<string> InFiles { get; set; }
+		public IEnumerable<string> InFiles { get; set; } = Enumerable.Empty<string>();
 
 		[Option( 'o', "out", HelpText = "Output path, current directory by default" )]
 		public string OutPath { get; init; } = Directory.GetCurrentDirectory();
@@ -43,6 +42,9 @@ namespace Myll
 
 		[Option( 'r', "run", HelpText = "Run the generated binary", Default = false )]
 		public bool IsRun { get; init; } = false;
+
+		[Option( 'M', "main", HelpText = "Set from which module the main func to generate", Default = "" )]
+		public string MainModule { get; init; } = "";
 	}
 
 	static partial class Program

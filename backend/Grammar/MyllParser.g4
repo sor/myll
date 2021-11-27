@@ -16,8 +16,8 @@ addOP		:	v=(	'+' | '-' | '^' | '|' ); // split xor and or?
 shiftOP		:		'<<' | '>''>';
 
 cmpOp       :   	'<=>';
-orderOP		:	v=(	'<=' | '>=' | '<' | '>' );
-equalOP		:	v=(	'==' | '!=' );
+relOP	:	v=(	'<=' | '>=' | '<' | '>' );
+equalOP	:	v=(	'==' | '!=' );
 
 andOP		:		'&&';
 orOP		:		'||';
@@ -90,7 +90,7 @@ tplArg		:	lit | typespec;
 tplArgs		:	LT tplArg	(COMMA tplArg)*	COMMA? GT;
 tplParams	:	LT id		(COMMA id)*		COMMA? GT;
 
-threeWay	:	(orderOP|equalOP)	COLON	expr;
+threeWay	:	(relOP|equalOP)	COLON	expr;
 
 // Tier 3
 //cast: nothing = static, ? = dynamic, ! = const & reinterpret
@@ -124,7 +124,7 @@ expr		:	(idTplArgs	SCOPE)+	idTplArgs	# ScopedExpr
 			|	expr	addOP			expr	# AddExpr
 			|	expr	shiftOP			expr	# ShiftExpr
 			|	expr	cmpOp			expr	# ComparisonExpr
-			|	expr	orderOP			expr	# RelationExpr // TODO: support 0 < x < 100
+			|	expr	relOP			expr	# RelationExpr
 			|	expr	equalOP			expr	# EqualityExpr
 			|	expr	andOP			expr	# AndExpr
 			|	expr	orOP			expr	# OrExpr

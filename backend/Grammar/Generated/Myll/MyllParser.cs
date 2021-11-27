@@ -63,7 +63,7 @@ public partial class MyllParser : Parser {
 		HEX_LIT=162, OCT_LIT=163, BIN_LIT=164, INTEGER_LIT=165, NL=166, WS=167;
 	public const int
 		RULE_comment = 0, RULE_postOP = 1, RULE_preOP = 2, RULE_powOP = 3, RULE_multOP = 4, 
-		RULE_addOP = 5, RULE_shiftOP = 6, RULE_cmpOp = 7, RULE_orderOP = 8, RULE_equalOP = 9, 
+		RULE_addOP = 5, RULE_shiftOP = 6, RULE_cmpOp = 7, RULE_relOP = 8, RULE_equalOP = 9, 
 		RULE_andOP = 10, RULE_orOP = 11, RULE_nulCoalOP = 12, RULE_memAccOP = 13, 
 		RULE_memAccPtrOP = 14, RULE_assignOP = 15, RULE_aggrAssignOP = 16, RULE_lit = 17, 
 		RULE_wildId = 18, RULE_id = 19, RULE_idOrLit = 20, RULE_specialType = 21, 
@@ -81,7 +81,7 @@ public partial class MyllParser : Parser {
 		RULE_module = 66, RULE_imports = 67, RULE_prog = 68;
 	public static readonly string[] ruleNames = {
 		"comment", "postOP", "preOP", "powOP", "multOP", "addOP", "shiftOP", "cmpOp", 
-		"orderOP", "equalOP", "andOP", "orOP", "nulCoalOP", "memAccOP", "memAccPtrOP", 
+		"relOP", "equalOP", "andOP", "orOP", "nulCoalOP", "memAccOP", "memAccPtrOP", 
 		"assignOP", "aggrAssignOP", "lit", "wildId", "id", "idOrLit", "specialType", 
 		"charType", "floatingType", "binaryType", "signedIntType", "unsignIntType", 
 		"qual", "typePtr", "idTplArgs", "typespec", "typespecBasic", "typespecFunc", 
@@ -550,29 +550,29 @@ public partial class MyllParser : Parser {
 		return _localctx;
 	}
 
-	public partial class OrderOPContext : ParserRuleContext {
+	public partial class RelOPContext : ParserRuleContext {
 		public IToken v;
 		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode LTEQ() { return GetToken(MyllParser.LTEQ, 0); }
 		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode GTEQ() { return GetToken(MyllParser.GTEQ, 0); }
 		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode LT() { return GetToken(MyllParser.LT, 0); }
 		[System.Diagnostics.DebuggerNonUserCode] public ITerminalNode GT() { return GetToken(MyllParser.GT, 0); }
-		public OrderOPContext(ParserRuleContext parent, int invokingState)
+		public RelOPContext(ParserRuleContext parent, int invokingState)
 			: base(parent, invokingState)
 		{
 		}
-		public override int RuleIndex { get { return RULE_orderOP; } }
+		public override int RuleIndex { get { return RULE_relOP; } }
 		[System.Diagnostics.DebuggerNonUserCode]
 		public override TResult Accept<TResult>(IParseTreeVisitor<TResult> visitor) {
 			IMyllParserVisitor<TResult> typedVisitor = visitor as IMyllParserVisitor<TResult>;
-			if (typedVisitor != null) return typedVisitor.VisitOrderOP(this);
+			if (typedVisitor != null) return typedVisitor.VisitRelOP(this);
 			else return visitor.VisitChildren(this);
 		}
 	}
 
 	[RuleVersion(0)]
-	public OrderOPContext orderOP() {
-		OrderOPContext _localctx = new OrderOPContext(Context, State);
-		EnterRule(_localctx, 16, RULE_orderOP);
+	public RelOPContext relOP() {
+		RelOPContext _localctx = new RelOPContext(Context, State);
+		EnterRule(_localctx, 16, RULE_relOP);
 		int _la;
 		try {
 			EnterOuterAlt(_localctx, 1);
@@ -2876,8 +2876,8 @@ public partial class MyllParser : Parser {
 		[System.Diagnostics.DebuggerNonUserCode] public ExprContext expr() {
 			return GetRuleContext<ExprContext>(0);
 		}
-		[System.Diagnostics.DebuggerNonUserCode] public OrderOPContext orderOP() {
-			return GetRuleContext<OrderOPContext>(0);
+		[System.Diagnostics.DebuggerNonUserCode] public RelOPContext relOP() {
+			return GetRuleContext<RelOPContext>(0);
 		}
 		[System.Diagnostics.DebuggerNonUserCode] public EqualOPContext equalOP() {
 			return GetRuleContext<EqualOPContext>(0);
@@ -2911,7 +2911,7 @@ public partial class MyllParser : Parser {
 			case GT:
 				{
 				State = 367;
-				orderOP();
+				relOP();
 				}
 				break;
 			case EQ:
@@ -3077,8 +3077,8 @@ public partial class MyllParser : Parser {
 		[System.Diagnostics.DebuggerNonUserCode] public ExprContext expr(int i) {
 			return GetRuleContext<ExprContext>(i);
 		}
-		[System.Diagnostics.DebuggerNonUserCode] public OrderOPContext orderOP() {
-			return GetRuleContext<OrderOPContext>(0);
+		[System.Diagnostics.DebuggerNonUserCode] public RelOPContext relOP() {
+			return GetRuleContext<RelOPContext>(0);
 		}
 		public RelationExprContext(ExprContext context) { CopyFrom(context); }
 		[System.Diagnostics.DebuggerNonUserCode]
@@ -3666,7 +3666,7 @@ public partial class MyllParser : Parser {
 						State = 446;
 						if (!(Precpred(Context, 12))) throw new FailedPredicateException(this, "Precpred(Context, 12)");
 						State = 447;
-						orderOP();
+						relOP();
 						State = 448;
 						expr(13);
 						}
