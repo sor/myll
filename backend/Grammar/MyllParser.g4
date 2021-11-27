@@ -45,21 +45,21 @@ charType	:	v=( CHAR | CODEPOINT | STRING );
 floatingType:	v=( FLOAT | F128 | F64 | F32 | F16 ); // 80 and 96 bit?
 binaryType	:	v=( BYTE | B64 | B32 | B16 | B8 );
 signedIntType:	v=( INT  | ISIZE | I64 | I32 | I16 | I8 );
-unsignIntType:  v=( UINT | USIZE | U64 | U32 | U16 | U8 );
+unsignIntType: 	v=( UINT | USIZE | U64 | U32 | U16 | U8 );
 
 qual		:	v=( CONST | MUTABLE | VOLATILE | STABLE );
 
 typePtr		:	qual*
-				( ptr=( DBL_AMP | AMP | STAR | PTR_TO_ARY )
-				| ary=( AT_LBRACK | LBRACK ) expr? RBRACK )
+				(	ptr=( DBL_AMP | AMP | STAR | PTR_TO_ARY )
+				|	ary=( AT_LBRACK | LBRACK ) expr? RBRACK )
 				suffix=( EM | PLUS | QM )?;
 
-idTplArgs	:	id tplArgs?;
+idTplArgs	:	id	tplArgs?;
 
 typespec	:	qual*
-				( typespecBasic	 typePtr*
-				| FUNC			 typePtr* typespecFunc
-				| typespecNested typePtr*);
+				(	typespecBasic	typePtr*
+				|	FUNC			typePtr*	typespecFunc
+				|	typespecNested	typePtr*);
 
 typespecBasic	:	specialType
 				|	charType
@@ -73,7 +73,7 @@ typespecFunc	:	funcTypeDef (RARROW typespec)?;
 // TODO different order than ScopedExpr
 typespecNested	:	idTplArgs	(SCOPE idTplArgs)*
 								(SCOPE v=( CTOR | DTOR | COPYCTOR | MOVECTOR ))?;
-typespecsNested	:	typespecNested (COMMA typespecNested)* COMMA?;	// trailing COMMA here really possible?
+typespecsNested	:	typespecNested (COMMA typespecNested)* COMMA?;
 
 // --- handled
 
@@ -90,7 +90,7 @@ tplArg		:	lit | typespec;
 tplArgs		:	LT tplArg	(COMMA tplArg)*	COMMA? GT;
 tplParams	:	LT id		(COMMA id)*		COMMA? GT;
 
-threeWay	:	(relOP|equalOP)	COLON	expr;
+threeWay	:	(relOP | equalOP)	COLON	expr;
 
 // Tier 3
 //cast: nothing = static, ? = dynamic, ! = const & reinterpret
@@ -165,8 +165,7 @@ initList	:	COLON id funcCall (COMMA id funcCall)* COMMA?;
 // is just SEMI as well in levStmt->inStmt
 funcBody	:	PHATRARROW expr SEMI
 			|	levStmt;
-accessorDef	:	attribBlk? a=( PUB | PROT | PRIV )?
-				qual* v=( GET | REFGET | SET ) funcBody;
+accessorDef	:	attribBlk?	qual* v=( GET | REFGET | SET ) funcBody;
 funcDef		:	id			tplParams?	funcTypeDef (RARROW typespec)?
 				(REQUIRES typespecsNested)?		// TODO
 				funcBody;
@@ -189,7 +188,7 @@ inDecl		:	NS id (SCOPE id)* SEMI						# Namespace // or better COLON
 						LCURLY	levDecl*	RCURLY	# ConceptDecl
 			// TODO aspect
 			|	ENUM	id
-				(COLON	bases=typespecBasic)?
+				(COLON	bases=typespecBasic)?	// TODO: enum inheritance
 				LCURLY	idExprs		RCURLY			# EnumDecl
 			|	v=( FUNC | PROC | METHOD )
 				(	LCURLY	funcDef*	RCURLY
@@ -197,24 +196,26 @@ inDecl		:	NS id (SCOPE id)* SEMI						# Namespace // or better COLON
 			|	OPERATOR
 				(	LCURLY	opDef*		RCURLY
 				|			opDef				)	# OpDecl
+			|	USING		typespecsNested	SEMI	# UsingDecl
+			// TODO: alias needs template support
+			|	ALIAS id ASSIGN	typespec 	SEMI	# AliasDecl
+			|	v=( VAR | FIELD | CONST | LET )
+				(	LCURLY	typedIdAcors*	RCURLY
+				|			typedIdAcors		)	# VariableDecl
 // class only:
-			|	v=( PUB | PROT | PRIV ) COLON		# AccessMod
 			|	v=( CTOR | COPYCTOR | MOVECTOR )
 				funcTypeDef	initList?		(SEMI | levStmt) # CtorDecl
 			|	DTOR	(LPAREN RPAREN)?	(SEMI | levStmt) # DtorDecl
 			;
 
-// using, var, const: these are both Stmt and Decl
-inAnyStmt	:	USING			typespecsNested	SEMI	# Using
-			// TODO: alias needs template support
-			|	ALIAS id ASSIGN	typespec 		SEMI	# AliasDecl
-			|	v=( VAR | FIELD | CONST | LET )
-				(	LCURLY	typedIdAcors*	RCURLY
-				|			typedIdAcors			)	# VariableDecl
-			;
-
 inStmt		:	SEMI								# EmptyStmt
 			|	LCURLY	levStmt*	RCURLY			# BlockStmt
+			|	USING		typespecsNested	SEMI	# UsingStmt
+			// TODO: alias needs template support
+			|	ALIAS id ASSIGN	typespec 	SEMI	# AliasStmt
+			|	v=( VAR | FIELD | CONST | LET )
+				(	LCURLY	typedIdAcors*	RCURLY
+				|			typedIdAcors		)	# VariableStmt
 			|	RETURN	expr?		SEMI			# ReturnStmt
 			|	DO RETURN expr?
 				IF LPAREN expr RPAREN	SEMI		# ReturnIfStmt
@@ -243,8 +244,8 @@ inStmt		:	SEMI								# EmptyStmt
 // ONLY refer to these lev* levels, NOT the in*
 levDecl		:	attribBlk	LCURLY	levDecl+ RCURLY	# AttribDeclBlock // must be in here, since it MUST have an attrib block
 			|	attribBlk	COLON 					# AttribState     // everything needs an antonym to make this work
-			|	attribBlk?	( inAnyStmt | inDecl )	# AttribDecl;
-levStmt		:	attribBlk?	( inAnyStmt | inStmt )	# AttribStmt;
+			|	attribBlk?	inDecl					# AttribDecl;
+levStmt		:	attribBlk?	inStmt					# AttribStmt;
 
 module		:	MODULE id SEMI;
 imports		:	IMPORT id (COMMA id)* COMMA? SEMI;

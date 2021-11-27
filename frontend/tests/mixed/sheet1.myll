@@ -15,12 +15,11 @@ class Sheet1 : Sheet
 	}
 	field f32 bgColor = 160.0f;
 
-public:
 	// ctor
 	// C++:  using Sheet::Sheet;
 	// MYLL: using base::ctor;
 
-	[override]
+	[pub, override]
 	{
 		method Init()
 		{
@@ -60,14 +59,14 @@ public:
 			renderer.ClearColor(160, 160, 160);
 
 			if (!blendedHead) {
-				const char *text = "        Kolloquium zur Masterarbeit\n\n  The MYLL Programming Language:\n       C++ Resyntaxed and Extended\n\n\n                               von\n                         Jan Reitz";
+				const char* text = "        Kolloquium zur Masterarbeit\n\n  The MYLL Programming Language:\n       C++ Resyntaxed and Extended\n\n\n                               von\n                         Jan Reitz";
 
 				var Surface surf = fontHead.RenderUTF8_Blended_Wrapped( text, white, 1160 );
 				blendedHead = Texture( renderer, surf );
 			}
 
 			if (!blendedBody) {
-				const char *text = "";
+				const char* text = "";
 
 				var Surface surf = fontBody.RenderUTF8_Blended_Wrapped( text, white, 1160 );
 				blendedBody = Texture( renderer, surf );

@@ -236,6 +236,7 @@ namespace Myll
 
 			// only idTpls is filled, is this correct?
 			TypespecNested ret = new() {
+				srcPos = c.ToSrcPos(),
 				idTpls = idTplArgs.ToList(),
 			};
 

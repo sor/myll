@@ -14,12 +14,11 @@ class Sheet3 : Sheet
 	}
 	field i32 old_state  = 0;
 
-public:
 	// ctor
 	// C++:  using Sheet::Sheet;
 	// MYLL: using base::ctor;
 
-	[override]
+	[pub, override]
 	{
 		method Init() {
 			fontHead = TTF::Font( "../assets/fonts/RobotoSlab-Bold.ttf", 64 );

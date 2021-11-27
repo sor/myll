@@ -59,7 +59,7 @@ namespace MyNS
 {
 	class MyClass
 	{
-	public:
+	[pub]:
 		[operators(bitwise),flags]
 		enum MyEnum : u32
 		{

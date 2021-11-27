@@ -14,6 +14,9 @@ namespace Myll
 	public class DeclVisitor
 		: ExtendedVisitor<Decl>
 	{
+		// HACK: will be buggy. needs to move to ScopeStack, when ScopeStack works.
+		private Access curAccess = Access.Public;
+
 		public DeclVisitor( Stack<Scope> scopeStack )
 			: base( scopeStack ) {}
 
@@ -132,7 +135,7 @@ namespace Myll
 		{
 			// HACK: only works for pub, prot & priv now, with optional "access=" prefix
 			// always has attribs
-			Attribs          attribs = c.attribBlk().Visit();
+			Attribs attribs = c.attribBlk().Visit();
 			string access = attribs.ContainsKey( "access" )
 				? attribs["access"].First()
 				: attribs.First().Key;
@@ -147,11 +150,7 @@ namespace Myll
 
 		public override Decl VisitAttribDecl( AttribDeclContext c )
 		{
-			Decl ret =
-				(c.inAnyStmt() != null) ? Visit( c.inAnyStmt() ) :
-				(c.inDecl()    != null) ? Visit( c.inDecl() ) :
-				                          throw new ArgumentOutOfRangeException(
-					                          nameof( c ), c, "neither inAnyStmt nor inDecl" );
+			Decl ret = Visit( c.inDecl() );
 
 			// PPP is null
 			if( ret != null ) {
@@ -243,7 +242,7 @@ namespace Myll
 			return ret;
 		}
 
-		public override Decl VisitUsing( UsingContext c )
+		public override Decl VisitUsingDecl( UsingDeclContext c )
 		{
 			MultiDecl ret = new();
 			foreach( TypespecNestedContext tc in c.typespecsNested().typespecNested() ) {
@@ -348,14 +347,6 @@ namespace Myll
 				ret.decls.ForEach( decl => ((Var) decl).type.qual |= Qualifier.Const );
 			}
 			return ret;
-		}
-
-		// HACK: will be buggy. needs to move to ScopeStack, when ScopeStack works.
-		private Access curAccess = Access.Public;
-		public override Decl VisitAccessMod( AccessModContext c )
-		{
-			curAccess = c.Visit();
-			return null;
 		}
 	}
 }

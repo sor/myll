@@ -589,12 +589,26 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitOpDecl([NotNull] MyllParser.OpDeclContext context);
 	/// <summary>
-	/// Visit a parse tree produced by the <c>AccessMod</c>
+	/// Visit a parse tree produced by the <c>UsingDecl</c>
 	/// labeled alternative in <see cref="MyllParser.inDecl"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitAccessMod([NotNull] MyllParser.AccessModContext context);
+	Result VisitUsingDecl([NotNull] MyllParser.UsingDeclContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>AliasDecl</c>
+	/// labeled alternative in <see cref="MyllParser.inDecl"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitAliasDecl([NotNull] MyllParser.AliasDeclContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>VariableDecl</c>
+	/// labeled alternative in <see cref="MyllParser.inDecl"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitVariableDecl([NotNull] MyllParser.VariableDeclContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>CtorDecl</c>
 	/// labeled alternative in <see cref="MyllParser.inDecl"/>.
@@ -610,27 +624,6 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitDtorDecl([NotNull] MyllParser.DtorDeclContext context);
 	/// <summary>
-	/// Visit a parse tree produced by the <c>Using</c>
-	/// labeled alternative in <see cref="MyllParser.inAnyStmt"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitUsing([NotNull] MyllParser.UsingContext context);
-	/// <summary>
-	/// Visit a parse tree produced by the <c>AliasDecl</c>
-	/// labeled alternative in <see cref="MyllParser.inAnyStmt"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitAliasDecl([NotNull] MyllParser.AliasDeclContext context);
-	/// <summary>
-	/// Visit a parse tree produced by the <c>VariableDecl</c>
-	/// labeled alternative in <see cref="MyllParser.inAnyStmt"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitVariableDecl([NotNull] MyllParser.VariableDeclContext context);
-	/// <summary>
 	/// Visit a parse tree produced by the <c>EmptyStmt</c>
 	/// labeled alternative in <see cref="MyllParser.inStmt"/>.
 	/// </summary>
@@ -644,6 +637,27 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitBlockStmt([NotNull] MyllParser.BlockStmtContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>UsingStmt</c>
+	/// labeled alternative in <see cref="MyllParser.inStmt"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitUsingStmt([NotNull] MyllParser.UsingStmtContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>AliasStmt</c>
+	/// labeled alternative in <see cref="MyllParser.inStmt"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitAliasStmt([NotNull] MyllParser.AliasStmtContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>VariableStmt</c>
+	/// labeled alternative in <see cref="MyllParser.inStmt"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitVariableStmt([NotNull] MyllParser.VariableStmtContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>ReturnStmt</c>
 	/// labeled alternative in <see cref="MyllParser.inStmt"/>.

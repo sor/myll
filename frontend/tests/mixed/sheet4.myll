@@ -19,12 +19,11 @@ class Sheet4 : Sheet
 	field i32 brightness = 320; // 63
 	const i32 scale      = 4;
 
-public:
 	// ctor
 	// C++:  using Sheet::Sheet;
 	// MYLL: using base::ctor;
 
-	[override]
+	[pub, override]
 	{
 		method Init()
 		{

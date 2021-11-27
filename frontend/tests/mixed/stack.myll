@@ -14,7 +14,7 @@ namespace Rethmann::OOA::Uebung2_3;
 class StackEmptyException {}
 
 class Stack<T> {
-private:
+[priv]:
 	field {
 		// only these new array pointers would allow arithmetic and therefore indexing
 		T[]* _values;
@@ -39,7 +39,7 @@ private:
 		_values = t;
 	}
 
-public:
+[pub]:
 	ctor() {
 		_last = 0;
 		_size = 8;

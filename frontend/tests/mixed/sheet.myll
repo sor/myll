@@ -7,7 +7,6 @@ import global, gamebase, std_vector;
 class Sheet : GameState
 {
 [prot]:
-//protected:
 	//[static] GCC internal compiler error, einen Tag vor dem Kolloq, lol
 	const {
 		Color white = Color( 255, 255, 255 );
@@ -16,7 +15,13 @@ class Sheet : GameState
 	field i32   state    = 0;
 	const char* bodyText = "";
 
-	method RenderWithOutline(Texture& text, const Point pos, const Color& textColor, const Color& outlineColor, const int outlineSize, const int outlineSizeDiagonal)
+	method RenderWithOutline(
+		Texture& text,
+		const Point pos,
+		const Color& textColor,
+		const Color& outlineColor,
+		const int outlineSize,
+		const int outlineSizeDiagonal)
 	{
 		var Point[8] posOffsets;
 		posOffsets[0] = Point(-outlineSizeDiagonal, -outlineSizeDiagonal);
@@ -38,7 +43,6 @@ class Sheet : GameState
 	}
 
 [access=pub]:
-//public:
 	// ctor
 	// C++:  using GameState::GameState;
 	// MYLL: using base::ctor;

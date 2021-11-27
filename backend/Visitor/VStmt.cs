@@ -27,11 +27,7 @@ namespace Myll
 
 		public override Stmt VisitAttribStmt( AttribStmtContext c )
 		{
-			Stmt ret =
-				(c.inAnyStmt() != null) ? Visit( c.inAnyStmt() ) :
-				(c.inStmt()    != null) ? Visit( c.inStmt() ) :
-				                          throw new ArgumentOutOfRangeException(
-					                          nameof( c ), c, "neither inAnyStmt nor inStmt" );
+			Stmt ret = Visit( c.inStmt() );
 
 			Attribs attribs = c.attribBlk()?.Visit();
 			if( attribs != null )
@@ -57,7 +53,7 @@ namespace Myll
 			return ret;
 		}
 
-		public override Stmt VisitUsing( UsingContext c )
+		public override Stmt VisitUsingStmt( UsingStmtContext c )
 		{
 			MultiStmt ret = new();
 			foreach( TypespecNestedContext tc in c.typespecsNested().typespecNested() ) {
@@ -70,7 +66,7 @@ namespace Myll
 			return ret;
 		}
 
-		public override Stmt VisitAliasDecl( AliasDeclContext c )
+		public override Stmt VisitAliasStmt( AliasStmtContext c )
 		{
 			UsingStmt ret = new() {
 				srcPos = c.ToSrcPos(),
@@ -102,7 +98,7 @@ namespace Myll
 			return ret;
 		}
 
-		public override Stmt VisitVariableDecl( VariableDeclContext c )
+		public override Stmt VisitVariableStmt( VariableStmtContext c )
 		{
 			MultiStmt ret = new() {
 				stmts = c

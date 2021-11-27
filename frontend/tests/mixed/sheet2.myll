@@ -14,12 +14,11 @@ class Sheet2 : Sheet
 	}
 	field i32 old_state  = 0;
 
-public:
 	// ctor
 	// C++:  using Sheet::Sheet;
 	// MYLL: using base::ctor;
 
-	[override]
+	[pub, override]
 	{
 		method Init()
 		{
@@ -81,7 +80,7 @@ public:
 			renderer.ClearColor(224, 224, 224);
 
 			if (!blendedHead) {
-				const char *text = "Übersicht der Arbeit";
+				const char* text = "Übersicht der Arbeit";
 
 				var Surface surf = fontHead.RenderUTF8_Blended_Wrapped( text, white, 1160 );
 				blendedHead = Texture( renderer, surf );

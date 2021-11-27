@@ -300,13 +300,6 @@ namespace Myll
 				MyllParser.STABLE   => Qualifier.Stable,
 			};
 
-		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static Access Visit( this Parser.AccessModContext c )
-			=> c.v.Type switch {
-				MyllParser.PRIV => Access.Private,
-				MyllParser.PROT => Access.Protected,
-				MyllParser.PUB  => Access.Public,
-			};
 #pragma warning restore 8509
 	}
 }

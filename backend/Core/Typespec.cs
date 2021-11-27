@@ -49,7 +49,6 @@ namespace Myll.Core
 		protected string PointerizeName(string leftOfName, string name = "" )
 		{
 			name = (" " + name).TrimEnd(); // empty name will result in empty string
-			//string leftOfName   = TargetGen();
 
 			if( ptrs == null || ptrs.IsEmpty() )
 				return leftOfName + name;
@@ -122,7 +121,8 @@ namespace Myll.Core
 	// c++:
 	//   named: void (*fun)(int,float)
 	//   unnamed: void (*)(int, float)
-	// In here the Template are Args and in the Parens are Params
+	// In here the Template are Args and in the Parens are Params,
+	// this means the Template part is not visible in the resulting type of the function pointer
 	public class TypespecFunc : Typespec
 	{
 		public List<Param> paras;

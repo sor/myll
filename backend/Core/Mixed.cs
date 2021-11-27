@@ -22,6 +22,8 @@ namespace Myll.Core
 			=> Format( "[{0}:{1}:{2}]", file, from.line, from.col );
 	}
 
+	// all following classes do not have a SrcPos, only the Expr have
+
 	public class Accessor
 	{
 		public enum Kind
