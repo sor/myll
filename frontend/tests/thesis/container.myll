@@ -1,0 +1,74 @@
+// Thesis page 19
+
+module MyContainers;
+//module main;
+
+import std_iostream;
+
+func main( int argc, char*[] argv ) -> int {
+	using std, JanSordid::Container;
+
+	var MyStack<i8> stack = MyStack<i8>(4);
+	stack.push( 42 ).push( 23 ).push( 16 ).push( 15 ).push( 8 ).push( 4 );
+
+	do 30 times stack.push( 1 );
+	do 30 times i stack.push( i );
+
+	while( !stack.isEmpty() ) {
+		cout << (int)stack.top() << endl;
+		stack.pop();
+	}
+	return 0;
+}
+
+namespace JanSordid::Container;
+
+[rule_of_n=0] // not yet validated
+class MyStack<T> {
+	const usize	_default_reserved = 8;
+	field usize	_reserved = _default_reserved;
+	field usize	_size = 0;
+	field T[]!	_data = new T[_reserved]!;
+
+[pub]:
+	//ctor() : ctor_(_default_reserved) {} // forwarding to other ctor does not work yet
+	ctor( usize reserved ) {
+		_reserved	= reserved;
+		_data		= new T[_reserved]!;
+	}
+
+	[pure] {
+		method isEmpty() -> bool => _size == 0;
+
+		//[precond(!isEmpty())]
+		method top() -> T => _data[_size-1];
+	}
+
+	[chain] // when this works, then the return type "-> MyStack&" and return statement "return self;" can be omitted
+	method push( T val ) -> MyStack& {
+		if( _size >= _reserved )
+			grow();
+		_data[_size] = val;
+		++_size;
+		return self;
+	}
+
+	//[precond(!isEmpty())]
+	method pop() {
+		--_size;
+	}
+
+[priv]:
+	method grow() {
+		[debug] //
+		std::cout << "grow\n";
+		const	usize	new_reserved	= _reserved * 2;
+		var		T[]!	new_data		= new T[new_reserved]!;
+
+		do _size times i {
+			new_data[i] = _data[i];
+		}
+		_reserved	= new_reserved;
+		_data		= (move)new_data;
+	}
+}

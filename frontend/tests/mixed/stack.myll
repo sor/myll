@@ -17,7 +17,7 @@ class Stack<T> {
 [priv]:
 	field {
 		// only these new array pointers would allow arithmetic and therefore indexing
-		T[]* _values;
+		T[*] _values;
 		int  _size, _last;
 	}
 	// the compiler could feed some info backwards here,
@@ -29,10 +29,10 @@ class Stack<T> {
 
 	[throw] // not supported yet, would make the method not noexcept, currently no method is noexcept but all but [throw] should be
 	method increase() {
-		var T[]* t = new T[_size * 2];
+		var T[*] t = new T[_size * 2];
 		// same as: for (int i = 0; i < _size; ++i)
 		do _size times i
-			t[i] = _values[i] = (9**8);
+			t[i] = _values[i];
 		_size *= 2;
 		// this could drop the [] once we know that _values is an array from analyze step
 		delete[] _values;

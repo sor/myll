@@ -2,6 +2,8 @@
 
 module my_enum; // enum is a keyword ;)...
 
+import std_iostream;
+
 // prevents unnecessary nesting
 namespace MyLang;
 

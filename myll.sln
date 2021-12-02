@@ -22,4 +22,9 @@ Global
 		{4D2A02BF-364B-44B4-A375-8AD037BD3239}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4D2A02BF-364B-44B4-A375-8AD037BD3239}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
+	GlobalSection(RiderSharedRunConfigurations) = postSolution
+		File = run\Thesis.run.xml
+		File = run\Game of Life.run.xml
+		File = run\Mixed.run.xml
+	EndGlobalSection
 EndGlobal

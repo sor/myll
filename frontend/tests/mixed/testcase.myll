@@ -45,7 +45,8 @@ func hans (int a) -> bool  => a == 42;
 func hansX(int a) -> bool* => new bool();
 
 // TODO: find a way to select which main is gonna be build by module
-func main()->int { return test(); }
+// HACK: running this will result in a crash with 0xC0000409
+func mainX()->int { return test(); }
 /*
 operator "|" (MyEnum lhs, MyEnum rhs) -> MyEnum
 {
@@ -57,7 +58,7 @@ operator "|" (MyEnum lhs, MyEnum rhs) -> MyEnum
 */
 namespace MyNS
 {
-	class MyClass
+	class MyClassX
 	{
 	[pub]:
 		[operators(bitwise),flags]
@@ -115,7 +116,7 @@ namespace MyNamespace
 		field T::X x_with_typename; // needs typename in C++
 		field int[5] ary;
 		// will just be generated as a common ptr in C++
-		field int[]* ptr_to_ary = &ary;
+		field int[*] ptr_to_ary = &ary;
 		// this is a non-arithmetic pointer and will not allow ++, --, +, -, []
 		field int* ptr_to_int = &ary;
 		field std::vector<int> vec;
