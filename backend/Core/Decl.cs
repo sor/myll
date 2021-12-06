@@ -142,11 +142,18 @@ namespace Myll.Core
 
 		public bool IsVirtual  => HasAttrib( "virtual" );
 		public bool IsImplicit => HasAttrib( "implicit" );
+		public bool IsDefault  => HasAttrib( "default" );
+		public bool IsDisabled => HasAttrib( "disable" );
 
 		// TODO: initlist
 
 		public override void AddToGen( HierarchicalGen gen )
 		{
+			if( block == null && !IsDefault && !IsDisabled )
+				throw new Exception(
+					Format(
+						"Structor with no block needs either [default] or [disable](delete in C++)" ) );
+
 			gen.AddStructor( this );
 		}
 	}
@@ -303,10 +310,8 @@ namespace Myll.Core
 				};
 
 				Expr
-					lhs = new IdExpr
-						{ op = Operand.Id, idTplArgs = new IdTplArgs { id = "lhs", tplArgs = new List<TplArg>() }, },
-					rhs = new IdExpr
-						{ op = Operand.Id, idTplArgs = new IdTplArgs { id = "rhs", tplArgs = new List<TplArg>() }, };
+					lhs = new IdExpr { op = Operand.Id, idTplArgs = new() { id = "lhs", tplArgs = new() }, },
+					rhs = new IdExpr { op = Operand.Id, idTplArgs = new() { id = "rhs", tplArgs = new() }, };
 
 				foreach( (string, Operand) tuple in BitwiseOps ) {
 					Func ret = new() {

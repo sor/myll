@@ -111,7 +111,8 @@ expr		:	(idTplArgs	SCOPE)+	idTplArgs	# ScopedExpr
 			| // can not even be associative without a contained expr
 				NEW	typespec?	funcCall?		# NewExpr
 			| // inherently <assoc=right>, so no need to tell ANTLR
-				(	(	MOVE // parens included
+				(	(	FORWARD // parens included
+					|	MOVE    // parens included
 					|	LPAREN (QM|EM)? typespec RPAREN)
 				|	SIZEOF
 				|	DELETE	( ary='['']' )?
@@ -161,6 +162,7 @@ caseStmt	:	CASE expr (COMMA expr)*
 				|	PHATRARROW	levStmt  (FALL SEMI)?);
 
 initList	:	COLON id funcCall (COMMA id funcCall)* COMMA?;
+// TODO: initList needs to support ": ctor()"
 
 // is just SEMI as well in levStmt->inStmt
 funcBody	:	PHATRARROW expr SEMI

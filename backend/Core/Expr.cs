@@ -150,6 +150,7 @@ namespace Myll.Core
 
 		Ids_Begin,
 		Id,
+		SpecialId,
 		WildId,    // special
 		DiscardId, // special
 		Ids_End,
@@ -316,6 +317,10 @@ namespace Myll.Core
 			if( op.In( Operand.WildId, Operand.DiscardId ) )
 				throw new Exception( "These should have already been replaced by now" );
 
+			// TODO solve that properly via Operand.SpecialId during creation
+			if( idTplArgs.id == "self" && idTplArgs.tplArgs.IsEmpty() )
+				return "(*this)";
+
 			return idTplArgs.Gen();
 		}
 	}
@@ -366,7 +371,24 @@ namespace Myll.Core
 
 		public override string Gen( bool doBrace = false )
 		{
-			string ret = "new " + type.Gen() + funcCall.Gen();
+			string       ret;
+			Pointer      ptr        = type.ptrs.FirstOrDefault(); // needs to be a variable to keep it accessible
+			bool         isSmartPtr = ptr?.kind.Between( Pointer.Kind.SmartPtr_Begin, Pointer.Kind.SmartPtr_End ) ?? false;
+			if( isSmartPtr ) {
+				// remove the pointer that is about to be replaced by custom code
+				type.ptrs.RemoveAt( 0 );
+				string ptrFmt = ptr.kind switch {
+					Pointer.Kind.Unique		 => "std::make_unique<{0}>({1})",
+					Pointer.Kind.UniqueArray => "std::make_unique<{0}[]>({1})",
+					Pointer.Kind.Shared		 => "std::make_shared<{0}>({1})",
+					Pointer.Kind.SharedArray => "std::make_shared<{0}[]>({1})",
+					_						 => throw new Exception("weak_ptr can not be new'ed"),
+				};
+				ret = Format( ptrFmt, type.Gen(), ptr.expr.Gen( false ) );
+			}
+			else {
+				ret = Format( "new {0}{1}", type.Gen(), funcCall.Gen() );
+			}
 			return ret.Brace( doBrace );
 		}
 	}
