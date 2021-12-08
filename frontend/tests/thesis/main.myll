@@ -3,74 +3,131 @@ import std_iostream, c_stdlib, std_chrono, std_vector;
 //#line 68 "../main.myll"
 
 func stuff() -> int[]! {
+	var int*[4][8] myArray1;	// declare myArray1 as pointer to array 4 of int
+	var int[8][4]* myArray2;	// declare myArray2 as array 4 of pointer to int
+	var int**!     myArray3;
 	var int*[] @[] * asd;
 	var int*!	iup2, jup2;
-	var int@[] a;
+	var int@[]	a;
+
+	//return {};		// unsupported still, should be relatively easy
+	//return int[]!();	// does not work either, grammar change (is this func style cast?)
+	return std::unique_ptr<int[]>();
 }
 
-func main() -> int
-{
-	problem_3311(); // clang++ error: use of undeclared identifier 'problem_3311'
-
-	return 42;
-}
-
-func problem_3311() {}
-
-class problem_3312 {
-	field int*[4][8] myArray1;	// declare myArray1 as pointer to array 4 of int
-	field int[8][4]* myArray2;	// declare myArray2 as array 4 of pointer to int
-	field int**! myArray3;	// declare myArray2 as array 4 of pointer to int
-	field int myField1;
-	field int myField2;
-	field int myField3 = 3;
-	[static] field int myStatic = 1;
-public:
-	ctor() {
-		myField1 = 1;
-		myField2 = 2;
+namespace problem_3311 {
+	func main() {
+		a(); // clang++ error: use of undeclared identifier 'a'
 	}
-	method myMethod1() -> int => 1;
-	[inline]		method myMethod2() -> int => 2;
-	[inline,const]	method myMethod3() -> int => 3;
-	[virtual]		method myVirtual() -> int => 4;
+	func a() {}
 }
 
-func problem_3313_1<T>() -> int => 0;
-func problem_3313_2() -> int => 0;
+namespace problem_3312 {
+	class MyClass {
+		field int myField1;
+		field int myField2;
+		field int myField3 = 3;
+		[static] field int myStatic = 1;
+	[pub]:
+		ctor() {
+			myField1 = 1;
+			myField2 = 2;
+		}
+		method myMethod1() -> int => 1;
+		[inline]		method myMethod2() -> int => 2;
+		[inline,const]	method myMethod3() -> int => 3;
+		[virtual]		method myVirtual() -> int => 4;
+	}
+}
+
+namespace problem_3313 {
+	func with_template<T>() -> int => 0;
+	func without_template() -> int => 0;
+}
 
 namespace problem_3321 {
 	alias a = int;
 	alias c = int;
-	func problem_3321() {
+	func problem() {
 		var a * b;
 		const a * b1;
 		var int a2, b2;
 		a2 * b2;	// clang++ warning: expression result unused [-Wunused-value]
 		var c d;
-		var c e1 = c();
+		var c e1 = c(); // different notation than in thesis
 	}
 	// TODO: problem_3321::c should just be c
-	func e2() -> problem_3321::c {}
+	func e2() -> problem_3321::c { return 0; }
 }
 
-func problem_3322() {
-	var int		i,			j;
-	var int*	ip = &i,	jp = &j;
-	var int&	ir =  i,	jr =  j;
-	var int[4]	ia,			ja;
+namespace problem_3322 {
+	func problem_3322() {
+		var int						i,			j;
+		var int*					ip = &i,	jp = &j;
+		var std::unique_ptr<int>	iu1, 		ju1;
+		var int*!					iu2, 		ju2;
+		var int&					ir =  i,	jr =  j;
+		var int[10]					ia,			ja;
+	}
 }
 
-func problem_3323() {
-	var int[4]* ptr_to_ary_of_4;
-	var int*[4] ary_of_4_ptrs;
+namespace problem_3323 {
+	func problem_3323() {
+		var int[4]* ptr_to_ary_of_4;
+		var int*[4] ary_of_4_ptrs;
+	}
 }
 
 namespace problem_3324 {
-	func f( int a, int b ) -> void {}
+	func f( int a, int b )-> void {}
 	func ff( func*(int,int)->int f) -> void {}
 	func func_ptr_fun() {
-		var func(int,int)->void fp = f;
-		var func*(func*(int,int)->int)->void ffp = ff;
+		var func*(int,int)->void				fp	= f;
+		var func*(func*(int,int)->int)->void	ffp	= ff;
+		var int[4]* c; // no func ptr
+	}
+	// all func need to be above all var to make this work without 'func_ptr_fun'
+	// solution, change for out-of-struct but keep like this in-struct?
+}
+
+namespace problem_3331 {
+	class C {
+		[implicit]
+		ctor(int i) {}
+		ctor(float f) {}
+		//[implicit, disable] // does not work either
+		//ctor(float f);
+	[pub]:
+		//[pub] // does not work yet
+		[static]
+		method test() {
+			var C c1 = C(1); // OK
+			var C c2 = 2; // OK, man wollte explizit die implizierte Konvertierung von int erlauben
+			var C c3 = C(3.0f); // OK
+			var C c4 = 4.0f; // Error, man bekommt standardmäßig nur den float Konstruktor
+			// NO Error? WTF C++
+			// 4.0f is converted to int and uses the implicit ctor(int) :facepalm:
+		}
 	}
 }
+
+namespace problem_3332 {
+	class C {}
+	class D1 : C {}
+	//class D2 : private C {} // private is not a keyword anymore, use attrib?
+	//class D2 : [priv] C {}
+}
+
+namespace problem_3333 {
+	func test() {
+
+	}
+}
+
+/*
+func main() -> int
+{
+	problem_3331::C::test();
+	return 42;
+}
+*/

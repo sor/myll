@@ -118,9 +118,10 @@ namespace Myll
 					};
 				}
 				else {
+					bool isStdArray = c.expr() != null && c.ary.Type == MyllParser.AT_LBRACK;
 					ret = new Pointer {
 						expr = c.expr().Visit(),
-						kind = ToPtr[c.ary.Type],
+						kind = isStdArray ? Pointer.Kind.Array : ToPtr[c.ary.Type],
 					};
 				}
 			}

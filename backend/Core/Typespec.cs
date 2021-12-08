@@ -34,17 +34,14 @@ namespace Myll.Core
 		public abstract string GenType();
 
 		public virtual string Gen( string name = "" )
-			=> PointerizeName( TargetGen(), name );
+			=> PointerizeName( GenQualifiers() + GenType(), name );
 
 		// r-padded qualifiers TODO: do properly
 		[Pure]
-		private string GenQualifiers()
+		protected string GenQualifiers()
 			=> (qual == Qualifier.None)
 				? ""
 				: qual.ToString().ToLower().Replace( ",", "" ) + " ";
-
-		protected string TargetGen()
-			=> GenQualifiers() + GenType();
 
 		protected string PointerizeName(string leftOfName, string name = "" )
 		{
@@ -53,27 +50,28 @@ namespace Myll.Core
 			if( ptrs == null || ptrs.IsEmpty() )
 				return leftOfName + name;
 
-			bool   wasArray    = false;
+			bool   wasArray    = false; // needs to be remembered from last iteration
 			string rightOfName = "";
 			foreach( Pointer ptr in ptrs.AsEnumerable() ) {
-				if( ptr.kind == Pointer.Kind.RawArray ) {
-					rightOfName = Format( "{0}[{1}]", rightOfName, ptr.expr?.Gen() ?? "" );
-					wasArray    = true;
+				bool needNoParens = ptr.kind.Between( Pointer.Kind.NoNeedForParens_Begin,
+				                                      Pointer.Kind.NoNeedForParens_End );
+				if( needNoParens ) {
+					leftOfName  = leftOfName + rightOfName;
+					rightOfName = "";
+				}
+				else if( wasArray && name != "" ) {
+					leftOfName  = leftOfName + "(";
+					rightOfName = ")"        + rightOfName;
+				}
+
+				wasArray = ptr.kind == Pointer.Kind.RawArray;
+				string tpl   = Pointer.template[ptr.kind];
+				string index = ptr.expr?.Gen() ?? "";
+				if( wasArray ) {
+					rightOfName = Format( tpl, rightOfName, index );
 				}
 				else {
-					bool needNoParens = ptr.kind.Between( Pointer.Kind.NoNeedForParens_Begin,
-					                                      Pointer.Kind.NoNeedForParens_End );
-					if( needNoParens ) {
-						leftOfName  = leftOfName + rightOfName;
-						rightOfName = "";
-					}
-					else if( wasArray ) {
-						leftOfName  = leftOfName + "(";
-						rightOfName = ")"        + rightOfName;
-					}
-					string tpl = Pointer.template[ptr.kind];
-					leftOfName = Format( tpl, leftOfName, "" );
-					wasArray   = false;
+					leftOfName = Format( tpl, leftOfName, index );
 				}
 			}
 
@@ -137,7 +135,7 @@ namespace Myll.Core
 			string center = PointerizeName( "", name );
 			return Format(
 				"{0}{1}({2})",
-				TargetGen(),
+				GenQualifiers() + GenType(),
 				center.Brace( center != "" ),
 				paras
 					.Select( p => p.Gen() )
@@ -168,13 +166,15 @@ namespace Myll.Core
 			RVRef,
 			RawArray,
 			NeedParens_End,
-			NoNeedForParens_Begin, // Sentinel
+			NoNeedForParens_Begin,
+			SmartPtr_Begin,
 			Unique,
 			Shared,
 			Weak,
 			UniqueArray,
 			SharedArray,
 			WeakArray,
+			SmartPtr_End,
 			Array,
 			Vector,
 			Set,
@@ -190,23 +190,23 @@ namespace Myll.Core
 
 		public static readonly IReadOnlyDictionary<Kind, string>
 			template = new Dictionary<Kind, string> {
-				{ Kind.RawPtr,			"{0}*{1}" },
-				{ Kind.PtrToAry,		"{0}*{1}" },
-				{ Kind.LVRef,			"{0}&{1}" },
-				{ Kind.RVRef,			"{0}&&{1}" },
-				{ Kind.RawArray,		"{0}({1})[{2}]" }, // TODO: named types must be embedded
-				{ Kind.Unique,			"std::unique_ptr<{0}>{1}" },
-				{ Kind.UniqueArray,		"std::unique_ptr<{0}[]>{1}" },
-				{ Kind.Shared,			"std::shared_ptr<{0}>{1}" },
-				{ Kind.SharedArray,		"std::shared_ptr<{0}[]>{1}" },
-				{ Kind.Weak,			"std::weak_ptr<{0}>{1}" },
-				{ Kind.WeakArray,		"std::weak_ptr<{0}[]>{1}" },
-				{ Kind.Array,			"std::array<{0},{2}>{1}" }, // TODO: named types must be embedded
-				{ Kind.Vector,			"std::vector<{0}>{1}" },
-				{ Kind.Set,				"std::unordered_set<{0}>{1}" },
-				{ Kind.OrderedSet,		"std::set<{0}>{1}" },
-				{ Kind.MultiSet,		"std::unordered_multiset<{0}>{1}" },
-				{ Kind.OrderedMultiSet, "std::multiset<{0}>{1}" },
+				{ Kind.RawPtr,			"{0}*" },
+				{ Kind.PtrToAry,		"{0}*" },
+				{ Kind.LVRef,			"{0}&" },
+				{ Kind.RVRef,			"{0}&&" },
+				{ Kind.RawArray,		"{0}[{1}]" },
+				{ Kind.Unique,			"std::unique_ptr<{0}>" },
+				{ Kind.UniqueArray,		"std::unique_ptr<{0}[]>" },
+				{ Kind.Shared,			"std::shared_ptr<{0}>" },
+				{ Kind.SharedArray,		"std::shared_ptr<{0}[]>" },
+				{ Kind.Weak,			"std::weak_ptr<{0}>" },
+				{ Kind.WeakArray,		"std::weak_ptr<{0}[]>" },
+				{ Kind.Array,			"std::array<{0},{1}>" },
+				{ Kind.Vector,			"std::vector<{0}>" },
+				{ Kind.Set,				"std::unordered_set<{0}>" },
+				{ Kind.OrderedSet,		"std::set<{0}>" },
+				{ Kind.MultiSet,		"std::unordered_multiset<{0}>" },
+				{ Kind.OrderedMultiSet, "std::multiset<{0}>" },
 			};
 
 		public Qualifier qual;

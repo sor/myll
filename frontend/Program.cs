@@ -239,7 +239,7 @@ namespace Myll
 					process2.Start();
 					process2.WaitForExit();
 
-					Console.WriteLine("Executable finished with exit code {0}", process2.ExitCode);
+					Console.WriteLine("Executable finished with exit code {0} 0x{0:X8}", process2.ExitCode);
 
 					return process2.ExitCode;
 				}

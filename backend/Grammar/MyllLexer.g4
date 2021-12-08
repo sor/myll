@@ -12,10 +12,11 @@ CHAR_LIT	: '\'' (CH_ESC | ~('\\' | '\'' | '\r' | '\n')) '\'';
 fragment STR_ESC: '\\' ('\\' | '"'  | 'a' | 'b' | 'f' | 'n' | 't' | 'r' | 'v');
 fragment CH_ESC:  '\\' ('\\' | '\'' | 'a' | 'b' | 'f' | 'n' | 't' | 'r' | 'v');
 
-MOVE		: '(move)';
+FORWARD		: '(fw)'|'(forward)';
+MOVE		: '(mv)'|'(move)';
 ARROW_STAR	: '->*';
 POINT_STAR	: '.*';
-PTR_TO_ARY	: '[]*';	// [*] could be a dynamic array
+PTR_TO_ARY	: '[*]';	// Maybe a ptr to an array can just be "[]" (depending on context of course)?
 COMPARE		: '<=>';	// <*>
 TRP_POINT	: '...';
 DBL_POINT	: '..';
@@ -94,7 +95,7 @@ INT			: 'int';
 UINT		: 'uint';
 ISIZE		: 'isize';
 USIZE		: 'usize';
-BYTE		: 'byte';
+BYTE		: 'byte'; // 8 bits, same as b8, not an integer, not a character
 CHAR		: 'char';
 CODEPOINT	: 'codept'|'codepoint';
 STRING		: 'string';
@@ -112,10 +113,16 @@ B64			: 'b64';
 B32			: 'b32';
 B16			: 'b16';
 B8			: 'b8';
-F128		: 'f128';	// long double prec. float
+F128		: 'f128';	// (opt) long double prec. float
 F64			: 'f64';	// double prec. float
 F32			: 'f32';	// single prec. float
-F16			: 'f16';	// half prec. float
+F16			: 'f16';	// (opt) half prec. float
+
+// arbitrary sized integers (as replacement for bitfields, ": 0" needs a different solution)
+// only works in Structural instance field (not static), can not have a pointer taken
+//INT_ANY		: 'i' (DIGITNZ DIGIT*);
+//UINT_ANY	: 'u' (DIGITNZ DIGIT*);
+//BIN_ANY		: 'b' (DIGITNZ DIGIT*);
 
 NS			: 'namespace';
 MODULE		: 'module';

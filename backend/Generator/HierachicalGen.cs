@@ -288,26 +288,31 @@ namespace Myll.Generator
 			bool    hasTpl         = tplParams.Count >= 1;
 			bool    isInline       = obj.IsInline;
 			bool    isInsideStruct = obj.IsInStruct;
+			bool    isStatic       = obj.IsStatic;
 			string  indentDecl     = IndentDecl;
 			string  indentImpl     = IndentImpl;
 			string  nameDecl       = obj.name;
 			string  nameImpl       = obj.FullyQualifiedName;
-			Strings targetDecl     = (obj.IsStatic ? staticMethodDecl : methodDecl).Target( obj.access );
-			Strings targetImpl     = (obj.IsStatic ? staticMethodImpl : methodImpl).Target( obj.access );
+			Strings targetDecl     = (isStatic ? staticMethodDecl : methodDecl).Target( obj.access );
+			Strings targetImpl     = (isStatic ? staticMethodImpl : methodImpl).Target( obj.access );
 			Strings targetProto    = isInsideStruct ? targetDecl : protoLate.Target( obj.access );
 
 			string paramString = obj.paras
 				.Select( p => p.Gen() )
 				.Join( ", " );
 
+			string prefix = (isStatic ? "static " : "") +
+							(obj.IsVirtual ? "virtual " : "") +
+							(isInline ? "inline " : "");
+			string suffix = (obj.IsConst ? " const" : "") +
+							(obj.IsOverride ? " override" : "");
 			string headlineDecl = Format(
 				FuncFormat[0],
 				indentDecl,
-				(obj.IsVirtual ? "virtual " : ""),
+				prefix,
 				obj.retType.Gen( nameDecl ),
 				paramString,
-				(obj.IsConst ? " const" : "") +
-				(obj.IsOverride ? " override" : "") );
+				suffix );
 
 			// TODO add the surrounding templates as well for tplImpl
 			string tplDecl, tplImpl;
@@ -392,7 +397,9 @@ namespace Myll.Generator
 				string tpl = Format(
 					"{0}template <{1}>",
 					indent,
-					hierWithTpl.TplParams.Select( o => "typename " + o.name ).Join( ", " ) );
+					hierWithTpl.TplParams
+						.Select( o => "typename " + o.name )
+						.Join( ", " ) );
 
 				targetProto.Add( tpl );
 				targetDecl.Add( tpl );
@@ -491,6 +498,9 @@ namespace Myll.Generator
 
 			bool    isCtor     = obj.kind == Structor.Kind.Constructor;
 			bool    isDtor     = obj.kind == Structor.Kind.Destructor;
+			bool    isDefault  = obj.IsDefault;
+			bool    isDisabled = obj.IsDisabled;
+			bool    isInline   = obj.IsInline || isDefault || isDisabled;
 			string  indentDecl = IndentDecl;
 			string  indentImpl = IndentImpl;
 			string  nameDecl   = obj.name;
@@ -512,19 +522,26 @@ namespace Myll.Generator
 				leadingAttrDecl += "virtual ";
 			}
 
+			string followingDecl =
+				isDefault  ? " = default;" :
+				isDisabled ? " = delete;" :
+							 "";
+
 			string headlineDecl = Format(
 				FuncFormat[1],
 				indentDecl,
 				leadingAttrDecl,
 				nameDecl,
 				paramString,
-				"" );
+				followingDecl );
 
-			if( obj.IsInline ) {
+			if( isInline ) {
 				targetDecl.Add( headlineDecl );
-				targetDecl.Add( Format( CurlyOpen, indentDecl ) );
-				targetDecl.AddRange( obj.block.GenWithoutCurly( LevelDecl + 1 ) );
-				targetDecl.Add( Format( CurlyClose, indentDecl ) );
+				if( !isDefault && !isDisabled ) {
+					targetDecl.Add( Format( CurlyOpen, indentDecl ) );
+					targetDecl.AddRange( obj.block.GenWithoutCurly( LevelDecl + 1 ) );
+					targetDecl.Add( Format( CurlyClose, indentDecl ) );
+				}
 			}
 			else {
 				string headlineImpl = Format(
