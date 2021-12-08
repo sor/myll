@@ -85,6 +85,15 @@ namespace Myll.Core
 		}
 
 		public abstract void AddToGen( HierarchicalGen gen );
+
+		// Shouldn't this be abstract?
+		public override Strings Gen( int level )
+		{
+			throw new NotImplementedException(
+				Format(
+					"plx implement in missing class: {0}",
+					GetType().Name ) );
+		}
 	}
 
 	// has in-order list of decls, visible from outside

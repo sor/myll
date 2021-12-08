@@ -25,9 +25,9 @@ namespace Myll.Core
 	/// </summary>
 	public abstract class Typespec
 	{
-		public SrcPos        srcPos;
-		public Qualifier     qual;
-		public List<Pointer> ptrs; // TODO: these are needed in reverse order, maybe store them reversed
+		public SrcPos         srcPos;
+		public Qualifier      qual;
+		public List<Pointer>? ptrs;
 
 		// Type resolvedType;
 
@@ -211,6 +211,6 @@ namespace Myll.Core
 
 		public Qualifier qual;
 		public Kind      kind;
-		public Expr      expr; // opt: only for Arrays
+		public Expr?     expr; // only for Arrays
 	}
 }

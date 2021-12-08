@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
 using Myll.Generator;
@@ -12,7 +13,7 @@ namespace Myll.Core
 	using Strings = List<string>;
 	using Attribs = Dictionary<string, List<string>>;
 
-	public class Stmt
+	public abstract class Stmt
 	{
 		public  SrcPos  srcPos;
 		private Attribs attribs { get; set; }
@@ -35,44 +36,33 @@ namespace Myll.Core
 			AttribsAssigned();
 		}
 
-		// this is the analyze-for-dummies until analyze works
+		// This is the analyze-for-dummies until analyze works
 		protected virtual void AttribsAssigned() {}
 
 		public override string ToString()
 		{
-			StringBuilder sb = new();
-			foreach( var info in GetType().GetProperties() ) {
-				object value = info.GetValue( this, null )
-				            ?? "(null)";
-				sb.Append( info.Name + ": " + value + ", " );
-			}
+			StringBuilder sb = GetType().GetProperties().Aggregate(
+				new StringBuilder(),
+				( builder, info ) => builder.AppendFormat(
+					"{0}: {1}, ",
+					info.Name,
+					info.GetValue( this, null ) ?? "(null)" ) );
 
+			// Remove the excess ", " from the end of the string
 			sb.Length = Math.Max( sb.Length - 2, 0 );
-			return "{"
-			     + GetType().Name + " "
-			     + sb             + "}";
+
+			return Format( "{{{0} {1}}}", GetType().Name, sb );
 		}
 
-		// only override in Block
+		// Only override in Block, is the same as Gen() everywhere else
 		public virtual Strings GenWithoutCurly( int level )
 		{
 			return Gen( level );
 		}
 
-		// Shouldn't this be abstract?
-		/// <summary>
-		/// This outputs immediate generated code
-		/// and inserts necessary declarations through the DeclGen parameter
-		/// </summary>
-		/// <param name="level">level of indentation</param>
-		/// <returns>immediate generated lines of code</returns>
-		public virtual Strings Gen( int level )
-		{
-			throw new NotImplementedException(
-				Format(
-					"plx implement in missing class: {0}",
-					GetType().Name ) );
-		}
+		// Outputs immediate generated lines of code
+		// level is the level of indentation
+		public abstract Strings Gen( int level );
 	}
 
 	public class VarStmt : Stmt
@@ -94,24 +84,6 @@ namespace Myll.Core
 					type.Gen( name ),
 					init != null ? VarFormat[3] + init.Gen() : "" )
 			};
-		}
-	}
-
-	public class MultiStmt : Stmt
-	{
-		public List<Stmt> stmts = new();
-
-		public override void AssignAttribs( Attribs inAttribs )
-		{
-			stmts.ForEach( v => v.AssignAttribs( inAttribs ) );
-		}
-
-		public override Strings Gen( int level )
-		{
-			Strings ret = stmts
-				.SelectMany( obj => obj.Gen( level ) )
-				.ToList();
-			return ret;
 		}
 	}
 
@@ -137,16 +109,15 @@ namespace Myll.Core
 
 	public class ReturnStmt : Stmt
 	{
-		public Expr expr; // opt
+		public Expr? expr;
+		public bool  HasValue => expr != null;
 
 		public override Strings Gen( int level )
-		{
-			return new() {
-				expr == null
-					? Format( ReturnFormat[0], IndentString.Repeat( level ) )
-					: Format( ReturnFormat[1], IndentString.Repeat( level ), expr.Gen() )
+			=> new() {
+				HasValue
+					? Format( ReturnFormat[1], IndentString.Repeat( level ), expr.Gen() )
+					: Format( ReturnFormat[0], IndentString.Repeat( level ) )
 			};
-		}
 	}
 
 	public class ThrowStmt : Stmt
@@ -154,11 +125,9 @@ namespace Myll.Core
 		public Expr expr;
 
 		public override Strings Gen( int level )
-		{
-			return new() {
+			=> new() {
 				Format( ThrowFormat, IndentString.Repeat( level ), expr.Gen() )
 			};
-		}
 	}
 
 	public class BreakStmt : Stmt
@@ -177,6 +146,36 @@ namespace Myll.Core
 		}
 	}
 
+	public class MultiAssign : Stmt
+	{
+		public List<Expr> exprs;
+
+		public override Strings Gen( int level )
+		{
+			string indent = IndentString.Repeat( level );
+			return new Strings {
+				indent + exprs.Select( e => e.Gen() ).Join( " = " ) + ";"
+			};
+		}
+	}
+
+	public class AggrAssign : Stmt
+	{
+		public Operand op;
+		public Expr    leftExpr;
+		public Expr    rightExpr;
+
+		public override Strings Gen( int level )
+		{
+			string indent = IndentString.Repeat( level );
+			return new Strings {
+				indent + Format( op.GetAssignFormat(), leftExpr.Gen(), rightExpr.Gen() ) + ";"
+			};
+		}
+	}
+
+	/// =!= Stmt which contain other Stmt themselves =!=
+
 	// TODO move or remove?
 	public struct CondThen
 	{
@@ -184,17 +183,17 @@ namespace Myll.Core
 		public Stmt thenStmt;
 	}
 
-	// 1-2 scopes
+	// 1-2-n scopes
 	public class IfStmt : Stmt
 	{
 		public List<CondThen> ifThens;
-		public Stmt           elseStmt; // opt
+		public Stmt?          elseStmt;
 
 		public override Strings Gen( int level )
 		{
 			Strings ret    = new();
 			string  indent = IndentString.Repeat( level );
-			int     index  = 0;
+			int     index  = 0; // 0 or 1, index of format string
 			foreach( CondThen ifThen in ifThens ) {
 				ret.Add( Format( IfFormat[index], indent, ifThen.condExpr.Gen() ) );
 				ret.Add( Format( CurlyOpen,       indent ) );
@@ -223,7 +222,12 @@ namespace Myll.Core
 	{
 		public Expr           condExpr;
 		public List<CaseStmt> caseStmts;
-		public List<Stmt>     elseStmts; // opt
+		public List<Stmt>?    elseStmts;
+
+		public override Strings Gen( int level )
+		{
+			throw new NotImplementedException();
+		}
 	}
 
 	// 1 scope
@@ -246,10 +250,10 @@ namespace Myll.Core
 	// +0-1 scope
 	public class ForStmt : LoopStmt
 	{
-		public Stmt initStmt;
-		public Expr condExpr;
-		public Expr iterExpr;
-		public Stmt elseStmt; // opt
+		public Stmt  initStmt;
+		public Expr  condExpr;
+		public Expr  iterExpr;
+		public Stmt? elseStmt;
 
 		public override Strings Gen( int level )
 		{
@@ -273,8 +277,8 @@ namespace Myll.Core
 	// +0-1 scope
 	public class WhileStmt : LoopStmt
 	{
-		public Expr condExpr;
-		public Stmt elseStmt; // opt
+		public Expr  condExpr;
+		public Stmt? elseStmt;
 
 		public override Strings Gen( int level )
 		{
@@ -336,31 +340,24 @@ namespace Myll.Core
 		}
 	}
 
-	public class MultiAssign : Stmt
+	public class MultiStmt : Stmt
 	{
-		public List<Expr> exprs;
+		public List<Stmt> stmts = new();
 
-		public override Strings Gen( int level )
+		// TODO merge this with Block?
+		// public bool       IsBlock { get; init; }
+
+		public override void AssignAttribs( Attribs inAttribs )
 		{
-			string indent = IndentString.Repeat( level );
-			return new Strings {
-				indent + exprs.Select( e => e.Gen() ).Join( " = " ) + ";"
-			};
+			stmts.ForEach( v => v.AssignAttribs( inAttribs ) );
 		}
-	}
-
-	public class AggrAssign : Stmt
-	{
-		public Operand op;
-		public Expr    leftExpr;
-		public Expr    rightExpr;
 
 		public override Strings Gen( int level )
 		{
-			string indent = IndentString.Repeat( level );
-			return new Strings {
-				indent + Format( op.GetAssignFormat(), leftExpr.Gen(), rightExpr.Gen() ) + ";"
-			};
+			Strings ret = stmts
+				.SelectMany( obj => obj.Gen( level ) )
+				.ToList();
+			return ret;
 		}
 	}
 
@@ -401,5 +398,11 @@ namespace Myll.Core
 		}
 	}
 
-	public class EmptyStmt : Stmt {}
+	public class EmptyStmt : Stmt
+	{
+		public override Strings Gen( int level )
+		{
+			throw new NotImplementedException( "Would this just work as a semicolon?" );
+		}
+	}
 }
