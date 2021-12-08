@@ -52,20 +52,20 @@ namespace Myll.Generator
 
 		private static readonly IDictionary<Operand, string>
 			ToAssignFormat = new Dictionary<Operand, string> {
-				{ Operand.Pow, "{0} = pow( {0}, {1} )" },
-				{ Operand.Multiply, "{0} *= {1}" },
-				{ Operand.EuclideanDivide, "{0} /= {1}" },
-				{ Operand.Modulo, "{0} %= {1}" },
-				{ Operand.Dot, "{0} = dot( {0}, {1} )" },
-				{ Operand.Cross, "{0} = cross( {0}, {1} )" },
-				{ Operand.Divide, "{0} = (double){0} / (double){1}" }, // TODO: this for integral, div() for others
-				{ Operand.Add, "{0} += {1}" },
-				{ Operand.Subtract, "{0} -= {1}" },
-				{ Operand.BitAnd, "{0} &= {1}" },
-				{ Operand.BitXor, "{0} ^= {1}" },
-				{ Operand.BitOr, "{0} |= {1}" },
-				{ Operand.LeftShift, "{0} <<= {1}"},
-				{ Operand.RightShift,"{0} >>= {1}"},
+				{ Operand.Pow,				"{0} = pow( {0}, {1} );" },
+				{ Operand.Multiply,			"{0} *= {1};" },
+				{ Operand.EuclideanDivide,	"{0} /= {1};" },
+				{ Operand.Modulo,			"{0} %= {1};" },
+				{ Operand.Dot,				"{0} = dot( {0}, {1} );" },
+				{ Operand.Cross,			"{0} = cross( {0}, {1} );" },
+				{ Operand.Divide,			"{0} = (double){0} / (double){1};" }, // TODO: this for integral, div() for others
+				{ Operand.Add,				"{0} += {1};" },
+				{ Operand.Subtract,			"{0} -= {1};" },
+				{ Operand.BitAnd,			"{0} &= {1};" },
+				{ Operand.BitXor,			"{0} ^= {1};" },
+				{ Operand.BitOr,			"{0} |= {1};" },
+				{ Operand.LeftShift,		"{0} <<= {1};" },
+				{ Operand.RightShift,		"{0} >>= {1};" },
 			};
 
 		public static string GetFormat( this Operand op )

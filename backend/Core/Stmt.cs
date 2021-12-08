@@ -174,12 +174,41 @@ namespace Myll.Core
 		public Expr    rightExpr;
 
 		public override Strings Gen( int level )
+			=> new Strings { Format( op.GetAssignFormat(), leftExpr.Gen(), rightExpr.Gen() ) }
+				.Indent( level )
+				.ToList();
+	}
+
+	public class ExprStmt : Stmt
+	{
+		public Expr expr;
+
+		public override Strings Gen( int level )
+			=> new Strings { Format( "{0};", expr.Gen() ) }
+				.Indent( level )
+				.ToList();
+	}
+
+	public class EmptyStmt : Stmt
+	{
+		public override Strings Gen( int level )
 		{
-			string indent = IndentString.Repeat( level );
-			return new Strings {
-				indent + Format( op.GetAssignFormat(), leftExpr.Gen(), rightExpr.Gen() ) + ";"
-			};
+			throw new NotImplementedException( "Would this just work as a semicolon?" );
 		}
+	}
+
+	// This class should be phased out in the far future, but for now it's just too useful
+	public class FreetextStmt : Stmt
+	{
+		public Strings lines;
+
+		public FreetextStmt( string text )
+			=> lines = new Strings { text };
+
+		public override Strings Gen( int level )
+			=> lines
+				.Indent( level )
+				.ToList();
 	}
 
 	/// =!= Stmt which contain other Stmt themselves =!=
@@ -482,25 +511,6 @@ namespace Myll.Core
 			ret.AddRange( stmts.SelectMany( s => s.Gen( level + 1 /*(s is Block ? 1 : 0)*/ ) ) );
 			ret.Add( Format( CurlyClose, indent ) );
 			return ret;
-		}
-	}
-
-	public class ExprStmt : Stmt
-	{
-		public Expr expr;
-
-		public override Strings Gen( int level )
-		{
-			string indent = IndentString.Repeat( level );
-			return new Strings { Format( "{0}{1};", indent, expr.Gen() ) };
-		}
-	}
-
-	public class EmptyStmt : Stmt
-	{
-		public override Strings Gen( int level )
-		{
-			throw new NotImplementedException( "Would this just work as a semicolon?" );
 		}
 	}
 }

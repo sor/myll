@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
+using Myll.Generator;
 
 namespace Myll.Core
 {
@@ -41,6 +42,15 @@ namespace Myll.Core
 			// TODO: this might be the bottleneck in the end, bench when finished
 			// there is a specialized string.Join with string[]
 			=> string.Join( delimiter, values );
+
+		public static IEnumerable<string> Indent( this IEnumerable<string> values, string indent )
+			=> values.Select( l => string.Format( "{0}{1}", indent, l ) );
+
+		public static IEnumerable<string> Indent( this IEnumerable<string> values, int level )
+		{
+			string indent = StmtFormatting.IndentString.Repeat( level );
+			return values.Select( l => string.Format( "{0}{1}", indent, l ) );
+		}
 
 		[Pure]
 		public static bool IsEmpty<T>( [NotNull] this IEnumerable<T> values )
