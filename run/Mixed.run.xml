@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Mixed" type="DotNetProject" factoryName=".NET Project">
-    <option name="EXE_PATH" value="$PROJECT_DIR$/frontend/bin/Debug/net5.0/myll.exe" />
-    <option name="PROGRAM_PARAMETERS" value="-i tests/mixed/testcase.myll tests/mixed/main.myll tests/mixed/stack.myll tests/mixed/enum.myll -o tests/mixed/generated -cr" />
+    <option name="EXE_PATH" value="$PROJECT_DIR$/frontend/bin/Debug/net5.0/myll" />
+    <option name="PROGRAM_PARAMETERS" value="-i tests/mixed/testcase.myll tests/mixed/main.myll tests/mixed/stack.myll tests/mixed/enum.myll -o tests/mixed/generated -Ccr" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/frontend/bin/Debug/net5.0" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <option name="USE_EXTERNAL_CONSOLE" value="0" />

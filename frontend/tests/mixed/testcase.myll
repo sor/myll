@@ -45,7 +45,8 @@ func hans (int a) -> bool  => a == 42;
 func hansX(int a) -> bool* => new bool();
 
 // TODO: find a way to select which main is gonna be build by module
-// HACK: running this will result in a crash with 0xC0000409
+// HACK: running this will result in a crash with 0xC0000409 win
+// HACK: running this will result in a crash with 0x0000008B linux
 func mainX()->int { return test(); }
 /*
 operator "|" (MyEnum lhs, MyEnum rhs) -> MyEnum
