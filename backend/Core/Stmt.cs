@@ -47,6 +47,7 @@ namespace Myll.Core
 		// This is the analyze-for-dummies until analyze works
 		protected virtual void AttribsAssigned() {}
 
+		[Pure]
 		public override string ToString()
 		{
 			StringBuilder sb = GetType().GetProperties().Aggregate(
@@ -140,7 +141,7 @@ namespace Myll.Core
 
 	public class BreakStmt : Stmt
 	{
-		public int depth; // C++ default is 1, break one level
+		public int depth = 1; // C++ default is 1, break one level
 
 		public override Strings Gen( int level )
 		{
@@ -292,7 +293,23 @@ namespace Myll.Core
 
 		public override Strings Gen( int level )
 		{
-			throw new NotImplementedException();
+			Strings ret      = new();
+			string  indent   = IndentString.Repeat( level );
+			string  inindent = IndentString.Repeat( level + 1 );
+			ret.Add( Format( "{0}switch({1})", indent, condExpr.Gen()) );
+			ret.Add( indent + "{" );
+			foreach( CaseStmt caseStmt in caseStmts ) {
+				foreach( Expr expr in caseStmt.caseExprs ) {
+					ret.Add( Format( "{0}case {1}:", inindent, expr.Gen() ) );
+				}
+				ret.AddRange( caseStmt.bodyStmt.Gen( level + 2 ) );
+			}
+			if( elseStmt != null ) {
+				ret.Add( inindent + "default:" );
+				ret.AddRange( elseStmt.Gen( level + 2 ) );
+			}
+			ret.Add( indent + "}" );
+			return ret;
 		}
 	}
 

@@ -316,9 +316,7 @@ namespace Myll
 			Expr          ret;
 			WildIdContext cc = c.wildId();
 			if( cc.USCORE() != null ) {
-				ret = new Expr {
-					op = Operand.DiscardId,
-				};
+				ret = new Discard();
 			}
 			else if( cc.AUTOINDEX() != null ) {
 				IdTplArgs idTplArgs = new() {

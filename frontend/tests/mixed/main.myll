@@ -29,5 +29,14 @@ func main( int argc, const char*[] argv ) -> int
 	}
 	cout.flush();
 
+	var int i;
+	switch( i )
+	{
+		case 1: cout << "one\n"; fall;
+		case 2: cout << "two\n"; break 1;
+		case 3 => cout << "three\n";
+		default: cout << "default\n"; return 1;
+	}
+
 	return 0;
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
 using Myll.Generator;
@@ -158,7 +159,7 @@ namespace Myll.Core
 		Literal,
 	}
 
-	public class Expr
+	public abstract class Expr
 	{
 		public Operand op              { get; set; }
 		public int     PrecedenceLevel => Precedence.PrecedenceLevel[op];
@@ -169,22 +170,33 @@ namespace Myll.Core
 				? value
 				: PrecedenceLevel;
 
+		[Pure]
 		public override string ToString()
 		{
-			StringBuilder sb = new();
-			foreach( var info in GetType().GetProperties() ) {
-				object value = info.GetValue( this, null )
-				            ?? "(null)";
-				sb.Append( info.Name + ": " + value + ", " );
-			}
+			StringBuilder sb = GetType().GetProperties().Aggregate(
+				new StringBuilder(),
+				( builder, info ) => builder.AppendFormat(
+					"{0}: {1}, ",
+					info.Name,
+					info.GetValue( this, null ) ?? "(null)" ) );
 
+			// Remove the excess ", " from the end of the string
 			sb.Length = Math.Max( sb.Length - 2, 0 );
-			return "{"
-			     + GetType().Name + " "
-			     + sb             + "}";
+
+			return Format( "{{{0} {1}}}", GetType().Name, sb );
 		}
 
-		public virtual string Gen( bool doBrace = false )
+		public abstract string Gen( bool doBrace = false );
+	}
+
+	public class Discard : Expr
+	{
+		public Discard()
+		{
+			op = Operand.DiscardId;
+		}
+
+		public override string Gen( bool doBrace = false )
 		{
 			throw new NotImplementedException();
 		}

@@ -159,9 +159,7 @@ namespace Myll.Core
 		public override void AddToGen( HierarchicalGen gen )
 		{
 			if( block == null && !IsDefault && !IsDisabled )
-				throw new Exception(
-					Format(
-						"Structor with no block needs either [default] or [disable](delete in C++)" ) );
+				throw new Exception( "Structor with no block needs either [default] or [disable](delete in C++)" );
 
 			gen.AddStructor( this );
 		}

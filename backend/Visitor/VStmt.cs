@@ -170,14 +170,16 @@ namespace Myll
 				srcPos = c.ToSrcPos(),
 				stmts  = c.levStmt().Select( Visit ).ToList(),
 			};
-			bool isFall  = c.FALL() != null;
-			bool isBreak = c.BREAK() != null || c.PHATRARROW() != null; // "=>" always breaks
+
+			bool isFall      = c.FALL()       != null;
+			bool isPhatArrow = c.PHATRARROW() != null; // "=>" always breaks
 			// TODO: check if either break or fall is set, throw if necessary
+			// breaks will be inside the multiStmt.stmts
 			// need info from the switch in here if there is a default case
-			if( !isFall || isBreak )
-				multiStmt.stmts.Append( new BreakStmt { depth = 1 } );
+			if( !isFall || isPhatArrow )
+				multiStmt.stmts.Add( new BreakStmt() );
 			else
-				multiStmt.stmts.Append( new FreetextStmt( "[[fallthrough]]" ) );
+				multiStmt.stmts.Add( new FreetextStmt( "[[fallthrough]];" ) );
 
 			CaseStmt ret = new() {
 				caseExprs = c.expr().Select( q => q.Visit() ).ToList(),

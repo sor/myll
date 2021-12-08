@@ -160,8 +160,8 @@ attrib		:	attribId
 attribBlk	:	LBRACK	attrib (COMMA attrib)* COMMA? RBRACK;
 
 caseStmt	:	CASE expr (COMMA expr)*
-				(	COLON		levStmt+ (FALL|BREAK SEMI)?
-				|	LCURLY		levStmt* (FALL|BREAK SEMI)? RCURLY
+				(	COLON		levStmt+ (FALL SEMI)?
+				|	LCURLY		levStmt* (FALL SEMI)? RCURLY
 				|	PHATRARROW	levStmt);
 
 defaultStmt	:	(ELSE|DEFAULT)
@@ -259,8 +259,8 @@ inStmt		:	SEMI								# EmptyStmt
 // ONLY refer to these lev* levels, NOT the in*
 levDecl		:	attribBlk	LCURLY	levDecl+ RCURLY	# AttribDeclBlock // must be in here, since it MUST have an attrib block
 			|	attribBlk	COLON 					# AttribState     // everything needs an antonym to make this work
-			|	attribBlk?	inDecl					# AttribDecl;
-levStmt		:	attribBlk?	inStmt					# AttribStmt;
+			|	attribBlk?			inDecl			# AttribDecl;
+levStmt		:	attribBlk?			inStmt			# AttribStmt;
 
 module		:	MODULE id SEMI;
 imports		:	IMPORT id (COMMA id)* COMMA? SEMI;
