@@ -166,10 +166,21 @@ namespace Myll
 
 		public new CaseStmt VisitCaseStmt( CaseStmtContext c )
 		{
+			MultiStmt multiStmt = new() {
+				srcPos = c.ToSrcPos(),
+				stmts  = c.levStmt().Select( Visit ).ToList(),
+			};
+			bool isFall = c.FALL() != null;
+			if( !isFall )
+				multiStmt.stmts.Append( new BreakStmt { depth = 1 } );
+			// TODO: else C++ [[fallthrough]]
+			//else
+			//	multiStmt.stmts.Append( new FallStmt() );
+			//	multiStmt.stmts.Append( new FreetextStmt( "[[fallthrough]]" ) );
+
 			CaseStmt ret = new() {
-				srcPos    = c.ToSrcPos(),
 				caseExprs = c.expr().Select( q => q.Visit() ).ToList(),
-				bodyStmts = c.levStmt().Select( Visit ).ToList(),
+				bodyStmt  = multiStmt,
 				autoBreak = c.FALL() != null,
 			};
 			return ret;

@@ -29,6 +29,14 @@ namespace Myll.Core
 			&& attribs.TryGetValue( key, out Strings values )
 			&& values.Contains( value );
 
+		// Enumerate (depth first) through all contained Stmt and itself
+		// Only overloaded in Stmt which contain more Stmt itself
+		// Filter results with e.g. EnumerateDF.OfType<ReturnStmt>()
+		[Pure]
+		public virtual IEnumerable<Stmt> EnumerateDF {
+			get { yield return this; }
+		}
+
 		public virtual void AssignAttribs( Attribs inAttribs )
 		{
 			attribs = inAttribs;
@@ -189,6 +197,21 @@ namespace Myll.Core
 		public List<CondThen> ifThens;
 		public Stmt?          elseStmt;
 
+		[Pure]
+		public override IEnumerable<Stmt> EnumerateDF {
+			get {
+				foreach( CondThen ifThen in ifThens )
+					foreach( Stmt subStmt in ifThen.thenStmt.EnumerateDF )
+						yield return subStmt;
+
+				if( elseStmt != null )
+					foreach( Stmt subStmt in elseStmt.EnumerateDF )
+						yield return subStmt;
+
+				yield return this;
+			}
+		}
+
 		public override Strings Gen( int level )
 		{
 			Strings ret    = new();
@@ -211,10 +234,10 @@ namespace Myll.Core
 		}
 	}
 
-	public class CaseStmt : Stmt
+	public struct CaseStmt
 	{
-		public List<Expr> caseExprs;
-		public List<Stmt> bodyStmts;
+		public List<Expr> caseExprs; // can have multiple ORed conditions
+		public MultiStmt  bodyStmt;
 		public bool       autoBreak;
 	}
 
@@ -223,6 +246,22 @@ namespace Myll.Core
 		public Expr           condExpr;
 		public List<CaseStmt> caseStmts;
 		public List<Stmt>?    elseStmts;
+
+		[Pure]
+		public override IEnumerable<Stmt> EnumerateDF {
+			get {
+				foreach( CaseStmt caseStmt in caseStmts )
+					foreach( Stmt subStmt in caseStmt.bodyStmt.EnumerateDF )
+						yield return subStmt;
+
+				if( elseStmts != null )
+					foreach( Stmt elseStmt in elseStmts )
+						foreach( Stmt subStmt in elseStmt.EnumerateDF )
+							yield return subStmt;
+
+				yield return this;
+			}
+		}
 
 		public override Strings Gen( int level )
 		{
@@ -234,6 +273,16 @@ namespace Myll.Core
 	public class LoopStmt : Stmt
 	{
 		public Stmt bodyStmt;
+
+		[Pure]
+		public override IEnumerable<Stmt> EnumerateDF {
+			get {
+				foreach( Stmt subStmt in bodyStmt.EnumerateDF )
+					yield return subStmt;
+
+				yield return this;
+			}
+		}
 
 		public override Strings Gen( int level )
 		{
@@ -254,6 +303,21 @@ namespace Myll.Core
 		public Expr  condExpr;
 		public Expr  iterExpr;
 		public Stmt? elseStmt;
+
+		[Pure]
+		public override IEnumerable<Stmt> EnumerateDF {
+			get {
+				foreach( Stmt subStmt in initStmt.EnumerateDF )
+					yield return subStmt;
+
+				if( elseStmt != null )
+					foreach( Stmt subStmt in elseStmt.EnumerateDF )
+						yield return subStmt;
+
+				foreach( Stmt baseStmt in base.EnumerateDF )
+					yield return baseStmt;
+			}
+		}
 
 		public override Strings Gen( int level )
 		{
@@ -279,6 +343,18 @@ namespace Myll.Core
 	{
 		public Expr  condExpr;
 		public Stmt? elseStmt;
+
+		[Pure]
+		public override IEnumerable<Stmt> EnumerateDF {
+			get {
+				if( elseStmt != null )
+					foreach( Stmt subStmt in elseStmt.EnumerateDF )
+						yield return subStmt;
+
+				foreach( Stmt baseStmt in base.EnumerateDF )
+					yield return baseStmt;
+			}
+		}
 
 		public override Strings Gen( int level )
 		{
@@ -347,6 +423,17 @@ namespace Myll.Core
 		// TODO merge this with Block?
 		// public bool       IsBlock { get; init; }
 
+		[Pure]
+		public override IEnumerable<Stmt> EnumerateDF {
+			get {
+				foreach( Stmt stmt in stmts )
+					foreach( Stmt subStmt in stmt.EnumerateDF )
+						yield return subStmt;
+
+				yield return this;
+			}
+		}
+
 		public override void AssignAttribs( Attribs inAttribs )
 		{
 			stmts.ForEach( v => v.AssignAttribs( inAttribs ) );
@@ -365,6 +452,17 @@ namespace Myll.Core
 	public class Block : Stmt
 	{
 		public List<Stmt> stmts;
+
+		[Pure]
+		public override IEnumerable<Stmt> EnumerateDF {
+			get {
+				foreach( Stmt stmt in stmts )
+					foreach( Stmt subStmt in stmt.EnumerateDF )
+						yield return subStmt;
+
+				yield return this;
+			}
+		}
 
 		// only overriden here
 		public override Strings GenWithoutCurly( int level )
