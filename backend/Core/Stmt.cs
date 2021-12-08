@@ -267,7 +267,6 @@ namespace Myll.Core
 	{
 		public List<Expr> caseExprs; // can have multiple ORed conditions
 		public MultiStmt  bodyStmt;
-		public bool       autoBreak;
 	}
 
 	public class SwitchStmt : Stmt

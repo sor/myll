@@ -170,18 +170,18 @@ namespace Myll
 				srcPos = c.ToSrcPos(),
 				stmts  = c.levStmt().Select( Visit ).ToList(),
 			};
-			bool isFall = c.FALL() != null;
-			if( !isFall )
+			bool isFall  = c.FALL() != null;
+			bool isBreak = c.BREAK() != null || c.PHATRARROW() != null; // "=>" always breaks
+			// TODO: check if either break or fall is set, throw if necessary
+			// need info from the switch in here if there is a default case
+			if( !isFall || isBreak )
 				multiStmt.stmts.Append( new BreakStmt { depth = 1 } );
-			// TODO: else C++ [[fallthrough]]
-			//else
-			//	multiStmt.stmts.Append( new FallStmt() );
-			//	multiStmt.stmts.Append( new FreetextStmt( "[[fallthrough]]" ) );
+			else
+				multiStmt.stmts.Append( new FreetextStmt( "[[fallthrough]]" ) );
 
 			CaseStmt ret = new() {
 				caseExprs = c.expr().Select( q => q.Visit() ).ToList(),
 				bodyStmt  = multiStmt,
-				autoBreak = c.FALL() != null,
 			};
 			return ret;
 		}

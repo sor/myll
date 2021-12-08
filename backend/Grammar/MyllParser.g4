@@ -160,9 +160,9 @@ attrib		:	attribId
 attribBlk	:	LBRACK	attrib (COMMA attrib)* COMMA? RBRACK;
 
 caseStmt	:	CASE expr (COMMA expr)*
-				(	COLON		levStmt+ (FALL SEMI)?
-				|	LCURLY		levStmt* (FALL SEMI)? RCURLY
-				|	PHATRARROW	levStmt  (FALL SEMI)?);
+				(	COLON		levStmt+ (FALL|BREAK SEMI)?
+				|	LCURLY		levStmt* (FALL|BREAK SEMI)? RCURLY
+				|	PHATRARROW	levStmt);
 
 defaultStmt	:	(ELSE|DEFAULT)
 				(	COLON		levStmt+
