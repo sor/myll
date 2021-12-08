@@ -119,10 +119,154 @@ namespace problem_3332 {
 }
 
 namespace problem_3333 {
-	func test() {
+	// [throw=seldom] is default, this does still mean that a func need to have [throw] if they do throw
+	class NoExplicitThrow {
+		[throw] // OR [throw=yes] OR [except]
+		func testThrow() {
+			// Would not compile without the [throw]
+			throw "Test";
+		}
+		func testNoThrow() {
+			// This would not compile, neither class nor func is [throw]
+			//throw "Test";
+		}
+	}
 
+	[throw] // Means the same as [throw=often], func inside are automatically [throw] by default
+	class WithExplicitThrow {
+		func testThrow() {
+			// The class enables throwing, no need to mention throw on the func
+			throw "Test";
+		}
+		[nothrow] // OR [throw=no] OR [noexcept]
+		func testNoThrow() {
+			// This would not compile
+			//throw "Test";
+		}
+		[nothrow]
+		func testCatchNoThrow() {
+			// This should compile, func is [nothrow] and the throw inside is caught
+			try {
+				throw "Test";
+			} catch( Exception e ) {
+			}
+		}
 	}
 }
+
+namespace problem_3334 {
+	func test() {
+		var int a;
+
+		/* Output for switch is not implemented yet
+
+		switch( a ) {
+			case 1:
+				do_this();
+				fall;	// error without either fall or break
+
+			case 2:
+				or_do_that();
+				break;	// error without either fall or break
+
+			case 3, 4:	// same as case 3: case 4:
+				two_cases_want_the_same();
+		}
+
+		// multiple statements in a scope, automatically break, fall maybe impossible here
+		switch( a ) {
+			case 1 {
+				do_this();
+			}
+			case 2 {
+				or_do_that();
+			}
+			case 3, 4 {
+				two_cases_want_the_same();
+			}
+		}
+
+		// only one statement, automatically break, fall definitely impossible here
+		switch( a ) {
+			case 1		=> do_this();
+			case 2		=> or_do_that();
+			case 3, 4	=> two_cases_want_the_same();
+		}
+
+		var int age;
+		switch( age ) {
+			case  0 ... 12:	return "child";
+			case 13 ... 17:	return "teenager";
+			case 18 ... 66:	return "work-work";
+			default:		return "pensioner";
+			// else: also would work here
+		}
+
+		// future idea, switch usable like an expr and it can yield it's content
+		//return switch( age ) {
+		//	case  0 ... 12	=> "child";
+		//	case 13 ... 17	=> "teenager";
+		//	case 18 ... 66	=> "work-work";
+		//	default			=> "pensioner";
+		//}
+		//*/
+	}
+}
+
+namespace problem_3341 {
+	// needs sema/analyze to work
+	func test() {
+		var i8	a = 17, b = 4;
+		var i8	c = a + b;	// all okay, i8 = i8 + i8 is likely fine, overflow must be handled differently
+		var i32	d = 707, e = 1337;
+		var i8	f = d + e;	// should error, i8 is to small to implicitly receive i32 + i32 result
+	}
+}
+
+namespace problem_3342 {
+	// needs sema/analyze to work
+	func takeBool(bool b) {}
+	struct TakeBool {
+		ctor(bool b) {}
+	}
+	func test() {
+		// Each of these 3 lines should fail
+		takeBool( 42 );
+		var TakeBool tbc = TakeBool( 42 );
+		var bool bool1 = 42;
+	}
+}
+
+namespace problem_3343 {
+	// needs sema/analyze to work
+	func test() {
+		var int* ip = 0;	// error
+		var int* jp = null;	// OK
+
+		var int scl;
+		var int[10] ary;
+		var int* ptr_to_scalar = &scl;	// OK, scalar pointer points to scalar
+		var int[*] ptr_to_ary1 = ary;	// OK, explicit decay from array to array pointer
+		var int[*] ptr_to_ary2 = &scl;	// Error: Scalar can not be converted to an array pointer
+		ptr_to_scalar++;	// Error: Pointer to scalar forbids arithmetic
+		ptr_to_ary1++;		// OK
+	}
+}
+
+namespace problem_3351 {
+	func pow1( float b, int e )-> float	{ return b ** e; }
+	func pow2( auto b, int e ) -> auto	{ return b ** e; }
+	func pow3( auto b, int e ) 			{ return b ** e; } // same as pow2
+	func pow4<T>( T b, int e ) -> auto	{ return b ** e; }
+	func pow5<T>( T b, int e ) -> T		{ return b ** e; }
+	func test() {
+		var func*(float b, int e) -> auto funcPtrToPow = pow1;
+		// TODO: var auto lambda = func(float b, int e) { return b ** e; };
+		// auto lambda = [](float b, int e)  { return pow(b, e); };
+		std::cout << lambda( 2, 5 );
+	}
+}
+
 
 /*
 func main() -> int

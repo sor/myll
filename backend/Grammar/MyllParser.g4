@@ -129,6 +129,7 @@ expr		:	(idTplArgs	SCOPE)+	idTplArgs	# ScopedExpr
 			|	expr	equalOP			expr	# EqualityExpr
 			|	expr	andOP			expr	# AndExpr
 			|	expr	orOP			expr	# OrExpr
+			|	expr	TRP_POINT		expr	# RangeExpr
 			|	expr	nulCoalOP		expr	# NullCoalesceExpr
 			// TODO: 2-way-cond and throw were in the same level, test if this still works fine
 			| <assoc=right>
@@ -139,6 +140,8 @@ expr		:	(idTplArgs	SCOPE)+	idTplArgs	# ScopedExpr
 				THROW	expr					# ThrowExpr		// Good or not?
 			|	LPAREN	expr	RPAREN			# ParenExpr
 			|	wildId							# WildIdExpr
+			|	FUNC funcTypeDef
+				(RARROW typespec)?	funcBody	# LambdaExpr	// TODO CST
 			|	lit								# LiteralExpr	// TODO
 			|	idTplArgs						# IdTplExpr
 			;
@@ -160,6 +163,11 @@ caseStmt	:	CASE expr (COMMA expr)*
 				(	COLON		levStmt+ (FALL SEMI)?
 				|	LCURLY		levStmt* (FALL SEMI)? RCURLY
 				|	PHATRARROW	levStmt  (FALL SEMI)?);
+
+defaultStmt	:	(ELSE|DEFAULT)
+				(	COLON		levStmt+
+				|	LCURLY		levStmt* RCURLY
+				|	PHATRARROW	levStmt);
 
 initList	:	COLON id funcCall (COMMA id funcCall)* COMMA?;
 // TODO: initList needs to support ": ctor()"
@@ -227,7 +235,7 @@ inStmt		:	SEMI								# EmptyStmt
 				(ELSE IF	condThen)*	// helps with formatting properly and de-nesting the AST
 				(ELSE		levStmt)?				# IfStmt
 			|	SWITCH	LPAREN expr RPAREN	LCURLY
-				caseStmt+ 	(DEFAULT levStmt+)? RCURLY	# SwitchStmt
+				caseStmt+ 	defaultStmt?	RCURLY	# SwitchStmt
 			|	LOOP	levStmt						# LoopStmt
 			|	FOR LPAREN levStmt	// TODO: add the syntax: for( a : b )
 					expr SEMI
@@ -238,9 +246,14 @@ inStmt		:	SEMI								# EmptyStmt
 			|	DO		levStmt
 				WHILE	LPAREN expr RPAREN			# DoWhileStmt
 			|	DO expr TIMES		id?	levStmt		# TimesStmt
+			|	TRY		levStmt
+				(CATCH	funcTypeDef		levStmt)+	# TryCatchStmt		// TODO CST
+			|	DEFER	levStmt						# DeferStmt			// TODO CST, scope_exit(,fail,success)
+													// #include <experimental/scope>
+													// std::experimental::scope_exit guard([]{ cout << "Exit!" << endl; });
 			| 	expr	(assignOP		expr)+ SEMI	# MultiAssignStmt
 			| 	expr	aggrAssignOP	expr SEMI	# AggrAssignStmt
-			|	expr SEMI							# ExpressionStmt
+			|	expr	SEMI						# ExpressionStmt
 			;
 
 // ONLY refer to these lev* levels, NOT the in*

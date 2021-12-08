@@ -155,7 +155,7 @@ SET			: 'set';
 FIELD		: 'field';
 OPERATOR	: 'operator';
 VAR			: 'var';
-LET			: 'let';	// obsolete?
+LET			: 'let';
 LOOP		: 'loop';
 FOR			: 'for';
 DO			: 'do';
@@ -172,6 +172,7 @@ FALL		: 'fall';
 RETURN		: 'return';
 TRY			: 'try';
 CATCH		: 'catch';
+DEFER		: 'defer';
 SIZEOF		: 'sizeof';
 NEW			: 'new';
 DELETE		: 'delete';

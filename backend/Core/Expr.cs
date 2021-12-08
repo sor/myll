@@ -320,6 +320,8 @@ namespace Myll.Core
 			// TODO solve that properly via Operand.SpecialId during creation
 			if( idTplArgs.id == "self" && idTplArgs.tplArgs.IsEmpty() )
 				return "(*this)";
+			else if( idTplArgs.id == "null" && idTplArgs.tplArgs.IsEmpty() )
+				return "nullptr";
 
 			return idTplArgs.Gen();
 		}

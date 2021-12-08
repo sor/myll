@@ -186,13 +186,25 @@ namespace Myll
 			return ret;
 		}
 
+		public new Stmt VisitDefaultStmt( DefaultStmtContext c )
+		{
+			if( c == null )
+				return null;
+
+			MultiStmt ret = new() {
+				srcPos = c.ToSrcPos(),
+				stmts  = c.levStmt().Select( Visit ).ToList(),
+			};
+			return ret;
+		}
+
 		public override Stmt VisitSwitchStmt( SwitchStmtContext c )
 		{
 			SwitchStmt ret = new() {
 				srcPos    = c.ToSrcPos(),
 				condExpr  = c.expr().Visit(),
 				caseStmts = c.caseStmt().Select( VisitCaseStmt ).ToList(),
-				elseStmts = c.levStmt().Select( Visit ).ToList(),
+				elseStmt  = VisitDefaultStmt( c.defaultStmt() ),
 			};
 			return ret;
 		}

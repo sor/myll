@@ -274,7 +274,7 @@ namespace Myll.Core
 	{
 		public Expr           condExpr;
 		public List<CaseStmt> caseStmts;
-		public List<Stmt>?    elseStmts;
+		public Stmt?          elseStmt;
 
 		[Pure]
 		public override IEnumerable<Stmt> EnumerateDF {
@@ -283,10 +283,9 @@ namespace Myll.Core
 					foreach( Stmt subStmt in caseStmt.bodyStmt.EnumerateDF )
 						yield return subStmt;
 
-				if( elseStmts != null )
-					foreach( Stmt elseStmt in elseStmts )
-						foreach( Stmt subStmt in elseStmt.EnumerateDF )
-							yield return subStmt;
+				if( elseStmt != null )
+					foreach( Stmt subStmt in elseStmt.EnumerateDF )
+						yield return subStmt;
 
 				yield return this;
 			}
