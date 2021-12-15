@@ -39,17 +39,17 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitComment([NotNull] MyllParser.CommentContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.postOP"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitPostOP([NotNull] MyllParser.PostOPContext context);
-	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.preOP"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitPreOP([NotNull] MyllParser.PreOPContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.postOP"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitPostOP([NotNull] MyllParser.PostOPContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.powOP"/>.
 	/// </summary>
@@ -303,6 +303,12 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitThreeWay([NotNull] MyllParser.ThreeWayContext context);
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.capture"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitCapture([NotNull] MyllParser.CaptureContext context);
+	/// <summary>
 	/// Visit a parse tree produced by the <c>AndExpr</c>
 	/// labeled alternative in <see cref="MyllParser.expr"/>.
 	/// </summary>
@@ -519,17 +525,17 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitAttribBlk([NotNull] MyllParser.AttribBlkContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.caseStmt"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.caseBlock"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitCaseStmt([NotNull] MyllParser.CaseStmtContext context);
+	Result VisitCaseBlock([NotNull] MyllParser.CaseBlockContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.defaultStmt"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.defaultBlock"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitDefaultStmt([NotNull] MyllParser.DefaultStmtContext context);
+	Result VisitDefaultBlock([NotNull] MyllParser.DefaultBlockContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.initList"/>.
 	/// </summary>

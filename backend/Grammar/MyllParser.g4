@@ -4,11 +4,11 @@ options { tokenVocab = MyllLexer; }
 
 comment		:	COMMENT;
 
-// =!= all operators handled by ToOp except those mentioned =!=
-postOP		:	v=(	'++' | '--' );
-
 // handled by ToPreOp because of collisions
 preOP		:	v=(	'++' | '--' | '+' | '-' | '!' | '~' | '*' | '&' );
+
+// all operators below are handled by ToOp
+postOP		:	v=(	'++' | '--' );
 
 powOP		:		'*''*';
 multOP		:	v=(	'*' | '/' | '%' | '&' | '·' | '×' | '÷' );
@@ -16,8 +16,8 @@ addOP		:	v=(	'+' | '-' | '^' | '|' ); // split xor and or?
 shiftOP		:		'<<' | '>''>';
 
 cmpOp       :   	'<=>';
-relOP	:	v=(	'<=' | '>=' | '<' | '>' );
-equalOP	:	v=(	'==' | '!=' );
+relOP		:	v=(	'<=' | '>=' | '<' | '>' );
+equalOP		:	v=(	'==' | '!=' );
 
 andOP		:		'&&';
 orOP		:		'||';
@@ -29,7 +29,6 @@ memAccPtrOP	:	v=(	'.*' | '?.*' | '->*' );
 //memAccOP	:	v=(	'.'  | '..'  | '?.'  | '?..'  | '->'  );
 //memAccPtrOP	:	v=(	'.*' | '..*' | '?.*' | '?..*' | '->*' );
 
-// handled by ToAssignOp because of collisions
 assignOP	:		'=';
 aggrAssignOP:	v=(	'**=' | '*=' | '/=' | '%=' | '&=' |	'·=' |	'×=' |	'÷=' |
 					'+='  | '-=' | '|=' | '^=' | '<<=' | '>>=' );
@@ -92,6 +91,8 @@ tplParams	:	LT id		(COMMA id)*		COMMA? GT;
 
 threeWay	:	(relOP | equalOP)	COLON	expr;
 
+capture		:	LBRACK	args?	RBRACK;
+
 // Tier 3
 //cast: nothing = static, ? = dynamic, ! = const & reinterpret
 // TODO REMOVE THEM ALL, IN CODE TOO
@@ -138,10 +139,10 @@ expr		:	(idTplArgs	SCOPE)+	idTplArgs	# ScopedExpr
 				expr	DBL_QM threeWay+ (COLON expr)?	# ThreeWayConditionalExpr
 			| <assoc=right>
 				THROW	expr					# ThrowExpr		// Good or not?
+			|	FUNC capture? tplParams? funcTypeDef
+				(RARROW typespec)?	funcBody	# LambdaExpr	// TODO CST
 			|	LPAREN	expr	RPAREN			# ParenExpr
 			|	wildId							# WildIdExpr
-			|	FUNC funcTypeDef
-				(RARROW typespec)?	funcBody	# LambdaExpr	// TODO CST
 			|	lit								# LiteralExpr	// TODO
 			|	idTplArgs						# IdTplExpr
 			;
@@ -152,20 +153,20 @@ idAccessors	:	idAccessor	(COMMA idAccessor)*	COMMA?;
 idExprs		:	idExpr		(COMMA idExpr)*		COMMA?;
 typedIdAcors:	typespec 	idAccessors	SEMI;
 
-attribId	:	id | CONST | FALL | THROW;
+attribId	:	id | CONST | FALL | THROW | DEFAULT;
 attrib		:	attribId
 				(	'=' idOrLit
 				|	'(' idOrLit (COMMA idOrLit)* COMMA? ')'
 				)?;
 attribBlk	:	LBRACK	attrib (COMMA attrib)* COMMA? RBRACK;
 
-caseStmt	:	CASE expr (COMMA expr)*
-				(	COLON		levStmt+ (FALL SEMI)?
+caseBlock	:	CASE expr (COMMA expr)*
+				(	COLON		levStmt* (FALL SEMI)?
 				|	LCURLY		levStmt* (FALL SEMI)? RCURLY
 				|	PHATRARROW	levStmt);
 
-defaultStmt	:	(ELSE|DEFAULT)
-				(	COLON		levStmt+
+defaultBlock:	(ELSE|DEFAULT)
+				(	COLON		levStmt*
 				|	LCURLY		levStmt* RCURLY
 				|	PHATRARROW	levStmt);
 
@@ -182,7 +183,8 @@ funcDef		:	id			tplParams?	funcTypeDef (RARROW typespec)?
 opDef		:	STRING_LIT	tplParams?	funcTypeDef (RARROW typespec)?
 				(REQUIRES typespecsNested)?		// TODO
 				funcBody;
-// TODO: can be used in more places
+
+// remove this?
 condThen	:	LPAREN expr RPAREN	levStmt;
 
 // DON'T refer to these in* here, ONLY refer to lev* levels
@@ -214,8 +216,8 @@ inDecl		:	NS id (SCOPE id)* SEMI						# Namespace // or better COLON
 				|			typedIdAcors		)	# VariableDecl
 // class only:
 			|	v=( CTOR | COPYCTOR | MOVECTOR )
-				funcTypeDef	initList?		(SEMI | levStmt) # CtorDecl
-			|	DTOR	(LPAREN RPAREN)?	(SEMI | levStmt) # DtorDecl
+				funcTypeDef	initList?	 funcBody	# CtorDecl
+			|	DTOR	(LPAREN RPAREN)? funcBody	# DtorDecl
 			;
 
 inStmt		:	SEMI								# EmptyStmt
@@ -234,18 +236,21 @@ inStmt		:	SEMI								# EmptyStmt
 			|	IF			condThen
 				(ELSE IF	condThen)*	// helps with formatting properly and de-nesting the AST
 				(ELSE		levStmt)?				# IfStmt
-			|	SWITCH	LPAREN expr RPAREN	LCURLY
-				caseStmt+ 	defaultStmt?	RCURLY	# SwitchStmt
-			|	LOOP	levStmt						# LoopStmt
-			|	FOR LPAREN levStmt	// TODO: add the syntax: for( a : b )
-					expr SEMI
-					expr RPAREN	levStmt
-				(ELSE			levStmt)?			# ForStmt
-			|	WHILE		condThen
-				(ELSE		levStmt)?				# WhileStmt
-			|	DO		levStmt
-				WHILE	LPAREN expr RPAREN			# DoWhileStmt
-			|	DO expr TIMES		id?	levStmt		# TimesStmt
+			|	SWITCH	LPAREN cond=expr RPAREN	LCURLY
+				caseBlock+ 	defaultBlock?	RCURLY	# SwitchStmt
+			|	LOOP	body=levStmt				# LoopStmt
+			|	FOR LPAREN init=levStmt	// TODO: add the syntax: for( a : b )
+				cond=expr? SEMI
+				iter=expr? RPAREN	body=levStmt
+				(ELSE				els=levStmt)?	# ForStmt
+			|	WHILE	LPAREN cond=expr RPAREN
+						body=levStmt
+				(ELSE	els=levStmt)?				# WhileStmt
+			|	DO		body=levStmt
+				WHILE	LPAREN cond=expr RPAREN		# DoWhileStmt
+			|	DO? count=expr TIMES
+				(name=id ((PLUS|MINUS) INTEGER_LIT)? )?
+						body=levStmt				# TimesStmt
 			|	TRY		levStmt
 				(CATCH	funcTypeDef		levStmt)+	# TryCatchStmt		// TODO CST
 			|	DEFER	levStmt						# DeferStmt			// TODO CST, scope_exit(,fail,success)

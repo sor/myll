@@ -59,7 +59,7 @@ namespace Myll
 				c => new EnumEntry {
 					srcPos = c.ToSrcPos(),
 					name   = c.id().Visit(),
-					value  = c.expr().Visit(),
+					value  = c.expr()?.Visit(),
 				} );
 	}
 
@@ -72,56 +72,52 @@ namespace Myll
 		public static readonly  DeclVisitor  DeclVis    = new( ScopeStack );
 
 		private static readonly Dictionary<int, Operand>
+			ToPreOperand = new() {
+				{ Parser.DBL_PLUS,	Operand.PreIncr },
+				{ Parser.DBL_MINUS,	Operand.PreDecr },
+				{ Parser.PLUS,		Operand.PrePlus },
+				{ Parser.MINUS,		Operand.PreMinus },
+				{ Parser.EM,		Operand.Negation },
+				{ Parser.TILDE,		Operand.Complement },
+				{ Parser.STAR,		Operand.Dereference },
+				{ Parser.AMP,		Operand.AddressOf },
+			};
+
+		private static readonly Dictionary<int, Operand>
 			ToOperand = new() {
-				{ Parser.DBL_PLUS, Operand.PostIncr },
-				{ Parser.DBL_MINUS, Operand.PostDecr },
-				{ Parser.LPAREN, Operand.FuncCall },
-				{ Parser.QM_LPAREN, Operand.NCFuncCall },
-				{ Parser.LBRACK, Operand.IndexCall },
-				{ Parser.QM_LBRACK, Operand.NCIndexCall },
-				{ Parser.POINT, Operand.MemberAccess },
-				{ Parser.QM_POINT, Operand.NCMemberAccess },
-				{ Parser.RARROW, Operand.MemberPtrAccess },
+				{ Parser.DBL_PLUS,	Operand.PostIncr },
+				{ Parser.DBL_MINUS,	Operand.PostDecr },
+				{ Parser.LPAREN,	Operand.FuncCall },
+				{ Parser.QM_LPAREN,	Operand.NCFuncCall },
+				{ Parser.LBRACK,	Operand.IndexCall },
+				{ Parser.QM_LBRACK,	Operand.NCIndexCall },
+				{ Parser.POINT,		Operand.MemberAccess },
+				{ Parser.QM_POINT,	Operand.NCMemberAccess },
+				{ Parser.RARROW,	Operand.MemberPtrAccess },
 				{ Parser.POINT_STAR, Operand.MemberAccessPtr },
 				{ Parser.QM_POINT_STAR, Operand.NCMemberAccessPtr },
 				{ Parser.ARROW_STAR, Operand.MemberPtrAccessPtr },
 				//	{Parser.DBL_STAR,	Operand.Pow},
-				{ Parser.STAR, Operand.Multiply },
-				{ Parser.SLASH, Operand.EuclideanDivide },
-				{ Parser.MOD, Operand.Modulo },
-				{ Parser.DOT, Operand.Dot },
-				{ Parser.CROSS, Operand.Cross },
-				{ Parser.DIV, Operand.Divide },
-				{ Parser.PLUS, Operand.Add },
-				{ Parser.MINUS, Operand.Subtract },
-				{ Parser.AMP, Operand.BitAnd },
-				{ Parser.HAT, Operand.BitXor },
-				{ Parser.PIPE, Operand.BitOr },
-				{ Parser.COMPARE, Operand.Comparison },
-				{ Parser.LT, Operand.LessThan },
-				{ Parser.LTEQ, Operand.LessEqual },
-				{ Parser.GT, Operand.GreaterThan },
-				{ Parser.GTEQ, Operand.GreaterEqual },
-				{ Parser.EQ, Operand.Equal },
-				{ Parser.NEQ, Operand.NotEqual },
-				{ Parser.DBL_AMP, Operand.And },
-				{ Parser.DBL_PIPE, Operand.Or },
-			};
-
-		private static readonly Dictionary<int, Operand>
-			ToPreOperand = new() {
-				{ Parser.DBL_PLUS, Operand.PreIncr },
-				{ Parser.DBL_MINUS, Operand.PreDecr },
-				{ Parser.PLUS, Operand.PrePlus },
-				{ Parser.MINUS, Operand.PreMinus },
-				{ Parser.EM, Operand.Negation },
-				{ Parser.TILDE, Operand.Complement },
-				{ Parser.STAR, Operand.Dereference },
-				{ Parser.AMP, Operand.AddressOf },
-			};
-
-		private static readonly Dictionary<int, Operand>
-			ToAssignOperand = new() {
+				{ Parser.STAR,		Operand.Multiply },
+				{ Parser.SLASH,		Operand.EuclideanDivide },
+				{ Parser.MOD,		Operand.Modulo },
+				{ Parser.DOT,		Operand.Dot },
+				{ Parser.CROSS,		Operand.Cross },
+				{ Parser.DIV,		Operand.Divide },
+				{ Parser.PLUS,		Operand.Add },
+				{ Parser.MINUS,		Operand.Subtract },
+				{ Parser.AMP,		Operand.BitAnd },
+				{ Parser.HAT,		Operand.BitXor },
+				{ Parser.PIPE,		Operand.BitOr },
+				{ Parser.COMPARE,	Operand.Comparison },
+				{ Parser.LT,		Operand.LessThan },
+				{ Parser.LTEQ,		Operand.LessEqual },
+				{ Parser.GT,		Operand.GreaterThan },
+				{ Parser.GTEQ,		Operand.GreaterEqual },
+				{ Parser.EQ,		Operand.Equal },
+				{ Parser.NEQ,		Operand.NotEqual },
+				{ Parser.DBL_AMP,	Operand.And },
+				{ Parser.DBL_PIPE,	Operand.Or },
 				{ Parser.ASSIGN,	Operand.Equal },
 				{ Parser.AS_POW,	Operand.Pow },
 				{ Parser.AS_MUL,	Operand.Multiply },
@@ -139,7 +135,7 @@ namespace Myll
 				{ Parser.AS_XOR,	Operand.BitXor },
 			};
 
-		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
 		public static void Exec<T>( this IEnumerable<T> s )
 		{
 			if( s == null ) return;
@@ -147,30 +143,24 @@ namespace Myll
 				while( e.MoveNext() ) {}
 		}
 
-		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
 		public static void ForAll<T>( this IEnumerable<T> s, Action<T> action )
 		{
 			foreach( T item in s )
 				action( item );
 		}
 
-		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static int ToInt( this ITerminalNode o, int @default = 0 )
-			=> o == null
-				? @default
-				: int.Parse( o.GetText() );
-
-		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static Operand ToOp( this IToken tok )
-			=> ToOperand[tok.Type];
+		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
+		public static int ToInt( this ITerminalNode o )
+			=> int.Parse( o.GetText() );
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Operand ToPreOp( this IToken tok )
 			=> ToPreOperand[tok.Type];
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static Operand ToAssignOp( this IToken tok )
-			=> ToAssignOperand[tok.Type];
+		public static Operand ToOp( this IToken tok )
+			=> ToOperand[tok.Type];
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static SrcPos ToSrcPos( this ParserRuleContext c )
@@ -206,27 +196,39 @@ namespace Myll
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Expr Visit( this Parser.ExprContext c )
-			=> c == null
+		{
+			if( c == null )
+				throw new ArgumentNullException();
+
+			return c == null
 				? null
 				: ExprVis.Visit( c );
+		}
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Literal Visit( this Parser.LitContext c )
 			=> ExprVis.VisitLit( c );
 
-		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		// TODO those null tolerant methods need to be removed
+		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
 		public static Stmt Visit( this Parser.LevStmtContext c )
 			=> c == null
 				? null
 				: StmtVis.Visit( c );
 
-		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static Stmt Visit( this Parser.FuncBodyContext c )
+		// TODO those null tolerant methods need to be removed
+		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
+		public static Block Visit( this Parser.FuncBodyContext c )
 			=> c == null
 				? null
 				: StmtVis.VisitFuncBody( c );
 
-		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		//[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
+		//public static Block VisitBlockify( this ParserRuleContext c )
+		//	=> StmtVis.VisitBlockify( c );
+
+		// TODO those null tolerant methods need to be removed
+		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
 		public static Decl Visit( this Parser.LevDeclContext c )
 			=> c == null
 				? null
@@ -269,7 +271,8 @@ namespace Myll
 			=> tok.Type switch {
 				Parser.GET    => Accessor.Kind.Get,
 				Parser.REFGET => Accessor.Kind.RefGet,
-				Parser.SET    => Accessor.Kind.Set
+				Parser.SET    => Accessor.Kind.Set,
+				_             => throw new ArgumentOutOfRangeException( "ToAccessorKind out of range " + tok )
 			};
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
@@ -278,6 +281,7 @@ namespace Myll
 				Parser.STRUCT => Structural.Kind.Struct,
 				Parser.CLASS  => Structural.Kind.Class,
 				Parser.UNION  => Structural.Kind.Union,
+				_             => throw new ArgumentOutOfRangeException( "ToStructuralKind out of range " + tok )
 			};
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
@@ -287,6 +291,7 @@ namespace Myll
 				Parser.FIELD => Qualifier.None,
 				Parser.CONST => Qualifier.Const,
 				Parser.LET   => Qualifier.Const,
+				_            => throw new ArgumentOutOfRangeException( "ToQualifier out of range " + tok )
 			};
 
 		// Visit
@@ -298,6 +303,7 @@ namespace Myll
 				MyllParser.MUTABLE  => Qualifier.Mutable,
 				MyllParser.VOLATILE => Qualifier.Volatile,
 				MyllParser.STABLE   => Qualifier.Stable,
+				_                   => throw new ArgumentOutOfRangeException( "Visit Qualifier out of range " + c )
 			};
 
 #pragma warning restore 8509

@@ -22,8 +22,6 @@ namespace Myll.Generator
 
 		//internal static readonly string IndentString = "\t";
 		internal const string IndentString = "    ";
-		internal const string ThrowFormat  = "{0}throw {1};";
-		internal const string BreakFormat  = "{0}break;";
 		internal const string CurlyOpen    = "{0}{{";
 		internal const string CurlyClose   = "{0}}}";
 		internal const string CurlyCloseSC = "{0}}};";
@@ -34,24 +32,6 @@ namespace Myll.Generator
 				{ Access.Protected, "{0}  protected:" },
 				{ Access.Public,    "{0}  public:" },
 			};
-
-		public static readonly string[] ReturnFormat = {
-			"{0}return;",
-			"{0}return {1};",
-		};
-
-		public static readonly string[] IfFormat = {
-			"{0}if( {1} )",
-			"{0}else if( {1} )",
-			"{0}else",
-		};
-
-		public static readonly string[] LoopFormat = {
-			"{0}for( {1} {2}; {3} )", // first semicolon is part of the stmt
-			"{0}while( {1} )",
-			"{0}do",
-			"{0}while( {1} );",
-		};
 
 		public static readonly string[] UsingFormat = {
 			"{0}using {1} = {2};",

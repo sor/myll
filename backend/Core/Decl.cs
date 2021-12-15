@@ -45,6 +45,7 @@ namespace Myll.Core
 			}
 		}
 
+		public bool IsExternal => HasAttrib( "extern" );
 		public bool IsInline   => HasAttrib( "inline" ) || IsTemplateUp;
 		public bool IsInStruct => scope.parent.decl is Structural;
 
@@ -120,7 +121,7 @@ namespace Myll.Core
 	{
 		public List<TplParam> TplParams { get; set; }
 		public List<Param>    paras;
-		public Stmt           block;
+		public Block?         body;
 		public Typespec       retType;
 
 		public bool IsVirtual  => HasAttrib( "virtual" );
@@ -132,6 +133,10 @@ namespace Myll.Core
 
 		public override void AddToGen( HierarchicalGen gen )
 		{
+			// null body could be used for extern stuff
+			if( body == null && !IsExternal )
+				throw new Exception( "Func has body: null" );
+
 			gen.AddFunc( this );
 		}
 	}
@@ -147,7 +152,7 @@ namespace Myll.Core
 
 		public Kind        kind;
 		public List<Param> paras;
-		public Stmt        block;
+		public Block?      body;
 
 		public bool IsVirtual  => HasAttrib( "virtual" );
 		public bool IsImplicit => HasAttrib( "implicit" );
@@ -158,8 +163,8 @@ namespace Myll.Core
 
 		public override void AddToGen( HierarchicalGen gen )
 		{
-			if( block == null && !IsDefault && !IsDisabled )
-				throw new Exception( "Structor with no block needs either [default] or [disable](delete in C++)" );
+			if( body == null && !IsDefault && !IsDisabled )
+				throw new Exception( "Structor with no body needs either [default] or [disable](delete in C++)" );
 
 			gen.AddStructor( this );
 		}
@@ -193,7 +198,7 @@ namespace Myll.Core
 	{
 		public Typespec       type;     // contains Qualifier
 		public List<Accessor> accessor; // opt, structural or global
-		public Expr           init;     // opt
+		public Expr?          init;
 
 		public override void AddToGen( HierarchicalGen gen )
 		{
@@ -223,7 +228,7 @@ namespace Myll.Core
 
 	public class EnumEntry : Decl
 	{
-		public Expr value;
+		public Expr? value;
 
 		public override void AddToGen( HierarchicalGen gen )
 		{
@@ -233,7 +238,7 @@ namespace Myll.Core
 
 	public class Enumeration : Hierarchical
 	{
-		public TypespecBasic basetype;
+		public TypespecBasic baseType;
 
 		public bool IsFlags     => HasAttrib( "flags" );
 		public bool IsOpBitwise => IsAttrib( "operators", "bitwise" );
@@ -251,7 +256,7 @@ namespace Myll.Core
 			("operator^=", Operand.BitXor),
 		};
 
-		// 0 will return true as well, which is maybe not what you wanted
+		// 0 will return true as well, which is maybe not what was expected
 		bool IsPowerOfTwo( uint x )
 		{
 			bool ret = (x & (x - 1)) == 0;
@@ -330,26 +335,32 @@ namespace Myll.Core
 							new() { name = "lhs", type = enumTypespec },
 							new() { name = "rhs", type = enumTypespec },
 						},
-						block = new ReturnStmt {
-							srcPos = srcPos,
-							expr = new CastExpr {
-								op   = Operand.StaticCast,
-								type = enumTypespec,
-								expr = new BinOp {
-									op = tuple.Item2,
-									left = new CastExpr {
+						body = new Block {
+							srcPos  = srcPos,
+							isScope = true,
+							stmts = new List<Stmt> {
+								new ReturnStmt {
+									srcPos = srcPos,
+									expr = new CastExpr {
 										op   = Operand.StaticCast,
-										type = underlying,
-										expr = lhs,
-									},
-									right = new CastExpr {
-										op   = Operand.StaticCast,
-										type = underlying,
-										expr = rhs,
+										type = enumTypespec,
+										expr = new BinOp {
+											op = tuple.Item2,
+											left = new CastExpr {
+												op   = Operand.StaticCast,
+												type = underlying,
+												expr = lhs,
+											},
+											right = new CastExpr {
+												op   = Operand.StaticCast,
+												type = underlying,
+												expr = rhs,
+											},
+										},
 									},
 								},
 							},
-						},
+						}
 					};
 
 					ret.AssignAttribs(
@@ -375,8 +386,9 @@ namespace Myll.Core
 							new() { name = "lhs", type = enumTypespecRef },
 							new() { name = "rhs", type = enumTypespec },
 						},
-						block = new Block {
-							srcPos = srcPos,
+						body = new Block {
+							srcPos  = srcPos,
+							isScope = true,
 							stmts = new List<Stmt> {
 								new MultiAssign {
 									srcPos = srcPos,

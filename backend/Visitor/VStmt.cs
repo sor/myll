@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
+using Antlr4.Runtime;
 using Antlr4.Runtime.Tree;
 using Myll.Core;
 
@@ -20,10 +22,44 @@ namespace Myll
 	{
 		public StmtVisitor( Stack<Scope> scopeStack ) : base( scopeStack ) {}
 
-		public override Stmt Visit( IParseTree c )
-			=> c == null
-				? null
-				: base.Visit( c );
+		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
+		public Stmt Visit( ParserRuleContext c )
+		{
+			if( c == null )
+				throw new ArgumentNullException();
+
+			Stmt ret = base.Visit( c );
+			ret.srcPos = c.ToSrcPos();
+			return ret;
+		}
+
+		public Block? VisitBlockify( LevStmtContext lsc )
+		{
+			//if( c == null )
+			//	return null;
+
+			AttribStmtContext c  = lsc as AttribStmtContext;
+			InStmtContext     sc = c!.inStmt();
+
+			Block ret;
+			if( sc is BlockStmtContext cb ) {
+				ret = VisitBlockStmt( cb );
+			}
+			else if( sc is EmptyStmtContext) {
+				ret = null;
+			}
+			else {
+				ret = new Block {
+					srcPos  = c.ToSrcPos(),
+					isScope = true,
+					stmts   = new List<Stmt>(),
+				};
+
+				if( c.inStmt() is not EmptyStmtContext )
+					ret.stmts.Add( Visit( c ) );
+			}
+			return ret;
+		}
 
 		public override Stmt VisitAttribStmt( AttribStmtContext c )
 		{
@@ -36,26 +72,38 @@ namespace Myll
 			return ret;
 		}
 
-		public override Stmt VisitFuncBody( FuncBodyContext c )
+		public override Block VisitFuncBody( FuncBodyContext c )
 		{
 			// Scope already open?
-			Stmt ret;
-			if( c.levStmt() != null ) {
-				ret = c.levStmt().Visit();
+			Block           ret;
+			LevStmtContext? lev = c.levStmt();
+			if( lev != null ) {
+				ret = VisitBlockify( lev );
 			}
-			else if( c.expr() != null ) {
-				ret = new ReturnStmt {
-					srcPos = c.ToSrcPos(),
-					expr   = c.expr().Visit(),
+			else if( c.expr() != null ) { // Phatarrow
+				ret = new Block {
+					isScope = true,
+					stmts = new() {
+						new ReturnStmt {	// TODO: return makes no sense for c/dtor
+							srcPos = c.ToSrcPos(),
+							expr   = c.expr().Visit(),
+						}
+					}
 				};
 			}
-			else throw new Exception( "unknown function decl body" );
+			else {
+				throw new Exception( "Unknown Func body" );
+			}
+
 			return ret;
 		}
 
-		public override Stmt VisitUsingStmt( UsingStmtContext c )
+		public override Block VisitUsingStmt( UsingStmtContext c )
 		{
-			MultiStmt ret = new();
+			Block ret = new() {
+				isScope = false,
+				stmts   = new(),
+			};
 			foreach( TypespecNestedContext tc in c.typespecsNested().typespecNested() ) {
 				UsingStmt usingStmt = new() {
 					srcPos = c.ToSrcPos(),
@@ -66,7 +114,7 @@ namespace Myll
 			return ret;
 		}
 
-		public override Stmt VisitAliasStmt( AliasStmtContext c )
+		public override UsingStmt VisitAliasStmt( AliasStmtContext c )
 		{
 			UsingStmt ret = new() {
 				srcPos = c.ToSrcPos(),
@@ -76,8 +124,9 @@ namespace Myll
 			return ret;
 		}
 
+		// NOTE: This is not an override
 		// list of typed and initialized vars
-		public List<Stmt> VisitStmtVars( TypedIdAcorsContext c )
+		private List<Stmt> VisitStmtVars( TypedIdAcorsContext c )
 		{
 			//Scope scope = ScopeStack.Peek();
 			// determine if only scope or container
@@ -87,10 +136,10 @@ namespace Myll
 				.idAccessor()
 				.Select(
 					q => new VarStmt {
-						srcPos   = c.ToSrcPos(),
-						name     = q.id().GetText(),
-						type     = type,
-						init     = q.expr().Visit(),
+						srcPos = c.ToSrcPos(), // needs to stay in here
+						name   = q.id().GetText(),
+						type   = type,
+						init   = q.expr()?.Visit(),
 						// no accessors as Stmt
 					} as Stmt )
 				.ToList();
@@ -98,9 +147,9 @@ namespace Myll
 			return ret;
 		}
 
-		public override Stmt VisitVariableStmt( VariableStmtContext c )
+		public override Block VisitVariableStmt( VariableStmtContext c )
 		{
-			MultiStmt ret = new() {
+			Block ret = new() {
 				stmts = c
 					.typedIdAcors()
 					.SelectMany( VisitStmtVars )
@@ -112,196 +161,195 @@ namespace Myll
 			return ret;
 		}
 
-		public override Stmt VisitEmptyStmt( EmptyStmtContext c )
-		{
-			return new EmptyStmt {
-				srcPos = c.ToSrcPos(),
-			};
-		}
+		public override EmptyStmt VisitEmptyStmt( EmptyStmtContext c )
+			=> new();
 
-		public override Stmt VisitReturnStmt( ReturnStmtContext c )
+		public override ReturnStmt VisitReturnStmt( ReturnStmtContext c )
 		{
 			ReturnStmt ret = new() {
-				srcPos = c.ToSrcPos(),
-				expr   = c.expr().Visit(),
+				expr = c.expr().Visit(),
 			};
 			return ret;
 		}
 
-		public override Stmt VisitThrowStmt( ThrowStmtContext c )
+		public override ThrowStmt VisitThrowStmt( ThrowStmtContext c )
 		{
 			ThrowStmt ret = new() {
-				srcPos = c.ToSrcPos(),
-				expr   = c.expr().Visit(),
+				expr = c.expr().Visit(),
 			};
 			return ret;
 		}
 
-		public override Stmt VisitBreakStmt( BreakStmtContext c )
+		public override BreakStmt VisitBreakStmt( BreakStmtContext c )
 		{
 			BreakStmt ret = new() {
-				srcPos = c.ToSrcPos(),
-				depth  = c.INTEGER_LIT().ToInt( 1 ),
+				depth = c.INTEGER_LIT()?.ToInt() ?? 1,
 			};
 			return ret;
 		}
 
-		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public new CondThen VisitCondThen( CondThenContext c )
+		// NOTE: This is not an override
+		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
+		public new IfStmt.CondThen VisitCondThen( CondThenContext c )
 			=> new() {
-				condExpr = c.expr().Visit(),
-				thenStmt = c.levStmt().Visit(),
+				cond = c.expr().Visit(),
+				then = c.levStmt().Visit(),
 			};
 
-		public override Stmt VisitIfStmt( IfStmtContext c )
+		public override IfStmt VisitIfStmt( IfStmtContext c )
 		{
 			IfStmt ret = new() {
-				srcPos   = c.ToSrcPos(),
-				ifThens  = c.condThen().Select( VisitCondThen ).ToList(),
-				elseStmt = c.levStmt().Visit(),
+				ifThens = c.condThen().Select( VisitCondThen ).ToList(),
+				els     = c.levStmt().Visit(),
 			};
 
 			return ret;
 		}
 
-		public new CaseStmt VisitCaseStmt( CaseStmtContext c )
+		// NOTE: This is not an override
+		private new SwitchStmt.CaseBlock VisitCaseBlock( CaseBlockContext c )
 		{
-			MultiStmt multiStmt = new() {
-				srcPos = c.ToSrcPos(),
-				stmts  = c.levStmt().Select( Visit ).ToList(),
+			Block body = new() {
+				srcPos  = c.ToSrcPos(), // needs to stay in here
+				isScope = c.LCURLY() != null,
+				stmts   = c.levStmt().Select( Visit ).ToList(),
 			};
 
-			bool isFall      = c.FALL()       != null;
-			bool isPhatArrow = c.PHATRARROW() != null; // "=>" always breaks
+			bool hasNoStmt = body.stmts.IsEmpty();
+			bool isFall    = c.FALL() != null;
 			// TODO: check if either break or fall is set, throw if necessary
-			// breaks will be inside the multiStmt.stmts
+			// breaks will be inside the body.stmts
 			// need info from the switch in here if there is a default case
-			if( !isFall || isPhatArrow )
-				multiStmt.stmts.Add( new BreakStmt() );
-			else
-				multiStmt.stmts.Add( new FreetextStmt( "[[fallthrough]];" ) );
+			if( hasNoStmt ) {
+				// OK, consecutive case stmt, silent fallthrough
+			}
+			else if( isFall ) {
+				body.stmts.Add( new FreetextStmt( "[[fallthrough]];" ) );
+			}
+			else if( body.stmts.Last() is not BreakStmt and not ReturnStmt ) {
+				body.stmts.Add( new BreakStmt() );
+			}
 
-			CaseStmt ret = new() {
-				caseExprs = c.expr().Select( q => q.Visit() ).ToList(),
-				bodyStmt  = multiStmt,
+			SwitchStmt.CaseBlock ret = new() {
+				compare = c.expr().Select( q => q.Visit() ).ToList(),
+				then    = body,
 			};
 			return ret;
 		}
 
-		public new Stmt VisitDefaultStmt( DefaultStmtContext c )
+		// NOTE: This is not an override, can receive c == null
+		private new Block VisitDefaultBlock( DefaultBlockContext? c )
 		{
 			if( c == null )
 				return null;
 
-			MultiStmt ret = new() {
-				srcPos = c.ToSrcPos(),
-				stmts  = c.levStmt().Select( Visit ).ToList(),
+			Block ret = new() {
+				srcPos  = c.ToSrcPos(), // needs to stay in here
+				isScope = c.LCURLY() != null,
+				stmts   = c.levStmt().Select( Visit ).ToList(),
 			};
 			return ret;
 		}
 
-		public override Stmt VisitSwitchStmt( SwitchStmtContext c )
+		public override SwitchStmt VisitSwitchStmt( SwitchStmtContext c )
 		{
 			SwitchStmt ret = new() {
-				srcPos    = c.ToSrcPos(),
-				condExpr  = c.expr().Visit(),
-				caseStmts = c.caseStmt().Select( VisitCaseStmt ).ToList(),
-				elseStmt  = VisitDefaultStmt( c.defaultStmt() ),
+				cond  = c.cond.Visit(),
+				cases = c.caseBlock().Select( VisitCaseBlock ).ToList(),
+				els   = VisitDefaultBlock( c.defaultBlock() ),
 			};
 			return ret;
 		}
 
-		public override Stmt VisitLoopStmt( LoopStmtContext c )
+		public override LoopStmt VisitLoopStmt( LoopStmtContext c )
 		{
 			LoopStmt ret = new() {
-				srcPos   = c.ToSrcPos(),
-				bodyStmt = c.levStmt().Visit(),
+				body = c.body.Visit(),
 			};
 			return ret;
 		}
 
-		public override Stmt VisitForStmt( ForStmtContext c )
+		public override ForStmt VisitForStmt( ForStmtContext c )
 		{
 			ForStmt ret = new() {
-				srcPos   = c.ToSrcPos(),
-				initStmt = c.levStmt(0).Visit(),
-				condExpr = c.expr( 0 ).Visit(),
-				iterExpr = c.expr( 1 ).Visit(),
-				bodyStmt = c.levStmt( 1 ).Visit(),
-				elseStmt = c.levStmt( 2 ).Visit(),
+				init = c.init.Visit(),
+				cond = c.cond?.Visit(),
+				iter = c.iter?.Visit(),
+				body = VisitBlockify( c.body ),
+				els  = c.els?.Visit(),
 			};
 			return ret;
 		}
 
-		public override Stmt VisitWhileStmt( WhileStmtContext c )
+		public override WhileStmt VisitWhileStmt( WhileStmtContext c )
 		{
-			CondThen condThen = VisitCondThen( c.condThen() );
 			WhileStmt ret = new() {
-				srcPos   = c.ToSrcPos(),
-				condExpr = condThen.condExpr,
-				bodyStmt = condThen.thenStmt,
-				elseStmt = c.levStmt().Visit(),
+				cond = c.cond.Visit(),
+				body = c.body.Visit(),
+				els  = c.els?.Visit(),
 			};
 			return ret;
 		}
 
-		public override Stmt VisitDoWhileStmt( DoWhileStmtContext c )
+		public override DoWhileStmt VisitDoWhileStmt( DoWhileStmtContext c )
 		{
 			DoWhileStmt ret = new() {
-				srcPos   = c.ToSrcPos(),
-				condExpr = c.expr().Visit(),
-				bodyStmt = c.levStmt().Visit(),
+				cond = c.cond.Visit(),
+				body = VisitBlockify( c.body ),
 			};
 			return ret;
 		}
 
-		public override Stmt VisitTimesStmt( TimesStmtContext c )
+		public override TimesStmt VisitTimesStmt( TimesStmtContext c )
 		{
 			TimesStmt ret = new() {
-				srcPos    = c.ToSrcPos(),
-				countExpr = c.expr().Visit(),
-				name      = c.id().Visit(), // TODO: check for null
-				bodyStmt  = c.levStmt().Visit(),
+				count = c.count.Visit(),
+				name  = c.name?.Visit(),
+				body  = VisitBlockify( c.body ),
 			};
-			// TODO: add name to current scope
+			// TODO: add "name" to current scope
+
+			// fill ret.offset
+			ITerminalNode intLit = c.INTEGER_LIT();
+			if( intLit != null ) {
+				_ = long.TryParse( intLit.GetText(), out ret.offset );
+				if( c.MINUS() != null )
+					ret.offset *= -1;
+			}
 			return ret;
 		}
 
-		public override Stmt VisitAggrAssignStmt( AggrAssignStmtContext c )
+		public override AggrAssign VisitAggrAssignStmt( AggrAssignStmtContext c )
 		{
 			AggrAssign ret = new() {
-				srcPos    = c.ToSrcPos(),
-				op        = c.aggrAssignOP().v.ToAssignOp(),
+				op        = c.aggrAssignOP().v.ToOp(),
 				leftExpr  = c.expr( 0 ).Visit(),
 				rightExpr = c.expr( 1 ).Visit(),
 			};
 			return ret;
 		}
 
-		public override Stmt VisitMultiAssignStmt( MultiAssignStmtContext c )
+		public override MultiAssign VisitMultiAssignStmt( MultiAssignStmtContext c )
 		{
 			MultiAssign ret = new() {
-				srcPos = c.ToSrcPos(),
-				exprs  = c.expr().Select( q => q.Visit() ).ToList(),
+				exprs = c.expr().Select( q => q.Visit() ).ToList(),
 			};
 			return ret;
 		}
 
-		public override Stmt VisitBlockStmt( BlockStmtContext c )
+		public override Block VisitBlockStmt( BlockStmtContext c )
 		{
 			Block ret = new() {
-				srcPos = c.ToSrcPos(),
-				stmts  = c.levStmt()?.Select( Visit ).ToList()
-				      ?? new List<Stmt>()
+				isScope = true,
+				stmts   = c.levStmt()?.Select( Visit ).ToList() ?? new List<Stmt>()
 			};
 			return ret;
 		}
 
-		public override Stmt VisitExpressionStmt( ExpressionStmtContext c )
+		public override ExprStmt VisitExpressionStmt( ExpressionStmtContext c )
 		{
 			ExprStmt ret = new() {
-				srcPos = c.ToSrcPos(),
-				expr   = c.expr().Visit(),
+				expr = c.expr().Visit(),
 			};
 			return ret;
 		}

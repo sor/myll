@@ -109,7 +109,7 @@ namespace Myll
 				if( c.suffix != null ) {
 					// TODO: add support for smartpointed containers
 					ret = new Pointer {
-						expr = c.expr().Visit(),
+						expr = c.expr()?.Visit(),
 						kind = c.suffix.Type switch {
 							MyllParser.EM   => Pointer.Kind.UniqueArray,
 							MyllParser.PLUS => Pointer.Kind.SharedArray,
@@ -120,7 +120,7 @@ namespace Myll
 				else {
 					bool isStdArray = c.expr() != null && c.ary.Type == MyllParser.AT_LBRACK;
 					ret = new Pointer {
-						expr = c.expr().Visit(),
+						expr = c.expr()?.Visit(),
 						kind = isStdArray ? Pointer.Kind.Array : ToPtr[c.ary.Type],
 					};
 				}

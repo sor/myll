@@ -37,6 +37,29 @@ namespace Myll.Core
 				? string.Format( "({0})", value )
 				: value;
 
+		public static string Curly( this string value, bool doCurly )
+			=> doCurly
+				? string.Format( "{{{0}}}", value )
+				: value;
+
+		// does not change indentation of passed in IEnumerable
+		public static IEnumerable<string> Curly( this IEnumerable<string> values, string indent, bool doCurly = true )
+			=> doCurly
+				? values
+					.Prepend( string.Format( "{0}{{", indent ) )
+					.Append( string.Format( "{0}}}",  indent ) )
+				: values;
+
+		// does not change indentation of passed in IEnumerable
+		public static IEnumerable<string> Curly( this IEnumerable<string> values, int level, bool doCurly = true )
+			=> doCurly
+				? values.Curly( StmtFormatting.IndentString.Repeat( level ), true )
+				: values;
+
+		//public static IEnumerable<Stmt> FilterEmpty( this IEnumerable<Stmt> values )
+		//	=> values.Where( s => s is not EmptyStmt );
+
+
 		// why was this ICollection instead of IEnumerable?
 		public static string Join( this IEnumerable<string> values, string delimiter )
 			// TODO: this might be the bottleneck in the end, bench when finished
@@ -47,9 +70,26 @@ namespace Myll.Core
 			=> values.Select( l => string.Format( "{0}{1}", indent, l ) );
 
 		public static IEnumerable<string> Indent( this IEnumerable<string> values, int level )
+			=> values.Indent( StmtFormatting.IndentString.Repeat( level ) );
+
+		public static List<string> IndentAll( this string value, int level )
 		{
 			string indent = StmtFormatting.IndentString.Repeat( level );
-			return values.Select( l => string.Format( "{0}{1}", indent, l ) );
+			if( !value.Contains( "\n" ) )
+				return new List<string> { indent + value };
+
+			string[] split = value.Split( '\n' );
+			return split.Indent( indent ).ToList();
+		}
+
+		public static List<string> Indent2nd( this string value, int level )
+		{
+			string indent = StmtFormatting.IndentString.Repeat( level );
+			if( !value.Contains( "\n" ) )
+				return new List<string> { indent + value };
+
+			string[] split = value.Split( '\n' );
+			return split.Skip( 1 ).Indent( level ).Prepend( split.First() ).ToList();
 		}
 
 		[Pure]

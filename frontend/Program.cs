@@ -2,13 +2,11 @@
 //#define DISABLE_PLINQ
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.Mime;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -112,13 +110,17 @@ namespace Myll
 		private static string ClassifyModule( MyllParser.ProgContext c )
 		{
 			FileInfo fi = new( c.Start.InputStream.SourceName );
-			return c.module()?.id().GetText()
-			    ?? Path.GetFileNameWithoutExtension( fi.Name );
+			string ret = c.module()?.id().GetText()
+			          ?? Path.GetFileNameWithoutExtension( fi.Name );
+			//Console.WriteLine( "Time elapsed after ClassifyModule {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
+			return ret;
 		}
 
 		private static GlobalNamespace CompileModule( ModuleGroup progContext )
 		{
-			return VisitorExtensions.DeclVis.VisitProgs( progContext );
+			GlobalNamespace ret = VisitorExtensions.DeclVis.VisitProgs( progContext );
+			//Console.WriteLine( "Time elapsed after CompileModule  {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
+			return ret;
 		}
 
 		private static List<(string, IStrings)> GenerateFiles( GlobalNamespace global_ns )
@@ -182,7 +184,7 @@ namespace Myll
 			}
 
 			if( !opt.IsFileOut && !opt.IsStdOut ) {
-				Console.WriteLine( "\nNO OUTPUT wanted, just burning CPU time then!" );
+				Console.WriteLine( "\nNO OUTPUT wanted, just burning CPU time while calculating the output!\n" );
 
 				output.Exec();
 			}

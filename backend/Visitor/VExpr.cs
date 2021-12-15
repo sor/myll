@@ -19,12 +19,12 @@ namespace Myll
 		public ExprVisitor( Stack<Scope> scopeStack ) : base( scopeStack ) {}
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public override Expr Visit( IParseTree c )
+		public override Expr Visit( IParseTree? c )
 			=> c == null
 				? null
 				: base.Visit( c );
 
-		public override Expr VisitScopedExpr( ScopedExprContext c )
+		public override ScopedExpr VisitScopedExpr( ScopedExprContext c )
 		{
 			ScopedExpr ret = new() {
 				op     = Operand.Scoped,
@@ -76,9 +76,9 @@ namespace Myll
 			return ret;
 		}
 
-		public override Expr VisitNewExpr( NewExprContext c )
+		public override NewExpr VisitNewExpr( NewExprContext c )
 		{
-			Expr ret = new NewExpr {
+			NewExpr ret = new() {
 				op       = Operand.New,
 				type     = VisitTypespec( c.typespec() ),
 				funcCall = VisitFuncCall( c.funcCall() ),
@@ -141,7 +141,7 @@ namespace Myll
 		}
 
 		// TODO: check if this really works
-		public override Expr VisitMemPtrExpr( MemPtrExprContext c )
+		public override BinOp VisitMemPtrExpr( MemPtrExprContext c )
 		{
 			BinOp ret = new() {
 				op    = c.memAccPtrOP().v.ToOp(),
@@ -151,7 +151,7 @@ namespace Myll
 			return ret;
 		}
 
-		public override Expr VisitPowExpr( PowExprContext c )
+		public override BinOp VisitPowExpr( PowExprContext c )
 		{
 			BinOp ret = new() {
 				op    = Operand.Pow,
@@ -161,7 +161,7 @@ namespace Myll
 			return ret;
 		}
 
-		public override Expr VisitMultExpr( MultExprContext c )
+		public override BinOp VisitMultExpr( MultExprContext c )
 		{
 			BinOp ret = new() {
 				op    = c.multOP().v.ToOp(),
@@ -171,7 +171,7 @@ namespace Myll
 			return ret;
 		}
 
-		public override Expr VisitAddExpr( AddExprContext c )
+		public override BinOp VisitAddExpr( AddExprContext c )
 		{
 			BinOp ret = new() {
 				op    = c.addOP().v.ToOp(),
@@ -181,7 +181,7 @@ namespace Myll
 			return ret;
 		}
 
-		public override Expr VisitShiftExpr( ShiftExprContext c )
+		public override BinOp VisitShiftExpr( ShiftExprContext c )
 		{
 			BinOp ret = new() {
 				op    = c.shiftOP().LSHIFT() != null ? Operand.LeftShift : Operand.RightShift,
@@ -191,7 +191,7 @@ namespace Myll
 			return ret;
 		}
 
-		public override Expr VisitComparisonExpr( ComparisonExprContext c )
+		public override BinOp VisitComparisonExpr( ComparisonExprContext c )
 		{
 			BinOp ret = new() {
 				op    = Operand.Comparison,
@@ -247,21 +247,21 @@ namespace Myll
 			}
 		}
 
-		public override Expr VisitRelationExpr( RelationExprContext c )
+		public override BinOp VisitRelationExpr( RelationExprContext c )
 		{
 			FlattenRelational flat = new( c );
-			Expr              ret  = flat.VisitWithAnd();
+			BinOp             ret  = flat.VisitWithAnd();
 			return ret;
 		}
 
-		public override Expr VisitEqualityExpr( EqualityExprContext c )
+		public override BinOp VisitEqualityExpr( EqualityExprContext c )
 		{
 			FlattenRelational flat = new( c );
-			Expr              ret  = flat.VisitWithAnd();
+			BinOp             ret  = flat.VisitWithAnd();
 			return ret;
 		}
 
-		public override Expr VisitAndExpr( AndExprContext c )
+		public override BinOp VisitAndExpr( AndExprContext c )
 		{
 			BinOp ret = new() {
 				op    = Operand.And,
@@ -271,7 +271,7 @@ namespace Myll
 			return ret;
 		}
 
-		public override Expr VisitOrExpr( OrExprContext c )
+		public override BinOp VisitOrExpr( OrExprContext c )
 		{
 			BinOp ret = new() {
 				op    = Operand.Or,
@@ -281,7 +281,7 @@ namespace Myll
 			return ret;
 		}
 
-		public override Expr VisitNullCoalesceExpr( NullCoalesceExprContext c )
+		public override BinOp VisitNullCoalesceExpr( NullCoalesceExprContext c )
 		{
 			BinOp ret = new() {
 				op    = Operand.NullCoalesce,
@@ -291,7 +291,7 @@ namespace Myll
 			return ret;
 		}
 
-		public override Expr VisitConditionalExpr( ConditionalExprContext c )
+		public override TernOp VisitConditionalExpr( ConditionalExprContext c )
 		{
 			TernOp ret = new() {
 				op    = Operand.Conditional,
@@ -302,7 +302,34 @@ namespace Myll
 			return ret;
 		}
 
-		public override Expr VisitParenExpr( ParenExprContext c )
+		public override Lambda VisitLambdaExpr( LambdaExprContext c )
+		{
+			// TODO this is probably just one big hack
+			PushScope(); // is this needed here?
+			Lambda ret = new();
+			Func func = new() {
+				srcPos    = c.ToSrcPos(),
+				TplParams = VisitTplParams( c.tplParams() ),
+				paras     = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
+				body      = c.funcBody().Visit(),
+			};
+			func.retType = c.typespec() != null ? VisitTypespec( c.typespec() ) :
+				func.IsReturningSomething ?
+					new TypespecBasic {
+						kind = TypespecBasic.Kind.Auto,
+						size = TypespecBasic.SizeUndetermined,
+					} :
+					new TypespecBasic {
+						kind = TypespecBasic.Kind.Void,
+						size = TypespecBasic.SizeInvalid,
+					};
+			ret.func = func;
+			PopScope();
+
+			return ret;
+		}
+
+		public override UnOp VisitParenExpr( ParenExprContext c )
 		{
 			UnOp ret = new() {
 				op   = Operand.Parens,
@@ -345,7 +372,7 @@ namespace Myll
 		}
 
 		// TODO remove this or the other above?
-		public override Expr VisitLiteralExpr( LiteralExprContext c )
+		public override Literal VisitLiteralExpr( LiteralExprContext c )
 		{
 			Literal ret = new() {
 				op   = Operand.Literal,
@@ -354,9 +381,9 @@ namespace Myll
 			return ret;
 		}
 
-		public override Expr VisitIdTplExpr( IdTplExprContext c )
+		public override IdExpr VisitIdTplExpr( IdTplExprContext c )
 		{
-			Expr ret = new IdExpr {
+			IdExpr ret = new() {
 				op        = Operand.Id,
 				idTplArgs = VisitIdTplArgs( c.idTplArgs() ),
 			};

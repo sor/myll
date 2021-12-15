@@ -283,6 +283,32 @@ namespace Myll.Core
 		}
 	}
 
+	public class Lambda : Expr
+	{
+		public Func func;
+
+		public override string Gen( bool doBrace = false )
+		{
+			// TODO capture and template
+			string paramString = func.paras
+				.Select( p => p.Gen() )
+				.Join( ", " );
+
+			List<string> body        = func.body.GenWithoutCurly( 1 );
+			bool         shortLambda = body.Count <= 1;
+			if( shortLambda )
+				return Format(
+					"[&]({0}) {{ {1} }}",
+					paramString,
+					body.Join( "\n" ).TrimStart() ).Brace( doBrace );
+			else
+				return Format(
+					"[&]({0}) {{\n{1}\n}}",
+					paramString,
+					body.Join( "\n" ) ).Brace( doBrace );
+		}
+	}
+
 	public class ScopedExpr : Expr
 	{
 		public List<IdTplArgs> idTpls;

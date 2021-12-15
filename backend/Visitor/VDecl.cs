@@ -32,13 +32,13 @@ namespace Myll
 				? null
 				: base.Visit( c );
 
-		public override Decl VisitEnumDecl( EnumDeclContext c )
+		public override Enumeration VisitEnumDecl( EnumDeclContext c )
 		{
 			Enumeration ret = new() {
 				srcPos   = c.ToSrcPos(),
 				name     = c.id().Visit(),
 				access   = curAccess,
-				basetype = (c.bases != null) ? VisitTypespecBasic( c.bases ) : null,
+				baseType = (c.bases != null) ? VisitTypespecBasic( c.bases ) : null,
 			};
 			// do not reset curAccess because there is no change inside enums
 			PushScope( ret );
@@ -48,7 +48,7 @@ namespace Myll
 			return ret;
 		}
 
-		public override Decl VisitFuncDef( FuncDefContext c )
+		public override Func VisitFuncDef( FuncDefContext c )
 		{
 			// ist das hier richtig?
 			PushScope();
@@ -58,7 +58,7 @@ namespace Myll
 				access    = curAccess,
 				TplParams = VisitTplParams( c.tplParams() ),
 				paras     = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
-				block     = c.funcBody().Visit(),
+				body      = c.funcBody().Visit(),
 			};
 			ret.retType = c.typespec() != null ? VisitTypespec( c.typespec() ) :
 				ret.IsReturningSomething ?
@@ -81,10 +81,10 @@ namespace Myll
 			return ret;
 		}
 
-		public new List<Decl> VisitFunctionDecl( FunctionDeclContext c )
+		public new List<Func> VisitFunctionDecl( FunctionDeclContext c )
 			=> c.funcDef().Select( VisitFuncDef ).ToList();
 
-		public override Decl VisitOpDef( OpDefContext c )
+		public override Func VisitOpDef( OpDefContext c )
 		{
 			// TODO solve that better
 			string stringOp  = c.STRING_LIT().GetText();
@@ -96,7 +96,7 @@ namespace Myll
 				access    = curAccess,
 				TplParams = VisitTplParams( c.tplParams() ),
 				paras     = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
-				block     = c.funcBody().Visit(),
+				body      = c.funcBody().Visit(),
 			};
 			ret.retType = c.typespec() != null ? VisitTypespec( c.typespec() ) :
 				ret.IsReturningSomething ?
@@ -113,7 +113,7 @@ namespace Myll
 			return ret;
 		}
 
-		public new List<Decl> VisitOpDecl( OpDeclContext c )
+		public new List<Func> VisitOpDecl( OpDeclContext c )
 			=> c.opDef().Select( VisitOpDef ).ToList();
 
 		public override Decl VisitAttribDeclBlock( AttribDeclBlockContext c )
@@ -183,7 +183,7 @@ namespace Myll
 			return global;
 		}
 
-		public override Decl VisitNamespace( NamespaceContext c )
+		public override Namespace VisitNamespace( NamespaceContext c )
 		{
 			Namespace ret = null;
 
@@ -203,7 +203,7 @@ namespace Myll
 					ret = ns;
 			}
 
-			// only visit children and remove hierarchy with body
+			// only visit children and remove hierarchy with then
 			if( withBody ) {
 				c.levDecl().Select( Visit ).Exec();
 
@@ -215,7 +215,7 @@ namespace Myll
 			return ret;
 		}
 
-		public override Decl VisitStructDecl( StructDeclContext c )
+		public override Structural VisitStructDecl( StructDeclContext c )
 		{
 			Structural ret = new() {
 				srcPos    = c.ToSrcPos(),
@@ -242,7 +242,7 @@ namespace Myll
 			return ret;
 		}
 
-		public override Decl VisitUsingDecl( UsingDeclContext c )
+		public override MultiDecl VisitUsingDecl( UsingDeclContext c )
 		{
 			MultiDecl ret = new();
 			foreach( TypespecNestedContext tc in c.typespecsNested().typespecNested() ) {
@@ -256,7 +256,7 @@ namespace Myll
 			return ret;
 		}
 
-		public override Decl VisitAliasDecl( AliasDeclContext c )
+		public override UsingDecl VisitAliasDecl( AliasDeclContext c )
 		{
 			UsingDecl ret = new() {
 				srcPos = c.ToSrcPos(),
@@ -267,7 +267,7 @@ namespace Myll
 			return ret;
 		}
 
-		public override Decl VisitCtorDecl( CtorDeclContext c )
+		public override Structor VisitCtorDecl( CtorDeclContext c )
 		{
 			Scope parent = scopeStack.Peek();
 			if( !parent.HasDecl || !(parent.decl is Structural) )
@@ -282,7 +282,7 @@ namespace Myll
 				access = curAccess,
 				kind   = Structor.Kind.Constructor,
 				paras  = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
-				block  = c.levStmt().Visit(),
+				body  =  c.funcBody().Visit(),
 				// TODO: cc.initList(); // opt
 			};
 			PopScope();
@@ -290,7 +290,7 @@ namespace Myll
 			return ret;
 		}
 
-		public override Decl VisitDtorDecl( DtorDeclContext c )
+		public override Structor VisitDtorDecl( DtorDeclContext c )
 		{
 			Scope parent = scopeStack.Peek();
 			if( !parent.HasDecl || !(parent.decl is Structural) )
@@ -305,7 +305,7 @@ namespace Myll
 				access = curAccess,
 				kind   = Structor.Kind.Destructor,
 				paras  = new List<Param>(),
-				block  = c.levStmt().Visit(),
+				body  = c.funcBody().Visit(),
 				// TODO: cc.initList(); // opt
 			};
 			PopScope();
@@ -327,7 +327,7 @@ namespace Myll
 						name     = q.id().GetText(),
 						access   = curAccess,
 						type     = type,
-						init     = q.expr().Visit(),
+						init     = q.expr()?.Visit(),
 						accessor = q.accessorDef().Visit(),
 						// TODO: Accessors, is this still valid?
 					} as Decl )
@@ -336,7 +336,7 @@ namespace Myll
 			return ret;
 		}
 
-		public override Decl VisitVariableDecl( VariableDeclContext c )
+		public override MultiDecl VisitVariableDecl( VariableDeclContext c )
 		{
 			MultiDecl ret = new() {
 				decls = c.typedIdAcors()

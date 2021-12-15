@@ -155,28 +155,35 @@ namespace problem_3333 {
 }
 
 namespace problem_3334 {
-	func test() {
-		var int a;
-
-		/* Output for switch is not implemented yet
+	func do_this() {}
+	func or_do_that() {}
+	func two_cases_want_the_same() {}
+	func test() -> const char* {
+		var int a, b, c;
 
 		switch( a ) {
 			case 1:
 				do_this();
 				fall;	// error without either fall or break
 
+			case 99:
 			case 2:
 				or_do_that();
 				break;	// error without either fall or break
 
 			case 3, 4:	// same as case 3: case 4:
 				two_cases_want_the_same();
+
+			else:
+				null;
+				null;
 		}
 
-		// multiple statements in a scope, automatically break, fall maybe impossible here
-		switch( a ) {
+		// multiple statements in a scope, automatically break, fall may be possible
+		switch( b ) {
 			case 1 {
 				do_this();
+				fall;
 			}
 			case 2 {
 				or_do_that();
@@ -184,15 +191,17 @@ namespace problem_3334 {
 			case 3, 4 {
 				two_cases_want_the_same();
 			}
+			else { null; }
 		}
 
-		// only one statement, automatically break, fall definitely impossible here
-		switch( a ) {
+		// only one statement, automatically break after, fall is impossible
+		switch( c ) {
 			case 1		=> do_this();
 			case 2		=> or_do_that();
 			case 3, 4	=> two_cases_want_the_same();
 		}
 
+		// TODO: range does not work yet
 		var int age;
 		switch( age ) {
 			case  0 ... 12:	return "child";
@@ -209,7 +218,6 @@ namespace problem_3334 {
 		//	case 18 ... 66	=> "work-work";
 		//	default			=> "pensioner";
 		//}
-		//*/
 	}
 }
 
@@ -245,33 +253,38 @@ namespace problem_3343 {
 
 		var int scl;
 		var int[10] ary;
-		var int* ptr_to_scalar = &scl;	// OK, scalar pointer points to scalar
-		var int[*] ptr_to_ary1 = ary;	// OK, explicit decay from array to array pointer
-		var int[*] ptr_to_ary2 = &scl;	// Error: Scalar can not be converted to an array pointer
+		var int* ptr_to_scalar = &scl;		// OK, scalar pointer points to scalar
+		// TODO: needs analyze to allow the & below
+		var int[*] ptr_to_ary1 = /*&*/ary;	// OK, explicit decay from array to array pointer
+		var int[*] ptr_to_ary2 = &scl;		// Error: Scalar can not be converted to an array pointer
 		ptr_to_scalar++;	// Error: Pointer to scalar forbids arithmetic
 		ptr_to_ary1++;		// OK
 	}
 }
 
 namespace problem_3351 {
-	func pow1( float b, int e )-> float	{ return b ** e; }
+	func pow1( f32  b, int e ) -> f32	{ return b ** e; }
 	func pow2( auto b, int e ) -> auto	{ return b ** e; }
-	func pow3( auto b, int e ) 			{ return b ** e; } // same as pow2
+	func pow3( auto b, int e )			{ return b ** e; } // same as pow2
 	func pow4<T>( T b, int e ) -> auto	{ return b ** e; }
 	func pow5<T>( T b, int e ) -> T		{ return b ** e; }
 	func test() {
-		var func*(float b, int e) -> auto funcPtrToPow = pow1;
-		// TODO: var auto lambda = func(float b, int e) { return b ** e; };
-		// auto lambda = [](float b, int e)  { return pow(b, e); };
-		std::cout << lambda( 2, 5 );
+		var func*( f32 b, int e ) -> auto funcPtr = pow5<f32>;
+		var f64 dbl = 99;
+		var auto lambda = func( f32 b, int e) {
+			var int i;
+			return funcPtr(b, e) + dbl;
+		};
+		//auto lambda = [](float b, int e)  { return pow(b, e); };
+		std::cout << lambda( 2, 10 ) << "\n";
 	}
 }
 
-
-/*
-func main() -> int
+func main( int argc, const char*[] argv ) -> int
 {
-	problem_3331::C::test();
-	return 42;
+	problem_3351::test();
+	//problem_3331::C::test();
+	return 0;// mainX( argc, argv );
+	//loop{break;}
 }
-*/
+

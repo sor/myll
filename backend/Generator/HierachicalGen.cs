@@ -289,6 +289,7 @@ namespace Myll.Generator
 			bool    isInline       = obj.IsInline;
 			bool    isInsideStruct = obj.IsInStruct;
 			bool    isStatic       = obj.IsStatic;
+			bool    isExternal     = obj.IsExternal;
 			string  indentDecl     = IndentDecl;
 			string  indentImpl     = IndentImpl;
 			string  nameDecl       = obj.name;
@@ -301,11 +302,12 @@ namespace Myll.Generator
 				.Select( p => p.Gen() )
 				.Join( ", " );
 
-			string prefix = (isStatic ? "static " : "") +
-							(obj.IsVirtual ? "virtual " : "") +
-							(isInline ? "inline " : "");
-			string suffix = (obj.IsConst ? " const" : "") +
-							(obj.IsOverride ? " override" : "");
+			string prefix = (isStatic ? "static " : "")
+			              + (isExternal ? "extern " : "")
+			              + (obj.IsVirtual ? "virtual " : "")
+			              + (isInline ? "inline " : "");
+			string suffix = (obj.IsConst ? " const" : "")
+			              + (obj.IsOverride ? " override" : "");
 			string headlineDecl = Format(
 				FuncFormat[0],
 				indentDecl,
@@ -336,19 +338,19 @@ namespace Myll.Generator
 				tplImpl = null;
 			}
 
-			if( isInline ) {
+			if( isInline || isExternal ) {
 				if( !isInsideStruct ) {
 					if( hasTpl )
 						targetProto.Add( tplDecl );
 					targetProto.Add( headlineDecl + ";" );
 				}
 
-				if( hasTpl )
-					targetDecl.Add( tplDecl );
-				targetDecl.Add( headlineDecl );
-				targetDecl.Add( Format( CurlyOpen, indentDecl ) );
-				targetDecl.AddRange( obj.block.GenWithoutCurly( LevelDecl + 1 ) );
-				targetDecl.Add( Format( CurlyClose, indentDecl ) );
+				if( !isExternal ) {
+					if( hasTpl )
+						targetDecl.Add( tplDecl );
+					targetDecl.Add( headlineDecl );
+					targetDecl.AddRange( obj.body.Gen( LevelDecl ) );
+				}
 			}
 			else {
 				string headlineImpl = Format(
@@ -366,9 +368,7 @@ namespace Myll.Generator
 				if( hasTpl )
 					targetImpl.Add( tplImpl );
 				targetImpl.Add( headlineImpl );
-				targetImpl.Add( Format( CurlyOpen, indentImpl ) );
-				targetImpl.AddRange( obj.block.GenWithoutCurly( LevelImpl + 1 ) );
-				targetImpl.Add( Format( CurlyClose, indentImpl ) );
+				targetImpl.AddRange( obj.body.Gen( LevelImpl ) );
 			}
 		}
 
@@ -421,8 +421,8 @@ namespace Myll.Generator
 			}
 			else if( isEnum ) {
 				keyword = StructFormat[6];
-				bases = (objEnum.basetype != null)
-					? " : " + objEnum.basetype.GenType()
+				bases = (objEnum.baseType != null)
+					? " : " + objEnum.baseType.GenType()
 					: "";
 			}
 			else if( isStruct ) {
@@ -484,9 +484,8 @@ namespace Myll.Generator
 
 			targetDecl.AddRange( gen.GenDecl() );
 
-			if( !isGlobal ) {
+			if( !isGlobal )
 				targetDecl.Add( Format( isNamespace ? CurlyClose : CurlyCloseSC, indent ) );
-			}
 
 			targetImpl.AddRange( gen.GenImpl() );
 		}
@@ -537,11 +536,8 @@ namespace Myll.Generator
 
 			if( isInline ) {
 				targetDecl.Add( headlineDecl );
-				if( !isDefault && !isDisabled ) {
-					targetDecl.Add( Format( CurlyOpen, indentDecl ) );
-					targetDecl.AddRange( obj.block.GenWithoutCurly( LevelDecl + 1 ) );
-					targetDecl.Add( Format( CurlyClose, indentDecl ) );
-				}
+				if( !isDefault && !isDisabled )
+					targetDecl.AddRange( obj.body.Gen( LevelDecl ) );
 			}
 			else {
 				string headlineImpl = Format(
@@ -555,9 +551,7 @@ namespace Myll.Generator
 				targetDecl.Add( headlineDecl + ";" );
 
 				targetImpl.Add( headlineImpl );
-				targetImpl.Add( Format( CurlyOpen, indentImpl ) );
-				targetImpl.AddRange( obj.block.GenWithoutCurly( LevelImpl + 1 ) );
-				targetImpl.Add( Format( CurlyClose, indentImpl ) );
+				targetImpl.AddRange( obj.body.Gen( LevelImpl ) );
 			}
 		}
 	}
