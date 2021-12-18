@@ -1,3 +1,5 @@
+![image](https://user-images.githubusercontent.com/634372/146655353-6066d0ac-cf61-4445-abd3-0b3d0e311900.png)
+
 # Myll
 IPA: /mʏl/, free from »MyLang«. A saner Programming Language that compiles to C++.
 
