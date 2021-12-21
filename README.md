@@ -35,22 +35,22 @@ Give professionals the comfort of known semantics with less repetition and fewer
 
 ## TODO
 - Prio 1 Output:
-    - [only-raw] pointer/array, output
-    - prototypes for simple gen
+    - DONE: [only-raw] pointer/array, output
+    - DONE: prototypes for simple gen
     - subclasses
     - test cases for thesis: the_final_test.myll
 
 - Prio 2:
     - Benchmark the compiler
-    - accessor, 100% concept, identify use cases and morph them
+    - accessors, 100% concept, identify use cases and morph them
 
 - Prio 3:
-    - intelligent extra linespacing (between output groups)
+    - DONE: intelligent extra linespacing (between output groups)
     - automatic includes (e.g. recognize std::vector)
 
 - fix:
     - ppp at end of struct
-    - imports having paths
+    - import statements which contain pathes
 
 - done:
     - [done] common statements, out
@@ -66,16 +66,16 @@ Give professionals the comfort of known semantics with less repetition and fewer
     - [partly] manual includes (OR just do the common includes!)
 
 - Don't forget high level ideas!
-    - SOA attribute
+    - SoA/AoS/AoSoA attribute
     - PIMPL attribute
     - Source file unification build
-    - Glue classes
-    - Memorization as language feature
+    - Glue classes (e.g. you include both; iostream and vector and **only then** get an stream.operator<<(vector). Neither iostream would force you to include vector, not vector would enforce iostream)
+    - Memoization as language feature
     - Static init of singletons, optimizing away the thread lock
     - *typename* instead of *var*
     - cost of moving, cost of comp, constexpr to switch algs, see "speed is in the minds of ppl"
     - less shadow language -> no preprocessor
-        - solve by having compile time descisions handled in the language itself
+        - solve by having compile time descisions handled in the language itself, via attribute sections
     - default arguments possible from callsite (like LINE and FILE)
 
 # Modules
@@ -93,32 +93,6 @@ There are plenty of differences to C++, but only the ones listed here could some
 static hat etliche Bedeutungen, const auch:
 ...Echte 'Konstanten' wurden aber sehr lange nicht etwa mit 'const float PI = 3.14f;'
 geschrieben, sondern mit '#define PI 3.14f'
-
-C#/Java/D/Rust argumentation erweitern
-
-Zu lesen: K&R, Stroustrup
-
-Leute kontaktieren:
-	BS, AH, JB, PV
-
-# Pointer / Array output
-
-- int a;			declare a as int
----
-- int *a;			declare a as pointer to int
-- int a[];		declare a as array of int
----
-- int *a[];		declare a as array of pointer to int
-- int *(a)[];		declare a as array of pointer to int
-- int (*a)[];		declare a as pointer to array of int
----
-- ptr<int> a;
-- ary<int> a;
----
-- ary<ptr<int>> a;
-- ptr<ary<int>> a;
----
-- ptr<int(*)[]> a;
 
 # Unsolved Issues
 (not to be mistakened with not-implemented features)
