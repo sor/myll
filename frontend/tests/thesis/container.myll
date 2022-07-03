@@ -1,27 +1,41 @@
 // Thesis page 19
-
 module MyContainers;
+
 //module main;
 
 import std_iostream;
 
-func main( int argc, char*[] argv ) -> int {
+func mainX( int argc, const char*[] argv ) -> int {
 	using std, JanSordid::Container;
 
 	var MyStack<i8> stack = MyStack<i8>(4);
 	stack.push( 42 ).push( 23 ).push( 16 ).push( 15 ).push( 8 ).push( 4 );
-
-	do 30 times stack.push( 1 );
-	do 30 times i stack.push( i );
-
+{{
+	// pushes -5 to +4 on the stack (10 numbers)
+	do 10 times i-5 stack.push( i );
+	{
+	// unnamed loop variable, pushes 1's on the stack
+	do 10 times stack.push( 1 );
+	}
+}}
 	while( !stack.isEmpty() ) {
+		// even int8_t will be printed via cout as char :(
 		cout << (int)stack.top() << endl;
+		//std::format_to( cout, "{0}", stack.top() );
 		stack.pop();
 	}
 	return 0;
 }
 
+// all the same (4+ a bit different)
+func hans1() -> auto => 9;
+func hans2() -> auto return 9;
+func hans3() -> auto {return 9;}
+func hans4() -> auto {{return 9;}}
+//func hans5();
+
 namespace JanSordid::Container;
+//namespace JanSordid::Container:
 
 [rule_of_n=0] // not yet validated
 class MyStack<T> {
@@ -72,3 +86,4 @@ class MyStack<T> {
 		_data		= (move)new_data;
 	}
 }
+//*/

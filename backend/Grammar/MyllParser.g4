@@ -2,6 +2,32 @@ parser grammar MyllParser;
 
 options { tokenVocab = MyllLexer; }
 
+prog		:	module? imports* /*definition?*/ levDecl*;
+
+module		:	MODULE id SEMI;
+imports		:	IMPORT id (COMMA id)* COMMA? SEMI;
+// which DEFINEs can be passed directly from the compiler, all others will be discarded
+//defines	:	DEFINITION id (COMMA id)* COMMA? SEMI;
+
+// ONLY refer to levStmt, NOT the inStmt
+levDecl		:	attribBlk	LCURLY	levDecl* RCURLY	# AttribDeclBlock // must be in here, since it MUST have an attrib block
+			|	attribBlk	COLON 					# AttribState     // everything needs an antonym to make this work
+			|	attribBlk?			inDecl			# AttribDecl;
+
+// ONLY refer to levStmt, NOT the inStmt
+levStmt		:	attribBlk?			inStmt			# AttribStmt;
+
+attribBlk	:	LBRACK	attrib (COMMA attrib)* COMMA? RBRACK;
+attrib		:	attribId
+				(	'=' idOrLit
+				|	'(' idOrLit (COMMA idOrLit)* COMMA? ')'
+				)?;
+attribId	:	id | CONST | FALL | THROW | DEFAULT;
+
+
+// The great reordering Part 2, everything below still TODO
+
+
 comment		:	COMMENT;
 
 // handled by ToPreOp because of collisions
@@ -82,7 +108,7 @@ funcCall	:	ary=( QM_LPAREN | LPAREN )	args?	RPAREN;
 indexCall	:	ary=( QM_LBRACK | LBRACK )	args	RBRACK;
 
 param		:	typespec id?;
-funcTypeDef	:	LPAREN (param (COMMA param)* COMMA?)? RPAREN;
+funcTypeDef	:	LPAREN	(param (COMMA param)* COMMA?)?	RPAREN;
 
 // can't contain expr, will fck up through idTplArgs with multiple templates (e.g. op | from enums)
 tplArg		:	lit | typespec;
@@ -112,9 +138,11 @@ expr		:	(idTplArgs	SCOPE)+	idTplArgs	# ScopedExpr
 			| // can not even be associative without a contained expr
 				NEW	typespec?	funcCall?		# NewExpr
 			| // inherently <assoc=right>, so no need to tell ANTLR
-				(	(	FORWARD // parens included
-					|	MOVE    // parens included
-					|	LPAREN (QM|EM)? typespec RPAREN)
+				(	LPAREN
+					(	COPY // cast that forces a copy?
+					|	MOVE
+					|	FORWARD
+					|	(QM|EM)? typespec	) RPAREN
 				|	SIZEOF
 				|	DELETE	( ary='['']' )?
 				|	preOP
@@ -153,18 +181,10 @@ idAccessors	:	idAccessor	(COMMA idAccessor)*	COMMA?;
 idExprs		:	idExpr		(COMMA idExpr)*		COMMA?;
 typedIdAcors:	typespec 	idAccessors	SEMI;
 
-attribId	:	id | CONST | FALL | THROW | DEFAULT;
-attrib		:	attribId
-				(	'=' idOrLit
-				|	'(' idOrLit (COMMA idOrLit)* COMMA? ')'
-				)?;
-attribBlk	:	LBRACK	attrib (COMMA attrib)* COMMA? RBRACK;
-
 caseBlock	:	CASE expr (COMMA expr)*
 				(	COLON		levStmt* (FALL SEMI)?
 				|	LCURLY		levStmt* (FALL SEMI)? RCURLY
 				|	PHATRARROW	levStmt);
-
 defaultBlock:	(ELSE|DEFAULT)
 				(	COLON		levStmt*
 				|	LCURLY		levStmt* RCURLY
@@ -177,52 +197,69 @@ initList	:	COLON id funcCall (COMMA id funcCall)* COMMA?;
 funcBody	:	PHATRARROW expr SEMI
 			|	levStmt;
 accessorDef	:	attribBlk?	qual* v=( GET | REFGET | SET ) funcBody;
-funcDef		:	id			tplParams?	funcTypeDef (RARROW typespec)?
-				(REQUIRES typespecsNested)?		// TODO
+funcDef		:	id			tplParams?	funcTypeDef?
+				(RARROW		typespec)?
+				(REQUIRES	typespecsNested)?	// TODO
 				funcBody;
-opDef		:	STRING_LIT	tplParams?	funcTypeDef (RARROW typespec)?
-				(REQUIRES typespecsNested)?		// TODO
+opDef		:	STRING_LIT	tplParams?	funcTypeDef?
+				(RARROW		typespec)?
+				(REQUIRES	typespecsNested)?	// TODO
 				funcBody;
 
 // remove this?
-condThen	:	LPAREN expr RPAREN	levStmt;
+condThen	:	LPAREN	expr	RPAREN	levStmt;
+		//	|			expr			levStmt; // bench if this would hurt
+		//	|			expr	COLON	levStmt; // try if this may work
 
-// DON'T refer to these in* here, ONLY refer to lev* levels
+// DON'T refer to inDecl, ONLY refer to levDecl
 // ns, class, enum, func, ppp, c/dtor, alias, static
-inDecl		:	NS id (SCOPE id)* SEMI						# Namespace // or better COLON
-			|	NS id (SCOPE id)* LCURLY levDecl+ RCURLY	# Namespace
+inDecl		:	NS id (SCOPE id)*
+				(		SEMI
+				|		COLON
+				|		LCURLY	levDecl*		RCURLY)	# Namespace
 			|	v=( STRUCT | CLASS | UNION ) id tplParams?
 				(COLON		bases=typespecsNested)?
 				(REQUIRES 	reqs=typespecsNested)?	// TODO
-						LCURLY	levDecl*	RCURLY	# StructDecl
+						LCURLY	levDecl*		RCURLY	# StructDecl
 			|	CONCEPT	id tplParams?		// TODO
 				(COLON	typespecsNested)?
-						LCURLY	levDecl*	RCURLY	# ConceptDecl
-			// TODO aspect
+						LCURLY	levDecl*		RCURLY	# ConceptDecl
+			|	ASPECT	id								# AspectDecl // TODO aspect
 			|	ENUM	id
 				(COLON	bases=typespecBasic)?	// TODO: enum inheritance
-				LCURLY	idExprs		RCURLY			# EnumDecl
+						LCURLY	idExprs			RCURLY	# EnumDecl
 			|	v=( FUNC | PROC | METHOD )
-				(	LCURLY	funcDef*	RCURLY
-				|			funcDef				)	# FunctionDecl
-			|	OPERATOR
-				(	LCURLY	opDef*		RCURLY
-				|			opDef				)	# OpDecl
-			|	USING		typespecsNested	SEMI	# UsingDecl
+				(				funcDef
+				|		LCURLY	funcDef*		RCURLY)	# FunctionDecl
+			|	(	(COPY|MOVE)	OPERATOR STRING_LIT?	id?
+				|	CONVERT (OPERATOR|FUNC|PROC|METHOD)	RARROW	typespec
+				|	OPERATOR (COPY|MOVE) STRING_LIT?	id?
+				|	(OPERATOR|FUNC|PROC|METHOD) CONVERT	RARROW	typespec
+				)							funcBody	# OpDecl
+			|	OPERATOR								// TODO remove one of the OpDecl
+				(				opDef
+				|		LCURLY	opDef*			RCURLY)	# OpDecl
+			|	USING		typespecsNested		SEMI	# UsingDecl
 			// TODO: alias needs template support
-			|	ALIAS id ASSIGN	typespec 	SEMI	# AliasDecl
+			|	ALIAS id ASSIGN	typespec 		SEMI	# AliasDecl
 			|	v=( VAR | FIELD | CONST | LET )
-				(	LCURLY	typedIdAcors*	RCURLY
-				|			typedIdAcors		)	# VariableDecl
-// class only:
-			|	v=( CTOR | COPYCTOR | MOVECTOR )
-				funcTypeDef	initList?	 funcBody	# CtorDecl
-			|	DTOR	(LPAREN RPAREN)? funcBody	# DtorDecl
+				(				typedIdAcors
+				|		LCURLY	typedIdAcors*	RCURLY)	# VariableDecl
+			|	(	DEFAULT				CTOR
+				|	(COPY|MOVE|FORWARD)	CTOR	id?
+				|	CONVERT				CTOR	/*LARROW?*/ typespec id?
+				|	CTOR	DEFAULT
+				|	CTOR	(COPY|MOVE|FORWARD)	id?
+				|	CTOR	CONVERT	/*LARROW?*/	typespec id?
+				|	CTOR	funcTypeDef?		initList?
+				)							funcBody	# CtorDecl
+			|	DTOR	(LPAREN RPAREN)?	funcBody	# DtorDecl
 			;
 
+// DON'T refer to inStmt, ONLY refer to levStmt
 inStmt		:	SEMI								# EmptyStmt
-			|	LCURLY	levStmt*	RCURLY			# BlockStmt
-			|	USING		typespecsNested	SEMI	# UsingStmt
+			|	LCURLY	levStmt*		RCURLY		# BlockStmt
+			|	USING	typespecsNested	SEMI		# UsingStmt
 			// TODO: alias needs template support
 			|	ALIAS id ASSIGN	typespec 	SEMI	# AliasStmt
 			|	v=( VAR | FIELD | CONST | LET )
@@ -252,6 +289,7 @@ inStmt		:	SEMI								# EmptyStmt
 				(name=id ((PLUS|MINUS) INTEGER_LIT)? )?
 						body=levStmt				# TimesStmt
 			|	TRY		levStmt
+			// funcTypeDef is wrong, but works for easy cases
 				(CATCH	funcTypeDef		levStmt)+	# TryCatchStmt		// TODO CST
 			|	DEFER	levStmt						# DeferStmt			// TODO CST, scope_exit(,fail,success)
 													// #include <experimental/scope>
@@ -260,14 +298,3 @@ inStmt		:	SEMI								# EmptyStmt
 			| 	expr	aggrAssignOP	expr SEMI	# AggrAssignStmt
 			|	expr	SEMI						# ExpressionStmt
 			;
-
-// ONLY refer to these lev* levels, NOT the in*
-levDecl		:	attribBlk	LCURLY	levDecl+ RCURLY	# AttribDeclBlock // must be in here, since it MUST have an attrib block
-			|	attribBlk	COLON 					# AttribState     // everything needs an antonym to make this work
-			|	attribBlk?			inDecl			# AttribDecl;
-levStmt		:	attribBlk?			inStmt			# AttribStmt;
-
-module		:	MODULE id SEMI;
-imports		:	IMPORT id (COMMA id)* COMMA? SEMI;
-
-prog		:	module? imports* levDecl+;

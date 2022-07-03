@@ -12,8 +12,6 @@ CHAR_LIT	: '\'' (CH_ESC | ~('\\' | '\'' | '\r' | '\n')) '\'';
 fragment STR_ESC: '\\' ('\\' | '"'  | 'a' | 'b' | 'f' | 'n' | 't' | 'r' | 'v');
 fragment CH_ESC:  '\\' ('\\' | '\'' | 'a' | 'b' | 'f' | 'n' | 't' | 'r' | 'v');
 
-FORWARD		: '(fw)'|'(forward)';
-MOVE		: '(mv)'|'(move)';
 ARROW_STAR	: '->*';
 POINT_STAR	: '.*';
 PTR_TO_ARY	: '[*]';	// Maybe a ptr to an array can just be "[]" (depending on context of course)?
@@ -26,7 +24,8 @@ QM_COLON	: '?:';
 //DBL_STAR	: '**';	// this is only supported by 2x STAR because of: var int** a; which is a double pointer, not a pow
 DBL_PLUS	: '++';
 DBL_MINUS	: '--';
-RARROW		: '->';
+RARROW		: '->';	// also the "to-operator"   (not really an operator), read as "to"
+//LARROW	: '<-';	//      the "from-operator" (not really an operator), read as "from"
 PHATRARROW	: '=>';
 LSHIFT		: '<<';
 //RSHIFT	: '>>';// this is only supported by 2x GT because of: var v<v<int>> a; which is two templates closing, not a right shift
@@ -118,8 +117,8 @@ F64			: 'f64';	// double prec. float
 F32			: 'f32';	// single prec. float
 F16			: 'f16';	// (opt) half prec. float
 
-// arbitrary sized integers (as replacement for bitfields, ": 0" needs a different solution)
-// only works in Structural instance field (not static), can not have a pointer taken
+// Arbitrary sized integers (as replacement for bitfields, ": 0" needs a different solution)
+// only works in locals and Structural instance fields, CAN'T have a pointer taken (why though?)
 //INT_ANY		: 'i' (DIGITNZ DIGIT*);
 //UINT_ANY	: 'u' (DIGITNZ DIGIT*);
 //BIN_ANY		: 'b' (DIGITNZ DIGIT*);
@@ -128,9 +127,9 @@ NS			: 'namespace';
 MODULE		: 'module';
 IMPORT		: 'import';
 VOLATILE	: 'volatile';
-STABLE		: 'stable';
+STABLE		: 'stable';			// antonym to volatile
 CONST		: 'const';
-MUTABLE		: 'mut'|'mutable';
+MUTABLE		: 'mut'|'mutable';	// antonym to const
 USING		: 'using';
 ALIAS       : 'alias';
 UNION		: 'union';
@@ -138,14 +137,50 @@ STRUCT		: 'struct';
 CLASS		: 'class';
 CTOR		: 'ctor';
 DTOR		: 'dtor';
-COPYCTOR	: 'copyctor'|'copy_ctor';
-MOVECTOR	: 'movector'|'move_ctor';
+COPYCTOR	: 'copyctor'|'copy_ctor';	// implicit by default
+MOVECTOR	: 'movector'|'move_ctor';	// implicit by default?
 COPYASSIGN	: 'copy=';
 MOVEASSIGN	: 'move=';
-FUNC		: 'func';
-PROC		: 'proc';
+// == Exploration ==
+// convert ctor( OTHER )	{...}	// implicit forced, can't be explicit, possibly more than one
+// convert ctor OTHER 		{...}	// implicit forced, can't be explicit
+// convert <- OTHER 		{...}	// read as "convert from OTHER", is a ctor like above
+// convert -> OTHER			{...}	// read as "convert to OTHER", is a convert operator, can be impl or expl, pure by default
+// default ctor				{...}
+// copy ctor				{...}
+// move ctor				{...}
+// copy	"="					{...}
+// move	"="					{...}
+// ctor convert( OTHER )	{...}	// implicit forced, can't be explicit, possibly more than one
+// ctor convert OTHER 		{...}	// implicit forced, can't be explicit
+// ctor convert <- OTHER 	{...}	// implicit forced, can't be explicit
+// ctor default				{...}
+// ctor copy				{...}
+// ctor move				{...}
+// ctor forward : BASE		{...}	template <typename... Args, typename = decltype(BASE(std::declval<Args>()...))> SELF(Args&&... args) : BASE(std::forward<Args>(args)...) {}
+// ctor( const SELF & other ) {...}		// manual
+// ctor( SELF && other )	{...}		// manual
+// ctor( convert OTHER )	{...}
+// ctor( default )			{...}
+// ctor( copy )				{...}
+// ctor( move )				{...}
+// ctor( copy other )		{...}
+// ctor( move other )		{...}
+// operator copy "="		{...}
+// operator move "="		{...}
+// operator convert -> OTHER{...}
+// operator -> OTHER		{...}
+// operator "=" copy		{...}
+// operator "=" move		{...}
+// operator "=" ( const SELF & other) {...}	// manual
+// operator "=" ( SELF && other) {...}		// manual
+// operator "=" ( copy other )	{...}
+// operator "=" ( move other )	{...}
+FUNC		: 'func';//|'function;
+PROC		: 'proc';//|'procedure';
 METHOD		: 'meth'|'method';
 ENUM		: 'enum';
+ASPECT		: 'aspect';
 CONCEPT		: 'concept';
 REQUIRES	: 'requires';
 PROP		: 'prop';
@@ -177,18 +212,27 @@ SIZEOF		: 'sizeof';
 NEW			: 'new';
 DELETE		: 'delete';
 THROW		: 'throw';
+NOT			: 'not';
+NAN			: 'nan';
+INF			: 'inf';
+IS			: 'is';
+
+CONVERT		: 'conv'|'convert';
+FORWARD		: 'forw'|'forward';
+MOVE		: 'move';
+COPY		: 'copy';
 
 ID			: ALPHA_ ALNUM_*;
 
 NUL			: 'null'|'nullptr'; // nullptr obsolete?
-CLASS_LIT	: 'this'|'self'|'base'|'super';
+CLASS_LIT	: 'this'|'that'|'self'|'other'|'base'|'super'; // 'ret'?, maybe its not good that other etc are in here
 BOOL_LIT	: 'true'|'false';
 FLOAT_LIT	:	(	DIGIT* '.' DIGIT+ ( [eE] [+-]? DIGIT+ )?
 				|	DIGIT+ [eE] [+-]? DIGIT+
 				) [lfLF]?;
-HEX_LIT     : '0x' HEXDIGIT HEXDIGIT_*;
-OCT_LIT     : '0o' OCTDIGIT OCTDIGIT_*;
-BIN_LIT     : '0b' BINDIGIT BINDIGIT_*;
+HEX_LIT		: '0x' HEXDIGIT HEXDIGIT_*;
+OCT_LIT		: '0o' OCTDIGIT OCTDIGIT_*;
+BIN_LIT		: '0b' BINDIGIT BINDIGIT_*;
 INTEGER_LIT	: (DIGITNZ DIGIT_*|[0]);
 
 fragment DIGITNZ	: [1-9];
@@ -208,7 +252,7 @@ WS			: (' '|'\t')+	-> skip;// channel(HIDDEN);
 
 /*
 contextual keywords for parameters
-mode MODE;
+mode PARAMETERS;
 LOOK		: 'look';
 COPY		: 'copy';
 EDIT		: 'edit';

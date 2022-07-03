@@ -4,9 +4,9 @@ module testcase;
 
 import std_iostream, stack;
 
-class Base { [pub]: ctor(int a){} [virtual]dtor(){} }
-class Derived : Base { [pub]: [virtual]dtor(){}}
-class Unrelated {}
+class Base				{ [pub]: ctor(int a){}	[virtual]dtor(){} }
+class Derived : Base	{ [pub]:				[virtual]dtor(){} }
+class Unrelated			{ [default] ctor(); }
 
 alias belanna = func(int)->bool*;
 
@@ -17,6 +17,17 @@ func test() -> int
 	var i8 value = 50;
 	if( 0 < value <= 100 )
 		cout << "value in range\n";
+	else if( value == 166 ) return 666;
+	else{
+		std::cout << "else";
+	}
+
+	if( 0 < value <= 100 ){
+		cout << "value in range\n";
+	}
+	else if( value == -99 ){{ return -99;}}
+	else
+		std::cout << "else";
 
 	var int* blubb, blabb, blebb;
 

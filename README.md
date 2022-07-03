@@ -39,6 +39,16 @@ Give professionals the comfort of known semantics with less repetition and fewer
     - DONE: prototypes for simple gen
     - subclasses
     - test cases for thesis: the_final_test.myll
+    - generate functions above the variables
+    - gen proper globals:
+        - either:
+            - extern int a;             // in .h
+            - int a = 9;                // in one single .cpp
+            - extern const int b;       // in .h
+            - extern const int b = 9;   // in other .cpps
+        - or:
+            - inline int a = 9;         // in .h
+            - inline const int b = 9;   // in .h
 
 - Prio 2:
     - Benchmark the compiler

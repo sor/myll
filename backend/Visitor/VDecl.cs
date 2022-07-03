@@ -114,7 +114,68 @@ namespace Myll
 		}
 
 		public new List<Func> VisitOpDecl( OpDeclContext c )
-			=> c.opDef().Select( VisitOpDef ).ToList();
+		{
+			bool isCopy    = c.COPY()    != null;
+			bool isMove    = c.MOVE()    != null;
+			bool isConvert = c.CONVERT() != null;
+
+			if( isCopy || isMove ) {
+				Scope parent = scopeStack.Peek();
+				if( !parent.HasDecl || !(parent.decl is Structural) )
+					throw new Exception( "parent of operator= copy or move has no decl or is not a structural" );
+
+				string stringOp = c.STRING_LIT()?.GetText() ?? "";
+				if( stringOp != "=" )
+					throw new Exception( "operator= copy or move must be \"=\"" );
+
+				string className = parent.decl.name; //.FullyQualifiedName;
+				List<IdTplArgs> classIdTpls = new() {
+					new() { id = className }
+				};
+
+				Param param = new() {
+					name = c.id()?.GetText() ?? "other",
+					type = new TypespecNested {
+						idTpls = classIdTpls,
+						qual   = Qualifier.None,
+						ptrs   = new()
+					}
+				};
+
+				if( isCopy ) {
+					param.type.qual = Qualifier.Const;
+					param.type.ptrs.Add( new() { kind = Pointer.Kind.LVRef } );
+				}
+				else if( isMove ) {
+					param.type.ptrs.Add( new() { kind = Pointer.Kind.RVRef } );
+				}
+				else {
+					throw new Exception( "Invalid state of operator= copy or move" );
+				}
+
+				Func ret = new() {
+					srcPos = c.ToSrcPos(),
+					name   = "operator=",
+					access = curAccess,
+					body   = c.funcBody().Visit(),
+					paras  = new List<Param>() { param },
+					retType = new TypespecNested() {
+						idTpls = classIdTpls,
+						ptrs = new List<Pointer> {
+							new() { kind = Pointer.Kind.LVRef }
+						}
+					},
+				};
+
+				return new List<Func> { ret };
+			}
+			else if( isConvert ) {
+				throw new NotSupportedException("output for this kind of operator not supported yet");
+			}
+			else {
+				return c.opDef().Select( VisitOpDef ).ToList();
+			}
+		}
 
 		public override Decl VisitAttribDeclBlock( AttribDeclBlockContext c )
 		{
@@ -191,7 +252,8 @@ namespace Myll
 
 			// TODO: check if Namespace already exists
 			// add new namespaces to hierarchy
-			bool withBody = (c.levDecl().Length >= 1);
+			bool withBody = (c.SEMI()  == null
+			              && c.COLON() == null);
 			foreach( IdContext id in c.id() ) {
 				Namespace ns = new() {
 					srcPos   = id.ToSrcPos(),
@@ -282,7 +344,7 @@ namespace Myll
 				access = curAccess,
 				kind   = Structor.Kind.Constructor,
 				paras  = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
-				body  =  c.funcBody().Visit(),
+				body   = c.funcBody().Visit(),
 				// TODO: cc.initList(); // opt
 			};
 			PopScope();

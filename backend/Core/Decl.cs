@@ -119,7 +119,7 @@ namespace Myll.Core
 	// functions, methods, operators, accessors (in the end)
 	public class Func : Decl, ITplParams
 	{
-		public List<TplParam> TplParams { get; set; }
+		public List<TplParam> TplParams { get; init; } = new();
 		public List<Param>    paras;
 		public Block?         body;
 		public Typespec       retType;

@@ -1,4 +1,4 @@
-import std_iostream, c_stdlib, std_chrono, std_vector;
+import std_iostream, c_stdlib, std_chrono, std_vector, MyContainers;
 
 //#line 68 "../main.myll"
 
@@ -178,6 +178,7 @@ namespace problem_3334 {
 				null;
 				null;
 		}
+		for(;;);
 
 		// multiple statements in a scope, automatically break, fall may be possible
 		switch( b ) {
@@ -279,6 +280,43 @@ namespace problem_3351 {
 		std::cout << lambda( 2, 10 ) << "\n";
 	}
 }
+
+//*
+namespace ctor_fun {
+
+	//[copy=default(ed), move=disable(d)]
+	class Test {
+		field f32 f;
+	[pub]:
+		ctor()			{}
+		ctor			{}	// same as above
+		ctor default	{}	// same as above
+	//	ctor( default )	{}	// same as above
+
+		[moep]{
+			ctor{}
+		}
+
+		ctor( const Test & other )	{ f = other.f;	}
+		ctor copy					{ f = other.f;	}	// same as above
+		copy ctor o					{ f = o.f;		}	// same as above
+
+		[implicit] ctor( bool b )	{ f = b ? 1 : 2; }
+		ctor convert bool b			{ f = b ? 1 : 2; }		// same as above
+		convert ctor bool			{ f = other ? 1 : 2; }	// same as above
+	//	ctor convert <- bool		{ f = other ? 1 : 2; }	// same as above
+	//	convert ctor <- bool b		{ f = b ? 1 : 2; }		// same as above
+
+		dtor()	{}
+		dtor	{}	// same as above
+
+		operator "=" ( const Test & other )	{ f = other.f; }
+		operator copy "="					{ f = other.f; } // same as above
+		copy operator "="					{ f = other.f; } // same as above
+	//	operator "=" copy					{ f = other.f; } // same as above
+	}
+}
+//*/
 
 func main( int argc, const char*[] argv ) -> int
 {

@@ -75,6 +75,8 @@ namespace Myll
 			parser.AddErrorListener( ConsoleErrorListener.Instance );
 			// This will exit after the first problem
 			//parser.ErrorHandler = new BailErrorStrategy();
+			//Console.WriteLine( "Time elapsed after CreateParser   {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
+
 			return parser;
 		}
 
@@ -92,6 +94,8 @@ namespace Myll
 						parser.SourceName );
 					Environment.Exit( -99 );
 				}
+				//Console.WriteLine( "Time elapsed after ParseCST       {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
+
 				return prog; // STAGE 1
 			}
 			// This might never be reached since the error handling above
@@ -138,6 +142,7 @@ namespace Myll
 			if( decl != null ) ret.Add( (string.Format( "{0}.h",   global_ns.module ), decl) );
 			if( impl != null ) ret.Add( (string.Format( "{0}.cpp", global_ns.module ), impl) );
 
+			//Console.WriteLine( "Time elapsed after GenerateFiles  {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
 			return ret;
 		}
 
@@ -217,7 +222,7 @@ namespace Myll
 				Directory.SetCurrentDirectory( opt.OutPath );
 
 				string cppFiles = Directory.GetFiles( ".", "*.cpp" ).Join( " " );
-				string cxxFlags = "-std=c++17 "
+				string cxxFlags = "-std=c++20 "
 				                + (opt.IsDebug ? "-g " : "")
 				                + (opt.OptimizationLevel > 0 ? "-O " + opt.OptimizationLevel : "");
 

@@ -47,12 +47,12 @@ namespace Myll
 				indexer  = false,
 			};
 
-		protected new IEnumerable<Param> VisitFuncTypeDef( FuncTypeDefContext cs )
-			=> cs.param().Select(
+		protected new IEnumerable<Param> VisitFuncTypeDef( FuncTypeDefContext? cs )
+			=> cs?.param().Select(
 				c => new Param {
 					name = c.id().Visit(),
 					type = VisitTypespec( c.typespec() )
-				} );
+				} ) ?? Enumerable.Empty<Param>();
 
 		protected IEnumerable<EnumEntry> VisitEnumEntrys( IdExprsContext cs )
 			=> cs.idExpr().Select(
@@ -138,7 +138,8 @@ namespace Myll
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
 		public static void Exec<T>( this IEnumerable<T> s )
 		{
-			if( s == null ) return;
+			if( s == null )
+				return;
 			using( IEnumerator<T> e = s.GetEnumerator() )
 				while( e.MoveNext() ) {}
 		}
@@ -200,9 +201,7 @@ namespace Myll
 			if( c == null )
 				throw new ArgumentNullException();
 
-			return c == null
-				? null
-				: ExprVis.Visit( c );
+			return ExprVis.Visit( c );
 		}
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]

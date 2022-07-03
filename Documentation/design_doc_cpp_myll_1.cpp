@@ -86,3 +86,16 @@ unique_ptr<BigOne> blah()
 	unique_ptr<BigOne> ret = new unique_ptr<BigOne>();
 	return ret;
 }
+
+// attributes
+
+linkage = reachability (not accessability)
+[extern,external,global?] var int i;	// extern int i;
+[intern,internal,local?]  var int j;	// static int j;
+
+[virtual(forbidden,discouraged,encouraged,enforced), pod == (virtual=forbidden)]
+class X {
+	[abstract,virtual,override,final,hide]
+	func a() {}
+}
+
