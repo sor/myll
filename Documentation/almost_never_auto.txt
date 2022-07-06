@@ -41,7 +41,7 @@ Reference initialization
 
 * Constructor convertability and User-defined conversion function
 
-[convert(ing)=auto] is the default, which means its "explicit" in all cases which I thought of already. Not overwriting it with "explicit" or "implicit" might produce a warning or even an error in later development, for cases which I not yet thought of.
+[conver(t|ting|sion)=auto] is the default, which means its "explicit" in all cases which I thought of already. Not overwriting it with "explicit" or "implicit" might produce a warning or even an error in later development, for cases which I not yet thought of.
 
 [convert=implicit OR implicit OR convert OR convert=yes]
 ctor() {...}
@@ -52,7 +52,7 @@ ctor() {...}
 [convert=implicit]
 convert -> int {...}
 
-[convert=explicit] // again unnecessary, the default
+[convert=explicit] // already the default, so likely unnecessary
 convert -> int {...}
 
 [virtual, abstract OR virtual=abstract OR virtual=pure OR abstract] // abstract implies virtual

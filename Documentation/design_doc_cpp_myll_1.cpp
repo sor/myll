@@ -58,7 +58,7 @@ class Base<T>
 where T : traits ( has_const_iterator, has_begin_end )
 
 class Base<T,V>
-where	T has_const_iterator & has_begin_end,
+where	T has_const_iterator && has_begin_end,
 		V is_class
 requires
 	is_class<V>,
@@ -84,7 +84,7 @@ func blah() -> produce BigOne
 unique_ptr<BigOne> blah()
 {
 	unique_ptr<BigOne> ret = new unique_ptr<BigOne>();
-	return ret;
+	return std::move(ret);
 }
 
 // attributes
@@ -96,6 +96,9 @@ linkage = reachability (not accessability)
 [virtual(forbidden,discouraged,encouraged,enforced), pod == (virtual=forbidden)]
 class X {
 	[abstract,virtual,override,final,hide]
-	func a() {}
+	func a();
 }
+
+[conversion(auto,default,implicit,explicit)]
+ctor( OTHER other) {...}
 
