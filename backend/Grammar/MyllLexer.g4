@@ -123,7 +123,7 @@ F16			: 'f16';	// (opt) half prec. float
 //UINT_ANY	: 'u' (DIGITNZ DIGIT*);
 //BIN_ANY		: 'b' (DIGITNZ DIGIT*);
 
-NS			: 'namespace';
+NAMESPACE	: 'namespace';
 MODULE		: 'module';
 IMPORT		: 'import';
 VOLATILE	: 'volatile';
@@ -137,45 +137,34 @@ STRUCT		: 'struct';
 CLASS		: 'class';
 CTOR		: 'ctor';
 DTOR		: 'dtor';
-COPYCTOR	: 'copyctor'|'copy_ctor';	// implicit by default
-MOVECTOR	: 'movector'|'move_ctor';	// implicit by default?
-COPYASSIGN	: 'copy=';
-MOVEASSIGN	: 'move=';
 // == Exploration ==
-// convert ctor( OTHER )	{...}	// implicit forced, can't be explicit, possibly more than one
-// convert ctor OTHER 		{...}	// implicit forced, can't be explicit
-// convert <- OTHER 		{...}	// read as "convert from OTHER", is a ctor like above
-// convert -> OTHER			{...}	// read as "convert to OTHER", is a convert operator, can be impl or expl, pure by default
-// default ctor				{...}
-// copy ctor				{...}
-// move ctor				{...}
-// copy	"="					{...}
-// move	"="					{...}
-// ctor convert( OTHER )	{...}	// implicit forced, can't be explicit, possibly more than one
-// ctor convert OTHER 		{...}	// implicit forced, can't be explicit
-// ctor convert <- OTHER 	{...}	// implicit forced, can't be explicit
-// ctor default				{...}
-// ctor copy				{...}
-// ctor move				{...}
+// # Read as "convert from OTHER"
+// explicit ctor( OTHER o )	{...}	// manual, converting ctor, convert from type OTHER
+// convert <- OTHER o 		{...}	// is a ctor like above
+// convert OTHER o ->		{...}	// same as above, alternative syntax
+// ctor convert <- OTHER o	{...}	// same as above, with ctor
+// ctor convert OTHER o ->	{...}	// same as above, alternative syntax
+// ctor convert OTHER o		{...}	// same as above, no arrow syntax
+//
+// # Read as "convert to OTHER"
+// explicit operator OTHER(){...}	// manual, converting operator, convert self to type OTHER
+// convert -> OTHER			{...}	// is a convert operator like above, pure by default
+// operator convert -> OTHER{...}	// same as "convert -> OTHER", alternative syntax
+// operator convert OTHER	{...}	// same as above, no arrow syntax
+
+// ctor()					{...}	// manual
+// ctor default				{...}	// same as above
+// ctor( const SELF & oth )	{...}	// manual
+// ctor copy				{...}	// same as above
+// ctor( SELF && other )	{...}	// manual
+// ctor move				{...}	// same as above
 // ctor forward : BASE		{...}	template <typename... Args, typename = decltype(BASE(std::declval<Args>()...))> SELF(Args&&... args) : BASE(std::forward<Args>(args)...) {}
-// ctor( const SELF & other ) {...}		// manual
-// ctor( SELF && other )	{...}		// manual
-// ctor( convert OTHER )	{...}
-// ctor( default )			{...}
-// ctor( copy )				{...}
-// ctor( move )				{...}
-// ctor( copy other )		{...}
-// ctor( move other )		{...}
-// operator copy "="		{...}
-// operator move "="		{...}
-// operator convert -> OTHER{...}
-// operator -> OTHER		{...}
-// operator "=" copy		{...}
-// operator "=" move		{...}
-// operator "=" ( const SELF & other) {...}	// manual
-// operator "=" ( SELF && other) {...}		// manual
-// operator "=" ( copy other )	{...}
-// operator "=" ( move other )	{...}
+//
+// operator "=" ( const SELF & o )	{...}	// manual
+// operator copy =					{...}
+// operator "=" ( SELF && o )		{...}	// manual
+// operator move =					{...}
+
 FUNC		: 'func';//|'function;
 PROC		: 'proc';//|'procedure';
 METHOD		: 'meth'|'method';

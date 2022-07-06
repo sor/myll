@@ -24,6 +24,80 @@ attrib		:	attribId
 				)?;
 attribId	:	id | CONST | FALL | THROW | DEFAULT;
 
+/*
+// DON'T refer to inDecl, ONLY refer to levDecl
+// ns, class, enum, func, ppp, c/dtor, alias, static
+inDeclX		:	ALIAS 		declAlias
+			|	ASPECT		declAspect
+			|	CONCEPT		declConcept
+			|	CONVERT		declConvert
+			|	CTOR		declCtor
+			|	DTOR		declDtor
+			|	ENUM		declEnum
+			|	NAMESPACE	declNS
+			|	OPERATOR	declOp
+			|	USING		declUsing
+			|				declFunc
+			|				declStruct
+			|				declVar
+			;
+
+declNS		:	id (SCOPE id)*
+				(	SEMI
+				|	COLON
+				|	LCURLY	levDecl*		RCURLY);
+
+declUsing	:	typespecsNested						SEMI;
+declAlias	:	id	tplParams?	ASSIGN	typespec	SEMI;	// TODO: needs multiple support
+declAspect	:	id	tplParams?;		// TODO
+declConcept	:	id	tplParams?		// TODO
+				(COLON	typespecsNested)?
+						LCURLY	levDecl*		RCURLY;
+declConvert	:	(	RARROW	to=typespec					// convert -> TYPE	- convert to TYPE	- operator TYPE
+				|			from=typespec	RARROW	id?	// convert TYPE ->	- convert from TYPE	- ctor( TYPE )
+				|	LARROW	from=typespec			id?	// convert <- TYPE	- convert from TYPE	- ctor( TYPE )
+				) funcBody;
+declCtor	:	(	DEFAULT
+				|	(COPY|MOVE|FORWARD)	id?
+				|	CONVERT	LARROW?	typespec id?
+				|	CONVERT			typespec id?	RARROW?
+				|	funcTypeDef?		initList?
+				) funcBody;
+declDtor	:	(LPAREN RPAREN)?	funcBody;
+declEnum	:	id
+				(COLON	bases=typespecBasic)?	// TODO: enum inheritance
+					LCURLY	idExprs			RCURLY;
+
+declOp		:	(	(COPY|MOVE) ASSIGN	id?	funcBody
+				|	CONVERT 	RARROW?		funcBody
+				|			opDef
+				|	LCURLY	attrOp*		RCURLY);
+
+declFunc	:	v=( FUNC | PROC | METHOD )
+				(			funcDef
+				|	LCURLY	attrFunc*	RCURLY);
+
+declStruct	:	v=( STRUCT | CLASS | UNION )
+				id	tplParams?
+				(COLON		bases=typespecsNested)?
+				(REQUIRES 	reqs=typespecsNested)?	// TODO
+					LCURLY	levDecl*		RCURLY;
+
+declVar		:	v=( VAR | FIELD | CONST | LET )
+				(			typedIdAcors
+				|	LCURLY	attrVar*		RCURLY);
+
+// TODO the 3 kinds of attr each
+attrFunc	:	attribBlk?	funcDef;
+attrOp		:	attribBlk?	opDef;
+attrVar		:	attribBlk?	typedIdAcors;
+*/
+/*
+opDef		:	STRING_LIT	tplParams?	funcTypeDef?
+				(RARROW		typespec)?
+				(REQUIRES	typespecsNested)?	// TODO
+				funcBody;
+*/
 
 // The great reordering Part 2, everything below still TODO
 
@@ -96,8 +170,9 @@ typespecBasic	:	specialType
 typespecFunc	:	funcTypeDef (RARROW typespec)?;
 
 // TODO different order than ScopedExpr
-typespecNested	:	idTplArgs	(SCOPE idTplArgs)*
-								(SCOPE v=( CTOR | DTOR | COPYCTOR | MOVECTOR ))?;
+typespecNested	:			idTplArgs
+					(SCOPE	idTplArgs)*
+					(SCOPE	v=CTOR)?;
 typespecsNested	:	typespecNested (COMMA typespecNested)* COMMA?;
 
 // --- handled
@@ -213,7 +288,7 @@ condThen	:	LPAREN	expr	RPAREN	levStmt;
 
 // DON'T refer to inDecl, ONLY refer to levDecl
 // ns, class, enum, func, ppp, c/dtor, alias, static
-inDecl		:	NS id (SCOPE id)*
+inDecl		:	NAMESPACE id (SCOPE id)*
 				(		SEMI
 				|		COLON
 				|		LCURLY	levDecl*		RCURLY)	# Namespace

@@ -10,14 +10,16 @@ func mainX( int argc, const char*[] argv ) -> int {
 
 	var MyStack<i8> stack = MyStack<i8>(4);
 	stack.push( 42 ).push( 23 ).push( 16 ).push( 15 ).push( 8 ).push( 4 );
-{{
-	// pushes -5 to +4 on the stack (10 numbers)
-	do 10 times i-5 stack.push( i );
-	{
-	// unnamed loop variable, pushes 1's on the stack
-	do 10 times stack.push( 1 );
-	}
-}}
+
+	{{
+		// pushes -5 to +4 on the stack (10 numbers)
+		do 10 times i-5 stack.push( i );
+		{
+			// unnamed loop variable, pushes 1's on the stack
+			do 10 times stack.push( 1 );
+		}
+	}}
+
 	while( !stack.isEmpty() ) {
 		// even int8_t will be printed via cout as char :(
 		cout << (int)stack.top() << endl;
