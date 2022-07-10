@@ -143,3 +143,9 @@ auto does one good thing for readability, it's very easy to spot variable declar
 Contrary to C++, the initialization with the = sign can now communicate its type to the right side.
 	MyClass myC = new();
 The new can not deduce ...??
+
+
+[magic-return-val=ret]
+[magic-param-val=other]
+[magic-param-ref=other]
+[magic-param-ptr=that]

@@ -288,31 +288,36 @@ namespace ctor_fun {
 	class Test {
 		field f32 f;
 	[pub]:
-		ctor()			{}
-		ctor			{}	// same as above
-		ctor default	{}	// same as above
-	//	ctor( default )	{}	// same as above
+		ctor()	{}
+		ctor	{}	// same as above
+		ctor;		// defaulted default ctor
 
 		[moep]{
+			method isEmpty() -> bool => _size == 0;
 			ctor{}
 		}
 
 		ctor( const Test & other )	{ f = other.f;	}
 		ctor copy					{ f = other.f;	}	// same as above
-		copy ctor o					{ f = o.f;		}	// same as above
+		ctor copy o					{ f = o.f;		}	// same as above
 
 		[implicit] ctor( bool b )	{ f = b ? 1 : 2; }
 		ctor convert bool b			{ f = b ? 1 : 2; }		// same as above
-		convert ctor bool			{ f = other ? 1 : 2; }	// same as above
-	//	ctor convert <- bool		{ f = other ? 1 : 2; }	// same as above
-	//	convert ctor <- bool b		{ f = b ? 1 : 2; }		// same as above
+		ctor convert bool			{ f = other ? 1 : 2; }	// same as above
+		ctor convert <- bool		{ f = other ? 1 : 2; }	// same as above
+		ctor convert bool ->		{ f = other ? 1 : 2; }	// same as above
+		convert <- bool b			{ f = b ? 1 : 2; }		// same as above
+		convert bool b ->			{ f = b ? 1 : 2; }		// same as above
 
 		dtor()	{}
 		dtor	{}	// same as above
+		dtor;		// defaulted dtor
 
 		operator "=" ( const Test & other )	{ f = other.f; }
-		operator copy "="					{ f = other.f; } // same as above
-		copy operator "="					{ f = other.f; } // same as above
+		operator copy=						{ f = other.f; } // same as above
+
+		operator "=" ( Test && other )		{ f = other.f; }
+		operator move=						{ f = other.f; } // same as above
 	//	operator "=" copy					{ f = other.f; } // same as above
 	}
 }

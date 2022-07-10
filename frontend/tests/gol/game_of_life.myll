@@ -19,7 +19,7 @@ class GameOfLife
 [pub]:
 	ctor()
 	{
-		var Map2D& dstMap = doubleBufferedMap[currentIndex];
+		var Map2D & dstMap = doubleBufferedMap[currentIndex];
 
 		do sizeY times y
 		{
@@ -55,7 +55,7 @@ class GameOfLife
 				else
 				{
 					const bool aliveSelf = srcMap[y][x] == 'o';
-					const int  aliveNB   =
+					const int  aliveNeighborCount =
 						  (srcMap[y-1][x-1] == 'o')
 						+ (srcMap[y-1][x  ] == 'o')
 						+ (srcMap[y-1][x+1] == 'o')
@@ -65,8 +65,8 @@ class GameOfLife
 						+ (srcMap[y+1][x  ] == 'o')
 						+ (srcMap[y+1][x+1] == 'o');
 					const bool aliveDst = aliveSelf
-						? (aliveNB == 2 || aliveNB == 3)
-						: (aliveNB == 3);
+						? (aliveNeighborCount == 2 || aliveNeighborCount == 3)
+						: (aliveNeighborCount == 3);
 
 					dstMap[y][x] = aliveDst ? 'o' : ' ';
 				}

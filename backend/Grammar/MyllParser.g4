@@ -10,6 +10,7 @@ imports		:	IMPORT id (COMMA id)* COMMA? SEMI;
 //defines	:	DEFINITION id (COMMA id)* COMMA? SEMI;
 
 // ONLY refer to levStmt, NOT the inStmt
+// rename to decl?
 levDecl		:	attribBlk	LCURLY	levDecl* RCURLY	# AttribDeclBlock // must be in here, since it MUST have an attrib block
 			|	attribBlk	COLON 					# AttribState     // everything needs an antonym to make this work
 			|	attribBlk?			inDecl			# AttribDecl;
@@ -26,72 +27,108 @@ attribId	:	id | CONST | FALL | THROW | DEFAULT;
 
 /*
 // DON'T refer to inDecl, ONLY refer to levDecl
-// ns, class, enum, func, ppp, c/dtor, alias, static
-inDeclX		:	ALIAS 		declAlias
-			|	ASPECT		declAspect
-			|	CONCEPT		declConcept
-			|	CONVERT		declConvert
-			|	CTOR		declCtor
-			|	DTOR		declDtor
-			|	ENUM		declEnum
-			|	NAMESPACE	declNS
-			|	OPERATOR	declOp
-			|	USING		declUsing
-			|				declFunc
-			|				declStruct
-			|				declVar
+inDecl		:	declNamespace
+			|	declUsing
+			|	declAlias
+			|	declAspect	// TODO
+			|	declConcept	// TODO
+			|	declEnum
+			|	declStruct
+			|	declConvert
+			|	declCtor
+			|	declDtor
+			|	declFunc
+			|	declOp
+			|	declVar
 			;
 
-declNS		:	id (SCOPE id)*
+declNamespace:	NAMESPACE	( defNamespace									);
+declUsing	:	USING		( defUsing SEMI	| LCURLY attrUsing*		RCURLY	);
+declAlias	:	ALIAS		( defAlias SEMI	| LCURLY attrAlias*		RCURLY	);
+declAspect	:	ASPECT		( defAspect										);
+declConcept	:	CONCEPT		( defConcept									);
+declEnum	:	ENUM		( defEnum										);
+declStruct	:	kindOfStruct( defStruct										);
+declConvert	:	CONVERT		( defConvert	| LCURLY attrConvert*	RCURLY	);
+declCtor	:	CTOR		( defCtor		| LCURLY attrCtor*		RCURLY	);
+declDtor	:	DTOR		( defDtor										);
+declFunc	:	kindOfFunc	( defFunc		| LCURLY attrFunc*		RCURLY	);
+declOp		:	OPERATOR	( defOp			| LCURLY attrOp*		RCURLY	);
+declVar		:	kindOfVar	( defVar		| LCURLY attrVar*		RCURLY	);
+
+kindOfStruct:	STRUCT	|	CLASS	|	UNION;
+kindOfFunc	:	FUNC	|	PROC	|	METHOD;
+kindOfVar	:	VAR		|	FIELD	|	CONST	|	LET;
+
+kindOfPassing:	COPY	|	MOVE	|	FORWARD;
+
+attrUsing	:	defUsing	| attribBlk ( defUsing		| LCURLY attrUsing*		RCURLY | COLON );
+attrAlias	:	defAlias	| attribBlk ( defAlias		| LCURLY attrAlias*		RCURLY | COLON );
+attrConvert	:	defConvert	| attribBlk ( defConvert	| LCURLY attrConvert*	RCURLY | COLON );
+attrCtor	:	defCtor		| attribBlk ( defCtor		| LCURLY attrCtor*		RCURLY | COLON );
+attrFunc	:	defFunc		| attribBlk ( defFunc		| LCURLY attrFunc*		RCURLY | COLON );
+attrOp		:	defOp		| attribBlk ( defOp			| LCURLY attrOp*		RCURLY | COLON );
+attrVar		:	defVar		| attribBlk ( defVar		| LCURLY attrVar*		RCURLY | COLON );
+
+//// TODO the 3 kinds of attr each?
+//attrUsing	:	attribBlk?	defUsing;
+//attrAlias	:	attribBlk?	defAlias;
+//attrConvert	:	attribBlk?	defConvert;
+//attrCtor	:	attribBlk?	defCtor;
+//attrFunc	:	attribBlk?	defFunc;
+//attrOp		:	attribBlk?	defOp;
+//attrVar		:	attribBlk?	defVar;
+
+defNamespace:	id (SCOPE id)*
 				(	SEMI
 				|	COLON
 				|	LCURLY	levDecl*		RCURLY);
 
-declUsing	:	typespecsNested						SEMI;
-declAlias	:	id	tplParams?	ASSIGN	typespec	SEMI;	// TODO: needs multiple support
-declAspect	:	id	tplParams?;		// TODO
-declConcept	:	id	tplParams?		// TODO
+defUsing	:	typespecsNested;
+defAlias	:	id	tplParams?	ASSIGN	typespec;	// TODO: needs COMMA multiple support
+
+defAspect	:	id	tplParams?;		// TODO
+defConcept	:	id	tplParams?		// TODO
 				(COLON	typespecsNested)?
 						LCURLY	levDecl*		RCURLY;
-declConvert	:	(	RARROW	to=typespec					// convert -> TYPE	- convert to TYPE	- operator TYPE
-				|			from=typespec	RARROW	id?	// convert TYPE ->	- convert from TYPE	- ctor( TYPE )
-				|	LARROW	from=typespec			id?	// convert <- TYPE	- convert from TYPE	- ctor( TYPE )
-				) funcBody;
-declCtor	:	(	DEFAULT
-				|	(COPY|MOVE|FORWARD)	id?
-				|	CONVERT	LARROW?	typespec id?
-				|	CONVERT			typespec id?	RARROW?
-				|	funcTypeDef?		initList?
-				) funcBody;
-declDtor	:	(LPAREN RPAREN)?	funcBody;
-declEnum	:	id
+defEnum		:	id
 				(COLON	bases=typespecBasic)?	// TODO: enum inheritance
 					LCURLY	idExprs			RCURLY;
-
-declOp		:	(	(COPY|MOVE) ASSIGN	id?	funcBody
-				|	CONVERT 	RARROW?		funcBody
-				|			opDef
-				|	LCURLY	attrOp*		RCURLY);
-
-declFunc	:	v=( FUNC | PROC | METHOD )
-				(			funcDef
-				|	LCURLY	attrFunc*	RCURLY);
-
-declStruct	:	v=( STRUCT | CLASS | UNION )
-				id	tplParams?
+defStruct	:	id	tplParams?
 				(COLON		bases=typespecsNested)?
 				(REQUIRES 	reqs=typespecsNested)?	// TODO
 					LCURLY	levDecl*		RCURLY;
 
-declVar		:	v=( VAR | FIELD | CONST | LET )
-				(			typedIdAcors
-				|	LCURLY	attrVar*		RCURLY);
+defConvert	:	(	RARROW		to=typespec					// convert -> TYPE	- convert to TYPE	- operator TYPE
+				|				from=typespec	id?	RARROW	// convert TYPE ->	- convert from TYPE	- ctor( TYPE ) // not very analogous to the return type definition
+				|	LARROW		from=typespec	id?			// convert <- TYPE	- convert from TYPE	- ctor( TYPE )
+				)
+				funcBody;
+defCtor		:	(	kindOfPassing				id?
+				|	CONVERT	LARROW?	typespec	id?
+				|	CONVERT			typespec	id?	RARROW?
+				|	funcTypeDef?	initList?
+				)
+				funcBody;
+defDtor		:	(LPAREN RPAREN)?
+				funcBody;
+defFunc		:	id			tplParams?	funcTypeDef?
+				(RARROW		typespec)?
+				(REQUIRES	typespecsNested)?	// TODO
+				funcBody;
+defOp		:	(	kindOfPassing	ASSIGN	id?
+				|	CONVERT 		RARROW?
+				|	STRING_LIT		tplParams?	funcTypeDef?
+					(RARROW			typespec)?
+					(REQUIRES		typespecsNested)?	// TODO
+				)
+				funcBody;
 
-// TODO the 3 kinds of attr each
-attrFunc	:	attribBlk?	funcDef;
-attrOp		:	attribBlk?	opDef;
-attrVar		:	attribBlk?	typedIdAcors;
-*/
+defVar		:	typedIdAcors;
+
+
+
+
 /*
 opDef		:	STRING_LIT	tplParams?	funcTypeDef?
 				(RARROW		typespec)?

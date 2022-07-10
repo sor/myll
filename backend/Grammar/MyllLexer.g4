@@ -213,7 +213,11 @@ COPY		: 'copy';
 
 ID			: ALPHA_ ALNUM_*;
 
+// The keywords "ret, result, other, that" are not really keywords,
+//	they exist only in special spots and depending on context,
+//	and they are handled by "id"
 NUL			: 'null'|'nullptr'; // nullptr obsolete?
+//CLASS_LIT	: 'this'|'self'|'base'|'super';
 CLASS_LIT	: 'this'|'that'|'self'|'other'|'base'|'super'; // 'ret'?, maybe its not good that other etc are in here
 BOOL_LIT	: 'true'|'false';
 FLOAT_LIT	:	(	DIGIT* '.' DIGIT+ ( [eE] [+-]? DIGIT+ )?
