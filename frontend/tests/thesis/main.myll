@@ -1,6 +1,11 @@
 import std_iostream, c_stdlib, std_chrono, std_vector, MyContainers;
 
+[pub]:
 //#line 68 "../main.myll"
+
+// Beispiele für globals und so
+//[hidden] var int no_collide = 9;
+//[global] var int do_collide = 9;
 
 func stuff() -> int[]! {
 	var int*[4][8] myArray1;	// declare myArray1 as pointer to array 4 of int
@@ -281,21 +286,22 @@ namespace problem_3351 {
 	}
 }
 
-//*
+/*
 namespace ctor_fun {
 
 	//[copy=default(ed), move=disable(d)]
-	class Test {
+	class TestCtors {
 		field f32 f;
 	[pub]:
 		ctor()	{}
 		ctor	{}	// same as above
-		ctor;		// defaulted default ctor
+	//	ctor;		// defaulted default ctor, crashes
 
-		[moep]{
+		// crasht grad noch
+		//[moep]{
 			method isEmpty() -> bool => _size == 0;
 			ctor{}
-		}
+		//}
 
 		ctor( const Test & other )	{ f = other.f;	}
 		ctor copy					{ f = other.f;	}	// same as above
@@ -311,14 +317,20 @@ namespace ctor_fun {
 
 		dtor()	{}
 		dtor	{}	// same as above
-		dtor;		// defaulted dtor
+	//	dtor;		// defaulted dtor
 
-		operator "=" ( const Test & other )	{ f = other.f; }
-		operator copy=						{ f = other.f; } // same as above
+		operator "=" ( const Test & other )	{ f = other.f;	}
+		operator copy=						{ f = other.f;	} // same as above
+		operator copy= o					{ f = o.f;		} // same as above
 
-		operator "=" ( Test && other )		{ f = other.f; }
-		operator move=						{ f = other.f; } // same as above
-	//	operator "=" copy					{ f = other.f; } // same as above
+		operator "=" ( Test && other )		{ f = other.f;	}
+		operator move=						{ f = other.f;	} // same as above
+		operator move= o					{ f = o.f;		} // same as above
+
+	//	explicit operator bool() const		{ return f <= 0.0f; }
+		operator convert -> bool			{ return f <= 0.0;	} // same as above
+		operator convert bool				{ return f <= 0.0;	} // same as above
+		convert -> bool						{ return f <= 0.0;	} // same as above
 	}
 }
 //*/
@@ -330,4 +342,3 @@ func main( int argc, const char*[] argv ) -> int
 	return 0;// mainX( argc, argv );
 	//loop{break;}
 }
-

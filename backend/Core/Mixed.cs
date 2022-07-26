@@ -38,21 +38,23 @@ namespace Myll.Core
 		public Stmt      body; // opt
 	}
 
-	// func blah(int a) // int is _type_, a is _name_
+	// func blah(  int  n     )
+	//           \ type name /
 	public class Param
 	{
 		public Typespec type;
-		public string   name; // opt
+		public string?  name;
 
 		public string Gen()
 			=> type.Gen( name );
 	}
 
-	// blah(n: 1+2) // n is matching _name_ of param, 1+2 is _expr_
+	// blah(  n:   1+2   )
+	//      \ name expr /
 	public class Arg // Decl
 	{
-		public string name; // opt
-		public Expr   expr;
+		public string? name;
+		public Expr    expr;
 
 		public string Gen()
 		{
@@ -63,6 +65,9 @@ namespace Myll.Core
 		}
 	}
 
+	//     \/-nullCoal
+	// blah?( "moep", n: 1+2 )     moep[ 1  ]
+	//     \      args       / indexer \args/
 	public class FuncCall
 	{
 		public List<Arg> args;
@@ -71,10 +76,10 @@ namespace Myll.Core
 
 		public string Gen()
 		{
-			if( nullCoal )
+			if( nullCoal ) {
 				throw new NotImplementedException( "null coalescing for function calls needs to be implemented" );
-
-			if( indexer ) {
+			}
+			else if( indexer ) {
 				// TODO: call a different method that can handle more than one parameter
 				if( args.Count != 1 )
 					throw new Exception( "indexer call with != 1 arguments" );
@@ -85,10 +90,10 @@ namespace Myll.Core
 						.Select( a => a.Gen() )
 						.Join( ", " ) );
 			}
+			else if( args.Count == 0 ) {
+				return "()";
+			}
 			else {
-				if( args.Count == 0 )
-					return "()";
-
 				return Format(
 					"( {0} )",
 					args

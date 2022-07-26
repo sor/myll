@@ -2,18 +2,15 @@ parser grammar MyllParser;
 
 options { tokenVocab = MyllLexer; }
 
-prog		:	module? imports* /*definition?*/ levDecl*;
+prog		:	module?
+				imports*
+				/*definition?*/
+				decl*;
 
 module		:	MODULE id SEMI;
 imports		:	IMPORT id (COMMA id)* COMMA? SEMI;
 // which DEFINEs can be passed directly from the compiler, all others will be discarded
 //defines	:	DEFINITION id (COMMA id)* COMMA? SEMI;
-
-// ONLY refer to levStmt, NOT the inStmt
-// rename to decl?
-levDecl		:	attribBlk	LCURLY	levDecl* RCURLY	# AttribDeclBlock // must be in here, since it MUST have an attrib block
-			|	attribBlk	COLON 					# AttribState     // everything needs an antonym to make this work
-			|	attribBlk?			inDecl			# AttribDecl;
 
 // ONLY refer to levStmt, NOT the inStmt
 levStmt		:	attribBlk?			inStmt			# AttribStmt;
@@ -25,9 +22,9 @@ attrib		:	attribId
 				)?;
 attribId	:	id | CONST | FALL | THROW | DEFAULT;
 
-/*
-// DON'T refer to inDecl, ONLY refer to levDecl
-inDecl		:	declNamespace
+
+// DON'T refer to defDecl, ONLY refer to decl
+defDecl		:	declNamespace
 			|	declUsing
 			|	declAlias
 			|	declAspect	// TODO
@@ -37,8 +34,8 @@ inDecl		:	declNamespace
 			|	declConvert
 			|	declCtor
 			|	declDtor
-			|	declFunc
 			|	declOp
+			|	declFunc
 			|	declVar
 			;
 
@@ -52,37 +49,30 @@ declStruct	:	kindOfStruct( defStruct										);
 declConvert	:	CONVERT		( defConvert	| LCURLY attrConvert*	RCURLY	);
 declCtor	:	CTOR		( defCtor		| LCURLY attrCtor*		RCURLY	);
 declDtor	:	DTOR		( defDtor										);
-declFunc	:	kindOfFunc	( defFunc		| LCURLY attrFunc*		RCURLY	);
 declOp		:	OPERATOR	( defOp			| LCURLY attrOp*		RCURLY	);
+declFunc	:	kindOfFunc	( defFunc		| LCURLY attrFunc*		RCURLY	);
 declVar		:	kindOfVar	( defVar		| LCURLY attrVar*		RCURLY	);
 
-kindOfStruct:	STRUCT	|	CLASS	|	UNION;
-kindOfFunc	:	FUNC	|	PROC	|	METHOD;
-kindOfVar	:	VAR		|	FIELD	|	CONST	|	LET;
+kindOfStruct:	v=(	STRUCT	|	CLASS	|	UNION	);
+kindOfFunc	:	v=(	FUNC	|	PROC	|	METHOD	);
+kindOfVar	:	v=(	VAR		|	FIELD	|	CONST	|	LET	);
 
-kindOfPassing:	COPY	|	MOVE	|	FORWARD;
+kindOfPassing:	v=(	COPY	|	MOVE	|	FORWARD	);
 
+decl		:	attrDecl;
+attrDecl	:	defDecl		| attribBlk ( defDecl		| LCURLY attrDecl*		RCURLY | COLON );
 attrUsing	:	defUsing	| attribBlk ( defUsing		| LCURLY attrUsing*		RCURLY | COLON );
 attrAlias	:	defAlias	| attribBlk ( defAlias		| LCURLY attrAlias*		RCURLY | COLON );
 attrConvert	:	defConvert	| attribBlk ( defConvert	| LCURLY attrConvert*	RCURLY | COLON );
 attrCtor	:	defCtor		| attribBlk ( defCtor		| LCURLY attrCtor*		RCURLY | COLON );
-attrFunc	:	defFunc		| attribBlk ( defFunc		| LCURLY attrFunc*		RCURLY | COLON );
 attrOp		:	defOp		| attribBlk ( defOp			| LCURLY attrOp*		RCURLY | COLON );
+attrFunc	:	defFunc		| attribBlk ( defFunc		| LCURLY attrFunc*		RCURLY | COLON );
 attrVar		:	defVar		| attribBlk ( defVar		| LCURLY attrVar*		RCURLY | COLON );
-
-//// TODO the 3 kinds of attr each?
-//attrUsing	:	attribBlk?	defUsing;
-//attrAlias	:	attribBlk?	defAlias;
-//attrConvert	:	attribBlk?	defConvert;
-//attrCtor	:	attribBlk?	defCtor;
-//attrFunc	:	attribBlk?	defFunc;
-//attrOp		:	attribBlk?	defOp;
-//attrVar		:	attribBlk?	defVar;
 
 defNamespace:	id (SCOPE id)*
 				(	SEMI
 				|	COLON
-				|	LCURLY	levDecl*		RCURLY);
+				|	LCURLY	decl*		RCURLY);
 
 defUsing	:	typespecsNested;
 defAlias	:	id	tplParams?	ASSIGN	typespec;	// TODO: needs COMMA multiple support
@@ -90,14 +80,14 @@ defAlias	:	id	tplParams?	ASSIGN	typespec;	// TODO: needs COMMA multiple support
 defAspect	:	id	tplParams?;		// TODO
 defConcept	:	id	tplParams?		// TODO
 				(COLON	typespecsNested)?
-						LCURLY	levDecl*		RCURLY;
+					LCURLY	decl*		RCURLY;
 defEnum		:	id
-				(COLON	bases=typespecBasic)?	// TODO: enum inheritance
+				(COLON		bases=typespecBasic)?	// TODO: enum inheritance
 					LCURLY	idExprs			RCURLY;
 defStruct	:	id	tplParams?
 				(COLON		bases=typespecsNested)?
 				(REQUIRES 	reqs=typespecsNested)?	// TODO
-					LCURLY	levDecl*		RCURLY;
+					LCURLY	decl*		RCURLY;
 
 defConvert	:	(	RARROW		to=typespec					// convert -> TYPE	- convert to TYPE	- operator TYPE
 				|				from=typespec	id?	RARROW	// convert TYPE ->	- convert from TYPE	- ctor( TYPE ) // not very analogous to the return type definition
@@ -109,32 +99,26 @@ defCtor		:	(	kindOfPassing				id?
 				|	CONVERT			typespec	id?	RARROW?
 				|	funcTypeDef?	initList?
 				)
+				// (REQUIRES	typespecsNested)?  ?
 				funcBody;
 defDtor		:	(LPAREN RPAREN)?
 				funcBody;
-defFunc		:	id			tplParams?	funcTypeDef?
-				(RARROW		typespec)?
-				(REQUIRES	typespecsNested)?	// TODO
-				funcBody;
-defOp		:	(	kindOfPassing	ASSIGN	id?
-				|	CONVERT 		RARROW?
-				|	STRING_LIT		tplParams?	funcTypeDef?
-					(RARROW			typespec)?
-					(REQUIRES		typespecsNested)?	// TODO
+defOp		:	(	kindOfPassing	ASSIGN				id?
+				|	CONVERT			tplParams?	RARROW?	typespec // no param == no id
+				|	STRING_LIT		defCoreFunc
 				)
+				(REQUIRES	typespecsNested)?
 				funcBody;
+defFunc		:	id			defCoreFunc
+				(REQUIRES	typespecsNested)?
+				funcBody;
+defCoreFunc	:	tplParams?	funcTypeDef?
+				(RARROW		typespec)?;
+				//(REQUIRES	typespecsNested)?;
 
 defVar		:	typedIdAcors;
 
 
-
-
-/*
-opDef		:	STRING_LIT	tplParams?	funcTypeDef?
-				(RARROW		typespec)?
-				(REQUIRES	typespecsNested)?	// TODO
-				funcBody;
-*/
 
 // The great reordering Part 2, everything below still TODO
 
@@ -168,7 +152,7 @@ memAccPtrOP	:	v=(	'.*' | '?.*' | '->*' );
 
 assignOP	:		'=';
 aggrAssignOP:	v=(	'**=' | '*=' | '/=' | '%=' | '&=' |	'·=' |	'×=' |	'÷=' |
-					'+='  | '-=' | '|=' | '^=' | '<<=' | '>>=' );
+					'+='  | '-=' | '|=' | '^=' | '<<=' | '>>=' | '?=' );
 
 lit			:	CLASS_LIT | HEX_LIT | OCT_LIT | BIN_LIT | INTEGER_LIT | FLOAT_LIT | STRING_LIT | CHAR_LIT | BOOL_LIT | NUL;
 wildId		:	AUTOINDEX | USCORE;
@@ -204,7 +188,7 @@ typespecBasic	:	specialType
 				|	signedIntType
 				|	unsignIntType;
 
-typespecFunc	:	funcTypeDef (RARROW typespec)?;
+typespecFunc	:	funcTypeDef? (RARROW typespec)?;
 
 // TODO different order than ScopedExpr
 typespecNested	:			idTplArgs
@@ -279,8 +263,8 @@ expr		:	(idTplArgs	SCOPE)+	idTplArgs	# ScopedExpr
 				expr	DBL_QM threeWay+ (COLON expr)?	# ThreeWayConditionalExpr
 			| <assoc=right>
 				THROW	expr					# ThrowExpr		// Good or not?
-			|	FUNC capture? tplParams? funcTypeDef
-				(RARROW typespec)?	funcBody	# LambdaExpr	// TODO CST
+			|	FUNC capture? tplParams? funcTypeDef?
+				(RARROW typespec)?	funcBody	# LambdaExpr	// TODO
 			|	LPAREN	expr	RPAREN			# ParenExpr
 			|	wildId							# WildIdExpr
 			|	lit								# LiteralExpr	// TODO
@@ -302,8 +286,10 @@ defaultBlock:	(ELSE|DEFAULT)
 				|	LCURLY		levStmt* RCURLY
 				|	PHATRARROW	levStmt);
 
-initList	:	COLON id funcCall (COMMA id funcCall)* COMMA?;
-// TODO: initList needs to support ": ctor()"
+initList	:	COLON
+				(	id		funcCall (COMMA id funcCall)*	COMMA?
+				|	CTOR	funcCall						COMMA?
+				);
 
 // is just SEMI as well in levStmt->inStmt
 funcBody	:	PHATRARROW expr SEMI
@@ -311,61 +297,17 @@ funcBody	:	PHATRARROW expr SEMI
 accessorDef	:	attribBlk?	qual* v=( GET | REFGET | SET ) funcBody;
 funcDef		:	id			tplParams?	funcTypeDef?
 				(RARROW		typespec)?
-				(REQUIRES	typespecsNested)?	// TODO
+				(REQUIRES	typespecsNested)?
 				funcBody;
 opDef		:	STRING_LIT	tplParams?	funcTypeDef?
 				(RARROW		typespec)?
-				(REQUIRES	typespecsNested)?	// TODO
+				(REQUIRES	typespecsNested)?
 				funcBody;
 
 // remove this?
-condThen	:	LPAREN	expr	RPAREN	levStmt;
-		//	|			expr			levStmt; // bench if this would hurt
-		//	|			expr	COLON	levStmt; // try if this may work
-
-// DON'T refer to inDecl, ONLY refer to levDecl
-// ns, class, enum, func, ppp, c/dtor, alias, static
-inDecl		:	NAMESPACE id (SCOPE id)*
-				(		SEMI
-				|		COLON
-				|		LCURLY	levDecl*		RCURLY)	# Namespace
-			|	v=( STRUCT | CLASS | UNION ) id tplParams?
-				(COLON		bases=typespecsNested)?
-				(REQUIRES 	reqs=typespecsNested)?	// TODO
-						LCURLY	levDecl*		RCURLY	# StructDecl
-			|	CONCEPT	id tplParams?		// TODO
-				(COLON	typespecsNested)?
-						LCURLY	levDecl*		RCURLY	# ConceptDecl
-			|	ASPECT	id								# AspectDecl // TODO aspect
-			|	ENUM	id
-				(COLON	bases=typespecBasic)?	// TODO: enum inheritance
-						LCURLY	idExprs			RCURLY	# EnumDecl
-			|	v=( FUNC | PROC | METHOD )
-				(				funcDef
-				|		LCURLY	funcDef*		RCURLY)	# FunctionDecl
-			|	(	(COPY|MOVE)	OPERATOR STRING_LIT?	id?
-				|	CONVERT (OPERATOR|FUNC|PROC|METHOD)	RARROW	typespec
-				|	OPERATOR (COPY|MOVE) STRING_LIT?	id?
-				|	(OPERATOR|FUNC|PROC|METHOD) CONVERT	RARROW	typespec
-				)							funcBody	# OpDecl
-			|	OPERATOR								// TODO remove one of the OpDecl
-				(				opDef
-				|		LCURLY	opDef*			RCURLY)	# OpDecl
-			|	USING		typespecsNested		SEMI	# UsingDecl
-			// TODO: alias needs template support
-			|	ALIAS id ASSIGN	typespec 		SEMI	# AliasDecl
-			|	v=( VAR | FIELD | CONST | LET )
-				(				typedIdAcors
-				|		LCURLY	typedIdAcors*	RCURLY)	# VariableDecl
-			|	(	DEFAULT				CTOR
-				|	(COPY|MOVE|FORWARD)	CTOR	id?
-				|	CONVERT				CTOR	/*LARROW?*/ typespec id?
-				|	CTOR	DEFAULT
-				|	CTOR	(COPY|MOVE|FORWARD)	id?
-				|	CTOR	CONVERT	/*LARROW?*/	typespec id?
-				|	CTOR	funcTypeDef?		initList?
-				)							funcBody	# CtorDecl
-			|	DTOR	(LPAREN RPAREN)?	funcBody	# DtorDecl
+condThen	:	LPAREN	expr	RPAREN	levStmt
+		//	|			expr			levStmt // bench if this would hurt
+		//	|			expr	COLON	levStmt // try if this may work
 			;
 
 // DON'T refer to inStmt, ONLY refer to levStmt
@@ -402,8 +344,8 @@ inStmt		:	SEMI								# EmptyStmt
 						body=levStmt				# TimesStmt
 			|	TRY		levStmt
 			// funcTypeDef is wrong, but works for easy cases
-				(CATCH	funcTypeDef		levStmt)+	# TryCatchStmt		// TODO CST
-			|	DEFER	levStmt						# DeferStmt			// TODO CST, scope_exit(,fail,success)
+				(CATCH	funcTypeDef?	levStmt)+	# TryCatchStmt		// TODO
+			|	DEFER	levStmt						# DeferStmt			// TODO, scope_exit(,fail,success)
 													// #include <experimental/scope>
 													// std::experimental::scope_exit guard([]{ cout << "Exit!" << endl; });
 			| 	expr	(assignOP		expr)+ SEMI	# MultiAssignStmt

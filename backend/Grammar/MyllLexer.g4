@@ -25,7 +25,7 @@ QM_COLON	: '?:';
 DBL_PLUS	: '++';
 DBL_MINUS	: '--';
 RARROW		: '->';	// also the "to-operator"   (not really an operator), read as "to"
-//LARROW	: '<-';	//      the "from-operator" (not really an operator), read as "from"
+LARROW		: '<-';	//      the "from-operator" (not really an operator), read as "from"
 PHATRARROW	: '=>';
 LSHIFT		: '<<';
 //RSHIFT	: '>>';// this is only supported by 2x GT because of: var v<v<int>> a; which is two templates closing, not a right shift
@@ -86,6 +86,9 @@ AS_RSH		: '>>=';
 AS_AND		: '&=';
 AS_OR		: '|=';
 AS_XOR		: '^=';
+//AS_DBLAND	: '&&=';
+//AS_DBLOR	: '||=';
+AS_QM		: '?=';		// assign if null
 
 AUTO		: 'auto';
 VOID		: 'void';
@@ -213,12 +216,11 @@ COPY		: 'copy';
 
 ID			: ALPHA_ ALNUM_*;
 
-// The keywords "ret, result, other, that" are not really keywords,
+// The keywords "ret, result, other, that, nullptr" are not really keywords,
 //	they exist only in special spots and depending on context,
 //	and they are handled by "id"
-NUL			: 'null'|'nullptr'; // nullptr obsolete?
-//CLASS_LIT	: 'this'|'self'|'base'|'super';
-CLASS_LIT	: 'this'|'that'|'self'|'other'|'base'|'super'; // 'ret'?, maybe its not good that other etc are in here
+NUL			: 'null';
+CLASS_LIT	: 'this'|'self'|'base'|'super';
 BOOL_LIT	: 'true'|'false';
 FLOAT_LIT	:	(	DIGIT* '.' DIGIT+ ( [eE] [+-]? DIGIT+ )?
 				|	DIGIT+ [eE] [+-]? DIGIT+

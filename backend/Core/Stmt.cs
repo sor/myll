@@ -40,6 +40,7 @@ namespace Myll.Core
 
 		public virtual void AssignAttribs( Attribs inAttribs )
 		{
+			// TODO: support multiple attribs, in tandem with ScopeStack
 			attribs = inAttribs;
 
 			AttribsAssigned();

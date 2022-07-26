@@ -338,6 +338,7 @@ namespace Myll.Generator
 				tplImpl = null;
 			}
 
+			// TODO: move inlines to bottom of header
 			if( isInline || isExternal ) {
 				if( !isInsideStruct ) {
 					if( hasTpl )

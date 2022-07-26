@@ -247,5 +247,8 @@ namespace Myll
 		public List<TypespecNested> VisitTypespecsNested( TypespecNestedContext[] c )
 			=> c?.Select( VisitTypespecNested ).ToList()
 			?? new List<TypespecNested>();
+
+		public List<TypespecNested> VisitTypespecsNested( TypespecsNestedContext? c )
+			=> VisitTypespecsNested( c?.typespecNested() );
 	}
 }

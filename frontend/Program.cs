@@ -23,11 +23,33 @@ namespace Myll
 
 	#if !DISABLE_PLINQ
 	using static ParallelEnumerable;
-	#endif
+#endif
 
-	public sealed class ConsoleErrorListener : IAntlrErrorListener<IToken>
+	public sealed class LexerConsoleErrorListener : IAntlrErrorListener<int>
 	{
-		public static readonly ConsoleErrorListener Instance = new();
+		public static readonly LexerConsoleErrorListener Instance = new();
+
+		public void SyntaxError(
+			TextWriter           output,
+			IRecognizer          recognizer,
+			int                  offendingSymbol,
+			int                  line,
+			int                  charPositionInLine,
+			string               msg,
+			RecognitionException e )
+		{
+			output.WriteLine(
+				"In file {0} line {1}:{2} {3}",
+				((MyllLexer)recognizer).SourceName,
+				line,
+				charPositionInLine,
+				msg );
+		}
+	}
+
+	public sealed class ParserConsoleErrorListener : IAntlrErrorListener<IToken>
+	{
+		public static readonly ParserConsoleErrorListener Instance = new();
 
 		public void SyntaxError(
 			TextWriter           output,
@@ -38,11 +60,12 @@ namespace Myll
 			string               msg,
 			RecognitionException e )
 		{
-			output.WriteLine( "In file {0} line {1}:{2} {3}",
-				((MyllParser) recognizer).SourceName,
+			output.WriteLine(
+				"In file {0} line {1}:{2} {3}",
+				((MyllParser)recognizer).SourceName,
 				line,
 				charPositionInLine,
-				msg);
+				msg );
 		}
 	}
 
@@ -69,10 +92,12 @@ namespace Myll
 			StreamReader      reader      = new( filename );
 			AntlrInputStream  inputStream = new( reader ) { name = filename };
 			MyllLexer         lexer       = new( inputStream );
+			lexer.RemoveErrorListeners();
+			lexer.AddErrorListener( LexerConsoleErrorListener.Instance );
 			CommonTokenStream tokenStream = new( lexer );
 			MyllParser        parser      = new( tokenStream );
 			parser.RemoveErrorListeners();
-			parser.AddErrorListener( ConsoleErrorListener.Instance );
+			parser.AddErrorListener( ParserConsoleErrorListener.Instance );
 			// This will exit after the first problem
 			//parser.ErrorHandler = new BailErrorStrategy();
 			//Console.WriteLine( "Time elapsed after CreateParser   {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
@@ -83,8 +108,8 @@ namespace Myll
 		private static MyllParser.ProgContext ParseCST( MyllParser parser )
 		{
 			// if exceptions happen, comment this out
-			parser.Interpreter.PredictionMode = PredictionMode.SLL;
-			//parser.Interpreter.PredictionMode = PredictionMode.LL_EXACT_AMBIG_DETECTION;
+			//parser.Interpreter.PredictionMode = PredictionMode.SLL;
+			parser.Interpreter.PredictionMode = PredictionMode.LL_EXACT_AMBIG_DETECTION;
 
 			try {
 				MyllParser.ProgContext prog = parser.prog();

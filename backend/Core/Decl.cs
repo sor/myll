@@ -33,7 +33,7 @@ namespace Myll.Core
 		public Access    access = Access.Public;
 		public ScopeLeaf scope;
 
-		// recursive
+		// recursively check if there is anything templated surrounding
 		public bool IsTemplateUp {
 			get {
 				for( ScopeLeaf cur = scope; cur?.parent != null; cur = cur.parent )
@@ -97,7 +97,7 @@ namespace Myll.Core
 		}
 	}
 
-	// has in-order list of decls, visible from outside
+	// Has an in-order list of decls, visible from outside
 	public abstract class Hierarchical : Decl
 	{
 		public readonly List<Decl> children = new();
@@ -119,10 +119,21 @@ namespace Myll.Core
 	// functions, methods, operators, accessors (in the end)
 	public class Func : Decl, ITplParams
 	{
-		public List<TplParam> TplParams { get; init; } = new();
-		public List<Param>    paras;
-		public Block?         body;
-		public Typespec       retType;
+		public enum Kind
+		{
+			Function,
+			Procedure,
+			Method,
+			Operator, // free or bound to obj
+			Convert,
+		}
+
+		public Kind                 kind;
+		public List<TplParam>       TplParams { get; init; } = new();
+		public List<TypespecNested> Requires  { get; init; } = new(); // TODO: replace with dedicated type
+		public List<Param>          paras;
+		public Block?               body;
+		public Typespec             retType;
 
 		public bool IsVirtual  => HasAttrib( "virtual" );
 		public bool IsConst    => HasAttrib( "const" ) || HasAttrib( "pure" );
@@ -196,6 +207,15 @@ namespace Myll.Core
 	*/
 	public class VarDecl : Decl
 	{
+		public enum Kind
+		{
+			Var,
+			Field,
+			Const,
+			Let,
+		}
+
+		public Kind           kind;
 		public Typespec       type;     // contains Qualifier
 		public List<Accessor> accessor; // opt, structural or global
 		public Expr?          init;
@@ -209,6 +229,13 @@ namespace Myll.Core
 	public class MultiDecl : Decl
 	{
 		public List<Decl> decls = new();
+
+		public MultiDecl() {}
+		public MultiDecl( IEnumerable<Decl>? decls )
+		{
+			// TODO: if decls contains MultiDecl then unwrap them
+			this.decls = decls?.ToList() ?? new();
+		}
 
 		public override void AssignAttribs( Attribs inAttribs )
 		{
@@ -268,7 +295,7 @@ namespace Myll.Core
 		{
 			bool isFlags = IsFlags;
 			if( isFlags ) {
-				// HACK this is just written in a hurry, that might break at any user intervention
+				// HACK: This is just written in a hurry, might break at any user intervention
 				uint index = 1;
 				foreach( Decl child in children ) {
 					if( child is EnumEntry ee ) {

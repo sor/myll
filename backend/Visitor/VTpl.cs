@@ -40,7 +40,7 @@ namespace Myll
 			return tp;
 		}
 
-		public new List<TplParam> VisitTplParams( TplParamsContext c )
+		public new List<TplParam> VisitTplParams( TplParamsContext? c )
 			=> c?.id().Select( VisitTplParam ).ToList()
 			?? new List<TplParam>();
 	}

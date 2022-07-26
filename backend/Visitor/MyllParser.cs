@@ -21,7 +21,7 @@ namespace Myll
 			}
 		}
 
-		public partial class LevDeclContext
+		public partial class DeclContext
 		{
 			public string Text {
 				get {

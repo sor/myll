@@ -19,6 +19,13 @@ namespace Myll.Core
 		Stable   = 1 << 3,
 	}
 
+	public enum PassingKind
+	{
+		Copy,
+		Move,
+		Forward,
+	}
+
 	/// <summary>
 	/// Formatting with the name needs to be done in here,
 	/// in C++ the name is mixed up in the type
@@ -124,7 +131,7 @@ namespace Myll.Core
 	public class TypespecFunc : Typespec
 	{
 		public List<Param> paras;
-		public Typespec    retType; // opt
+		public Typespec    retType = new TypespecBasic { kind = TypespecBasic.Kind.Void }; // opt
 
 		public override string GenType()
 			=> retType.Gen();

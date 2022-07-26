@@ -5,6 +5,9 @@ module MyContainers;
 
 import std_iostream;
 
+//[hidden] var float no_collide = 9.0;
+//[global] var float do_collide = 9.0;
+
 func mainX( int argc, const char*[] argv ) -> int {
 	using std, JanSordid::Container;
 
@@ -13,10 +16,12 @@ func mainX( int argc, const char*[] argv ) -> int {
 
 	{{
 		// pushes -5 to +4 on the stack (10 numbers)
-		do 10 times i-5 stack.push( i );
+		do 10 times i-5
+			stack.push( i );
 		{
 			// unnamed loop variable, pushes 1's on the stack
-			do 10 times stack.push( 1 );
+			do 10 times
+				stack.push( 1 );
 		}
 	}}
 
@@ -29,15 +34,15 @@ func mainX( int argc, const char*[] argv ) -> int {
 	return 0;
 }
 
-// all the same (4+ a bit different)
+// all the same (4 a bit different)
 func hans1() -> auto => 9;
 func hans2() -> auto return 9;
 func hans3() -> auto {return 9;}
 func hans4() -> auto {{return 9;}}
 //func hans5();
 
-namespace JanSordid::Container;
-//namespace JanSordid::Container:
+
+namespace JanSordid::Container: // ";" or ":"
 
 [rule_of_n=0] // not yet validated
 class MyStack<T> {
@@ -47,7 +52,7 @@ class MyStack<T> {
 	field T[]!	_data = new T[_reserved]!;
 
 [pub]:
-	//ctor() : ctor_(_default_reserved) {} // forwarding to other ctor does not work yet
+	ctor() : ctor( _default_reserved ) {}
 	ctor( usize reserved ) {
 		_reserved	= reserved;
 		_data		= new T[_reserved]!;

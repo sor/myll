@@ -228,7 +228,7 @@ namespace Myll
 
 		// TODO those null tolerant methods need to be removed
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
-		public static Decl Visit( this Parser.LevDeclContext c )
+		public static Decl Visit( this Parser.DeclContext c )
 			=> c == null
 				? null
 				: DeclVis.Visit( c );
@@ -260,6 +260,44 @@ namespace Myll
 
 			return attribs;
 		}
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static Structural.Kind Visit( this KindOfStructContext c )
+			=> c.v.Type switch {
+				Parser.STRUCT => Structural.Kind.Struct,
+				Parser.CLASS  => Structural.Kind.Class,
+				Parser.UNION  => Structural.Kind.Union,
+				_             => throw new ArgumentOutOfRangeException( "Structural.Kind Visit out of range " + c )
+			};
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static Func.Kind Visit( this KindOfFuncContext c )
+			=> c.v.Type switch {
+				Parser.FUNC   => Func.Kind.Function,
+				Parser.PROC   => Func.Kind.Procedure,
+				Parser.METHOD => Func.Kind.Method,
+				_             => throw new ArgumentOutOfRangeException( "Func.Kind Visit out of range " + c )
+			};
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static VarDecl.Kind Visit( this KindOfVarContext c )
+			=> c.v.Type switch {
+				Parser.VAR   => VarDecl.Kind.Var,
+				Parser.FIELD => VarDecl.Kind.Field,
+				Parser.CONST => VarDecl.Kind.Const,
+				Parser.LET   => VarDecl.Kind.Let,
+				_            => throw new ArgumentOutOfRangeException( "VarDecl.Kind Visit out of range " + c )
+			};
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static PassingKind Visit( this KindOfPassingContext c )
+			=> c.v.Type switch {
+				Parser.COPY    => PassingKind.Copy,
+				Parser.MOVE    => PassingKind.Move,
+				Parser.FORWARD => PassingKind.Forward,
+				_              => throw new ArgumentOutOfRangeException( "PassingKind Visit out of range " + c )
+			};
+
 
 #pragma warning disable 8509
 
@@ -293,6 +331,15 @@ namespace Myll
 				_            => throw new ArgumentOutOfRangeException( "ToQualifier out of range " + tok )
 			};
 
+		public static Qualifier ToQualifier( this VarDecl.Kind kind )
+			=> kind switch {
+				VarDecl.Kind.Var   => Qualifier.None,
+				VarDecl.Kind.Field => Qualifier.None,
+				VarDecl.Kind.Const => Qualifier.Const,
+				VarDecl.Kind.Let   => Qualifier.Const,
+				_                  => throw new ArgumentOutOfRangeException( "ToQualifier out of range " + kind )
+			};
+
 		// Visit
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
@@ -305,6 +352,14 @@ namespace Myll
 				_                   => throw new ArgumentOutOfRangeException( "Visit Qualifier out of range " + c )
 			};
 
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static (Qualifier qual, List<Pointer> ptrs) ToQualPtrs( this PassingKind passingKind )
+			=> passingKind switch {
+				PassingKind.Copy    => (Qualifier.Const, new() { new() { kind = Pointer.Kind.LVRef } }),
+				PassingKind.Move    => (Qualifier.None,  new() { new() { kind = Pointer.Kind.RVRef } }),
+				PassingKind.Forward => (Qualifier.None,  new() { new() { kind = Pointer.Kind.RVRef } }),
+				// forward is not complete with just this
+			};
 #pragma warning restore 8509
 	}
 }

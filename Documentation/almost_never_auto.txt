@@ -145,7 +145,5 @@ Contrary to C++, the initialization with the = sign can now communicate its type
 The new can not deduce ...??
 
 
-[magic-return-val=ret]
-[magic-param-val=other]
-[magic-param-ref=other]
-[magic-param-ptr=that]
+{
+	"class", "MyClass", ["dispatch=basic"]
