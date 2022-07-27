@@ -33,6 +33,12 @@ using IToken = Antlr4.Runtime.IToken;
 [System.CLSCompliant(false)]
 public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.comment"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitComment([NotNull] MyllParser.CommentContext context);
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.prog"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
@@ -75,6 +81,60 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitAttribId([NotNull] MyllParser.AttribIdContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.decl"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitDecl([NotNull] MyllParser.DeclContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.attrDecl"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitAttrDecl([NotNull] MyllParser.AttrDeclContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.attrUsing"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitAttrUsing([NotNull] MyllParser.AttrUsingContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.attrAlias"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitAttrAlias([NotNull] MyllParser.AttrAliasContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.attrConvert"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitAttrConvert([NotNull] MyllParser.AttrConvertContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.attrCtor"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitAttrCtor([NotNull] MyllParser.AttrCtorContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.attrOp"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitAttrOp([NotNull] MyllParser.AttrOpContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.attrFunc"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitAttrFunc([NotNull] MyllParser.AttrFuncContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.attrVar"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitAttrVar([NotNull] MyllParser.AttrVarContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.defDecl"/>.
 	/// </summary>
@@ -160,84 +220,6 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitDeclVar([NotNull] MyllParser.DeclVarContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.kindOfStruct"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitKindOfStruct([NotNull] MyllParser.KindOfStructContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.kindOfFunc"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitKindOfFunc([NotNull] MyllParser.KindOfFuncContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.kindOfVar"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitKindOfVar([NotNull] MyllParser.KindOfVarContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.kindOfPassing"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitKindOfPassing([NotNull] MyllParser.KindOfPassingContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.decl"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitDecl([NotNull] MyllParser.DeclContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.attrDecl"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitAttrDecl([NotNull] MyllParser.AttrDeclContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.attrUsing"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitAttrUsing([NotNull] MyllParser.AttrUsingContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.attrAlias"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitAttrAlias([NotNull] MyllParser.AttrAliasContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.attrConvert"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitAttrConvert([NotNull] MyllParser.AttrConvertContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.attrCtor"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitAttrCtor([NotNull] MyllParser.AttrCtorContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.attrOp"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitAttrOp([NotNull] MyllParser.AttrOpContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.attrFunc"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitAttrFunc([NotNull] MyllParser.AttrFuncContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.attrVar"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitAttrVar([NotNull] MyllParser.AttrVarContext context);
-	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.defNamespace"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
@@ -322,11 +304,29 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitDefVar([NotNull] MyllParser.DefVarContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.comment"/>.
+	/// Visit a parse tree produced by <see cref="MyllParser.kindOfStruct"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitComment([NotNull] MyllParser.CommentContext context);
+	Result VisitKindOfStruct([NotNull] MyllParser.KindOfStructContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.kindOfFunc"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitKindOfFunc([NotNull] MyllParser.KindOfFuncContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.kindOfVar"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitKindOfVar([NotNull] MyllParser.KindOfVarContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.kindOfPassing"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitKindOfPassing([NotNull] MyllParser.KindOfPassingContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.preOP"/>.
 	/// </summary>

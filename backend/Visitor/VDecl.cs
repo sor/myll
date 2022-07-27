@@ -62,46 +62,6 @@ namespace Myll
 			return global;
 		}
 
-		// The other Decl should not need implementations here, only Struct, Func, and Var
-
-		public override Decl VisitDeclStruct( DeclStructContext c )
-		{
-			Structural.Kind kind = c.kindOfStruct().Visit();
-			return VisitDefStruct( c.defStruct(), kind );
-		}
-
-		public override Decl VisitDeclFunc( DeclFuncContext c )
-		{
-			Func.Kind kind = c.kindOfFunc().Visit();
-
-			Decl ret;
-			if( c.defFunc() != null )
-				ret = VisitDefFunc( c.defFunc(), kind );
-			else if( c.attrFunc() != null )
-				ret = new MultiDecl( c.attrFunc().Select( ac => VisitAttrFunc( ac, kind ) ) );
-			else
-				throw new InvalidOperationException( "declFunc unknown" );
-
-			return ret;
-		}
-
-		public override MultiDecl VisitDeclVar( DeclVarContext c )
-		{
-			// TODO: huge overlap with VisitAttrVar
-
-			VarDecl.Kind kind = c.kindOfVar().Visit();
-
-			MultiDecl ret;
-			if( c.defVar() != null )
-				ret = VisitDefVar( c.defVar(), kind );
-			else if( c.attrVar() != null )
-				ret = new( c.attrVar().Select( ac => VisitAttrVar( ac, kind ) ) );
-			else
-				throw new InvalidOperationException( "declVar unknown " );
-
-			return ret;
-		}
-
 		public override Decl VisitAttrDecl( 	AttrDeclContext		c ) => VisitAttrAnyDecl( c.attribBlk(), c.defDecl(), c.attrDecl() );
 		public override Decl VisitAttrUsing( 	AttrUsingContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defUsing(), c.attrUsing() );
 		public override Decl VisitAttrAlias( 	AttrAliasContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defAlias(), c.attrAlias() );
@@ -109,6 +69,7 @@ namespace Myll
 		public override Decl VisitAttrCtor( 	AttrCtorContext		c ) => VisitAttrAnyDecl( c.attribBlk(), c.defCtor(), c.attrCtor() );
 		public override Decl VisitAttrOp( 		AttrOpContext		c ) => VisitAttrAnyDecl( c.attribBlk(), c.defOp(), c.attrOp() );
 
+		// no override
 		public Decl VisitAttrAnyDecl<TDefContext, TAttrContext>(
 			AttribBlkContext? blkc,
 			TDefContext?      dc,
@@ -194,6 +155,46 @@ namespace Myll
 				"priv" => Access.Private,
 				_      => throw new NotSupportedException( "Got unsupported attribute in AttribState: " + access ),
 			};
+		}
+
+		// The other Decl should not need implementations here, only Struct, Func, and Var
+
+		public override Decl VisitDeclStruct( DeclStructContext c )
+		{
+			Structural.Kind kind = c.kindOfStruct().Visit();
+			return VisitDefStruct( c.defStruct(), kind );
+		}
+
+		public override Decl VisitDeclFunc( DeclFuncContext c )
+		{
+			Func.Kind kind = c.kindOfFunc().Visit();
+
+			Decl ret;
+			if( c.defFunc() != null )
+				ret = VisitDefFunc( c.defFunc(), kind );
+			else if( c.attrFunc() != null )
+				ret = new MultiDecl( c.attrFunc().Select( ac => VisitAttrFunc( ac, kind ) ) );
+			else
+				throw new InvalidOperationException( "declFunc unknown" );
+
+			return ret;
+		}
+
+		public override MultiDecl VisitDeclVar( DeclVarContext c )
+		{
+			// TODO: huge overlap with VisitAttrVar
+
+			VarDecl.Kind kind = c.kindOfVar().Visit();
+
+			MultiDecl ret;
+			if( c.defVar() != null )
+				ret = VisitDefVar( c.defVar(), kind );
+			else if( c.attrVar() != null )
+				ret = new( c.attrVar().Select( ac => VisitAttrVar( ac, kind ) ) );
+			else
+				throw new InvalidOperationException( "declVar unknown " );
+
+			return ret;
 		}
 
 		public override Namespace VisitDefNamespace( DefNamespaceContext c )

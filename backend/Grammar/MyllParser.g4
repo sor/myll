@@ -2,6 +2,8 @@ parser grammar MyllParser;
 
 options { tokenVocab = MyllLexer; }
 
+comment		:	COMMENT;
+
 prog		:	module?
 				imports*
 				/*definition?*/
@@ -22,6 +24,15 @@ attrib		:	attribId
 				)?;
 attribId	:	id | CONST | FALL | THROW | DEFAULT;
 
+decl		:	attrDecl;
+attrDecl	:	defDecl		| attribBlk ( defDecl		| LCURLY attrDecl*		RCURLY | COLON );
+attrUsing	:	defUsing	| attribBlk ( defUsing		| LCURLY attrUsing*		RCURLY | COLON );
+attrAlias	:	defAlias	| attribBlk ( defAlias		| LCURLY attrAlias*		RCURLY | COLON );
+attrConvert	:	defConvert	| attribBlk ( defConvert	| LCURLY attrConvert*	RCURLY | COLON );
+attrCtor	:	defCtor		| attribBlk ( defCtor		| LCURLY attrCtor*		RCURLY | COLON );
+attrOp		:	defOp		| attribBlk ( defOp			| LCURLY attrOp*		RCURLY | COLON );
+attrFunc	:	defFunc		| attribBlk ( defFunc		| LCURLY attrFunc*		RCURLY | COLON );
+attrVar		:	defVar		| attribBlk ( defVar		| LCURLY attrVar*		RCURLY | COLON );
 
 // DON'T refer to defDecl, ONLY refer to decl
 defDecl		:	declNamespace
@@ -52,22 +63,6 @@ declDtor	:	DTOR		( defDtor										);
 declOp		:	OPERATOR	( defOp			| LCURLY attrOp*		RCURLY	);
 declFunc	:	kindOfFunc	( defFunc		| LCURLY attrFunc*		RCURLY	);
 declVar		:	kindOfVar	( defVar		| LCURLY attrVar*		RCURLY	);
-
-kindOfStruct:	v=(	STRUCT	|	CLASS	|	UNION	);
-kindOfFunc	:	v=(	FUNC	|	PROC	|	METHOD	);
-kindOfVar	:	v=(	VAR		|	FIELD	|	CONST	|	LET	);
-
-kindOfPassing:	v=(	COPY	|	MOVE	|	FORWARD	);
-
-decl		:	attrDecl;
-attrDecl	:	defDecl		| attribBlk ( defDecl		| LCURLY attrDecl*		RCURLY | COLON );
-attrUsing	:	defUsing	| attribBlk ( defUsing		| LCURLY attrUsing*		RCURLY | COLON );
-attrAlias	:	defAlias	| attribBlk ( defAlias		| LCURLY attrAlias*		RCURLY | COLON );
-attrConvert	:	defConvert	| attribBlk ( defConvert	| LCURLY attrConvert*	RCURLY | COLON );
-attrCtor	:	defCtor		| attribBlk ( defCtor		| LCURLY attrCtor*		RCURLY | COLON );
-attrOp		:	defOp		| attribBlk ( defOp			| LCURLY attrOp*		RCURLY | COLON );
-attrFunc	:	defFunc		| attribBlk ( defFunc		| LCURLY attrFunc*		RCURLY | COLON );
-attrVar		:	defVar		| attribBlk ( defVar		| LCURLY attrVar*		RCURLY | COLON );
 
 defNamespace:	id (SCOPE id)*
 				(	SEMI
@@ -119,11 +114,15 @@ defCoreFunc	:	tplParams?	funcTypeDef?
 defVar		:	typedIdAcors;
 
 
+kindOfStruct:	v=(	STRUCT	|	CLASS	|	UNION	);
+kindOfFunc	:	v=(	FUNC	|	PROC	|	METHOD	);
+kindOfVar	:	v=(	VAR		|	FIELD	|	CONST	|	LET	);
+
+kindOfPassing:	v=(	COPY	|	MOVE	|	FORWARD	);
+
 
 // The great reordering Part 2, everything below still TODO
 
-
-comment		:	COMMENT;
 
 // handled by ToPreOp because of collisions
 preOP		:	v=(	'++' | '--' | '+' | '-' | '!' | '~' | '*' | '&' );
