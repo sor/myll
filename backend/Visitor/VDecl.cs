@@ -41,161 +41,73 @@ namespace Myll
 				_ => new MultiDecl( c.Select( Visit ) )
 			};
 
-		public override Enumeration VisitDefEnum( DefEnumContext c )
+		public GlobalNamespace VisitProgs( IGrouping<string, ProgContext> cs )
 		{
-			// CnP: recheck this
-			// TODO: enum inheritance from non-basic types
-			Enumeration ret = new() {
-				srcPos   = c.ToSrcPos(),
-				name     = c.id().Visit(),
-				access   = curAccess,
-				baseType = (c.bases != null) ? VisitTypespecBasic( c.bases ) : null,
-			};
-			// do not reset curAccess because there is no change inside enums
-			PushScope( ret );
-			{
-				AddChildren( VisitEnumEntrys( c.idExprs() ) );
+			GlobalNamespace global = GenerateGlobalScope( cs.Key );
+
+			foreach( ProgContext c in cs ) {
+				global.imps.UnionWith(
+					c.imports()
+						.SelectMany( i => i.id() )
+						.Select( i => i.GetText() )
+						.ToList() );
+
+				c.decl().Select( Visit ).Exec();
+
+				CleanBodylessNamespace();
 			}
-			PopScope();
 
-			return ret;
+			CloseGlobalScope();
+
+			return global;
 		}
 
-		// no override
-		public Func VisitDefFunc( DefFuncContext c, Func.Kind kind )
+		// The other Decl should not need implementations here, only Struct, Func, and Var
+
+		public override Decl VisitDeclStruct( DeclStructContext c )
 		{
-			PushScope();
-
-			Func ret = VisitDefCoreFunc(
-				c.defCoreFunc(),
-				c.id().Visit(),
-				kind,
-				VisitTypespecsNested( c.typespecsNested() ),
-				c.funcBody().Visit() );
-
-			PopScope();
-			AddChild( ret );
-
-			// what was that for?
-			//bool wasOK = NotifyObservers( ret );
-			// validator
-			//ret.HasAttrib( "blah" );
-
-			return ret;
+			Structural.Kind kind = c.kindOfStruct().Visit();
+			return VisitDefStruct( c.defStruct(), kind );
 		}
 
-		// no override
-		public Func VisitDefCoreFunc(
-			DefCoreFuncContext   c,
-			string               name,
-			Func.Kind            kind,
-			List<TypespecNested> requires,
-			Block?               body )
+		public override Decl VisitDeclFunc( DeclFuncContext c )
 		{
-			Func ret = new() {
-				srcPos    = c.ToSrcPos(),
-				name      = name,
-				access    = curAccess,
-				kind      = kind,
-				TplParams = VisitTplParams( c.tplParams() ),
-				Requires  = requires,
-				paras     = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
-				body      = body,
-			};
-			ret.retType = c.typespec() != null ? VisitTypespec( c.typespec() ) :
-				ret.IsReturningSomething ?
-					new TypespecBasic {
-						kind = TypespecBasic.Kind.Auto,
-						size = TypespecBasic.SizeUndetermined,
-					} :
-					new TypespecBasic {
-						kind = TypespecBasic.Kind.Void,
-						size = TypespecBasic.SizeInvalid,
-					};
+			Func.Kind kind = c.kindOfFunc().Visit();
+
+			Decl ret;
+			if( c.defFunc() != null )
+				ret = VisitDefFunc( c.defFunc(), kind );
+			else if( c.attrFunc() != null )
+				ret = new MultiDecl( c.attrFunc().Select( ac => VisitAttrFunc( ac, kind ) ) );
+			else
+				throw new InvalidOperationException( "declFunc unknown" );
+
 			return ret;
 		}
 
-		public override Func VisitDefOp( DefOpContext c )
+		public override MultiDecl VisitDeclVar( DeclVarContext c )
 		{
-			Scope parent = scopeStack.Peek();
-			Func  ret;
-			PushScope();
-			{
-				if( c.ASSIGN() != null ) {
-					string?     id          = c.id().Visit();
-					PassingKind passingKind = c.kindOfPassing().Visit();
-					bool        isCopy      = passingKind == PassingKind.Copy;
-					bool        isMove      = passingKind == PassingKind.Move;
+			// TODO: huge overlap with VisitAttrVar
 
-					if( !isCopy && !isMove )
-						throw new NotSupportedException( "only copy and move special assignment ops are supported" );
+			VarDecl.Kind kind = c.kindOfVar().Visit();
 
-					if( !parent.HasDecl || !(parent.decl is Structural) )
-						throw new Exception( "parent of operator= copy or move has no decl or is not a structural" );
+			MultiDecl ret;
+			if( c.defVar() != null )
+				ret = VisitDefVar( c.defVar(), kind );
+			else if( c.attrVar() != null )
+				ret = new( c.attrVar().Select( ac => VisitAttrVar( ac, kind ) ) );
+			else
+				throw new InvalidOperationException( "declVar unknown " );
 
-					string className = parent.decl.name; //.FullyQualifiedName;
-					List<IdTplArgs> classIdTpls = new() {
-						new() {
-							id      = className,
-							tplArgs = new(),
-						},
-					};
-
-					var qualPtrsTuple = passingKind.ToQualPtrs();
-					Param param = new() {
-						name = id ?? "other", // TODO: replace "other" with configuration
-						type = new TypespecNested {
-							idTpls = classIdTpls,
-							qual   = qualPtrsTuple.qual,
-							ptrs   = qualPtrsTuple.ptrs,
-						},
-					};
-
-					ret = new() {
-						srcPos   = c.ToSrcPos(),
-						name     = "operator=",
-						access   = curAccess,
-						body     = c.funcBody().Visit(),
-						Requires = VisitTypespecsNested( c.typespecsNested() ),
-						paras    = new() { param },
-						retType = new TypespecNested() {
-							idTpls = classIdTpls,
-							ptrs = new() {
-								new() { kind = Pointer.Kind.LVRef },
-							},
-						},
-					};
-					//ret = VisitOpSpecialAssign( c );
-				}
-				else if( c.CONVERT() != null ) {
-					ret = new() {
-						srcPos    = c.ToSrcPos(),
-						name      = string.Empty,
-						access    = curAccess,
-						kind      = Func.Kind.Convert,
-						TplParams = VisitTplParams( c.tplParams() ),
-						Requires  = VisitTypespecsNested( c.typespecsNested() ),
-						paras     = new(),
-						body      = c.funcBody().Visit(),
-						retType   = VisitTypespec( c.typespec() ),
-					};
-				}
-				else {
-					string stringOp  = c.STRING_LIT().GetText();
-					string cleanedOp = "operator" + stringOp.Substring( 1, stringOp.Length - 2 );
-					ret = VisitDefCoreFunc(
-						c.defCoreFunc(),
-						cleanedOp,
-						Func.Kind.Operator,
-						VisitTypespecsNested( c.typespecsNested() ),
-						c.funcBody().Visit() );
-				}
-			}
-			PopScope();
-			AddChild( ret ); // needs ret.name to be set already
-			c.id().Visit();
 			return ret;
 		}
+
+		public override Decl VisitAttrDecl( 	AttrDeclContext		c ) => VisitAttrAnyDecl( c.attribBlk(), c.defDecl(), c.attrDecl() );
+		public override Decl VisitAttrUsing( 	AttrUsingContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defUsing(), c.attrUsing() );
+		public override Decl VisitAttrAlias( 	AttrAliasContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defAlias(), c.attrAlias() );
+		public override Decl VisitAttrConvert( 	AttrConvertContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defConvert(), c.attrConvert() );
+		public override Decl VisitAttrCtor( 	AttrCtorContext		c ) => VisitAttrAnyDecl( c.attribBlk(), c.defCtor(), c.attrCtor() );
+		public override Decl VisitAttrOp( 		AttrOpContext		c ) => VisitAttrAnyDecl( c.attribBlk(), c.defOp(), c.attrOp() );
 
 		public Decl VisitAttrAnyDecl<TDefContext, TAttrContext>(
 			AttribBlkContext? blkc,
@@ -284,27 +196,6 @@ namespace Myll
 			};
 		}
 
-		public GlobalNamespace VisitProgs( IGrouping<string, ProgContext> cs )
-		{
-			GlobalNamespace global = GenerateGlobalScope( cs.Key );
-
-			foreach( ProgContext c in cs ) {
-				global.imps.UnionWith(
-					c.imports()
-						.SelectMany( i => i.id() )
-						.Select( i => i.GetText() )
-						.ToList() );
-
-				c.decl().Select( Visit ).Exec();
-
-				CleanBodylessNamespace();
-			}
-
-			CloseGlobalScope();
-
-			return global;
-		}
-
 		public override Namespace VisitDefNamespace( DefNamespaceContext c )
 		{
 			// CnP: recheck this
@@ -339,6 +230,60 @@ namespace Myll
 			return ret;
 		}
 
+		public override MultiDecl VisitDefUsing( DefUsingContext c )
+		{
+			SrcPos pos = c.ToSrcPos();
+			MultiDecl ret = new(
+				VisitTypespecsNested( c.typespecsNested() ).Select(
+					t => new UsingDecl() {
+						srcPos = pos,
+						type   = t
+					} ) );
+			AddChildren( ret.decls );
+			return ret;
+		}
+
+		public override UsingDecl VisitDefAlias( DefAliasContext c )
+		{
+			// TODO: tplParams, multi-decl
+			List<TplParam> useMe = VisitTplParams( c.tplParams() );
+
+			// TODO: This should not be a UsingDecl
+			UsingDecl ret = new() {
+				srcPos = c.ToSrcPos(),
+				name   = c.id().GetText(),
+				type   = VisitTypespec( c.typespec() ),
+			};
+			AddChild( ret );
+			return ret;
+		}
+
+		// TODO
+		public override Decl VisitDefAspect( DefAspectContext c ) => base.VisitDefAspect( c );
+
+		// TODO
+		public override Decl VisitDefConcept( DefConceptContext c ) => base.VisitDefConcept( c );
+
+		public override Enumeration VisitDefEnum( DefEnumContext c )
+		{
+			// CnP: recheck this
+			// TODO: enum inheritance from non-basic types
+			Enumeration ret = new() {
+				srcPos   = c.ToSrcPos(),
+				name     = c.id().Visit(),
+				access   = curAccess,
+				baseType = (c.bases != null) ? VisitTypespecBasic( c.bases ) : null,
+			};
+			// do not reset curAccess because there is no change inside enums
+			PushScope( ret );
+			{
+				AddChildren( VisitEnumEntrys( c.idExprs() ) );
+			}
+			PopScope();
+
+			return ret;
+		}
+
 		public Structural VisitDefStruct( DefStructContext c, Structural.Kind kind )
 		{
 			// CnP: recheck this
@@ -368,33 +313,8 @@ namespace Myll
 			return ret;
 		}
 
-		public override MultiDecl VisitDefUsing( DefUsingContext c )
-		{
-			SrcPos pos = c.ToSrcPos();
-			MultiDecl ret = new(
-				VisitTypespecsNested( c.typespecsNested() ).Select(
-					t => new UsingDecl() {
-						srcPos = pos,
-						type   = t
-					} ) );
-			AddChildren( ret.decls );
-			return ret;
-		}
-
-		public override UsingDecl VisitDefAlias( DefAliasContext c )
-		{
-			// TODO: tplParams, multi-decl
-			List<TplParam> useMe = VisitTplParams( c.tplParams() );
-
-			// TODO: This should not be a UsingDecl
-			UsingDecl ret = new() {
-				srcPos = c.ToSrcPos(),
-				name   = c.id().GetText(),
-				type   = VisitTypespec( c.typespec() ),
-			};
-			AddChild( ret );
-			return ret;
-		}
+		// TODO
+		public override Decl VisitDefConvert( DefConvertContext c ) => base.VisitDefConvert( c );
 
 		public override Structor VisitDefCtor( DefCtorContext c )
 		{
@@ -437,6 +357,142 @@ namespace Myll
 			return ret;
 		}
 
+		public override Func VisitDefOp( DefOpContext c )
+		{
+			Scope parent = scopeStack.Peek();
+			Func ret;
+			PushScope();
+			{
+				if( c.ASSIGN() != null ) {
+					string?     id          = c.id().Visit();
+					PassingKind passingKind = c.kindOfPassing().Visit();
+					bool        isCopy      = passingKind == PassingKind.Copy;
+					bool        isMove      = passingKind == PassingKind.Move;
+
+					if( !isCopy && !isMove )
+						throw new NotSupportedException( "only copy and move special assignment ops are supported" );
+
+					if( !parent.HasDecl || !(parent.decl is Structural) )
+						throw new Exception( "parent of operator= copy or move has no decl or is not a structural" );
+
+					string className = parent.decl.name; //.FullyQualifiedName;
+					List<IdTplArgs> classIdTpls = new() {
+						new() {
+							id      = className,
+							tplArgs = new(),
+						},
+					};
+
+					var qualPtrsTuple = passingKind.ToQualPtrs();
+					Param param = new() {
+						name = id ?? "other", // TODO: replace "other" with configuration
+						type = new TypespecNested {
+							idTpls = classIdTpls,
+							qual   = qualPtrsTuple.qual,
+							ptrs   = qualPtrsTuple.ptrs,
+						},
+					};
+
+					ret = new() {
+						srcPos   = c.ToSrcPos(),
+						name     = "operator=",
+						access   = curAccess,
+						body     = c.funcBody().Visit(),
+						Requires = VisitTypespecsNested( c.typespecsNested() ),
+						paras    = new() { param },
+						retType = new TypespecNested() {
+							idTpls = classIdTpls,
+							ptrs = new() {
+								new() { kind = Pointer.Kind.LVRef },
+							},
+						},
+					};
+					//ret = VisitOpSpecialAssign( c );
+				}
+				else if( c.CONVERT() != null ) {
+					ret = new() {
+						srcPos    = c.ToSrcPos(),
+						name      = string.Empty,
+						access    = curAccess,
+						kind      = Func.Kind.Convert,
+						TplParams = VisitTplParams( c.tplParams() ),
+						Requires  = VisitTypespecsNested( c.typespecsNested() ),
+						paras     = new(),
+						body      = c.funcBody().Visit(),
+						retType   = VisitTypespec( c.typespec() ),
+					};
+				}
+				else {
+					string stringOp  = c.STRING_LIT().GetText();
+					string cleanedOp = "operator" + stringOp.Substring( 1, stringOp.Length - 2 );
+					ret = VisitDefCoreFunc(
+						c.defCoreFunc(),
+						cleanedOp,
+						Func.Kind.Operator,
+						VisitTypespecsNested( c.typespecsNested() ),
+						c.funcBody().Visit() );
+				}
+			}
+			PopScope();
+			AddChild( ret ); // needs ret.name to be set already
+			c.id().Visit();
+			return ret;
+		}
+
+		// no override
+		public Func VisitDefFunc( DefFuncContext c, Func.Kind kind )
+		{
+			PushScope();
+
+			Func ret = VisitDefCoreFunc(
+				c.defCoreFunc(),
+				c.id().Visit(),
+				kind,
+				VisitTypespecsNested( c.typespecsNested() ),
+				c.funcBody().Visit() );
+
+			PopScope();
+			AddChild( ret );
+
+			// what was that for?
+			//bool wasOK = NotifyObservers( ret );
+			// validator
+			//ret.HasAttrib( "blah" );
+
+			return ret;
+		}
+
+		// no override
+		public Func VisitDefCoreFunc(
+			DefCoreFuncContext   c,
+			string               name,
+			Func.Kind            kind,
+			List<TypespecNested> requires,
+			Block?               body )
+		{
+			Func ret = new() {
+				srcPos    = c.ToSrcPos(),
+				name      = name,
+				access    = curAccess,
+				kind      = kind,
+				TplParams = VisitTplParams( c.tplParams() ),
+				Requires  = requires,
+				paras     = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
+				body      = body,
+			};
+			ret.retType = c.typespec() != null ? VisitTypespec( c.typespec() ) :
+				ret.IsReturningSomething ?
+					new TypespecBasic {
+						kind = TypespecBasic.Kind.Auto,
+						size = TypespecBasic.SizeUndetermined,
+					} :
+					new TypespecBasic {
+						kind = TypespecBasic.Kind.Void,
+						size = TypespecBasic.SizeInvalid,
+					};
+			return ret;
+		}
+
 		// no override
 		// list of typed and initialized vars
 		public MultiDecl VisitDefVar( DefVarContext c, VarDecl.Kind kind )
@@ -467,63 +523,6 @@ namespace Myll
 			return ret;
 		}
 
-		// The other Decl should not need implementations here, only Struct, Func, and Var
-
-		public override Decl VisitDeclStruct( DeclStructContext c )
-		{
-			Structural.Kind kind = c.kindOfStruct().Visit();
-			return VisitDefStruct( c.defStruct(), kind );
-		}
-
-		public override Decl VisitDeclFunc( DeclFuncContext c )
-		{
-			Func.Kind kind = c.kindOfFunc().Visit();
-
-			Decl ret;
-			if( c.defFunc() != null )
-				ret = VisitDefFunc( c.defFunc(), kind );
-			else if( c.attrFunc() != null )
-				ret = new MultiDecl( c.attrFunc().Select( ac => VisitAttrFunc( ac, kind ) ) );
-			else
-				throw new InvalidOperationException( "declFunc unknown" );
-
-			return ret;
-		}
-
-		public override MultiDecl VisitDeclVar( DeclVarContext c )
-		{
-			// TODO: huge overlap with VisitAttrVar
-
-			VarDecl.Kind kind = c.kindOfVar().Visit();
-
-			MultiDecl ret;
-			if( c.defVar() != null )
-				ret = VisitDefVar( c.defVar(), kind );
-			else if( c.attrVar() != null )
-				ret = new( c.attrVar().Select( ac => VisitAttrVar( ac, kind ) ) );
-			else
-				throw new InvalidOperationException( "declVar unknown " );
-
-			return ret;
-		}
-
-		public override Decl VisitAttrDecl( 	AttrDeclContext		c ) => VisitAttrAnyDecl( c.attribBlk(), c.defDecl(), c.attrDecl() );
-		public override Decl VisitAttrUsing( 	AttrUsingContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defUsing(), c.attrUsing() );
-		public override Decl VisitAttrAlias( 	AttrAliasContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defAlias(), c.attrAlias() );
-		public override Decl VisitAttrConvert( 	AttrConvertContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defConvert(), c.attrConvert() );
-		public override Decl VisitAttrCtor( 	AttrCtorContext		c ) => VisitAttrAnyDecl( c.attribBlk(), c.defCtor(), c.attrCtor() );
-		public override Decl VisitAttrOp( 		AttrOpContext		c ) => VisitAttrAnyDecl( c.attribBlk(), c.defOp(), c.attrOp() );
-
-		// TODO
-		public override Decl VisitDefAspect( DefAspectContext c ) => base.VisitDefAspect( c );
-
-		// TODO
-		public override Decl VisitDefConcept( DefConceptContext c ) => base.VisitDefConcept( c );
-
-		// TODO
-		public override Decl VisitDefConvert( DefConvertContext c ) => base.VisitDefConvert( c );
-
-
 		#region Disallowed Visitors (throwing InvalidOperationException)
 
 		public override Decl VisitAttrFunc( AttrFuncContext c )
@@ -533,7 +532,6 @@ namespace Myll
 		public override Decl VisitAttrVar( AttrVarContext c )
 			=> throw new InvalidOperationException(
 				"This method may never be called, always use the two parameter overload" );
-
 
 		public override Decl VisitDefStruct( DefStructContext c )
 			=> throw new InvalidOperationException(
