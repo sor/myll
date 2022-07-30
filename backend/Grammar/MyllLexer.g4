@@ -138,8 +138,8 @@ ALIAS       : 'alias';
 UNION		: 'union';
 STRUCT		: 'struct';
 CLASS		: 'class';
-CTOR		: 'ctor';
-DTOR		: 'dtor';
+CTOR		: 'ctor';//|'constructor';
+DTOR		: 'dtor';//|'destructor';
 // == Exploration ==
 // # Read as "convert from OTHER"
 // explicit ctor( OTHER o )	{...}	// manual, converting ctor, convert from type OTHER
@@ -168,7 +168,7 @@ DTOR		: 'dtor';
 // operator "=" ( SELF && o )		{...}	// manual
 // operator move =					{...}
 
-FUNC		: 'func';//|'function;
+FUNC		: /*'fn'|*/'func';//|'function';
 PROC		: 'proc';//|'procedure';
 METHOD		: 'meth'|'method';
 ENUM		: 'enum';
@@ -180,7 +180,7 @@ GET			: 'get';
 REFGET		: 'refget';
 SET			: 'set';
 FIELD		: 'field';
-OPERATOR	: 'operator';
+OPERATOR	: /*'op'|*/'operator';
 VAR			: 'var';
 LET			: 'let';
 LOOP		: 'loop';

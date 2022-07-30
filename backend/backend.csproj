@@ -7,7 +7,7 @@
 		<RootNamespace>Myll</RootNamespace>
 		<Authors>Jan "SoRDiD" Reitz</Authors>
 		<Description>Backend of the Myll Programming Language</Description>
-		<Nullable>disable</Nullable>
+		<Nullable>warnings</Nullable>
 	</PropertyGroup>
 
 	<PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
@@ -15,7 +15,7 @@
 	</PropertyGroup>
 
 	<PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-	  <NoWarn>1701;1702;3021;CS8632</NoWarn>
+	  <NoWarn>1701;1702;3021;CS8632;CS8764</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>

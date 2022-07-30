@@ -210,7 +210,7 @@ namespace Myll
 
 		// TODO those null tolerant methods need to be removed
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
-		public static Stmt Visit( this Parser.LevStmtContext c )
+		public static Stmt Visit( this Parser.StmtContext c )
 			=> c == null
 				? null
 				: StmtVis.Visit( c );
@@ -359,6 +359,7 @@ namespace Myll
 				PassingKind.Move    => (Qualifier.None,  new() { new() { kind = Pointer.Kind.RVRef } }),
 				PassingKind.Forward => (Qualifier.None,  new() { new() { kind = Pointer.Kind.RVRef } }),
 				// forward is not complete with just this
+				_ => throw new ArgumentOutOfRangeException( "ToQualPtrs out of range " + passingKind )
 			};
 #pragma warning restore 8509
 	}

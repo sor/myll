@@ -7,7 +7,7 @@ namespace Myll
 {
 	public partial class MyllParser : Parser
 	{
-		public partial class LevStmtContext
+		public partial class StmtContext
 		{
 			public string Text {
 				get {
