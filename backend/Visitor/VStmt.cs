@@ -66,6 +66,16 @@ namespace Myll
 			return ret;
 		}
 
+		// TODO: to be removed
+		public override Block VisitBlockStmt( BlockStmtContext c )
+		{
+			Block ret = new() {
+				isScope = true,
+				stmts   = c.stmt()?.Select( Visit ).ToList() ?? new List<Stmt>()
+			};
+			return ret;
+		}
+
 		public override Stmt VisitStmt( StmtContext c )
 		{
 			Stmt ret;
@@ -118,6 +128,7 @@ namespace Myll
 			return ret;
 		}
 
+	//	public override Block VisitStmtUsing( StmtUsingContext c )
 		public override Block VisitUsingStmt( UsingStmtContext c )
 		{
 			Block ret = new() {
@@ -134,6 +145,7 @@ namespace Myll
 			return ret;
 		}
 
+	//	public override UsingStmt VisitStmtAlias( StmtAliasContext c )
 		public override UsingStmt VisitAliasStmt( AliasStmtContext c )
 		{
 			UsingStmt ret = new() {
@@ -144,7 +156,7 @@ namespace Myll
 			return ret;
 		}
 
-		// NOTE: This is not an override
+		// no override
 		// list of typed and initialized vars
 		private List<Stmt> VisitStmtVars( TypedIdAcorsContext c )
 		{
@@ -167,6 +179,7 @@ namespace Myll
 			return ret;
 		}
 
+	//	public override Block VisitStmtVariable( StmtVariableContext c )
 		public override Block VisitVariableStmt( VariableStmtContext c )
 		{
 			Block ret = new() {
@@ -181,9 +194,11 @@ namespace Myll
 			return ret;
 		}
 
+	//	public override EmptyStmt VisitStmtEmpty( StmtEmptyContext c )
 		public override EmptyStmt VisitEmptyStmt( EmptyStmtContext c )
 			=> new();
 
+	//	public override ReturnStmt VisitStmtReturn( StmtReturnContext c )
 		public override ReturnStmt VisitReturnStmt( ReturnStmtContext c )
 		{
 			ReturnStmt ret = new() {
@@ -192,6 +207,7 @@ namespace Myll
 			return ret;
 		}
 
+		public override ThrowStmt VisitStmtThrow( StmtThrowContext c ) => (ThrowStmt)base.VisitStmtThrow( c );
 		public override ThrowStmt VisitThrowStmt( ThrowStmtContext c )
 		{
 			ThrowStmt ret = new() {
@@ -200,6 +216,7 @@ namespace Myll
 			return ret;
 		}
 
+		public override Stmt VisitStmtBreak( StmtBreakContext c ) => base.VisitStmtBreak( c );
 		public override BreakStmt VisitBreakStmt( BreakStmtContext c )
 		{
 			BreakStmt ret = new() {
@@ -208,7 +225,7 @@ namespace Myll
 			return ret;
 		}
 
-		// NOTE: This is not an override
+		// no override
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
 		public new IfStmt.CondThen VisitCondThen( CondThenContext c )
 			=> new() {
@@ -216,6 +233,7 @@ namespace Myll
 				then = c.stmt().Visit(),
 			};
 
+		public override IfStmt VisitStmtIf( StmtIfContext c ) => (IfStmt)base.VisitStmtIf( c );
 		public override IfStmt VisitIfStmt( IfStmtContext c )
 		{
 			IfStmt ret = new() {
@@ -257,8 +275,8 @@ namespace Myll
 			return ret;
 		}
 
-		// NOTE: This is not an override, can receive c == null
-		private new Block VisitDefaultBlock( DefaultBlockContext? c )
+		// no override
+		private new Block? VisitDefaultBlock( DefaultBlockContext? c )
 		{
 			if( c == null )
 				return null;
@@ -271,6 +289,7 @@ namespace Myll
 			return ret;
 		}
 
+		public override Stmt VisitStmtSwitch( StmtSwitchContext c ) => base.VisitStmtSwitch( c );
 		public override SwitchStmt VisitSwitchStmt( SwitchStmtContext c )
 		{
 			SwitchStmt ret = new() {
@@ -281,6 +300,7 @@ namespace Myll
 			return ret;
 		}
 
+		public override Stmt VisitStmtLoop( StmtLoopContext c ) => base.VisitStmtLoop( c );
 		public override LoopStmt VisitLoopStmt( LoopStmtContext c )
 		{
 			LoopStmt ret = new() {
@@ -289,6 +309,7 @@ namespace Myll
 			return ret;
 		}
 
+		public override Stmt VisitStmtFor( StmtForContext c ) => base.VisitStmtFor( c );
 		public override ForStmt VisitForStmt( ForStmtContext c )
 		{
 			ForStmt ret = new() {
@@ -301,6 +322,7 @@ namespace Myll
 			return ret;
 		}
 
+		public override Stmt VisitStmtWhile( StmtWhileContext c ) => base.VisitStmtWhile( c );
 		public override WhileStmt VisitWhileStmt( WhileStmtContext c )
 		{
 			WhileStmt ret = new() {
@@ -311,6 +333,7 @@ namespace Myll
 			return ret;
 		}
 
+		public override Stmt VisitStmtDoWhile( StmtDoWhileContext c ) => base.VisitStmtDoWhile( c );
 		public override DoWhileStmt VisitDoWhileStmt( DoWhileStmtContext c )
 		{
 			DoWhileStmt ret = new() {
@@ -320,6 +343,7 @@ namespace Myll
 			return ret;
 		}
 
+		public override Stmt VisitStmtTimes( StmtTimesContext c ) => base.VisitStmtTimes( c );
 		public override TimesStmt VisitTimesStmt( TimesStmtContext c )
 		{
 			TimesStmt ret = new() {
@@ -339,6 +363,7 @@ namespace Myll
 			return ret;
 		}
 
+		public override Stmt VisitStmtAggregate( StmtAggregateContext c ) => base.VisitStmtAggregate( c );
 		public override AggrAssign VisitAggrAssignStmt( AggrAssignStmtContext c )
 		{
 			AggrAssign ret = new() {
@@ -349,6 +374,7 @@ namespace Myll
 			return ret;
 		}
 
+		public override Stmt VisitStmtAssign( StmtAssignContext c ) => base.VisitStmtAssign( c );
 		public override MultiAssign VisitMultiAssignStmt( MultiAssignStmtContext c )
 		{
 			MultiAssign ret = new() {
@@ -357,15 +383,7 @@ namespace Myll
 			return ret;
 		}
 
-		public override Block VisitBlockStmt( BlockStmtContext c )
-		{
-			Block ret = new() {
-				isScope = true,
-				stmts   = c.stmt()?.Select( Visit ).ToList() ?? new List<Stmt>()
-			};
-			return ret;
-		}
-
+		public override Stmt VisitStmtExpr( StmtExprContext c ) => base.VisitStmtExpr( c );
 		public override ExprStmt VisitExpressionStmt( ExpressionStmtContext c )
 		{
 			ExprStmt ret = new() {

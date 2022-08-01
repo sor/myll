@@ -128,6 +128,7 @@ weak_pointer=std::weak_ptr,
 // static_array: type@[16], dynamic_array@[],
 static_array=std::array,
 dynamic_array=std::vector,
+narrowing_conversion=false, // also set related C++ compiler warnings as errors to be sure
 ]
 class rule::myll::magic {}
 
@@ -150,6 +151,7 @@ proc_default=[],
 unique_pointer=std::unique_ptr,
 shared_pointer=std::shared_ptr,
 weak_pointer=std::weak_ptr,
+narrowing_conversion=true,
 ]
 class rule::myll::retro {}
 
@@ -279,22 +281,33 @@ int Blah::i = 0;
 
 how to do explicit template instantiation?
 
-Removed in Myll compared to C and C++ (functionality which was only renamed, is not considered removed)
+Removed in Myll compared to C and C++
+(functionality which was only renamed, is not considered removed)
 - preprocessor (instead use attributes, constexpr)
 - the split between implementation and header files (.cpp/.h/.hpp/...)
 - operator ","
 - operator prefix "+" ???
-- typedef (use using instead)
-- non-class enums (use class enum instead)
+- typedef (use "using" instead)
+- non-class enums (use "class enum" instead)
 - directly declare an object of a newly declared type (struct B{} b;)
 - local classes, structs, enums, and functions inside functions. (lambdas can replace local functions)
 - forward declarations (import what you need from other modules)
 - assignment in expressions
 - throw in expressions
 - goto
-- unsigned long long and a lot of similar names are gone
+- unsigned long long and a lot of similar typenames with spaces are gone
 - using {} for initialization everywhere (it solves a problem in C++ which Myll does not have)
 
+Added:
+- Opt in to convention over configuration (your own convention via rulesets)
+- Automatic checks that your code style and conventions are upheld
+- Extensibility via your own attributes (later, this does not change the language per se)
+
+
+My naming of things:
+	variable -> object
+	template function -> function template
+	type: levels of indirection are part of the type
 
 
 struct B {
@@ -335,3 +348,4 @@ render.DrawLine(...); // working autocompletion and 10 significant chars less to
 // The code has the same performance as it produces the same binary,
 // assuming that you did not intentionally sabotage DrawLine by making it unnecesarily virtual.
 // This is not about polymorphism.
+

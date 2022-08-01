@@ -161,7 +161,7 @@ stmtTryCatch:	TRY						stmt
 				(CATCH	funcTypeDef?	stmt)+; // funcTypeDef is wrong, but works for easy cases
 
 stmtReturn	:	RETURN		expr?							SEMI;
-stmtReturnIf:	DO RETURN	expr?	IF LPAREN expr RPAREN	SEMI;
+stmtReturnIf:	DO RETURN	expr?	IF LPAREN expr RPAREN	SEMI; // same for throw and break, or make this a general contruct? replace "if" with "when"?
 stmtThrow	:	THROW		expr							SEMI;
 stmtBreak	:	BREAK		INTEGER_LIT?					SEMI;
 

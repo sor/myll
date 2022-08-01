@@ -99,7 +99,7 @@ ISIZE		: 'isize';
 USIZE		: 'usize';
 BYTE		: 'byte'; // 8 bits, same as b8, not an integer, not a character
 CHAR		: 'char';
-CODEPOINT	: 'codept'|'codepoint';
+CODEPOINT	: 'codept'|'codepoint'; // 'rune' like Odin?
 STRING		: 'string';
 FLOAT		: 'float';
 
