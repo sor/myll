@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -28,12 +30,19 @@ namespace Myll
 			return module;
 		}
 
+		/*
 		public override Decl? Visit( IParseTree? c )
 			=> c == null
 				? null
 				: base.Visit( c );
+		*/
 
-		public Decl? VisitMulti<T>( T[] c )
+		public override Decl Visit( IParseTree c )
+			=>  c == null
+				? throw new Exception()
+				: base.Visit( c );
+
+		public Decl VisitMulti<T>( T[] c )
 			where T : ParserRuleContext
 			=> c.Length switch {
 				0 => throw new InvalidDataException( "Empty array for VisitMulti" ), //null,
@@ -62,28 +71,28 @@ namespace Myll
 			return global;
 		}
 
-		public override Decl VisitAttrDecl( 	AttrDeclContext		c ) => VisitAttrAnyDecl( c.attribBlk(), c.defDecl(), c.attrDecl() );
-		public override Decl VisitAttrUsing( 	AttrUsingContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defUsing(), c.attrUsing() );
-		public override Decl VisitAttrAlias( 	AttrAliasContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defAlias(), c.attrAlias() );
-		public override Decl VisitAttrConvert( 	AttrConvertContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defConvert(), c.attrConvert() );
-		public override Decl VisitAttrCtor( 	AttrCtorContext		c ) => VisitAttrAnyDecl( c.attribBlk(), c.defCtor(), c.attrCtor() );
-		public override Decl VisitAttrOp( 		AttrOpContext		c ) => VisitAttrAnyDecl( c.attribBlk(), c.defOp(), c.attrOp() );
+		public override Decl? VisitDecl(		DeclContext			c ) => VisitAttrAnyDecl( c.attribBlk(), c.defDecl(), c.decl() );
+		public override Decl? VisitAttrUsing(	AttrUsingContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defUsing(), c.attrUsing() );
+		public override Decl? VisitAttrAlias(	AttrAliasContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defAlias(), c.attrAlias() );
+		public override Decl? VisitAttrConvert(	AttrConvertContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defConvert(), c.attrConvert() );
+		public override Decl? VisitAttrCtor(	AttrCtorContext		c ) => VisitAttrAnyDecl( c.attribBlk(), c.defCtor(), c.attrCtor() );
+		public override Decl? VisitAttrOp( 		AttrOpContext		c ) => VisitAttrAnyDecl( c.attribBlk(), c.defOp(), c.attrOp() );
 
 		// no override
-		public Decl VisitAttrAnyDecl<TDefContext, TAttrContext>(
-			AttribBlkContext? blkc,
-			TDefContext?      dc,
-			TAttrContext[]    ac ) // missed opportunity for an ACDC joke
+		public Decl? VisitAttrAnyDecl<TDefContext, TAttrContext>(
+			AttribBlkContext? aAttribBlk,
+			TDefContext?      cDef,
+			TAttrContext[]    cAttr ) // missed opportunity for an ACDC joke
 			where TDefContext : ParserRuleContext
 			where TAttrContext : ParserRuleContext
 		{
 			Decl     ret;
-			Attribs? attribs = blkc?.Visit();
-			if( dc != null ) {
-				ret = Visit( dc );
+			Attribs? attribs = aAttribBlk?.Visit();
+			if( cDef != null ) {
+				ret = Visit( cDef );
 			}
-			else if( ac.Any() ) {
-				ret = VisitMulti( ac );
+			else if( cAttr.Any() ) {
+				ret = VisitMulti( cAttr );
 			}
 			else {
 				VisitAttrColon( attribs );
@@ -97,15 +106,18 @@ namespace Myll
 		}
 
 		// no override
-		public Decl VisitAttrFunc( AttrFuncContext c, Func.Kind kind )
+		public Decl? VisitAttrFunc( AttrFuncContext c, Func.Kind kind )
 		{
-			Decl    ret;
-			Attribs attribs = c.attribBlk()?.Visit();
+			Decl     ret;
+			Attribs? attribs = c.attribBlk()?.Visit();
 			if( c.defFunc() != null ) {
 				ret = VisitDefFunc( c.defFunc(), kind );
 			}
 			else if( c.attrFunc() != null ) {
-				ret = new MultiDecl( c.attrFunc().Select( ac => VisitAttrFunc( ac, kind ) ) );
+				ret = new MultiDecl(
+					c.attrFunc()
+						.Select( ac => VisitAttrFunc( ac, kind ) )
+						.OfType<MultiDecl>() );
 			}
 			else {
 				VisitAttrColon( attribs );
@@ -113,21 +125,24 @@ namespace Myll
 			}
 
 			if( attribs != null )
-				ret?.AssignAttribs( attribs );
+				ret.AssignAttribs( attribs );
 
 			return ret;
 		}
 
 		// no override
-		public MultiDecl VisitAttrVar( AttrVarContext c, VarDecl.Kind kind )
+		public MultiDecl? VisitAttrVar( AttrVarContext c, VarDecl.Kind kind )
 		{
 			MultiDecl ret;
-			Attribs   attribs = c.attribBlk()?.Visit();
+			Attribs?  attribs = c.attribBlk()?.Visit();
 			if( c.defVar() != null ) {
 				ret = VisitDefVar( c.defVar(), kind );
 			}
 			else if( c.attrVar() != null ) {
-				ret = new( c.attrVar().Select( ac => VisitAttrVar( ac, kind ) ) );
+				ret = new(
+					c.attrVar()
+						.Select( ac => VisitAttrVar( ac, kind ) )
+						.OfType<MultiDecl>() );
 			}
 			else {
 				VisitAttrColon( attribs );
@@ -135,14 +150,17 @@ namespace Myll
 			}
 
 			if( attribs != null )
-				ret?.AssignAttribs( attribs );
+				ret.AssignAttribs( attribs );
 
 			return ret;
 		}
 
 		// no override
-		public void VisitAttrColon( Attribs attribs )
+		public void VisitAttrColon( Attribs? attribs )
 		{
+			if( attribs == null )
+				throw new InvalidOperationException( "VisitAttrColon without attributes" );
+
 			// HACK: will be buggy like VisitAccessMod needs to move to ScopeStack, when ScopeStack works.
 			// HACK: only works for pub, prot & priv now, with optional "access=" prefix
 			string access = attribs.ContainsKey( "access" )
@@ -173,7 +191,10 @@ namespace Myll
 			if( c.defFunc() != null )
 				ret = VisitDefFunc( c.defFunc(), kind );
 			else if( c.attrFunc() != null )
-				ret = new MultiDecl( c.attrFunc().Select( ac => VisitAttrFunc( ac, kind ) ) );
+				ret = new MultiDecl(
+					c.attrFunc()
+						.Select( ac => VisitAttrFunc( ac, kind ) )
+						.OfType<MultiDecl>() );
 			else
 				throw new InvalidOperationException( "declFunc unknown" );
 
@@ -190,7 +211,10 @@ namespace Myll
 			if( c.defVar() != null )
 				ret = VisitDefVar( c.defVar(), kind );
 			else if( c.attrVar() != null )
-				ret = new( c.attrVar().Select( ac => VisitAttrVar( ac, kind ) ) );
+				ret = new(
+					c.attrVar()
+						.Select( ac => VisitAttrVar( ac, kind ) )
+						.OfType<MultiDecl>() );
 			else
 				throw new InvalidOperationException( "declVar unknown " );
 
@@ -200,7 +224,7 @@ namespace Myll
 		public override Namespace VisitDefNamespace( DefNamespaceContext c )
 		{
 			// CnP: recheck this
-			Namespace ret = null;
+			Namespace? ret = null;
 
 			CleanBodylessNamespace();
 
@@ -215,8 +239,7 @@ namespace Myll
 					withBody = withBody,
 				};
 				PushScope( ns );
-				if( ret == null )
-					ret = ns;
+				ret ??= ns;
 			}
 
 			// only visit children and remove hierarchy with then
@@ -228,7 +251,7 @@ namespace Myll
 					PopScope();
 			}
 
-			return ret;
+			return ret!;
 		}
 
 		public override MultiDecl VisitDefUsing( DefUsingContext c )

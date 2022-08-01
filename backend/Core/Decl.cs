@@ -1,4 +1,6 @@
-﻿using System;
+﻿//#nullable enable
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -29,7 +31,7 @@ namespace Myll.Core
 	/// </summary>
 	public abstract class Decl : Stmt
 	{
-		public string    name;
+		public string    name { get; init; }
 		public Access    access = Access.Public;
 		public ScopeLeaf scope;
 

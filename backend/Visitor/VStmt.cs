@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Tree;
@@ -33,39 +32,60 @@ namespace Myll
 			return ret;
 		}
 
-		public Block? VisitBlockify( LevStmtContext lsc )
+		public Block? VisitBlockify( StmtContext c )
 		{
 			//if( c == null )
 			//	return null;
 
-			AttribStmtContext c  = lsc as AttribStmtContext;
-			InStmtContext     sc = c!.inStmt();
+			Block? ret;
 
-			Block ret;
-			if( sc is BlockStmtContext cb ) {
-				ret = VisitBlockStmt( cb );
-			}
-			else if( sc is EmptyStmtContext) {
-				ret = null;
+			DefStmtContext? sc = c.defStmt();
+			if( sc != null ) {
+				if( sc is BlockStmtContext cb ) {
+					ret = VisitBlockStmt( cb );
+				}
+				else if( sc is EmptyStmtContext ) {
+					ret = null;
+				}
+				else {
+					ret = new Block {
+						srcPos  = c.ToSrcPos(),
+						isScope = true,
+						stmts   = new List<Stmt>(),
+					};
+
+					if( c.defStmt() is not EmptyStmtContext )
+						ret.stmts.Add( Visit( c ) );
+				}
 			}
 			else {
-				ret = new Block {
-					srcPos  = c.ToSrcPos(),
-					isScope = true,
-					stmts   = new List<Stmt>(),
-				};
-
-				if( c.inStmt() is not EmptyStmtContext )
-					ret.stmts.Add( Visit( c ) );
+				throw new InvalidOperationException( "Stmt Blockify unhandled case" );
+				//c.stmt()
+				// BUG: OR c.stmt
 			}
 			return ret;
 		}
 
-		public override Stmt VisitAttribStmt( AttribStmtContext c )
+		public override Stmt VisitStmt( StmtContext c )
 		{
-			Stmt ret = Visit( c.inStmt() );
+			Stmt ret;
+			if( c.defStmt() != null ) {
+				ret = Visit( c.defStmt() );
+			}
+			else if( c.stmt().Any() ) {
+				//ret = VisitMulti( c.stmt() );
+				// HACK: not checked
+				ret = new Block {
+					srcPos  = c.ToSrcPos(),
+					isScope = true,
+					stmts   = c.stmt().Select( Visit ).ToList(),
+				};
+			}
+			else {
+				throw new InvalidOperationException( "Stmt unhandled case" );
+			}
 
-			Attribs attribs = c.attribBlk()?.Visit();
+			Attribs? attribs = c.attribBlk()?.Visit();
 			if( attribs != null )
 				ret.AssignAttribs( attribs );
 
@@ -75,8 +95,8 @@ namespace Myll
 		public override Block VisitFuncBody( FuncBodyContext c )
 		{
 			// Scope already open?
-			Block           ret;
-			LevStmtContext? lev = c.levStmt();
+			Block        ret;
+			StmtContext? lev = c.stmt();
 			if( lev != null ) {
 				ret = VisitBlockify( lev );
 			}
@@ -193,26 +213,26 @@ namespace Myll
 		public new IfStmt.CondThen VisitCondThen( CondThenContext c )
 			=> new() {
 				cond = c.expr().Visit(),
-				then = c.levStmt().Visit(),
+				then = c.stmt().Visit(),
 			};
 
 		public override IfStmt VisitIfStmt( IfStmtContext c )
 		{
 			IfStmt ret = new() {
 				ifThens = c.condThen().Select( VisitCondThen ).ToList(),
-				els     = c.levStmt().Visit(),
+				els     = c.stmt().Visit(),
 			};
 
 			return ret;
 		}
 
-		// NOTE: This is not an override
+		// no override
 		private new SwitchStmt.CaseBlock VisitCaseBlock( CaseBlockContext c )
 		{
 			Block body = new() {
 				srcPos  = c.ToSrcPos(), // needs to stay in here
 				isScope = c.LCURLY() != null,
-				stmts   = c.levStmt().Select( Visit ).ToList(),
+				stmts   = c.stmt().Select( Visit ).ToList(),
 			};
 
 			bool hasNoStmt = body.stmts.IsEmpty();
@@ -246,7 +266,7 @@ namespace Myll
 			Block ret = new() {
 				srcPos  = c.ToSrcPos(), // needs to stay in here
 				isScope = c.LCURLY() != null,
-				stmts   = c.levStmt().Select( Visit ).ToList(),
+				stmts   = c.stmt().Select( Visit ).ToList(),
 			};
 			return ret;
 		}
@@ -341,7 +361,7 @@ namespace Myll
 		{
 			Block ret = new() {
 				isScope = true,
-				stmts   = c.levStmt()?.Select( Visit ).ToList() ?? new List<Stmt>()
+				stmts   = c.stmt()?.Select( Visit ).ToList() ?? new List<Stmt>()
 			};
 			return ret;
 		}

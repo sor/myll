@@ -14,8 +14,6 @@ imports		:	IMPORT id (COMMA id)* COMMA? SEMI;
 // which DEFINEs can be passed directly from the compiler, all others will be discarded
 //defines	:	DEFINITION id (COMMA id)* COMMA? SEMI;
 
-// ONLY refer to levStmt, NOT the inStmt
-levStmt		:	attribBlk?			inStmt			# AttribStmt;
 
 attribBlk	:	LBRACK	attrib (COMMA attrib)* COMMA? RBRACK;
 attrib		:	attribId
@@ -24,8 +22,10 @@ attrib		:	attribId
 				)?;
 attribId	:	id | CONST | FALL | THROW | DEFAULT;
 
-decl		:	attrDecl;
-attrDecl	:	defDecl		| attribBlk ( defDecl		| LCURLY attrDecl*		RCURLY | COLON );
+
+// DECLs
+
+decl		:	defDecl		| attribBlk ( defDecl		| LCURLY decl*			RCURLY | COLON );
 attrUsing	:	defUsing	| attribBlk ( defUsing		| LCURLY attrUsing*		RCURLY | COLON );
 attrAlias	:	defAlias	| attribBlk ( defAlias		| LCURLY attrAlias*		RCURLY | COLON );
 attrConvert	:	defConvert	| attribBlk ( defConvert	| LCURLY attrConvert*	RCURLY | COLON );
@@ -34,7 +34,6 @@ attrOp		:	defOp		| attribBlk ( defOp			| LCURLY attrOp*		RCURLY | COLON );
 attrFunc	:	defFunc		| attribBlk ( defFunc		| LCURLY attrFunc*		RCURLY | COLON );
 attrVar		:	defVar		| attribBlk ( defVar		| LCURLY attrVar*		RCURLY | COLON );
 
-// DON'T refer to defDecl, ONLY refer to decl
 defDecl		:	declNamespace
 			|	declUsing
 			|	declAlias
@@ -112,6 +111,71 @@ defCoreFunc	:	tplParams?	funcTypeDef?
 				//(REQUIRES	typespecsNested)?;
 
 defVar		:	typedIdAcors;
+
+
+// STMTs
+
+stmt		:	defStmt		| attribBlk ( defStmt		| LCURLY stmt*			RCURLY );
+
+defStmtNew	:	declUsing
+			|	declAlias
+			|	declVar
+			|	stmtIf
+			|	stmtSwitch
+			|	stmtLoop
+			|	stmtFor
+			|	stmtWhile
+			|	stmtDoWhile
+			|	stmtTimes
+			|	stmtTryCatch
+			|	stmtReturn
+			|	stmtReturnIf
+			|	stmtThrow
+			|	stmtBreak
+			|	stmtAssign
+			|	stmtAggregate
+			|	stmtDefer
+			|	stmtExpr
+			|	stmtEmpty
+			;
+
+stmtIf		:	IF				condThen
+				(ELSE IF		condThen)*	// helps with formatting properly and de-nesting the AST
+				(ELSE			stmt)?;
+stmtSwitch	:	SWITCH	LPAREN	cond=expr	RPAREN
+				LCURLY	caseBlock+	defaultBlock?	RCURLY;
+
+stmtLoop	:	LOOP			body=stmt;
+stmtFor		:	FOR		LPAREN	init=stmt	// TODO: add syntax for( a : b )
+								cond=expr?	SEMI
+								iter=expr?	RPAREN	body=stmt	// assignment???
+				(ELSE			els=stmt)?;
+stmtWhile	:	WHILE	LPAREN	cond=expr	RPAREN	body=stmt
+				(ELSE			els=stmt)?;
+stmtDoWhile	:	DO				body=stmt
+				WHILE	LPAREN	cond=expr	RPAREN;
+stmtTimes	:	DO? 			count=expr	TIMES
+				(name=id ((PLUS|MINUS) INTEGER_LIT)? )? body=stmt;
+
+stmtTryCatch:	TRY						stmt
+				(CATCH	funcTypeDef?	stmt)+; // funcTypeDef is wrong, but works for easy cases
+
+stmtReturn	:	RETURN		expr?							SEMI;
+stmtReturnIf:	DO RETURN	expr?	IF LPAREN expr RPAREN	SEMI;
+stmtThrow	:	THROW		expr							SEMI;
+stmtBreak	:	BREAK		INTEGER_LIT?					SEMI;
+
+stmtAssign	:	expr	(assignOP		expr)+	SEMI;
+stmtAggregate:	expr	aggrAssignOP	expr	SEMI;
+
+stmtDefer	:	DEFER	stmt;
+stmtExpr	:	expr	SEMI;
+stmtEmpty	:	SEMI;
+
+
+// EXPRs
+
+// ...
 
 
 kindOfStruct:	v=(	STRUCT	|	CLASS	|	UNION	);
@@ -286,22 +350,22 @@ idExprs		:	idExpr		(COMMA idExpr)*		COMMA?;
 typedIdAcors:	typespec 	idAccessors	SEMI;
 
 caseBlock	:	CASE expr (COMMA expr)*
-				(	COLON		levStmt* (FALL SEMI)?
-				|	LCURLY		levStmt* (FALL SEMI)? RCURLY
-				|	PHATRARROW	levStmt);
+				(	COLON		stmt* (FALL SEMI)?
+				|	LCURLY		stmt* (FALL SEMI)? RCURLY
+				|	PHATRARROW	stmt);
 defaultBlock:	(ELSE|DEFAULT)
-				(	COLON		levStmt*
-				|	LCURLY		levStmt* RCURLY
-				|	PHATRARROW	levStmt);
+				(	COLON		stmt*
+				|	LCURLY		stmt* RCURLY
+				|	PHATRARROW	stmt);
 
 initList	:	COLON
 				(	id		funcCall (COMMA id funcCall)*	COMMA?
 				|	CTOR	funcCall						COMMA?
 				);
 
-// is just SEMI as well in levStmt->inStmt
+// is just SEMI as well in stmt->defStmt
 funcBody	:	PHATRARROW expr SEMI
-			|	levStmt;
+			|	stmt;
 accessorDef	:	attribBlk?	qual* v=( GET | REFGET | SET ) funcBody;
 funcDef		:	id			tplParams?	funcTypeDef?
 				(RARROW		typespec)?
@@ -313,14 +377,13 @@ opDef		:	STRING_LIT	tplParams?	funcTypeDef?
 				funcBody;
 
 // remove this?
-condThen	:	LPAREN	expr	RPAREN	levStmt
-		//	|			expr			levStmt // bench if this would hurt
-		//	|			expr	COLON	levStmt // try if this may work
+condThen	:	LPAREN	expr	RPAREN	stmt
+		//	|			expr			stmt // bench if this would hurt
+		//	|			expr	COLON	stmt // try if this may work
 			;
 
-// DON'T refer to inStmt, ONLY refer to levStmt
-inStmt		:	SEMI								# EmptyStmt
-			|	LCURLY	levStmt*		RCURLY		# BlockStmt
+defStmt		:	SEMI								# EmptyStmt
+			|	LCURLY	stmt*			RCURLY		# BlockStmt
 			|	USING	typespecsNested	SEMI		# UsingStmt
 			// TODO: alias needs template support
 			|	ALIAS id ASSIGN	typespec 	SEMI	# AliasStmt
@@ -334,29 +397,29 @@ inStmt		:	SEMI								# EmptyStmt
 			|	BREAK	INTEGER_LIT?	SEMI		# BreakStmt
 			|	IF			condThen
 				(ELSE IF	condThen)*	// helps with formatting properly and de-nesting the AST
-				(ELSE		levStmt)?				# IfStmt
+				(ELSE		stmt)?					# IfStmt
 			|	SWITCH	LPAREN cond=expr RPAREN	LCURLY
 				caseBlock+ 	defaultBlock?	RCURLY	# SwitchStmt
-			|	LOOP	body=levStmt				# LoopStmt
-			|	FOR LPAREN init=levStmt	// TODO: add the syntax: for( a : b )
+			|	LOOP	body=stmt					# LoopStmt
+			|	FOR LPAREN init=stmt	// TODO: add the syntax: for( a : b )
 				cond=expr? SEMI
-				iter=expr? RPAREN	body=levStmt
-				(ELSE				els=levStmt)?	# ForStmt
+				iter=expr? RPAREN	body=stmt
+				(ELSE				els=stmt)?		# ForStmt
 			|	WHILE	LPAREN cond=expr RPAREN
-						body=levStmt
-				(ELSE	els=levStmt)?				# WhileStmt
-			|	DO		body=levStmt
+						body=stmt
+				(ELSE	els=stmt)?					# WhileStmt
+			|	DO		body=stmt
 				WHILE	LPAREN cond=expr RPAREN		# DoWhileStmt
 			|	DO? count=expr TIMES
 				(name=id ((PLUS|MINUS) INTEGER_LIT)? )?
-						body=levStmt				# TimesStmt
-			|	TRY		levStmt
+						body=stmt					# TimesStmt
+			|	TRY		stmt
 			// funcTypeDef is wrong, but works for easy cases
-				(CATCH	funcTypeDef?	levStmt)+	# TryCatchStmt		// TODO
-			|	DEFER	levStmt						# DeferStmt			// TODO, scope_exit(,fail,success)
+				(CATCH	funcTypeDef?	stmt)+		# TryCatchStmt		// TODO
+			|	DEFER	stmt						# DeferStmt			// TODO, scope_exit(,fail,success)
 													// #include <experimental/scope>
 													// std::experimental::scope_exit guard([]{ cout << "Exit!" << endl; });
-			| 	expr	(assignOP		expr)+ SEMI	# MultiAssignStmt
-			| 	expr	aggrAssignOP	expr SEMI	# AggrAssignStmt
+			|	expr	(assignOP		expr)+ SEMI	# MultiAssignStmt
+			|	expr	aggrAssignOP	expr SEMI	# AggrAssignStmt
 			|	expr	SEMI						# ExpressionStmt
 			;
