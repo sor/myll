@@ -16,16 +16,18 @@ data_type{index_type} m;
 
 //////////////////////////// BESSER:
 MyLang			-> C++
-int[16]			-> array<int,16>
-int[*]			-> int *	// pointer that can hold an array
 int*			-> int *	// pointer to a single element
+int[*]			-> int *	// pointer that can hold an array
+int[16]			-> array<int,16>
 int[]			-> vector<int>
 int[](16)		-> vector<int>(16)
 int[](16,99)	-> vector<int>(16,99)
 int[init:16]	-> vector<int>(16)
-int[reserve:16]	-> vector<int> then reserve(16)
-int[>16]		-> vector<int> then reserve(16)
-int[16+]		-> vector<int> then reserve(16)
+int[reserve:16]	-> vector<int>; v.reserve(16)
+int[>16]		-> vector<int>; v.reserve(16)
+int[16+]		-> vector<int>; v.reserve(16)
+
+// TODO: find a way to make arrays that can only be indexed by specified enums
 
 // compatibility, this from C/C++ is possible
 int@[]		-> int[];
@@ -46,6 +48,15 @@ string{}			-> unordered_set<string>
 string{}(16)		-> unordered_set<string>(16)
 string{<}			-> set<string>
 string{>}			-> set<string,greater>
+
+string[set]			-> unordered_set<string>
+string[set,16]		-> unordered_set<string> // reserve 16 if possible
+string[set,<]		-> set<string>
+string[set,>]		-> set<string,greater>
+string[<set]		-> set<string>
+string[>set]		-> set<string,greater>
+string[<+set]		-> set<string>
+string[>set]		-> set<string,greater>
 
 string[deque]		-> deque<string>
 string[heap]		-> priority_queue<string>
@@ -72,7 +83,7 @@ requires
 	int i;
 }
 
-int *! uniq;
+int *! uniq;🥨🥯🥫
 int a = *uniq + 6;
 
 
@@ -106,14 +117,40 @@ class X {
 [conversion(auto,default,implicit,explicit)]
 ctor( OTHER other) {...}
 
-// rule file myll::magic
-[
+string[int]				-> unordered_map<int,string>
+string[int,hasher](16)	-> unordered_map<int,string,hasher<int>>(16)
+string[int,<]			-> map<int,string,less<int>>
+string[int,>]			-> map<int,string,greater<int>>
+string[int,+](16)		-> unordered_multimap<int,string>(16)
+string[int,<+](16)		-> multimap<int,string>(16)
+
+string{}			-> unordered_set<string>
+string{}(16)		-> unordered_set<string>(16)
+string{<}			-> set<string>
+string{>}			-> set<string,greater>
+
+string[set]			-> unordered_set<string>
+string[set,16]		-> unordered_set<string> // reserve 16 is possible
+string[set,<]		-> set<string>
+string[set,>]		-> set<string,greater>
+string[<set]		-> set<string>
+string[>set]		-> set<string,greater>
+string[<+set]		-> set<string>
+string[>set]		-> set<string,greater>
+
+string[deque]		-> deque<string>
+string[heap]		-> priority_queue<string>
+string[list]		-> list<string>
+string[stack]		-> stack<string>
+
+[ // rule file myll::magic
 magic_return_val=[ret,result],
 magic_param_val=other,
 magic_param_ref=other,
 magic_param_ptr=that,
 magic_uscore=true,
 magic_autoindex=true,
+
 convert_decl=true,
 default_on_semicolon=true,
 support_nullptr=warning,
@@ -122,17 +159,32 @@ struct_default=[pub,pod],
 method_default=[instance],
 func_default=[global,pure],
 proc_default=[global],
-unique_pointer=std::unique_ptr,
-shared_pointer=std::shared_ptr,
-weak_pointer=std::weak_ptr,
-// static_array: type@[16], dynamic_array@[],
-static_array=std::array,
-dynamic_array=std::vector,
+
+unique_pointer=std::unique_ptr<T>,
+shared_pointer=std::shared_ptr<T>,
+weak_pointer=std::weak_ptr<T>,
+
+// static_array: T@[16], dynamic_array: T@[],
+static_array=std::array<T,S>,
+dynamic_array=std::vector<T>,
+ordered_dict=std::map<K,V>, // sorted_dict
+unordered_dict=std::unordered_map<K,V>,
+ordered_set=std::set<T>,
+unordered_set=std::unordered_set<T>,
+ordered_multidict=std::multimap<K,V>,
+unordered_multidict=std::unordered_multimap<K,V>,
+ordered_multiset=std::multiset<T>,
+unordered_multiset=std::unordered_multiset<T>,
+
+static_cast=static_cast<T>,
+dynamic_cast=dynamic_cast<T>,
+const_cast=const_cast<T>,
+reinterpret_cast=reinterpret_cast<T>,
+bit_cast=std::bit_cast<T>,
 ]
 class rule::myll::magic {}
 
-// rule file myll::retro
-[
+[ // rule file myll::retro
 magic_return_val=[],
 magic_param_val=[],
 magic_param_ref=[],
@@ -147,11 +199,30 @@ struct_default=[pub],
 method_default=[],
 func_default=[],
 proc_default=[],
-unique_pointer=std::unique_ptr,
-shared_pointer=std::shared_ptr,
-weak_pointer=std::weak_ptr,
+unique_pointer=std::unique_ptr<T>,
+shared_pointer=std::shared_ptr<T>,
+weak_pointer=std::weak_ptr<T>,
+static_array=false,
+dynamic_array=false,
+static_cast=static_cast<T>,
+dynamic_cast=dynamic_cast<T>,
+const_cast=const_cast<T>,
+reinterpret_cast=reinterpret_cast<T>,
+bit_cast=std::bit_cast<T>,
 ]
 class rule::myll::retro {}
+
+[ // rule file myll::madness
+unique_pointer=T*,
+shared_pointer=T*,
+weak_pointer=T*,
+static_cast=((T)E),
+dynamic_cast=((T)E),
+const_cast=((T)E),
+reinterpret_cast=((T)E),
+bit_cast=((T)E),
+]
+class rule::myll::madness {}
 
 
 [virtual=encouraged]

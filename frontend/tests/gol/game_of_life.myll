@@ -21,6 +21,14 @@ class GameOfLife
 	{
 		var Map2D & dstMap = doubleBufferedMap[currentIndex];
 
+		// Exploration: Two nested loops like this?
+		//do sizeY, sizeX times y, x {}
+		//do [sizeY, sizeX] times [y, x] {}
+		//do sizeY times y, sizeX times x {}
+		//do sizeY times y do sizeX times x {} // should work already
+		//do( y: sizeY ) times {}
+		//do( y: sizeY, x: sizeX ) times {}
+		//do times( y: sizeY, x: sizeX ) {}
 		do sizeY times y
 		{
 			do sizeX times x

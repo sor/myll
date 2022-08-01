@@ -215,7 +215,13 @@ threeWay	:	(relOP | equalOP)	COLON	expr;
 capture		:	LBRACK	args?	RBRACK;
 
 // Tier 3
-//cast: nothing = static, ? = dynamic, ! = const & reinterpret
+//cast:	nothing		= static_cast
+//		?			= dynamic_cast
+//		-			= const_cast
+//		-const		= const_cast removing outer const
+//		-volatile	= const_cast removing outer volatile
+//		!			= std::bit_cast
+//		!!			= reinterpret_cast
 // TODO REMOVE THEM ALL, IN CODE TOO
 //					xxx
 //preOpExpr	:	preOP;
@@ -237,7 +243,10 @@ expr		:	(idTplArgs	SCOPE)+	idTplArgs	# ScopedExpr
 					(	COPY // cast that forces a copy?
 					|	MOVE
 					|	FORWARD
-					|	(QM|EM)? typespec	) RPAREN
+					|	MINUS CONST
+					|	MINUS VOLATILE
+					|	(QM|MINUS|EM|EM EM)? typespec 
+					) RPAREN
 				|	SIZEOF
 				|	DELETE	( ary='['']' )?
 				|	preOP
