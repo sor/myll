@@ -14,7 +14,7 @@ namespace Myll
 		{
 			IdTplArgs ret = new() {
 				id      = c.id().Visit(),
-				tplArgs = VisitTplArgs( c.tplArgs() )
+				tplArgs = VisitTplArgs( c.tplArgs() ),
 			};
 			return ret;
 		}

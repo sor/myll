@@ -16,6 +16,7 @@ namespace Myll.Core
 
 	public abstract class Stmt
 	{
+		// TODO: If there is no srcPos on myself, redirect to parent
 		public  SrcPos  srcPos;
 		private Attribs attribs { get; set; }
 
@@ -76,9 +77,10 @@ namespace Myll.Core
 
 	public class VarStmt : Stmt
 	{
-		public string   name;
-		public Typespec type; // contains Qualifier
-		public Expr?    init;
+		public VarDecl.Kind kind;
+		public string       name;
+		public Typespec     type; // contains Qualifier
+		public Expr?        init;
 
 		public override Strings Gen( int level )
 		{
@@ -120,9 +122,10 @@ namespace Myll.Core
 		public bool  HasValue => expr != null;
 
 		public override Strings Gen( int level )
-			=> (HasValue
-				? Format( "return {0};", expr.Gen() )
-				: Format( "return;" )).IndentAll( level );
+			=> ((expr != null)
+					? Format( "return {0};", expr.Gen() )
+					: Format( "return;" ))
+				.IndentAll( level );
 	}
 
 	public class ThrowStmt : Stmt
@@ -256,12 +259,12 @@ namespace Myll.Core
 		public struct CaseBlock
 		{
 			public List<Expr> compare; // can have multiple ORed conditions
-			public Block      then;
+			public MultiStmt  then;    // isScope = true
 		}
 
 		public Expr            cond;
 		public List<CaseBlock> cases;
-		public Block?          els;
+		public MultiStmt?      els; // isScope = true
 
 		[Pure]
 		public override IEnumerable<Stmt> EnumerateDF {
@@ -355,8 +358,8 @@ namespace Myll.Core
 			if( els != null )
 				throw new NotImplementedException( "Else for for-loop not implemented yet" );
 
-			if( init is Block )
-				throw new NotImplementedException( "Block can not be used in for-loo as init" );
+			if( init is MultiStmt )
+				throw new NotImplementedException( "A MultiStmt can not be used in for-loop as init" );
 
 			Strings inits = init.GenWithoutCurly( 0 );
 			if( inits.Count > 1 )
@@ -453,10 +456,10 @@ namespace Myll.Core
 	}
 
 	// 1 scope
-	public class Block : Stmt
+	public class MultiStmt : Stmt
 	{
-		public bool       isScope { get; init; }
-		public List<Stmt> stmts;
+		public bool       isScope { get; init; } = false;
+		public List<Stmt> stmts = new();
 
 		public bool isEmpty => stmts.IsEmpty();
 
@@ -464,11 +467,17 @@ namespace Myll.Core
 		public override IEnumerable<Stmt> EnumerateDF {
 			get {
 				foreach( Stmt stmt in stmts )
-					foreach( Stmt subStmt in stmt.EnumerateDF )
-						yield return subStmt;
+				foreach( Stmt subStmt in stmt.EnumerateDF )
+					yield return subStmt;
 
 				yield return this;
 			}
+		}
+
+		public MultiStmt( IEnumerable<Stmt>? stmts, bool isScope )
+		{
+			this.isScope = isScope;
+			this.stmts   = stmts?.ToList() ?? new(); // TODO: if stmts contains MultiStmt then unwrap them
 		}
 
 		public override void AssignAttribs( Attribs inAttribs )

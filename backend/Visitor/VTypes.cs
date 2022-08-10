@@ -229,11 +229,7 @@ namespace Myll
 			IEnumerable<IdTplArgs> idTplArgs = c.idTplArgs().Select( VisitIdTplArgs );
 
 			if( c.v != null )
-				idTplArgs = idTplArgs.Append(
-					new IdTplArgs {
-						id      = c.v.Text,
-						tplArgs = VisitTplArgs( null )
-					} );
+				idTplArgs = idTplArgs.Append( new() { id = c.v.Text } );
 
 			// only idTpls is filled, is this correct?
 			TypespecNested ret = new() {
@@ -248,7 +244,7 @@ namespace Myll
 			=> c?.Select( VisitTypespecNested ).ToList()
 			?? new List<TypespecNested>();
 
-		public List<TypespecNested> VisitTypespecsNested( TypespecsNestedContext? c )
+		public new List<TypespecNested> VisitTypespecsNested( TypespecsNestedContext? c )
 			=> VisitTypespecsNested( c?.typespecNested() );
 	}
 }

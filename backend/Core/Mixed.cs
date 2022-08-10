@@ -106,7 +106,7 @@ namespace Myll.Core
 	public class IdTplArgs
 	{
 		public string       id;
-		public List<TplArg> tplArgs; // opt
+		public List<TplArg> tplArgs = new();
 
 		public string Gen()
 		{

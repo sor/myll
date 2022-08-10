@@ -25,6 +25,9 @@ namespace Myll
 	public partial class ExtendedVisitor<Result>
 		: MyllParserBaseVisitor<Result>
 	{
+		protected override Result? AggregateResult( Result? aggregate, Result? nextResult )
+			=> nextResult ?? aggregate;
+
 		protected new IEnumerable<Arg> VisitArgs( ArgsContext cs )
 			=> cs?.arg().Select(
 				   c => new Arg {
@@ -177,6 +180,21 @@ namespace Myll
 				},
 			};
 
+		public static MultiStmt ToBlock( this Stmt stmt )
+			=> new( new List<Stmt> { stmt }, true );
+
+		public static MultiStmt ToMulti( this Stmt stmt )
+			=> new( new List<Stmt> { stmt }, false );
+
+		public static MultiStmt ToBlock( this IEnumerable<Stmt> stmts )
+			=> new( stmts, true );
+
+		public static MultiStmt ToMulti( this IEnumerable<Stmt> stmts )
+			=> new( stmts, false );
+
+		public static MultiDecl ToMulti( this IEnumerable<Decl> decls )
+			=> new( decls );
+
 		// this will become more specialized most likely, don't depend on current behavior
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static string Visit( this Parser.IdContext c )
@@ -217,9 +235,9 @@ namespace Myll
 
 		// TODO those null tolerant methods need to be removed
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
-		public static Block Visit( this Parser.FuncBodyContext c )
+		public static MultiStmt Visit( this Parser.FuncBodyContext c )
 			=> c == null
-				? null
+				? throw new ArgumentNullException( "arg can not be null" )
 				: StmtVis.VisitFuncBody( c );
 
 		//[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]

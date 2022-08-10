@@ -91,28 +91,69 @@ namespace Myll
 			Expr ret;
 			Expr expr = c.expr().Visit();
 
-			if( c.typespec() != null
-			 || c.MOVE()     != null ) {
-				Operand op =
-					c.QM()   != null ? Operand.DynamicCast :
-					c.EM()   != null ? Operand.AnyCast :
-					c.MOVE() != null ? Operand.MoveCast :
-					                   Operand.StaticCast;
-
-				Typespec t = (op != Operand.MoveCast)
-					? VisitTypespec( c.typespec() )
-					: new TypespecNested {
+			if( c.LPAREN() != null ) {
+				// c style cast
+				Operand  op;
+				Typespec type;
+				if( c.COPY() != null ) {
+					op = Operand.CopyCast;
+					throw new NotImplementedException( "copy-cast might need to introduce a new local to work" );
+				}
+				else if( c.MOVE() != null ) {
+					op = Operand.MoveCast;
+					type = new TypespecNested {
 						srcPos = c.ToSrcPos(),
-						idTpls = new List<IdTplArgs> {
-							new() {
-								id      = "move", // TODO: support std::forward as well
-								tplArgs = new List<TplArg>(),
-							}
-						}
+						idTpls = new() { new() { id = "std::move" } }
 					};
+				}
+				else if( c.FORWARD() != null ) {
+					op = Operand.ForwardCast;
+					type = new TypespecNested {
+						srcPos = c.ToSrcPos(),
+						idTpls = new() { new() { id = "std::forward" } }
+					};
+				}
+				else if( c.cv != null ) {
+					bool isPlus  = (c.PLUS()  != null);
+					bool isConst = (c.CONST() != null);
+					op = isPlus
+						? Operand.AddCVCast
+						: Operand.RemoveCVCast;
+
+					/*
+					string typemod = isPlus
+						? (isConst
+							? "std::add_const_t"
+							: "std::add_volatile_t")
+						: (isConst
+							? "std::remove_const_t"
+							: "std::remove_volatile_t");
+					*/
+
+					string typemod = string.Format(
+						"std::{0}_{1}_t",
+						isPlus  ? "add"   : "remove",
+						isConst ? "const" : "volatile" );
+
+					type = new TypespecNested {
+						srcPos = c.ToSrcPos(),
+						idTpls = new() { new() { id = typemod } }
+					};
+				}
+				else {
+					int emCount = c.EM().Length;
+					op = c.QM()   != null ? Operand.DynamicCast :
+						c.MINUS() != null ? Operand.ConstCast :
+						emCount   == 1    ? Operand.BitCast :
+						emCount   == 2    ? Operand.ReinterpretCast :
+						                    Operand.StaticCast;
+
+					type = VisitTypespec( c.typespec() );
+				}
+
 				ret = new CastExpr {
 					op   = op,
-					type = t,
+					type = type,
 					expr = expr,
 				};
 			}
@@ -135,8 +176,9 @@ namespace Myll
 				};
 			}
 			else {
-				throw new InvalidOperationException( "unknown pre-op " + c );
+				throw new InvalidOperationException( "unknown pre-expr " + c );
 			}
+
 			return ret;
 		}
 
@@ -346,10 +388,7 @@ namespace Myll
 				ret = new Discard();
 			}
 			else if( cc.AUTOINDEX() != null ) {
-				IdTplArgs idTplArgs = new() {
-					id      = cc.AUTOINDEX().GetText(),
-					tplArgs = new List<TplArg>( 0 ),
-				};
+				IdTplArgs idTplArgs = new() { id = cc.AUTOINDEX().GetText() };
 				ret = new IdExpr {
 					op        = Operand.WildId,
 					idTplArgs = idTplArgs,

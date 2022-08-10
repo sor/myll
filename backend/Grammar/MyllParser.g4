@@ -6,13 +6,16 @@ comment		:	COMMENT;
 
 prog		:	module?
 				imports*
-				/*definition?*/
+			//	rule?
+			//	defines?
 				decl*;
 
 module		:	MODULE id SEMI;
 imports		:	IMPORT id (COMMA id)* COMMA? SEMI;
+//rule		:	RULE typespecNested SEMI;
 // which DEFINEs can be passed directly from the compiler, all others will be discarded
-//defines	:	DEFINITION id (COMMA id)* COMMA? SEMI;
+//defines	:	DEFINE idExprs SEMI;
+//				define RULE=myll::magic, DEBUG=1, ASSERTS=1, FINAL=0;
 
 
 attribBlk	:	LBRACK	attrib (COMMA attrib)* COMMA? RBRACK;
@@ -62,6 +65,12 @@ declDtor	:	DTOR		( defDtor										);
 declOp		:	OPERATOR	( defOp			| LCURLY attrOp*		RCURLY	);
 declFunc	:	kindOfFunc	( defFunc		| LCURLY attrFunc*		RCURLY	);
 declVar		:	kindOfVar	( defVar		| LCURLY attrVar*		RCURLY	);
+
+/* next rework?
+declVar		:	kindOfVar				( defAttrVar	);
+defAttrVar	:	defVar					| LCURLY attrVar*	RCURLY;
+attrVar		:	attribBlk? defAttrVar	| attribBlk  COLON;
+*/
 
 defNamespace:	id (SCOPE id)*
 				(	SEMI
@@ -115,9 +124,9 @@ defVar		:	typedIdAcors;
 
 // STMTs
 
-stmt		:	defStmt		| attribBlk ( defStmt		| LCURLY stmt*			RCURLY );
+stmt		:	attribBlk? ( defStmt	| LCURLY stmt*	RCURLY );
 
-defStmtNew	:	declUsing
+defStmt		:	declUsing
 			|	declAlias
 			|	declVar
 			|	stmtIf
@@ -284,6 +293,8 @@ capture		:	LBRACK	args?	RBRACK;
 //		-			= const_cast
 //		-const		= const_cast removing outer const
 //		-volatile	= const_cast removing outer volatile
+//		+const		= static_cast adding const
+//		+volatile	= static_cast adding volatile
 //		!			= std::bit_cast
 //		!!			= reinterpret_cast
 // TODO REMOVE THEM ALL, IN CODE TOO
@@ -307,15 +318,14 @@ expr		:	(idTplArgs	SCOPE)+	idTplArgs	# ScopedExpr
 					(	COPY // cast that forces a copy?
 					|	MOVE
 					|	FORWARD
-					|	MINUS CONST
-					|	MINUS VOLATILE
-					|	(QM|MINUS|EM|EM EM)? typespec 
+					|	(PLUS|MINUS) cv=(CONST|VOLATILE)
+					|	(QM|MINUS|EM|EM EM)? typespec
 					) RPAREN
 				|	SIZEOF
 				|	DELETE	( ary='['']' )?
 				|	preOP
-				)						expr	# PreExpr // this visitor is unused
-			|	expr	memAccPtrOP		expr	# MemPtrExpr
+				)						expr	# PreExpr
+			|	expr	memAccPtrOP		expr	# MemPtrExpr // this visitor is unused
 			| <assoc=right>
 				expr	powOP			expr	# PowExpr
 			|	expr	multOP			expr	# MultExpr
@@ -340,7 +350,7 @@ expr		:	(idTplArgs	SCOPE)+	idTplArgs	# ScopedExpr
 			|	LPAREN	expr	RPAREN			# ParenExpr
 			|	wildId							# WildIdExpr
 			|	lit								# LiteralExpr	// TODO
-			|	idTplArgs						# IdTplExpr
+			|	idTplArgs						# IdTplExpr		// same as rule 1 ?
 			;
 
 idAccessor	:	id	(LCURLY accessorDef+ RCURLY)?	(ASSIGN expr)?;
@@ -380,46 +390,4 @@ opDef		:	STRING_LIT	tplParams?	funcTypeDef?
 condThen	:	LPAREN	expr	RPAREN	stmt
 		//	|			expr			stmt // bench if this would hurt
 		//	|			expr	COLON	stmt // try if this may work
-			;
-
-defStmt		:	SEMI								# EmptyStmt
-			|	LCURLY	stmt*			RCURLY		# BlockStmt
-			|	USING	typespecsNested	SEMI		# UsingStmt
-			// TODO: alias needs template support
-			|	ALIAS id ASSIGN	typespec 	SEMI	# AliasStmt
-			|	v=( VAR | FIELD | CONST | LET )
-				(	LCURLY	typedIdAcors*	RCURLY
-				|			typedIdAcors		)	# VariableStmt
-			|	RETURN	expr?		SEMI			# ReturnStmt
-			|	DO RETURN expr?
-				IF LPAREN expr RPAREN	SEMI		# ReturnIfStmt
-			|	THROW	expr			SEMI		# ThrowStmt
-			|	BREAK	INTEGER_LIT?	SEMI		# BreakStmt
-			|	IF			condThen
-				(ELSE IF	condThen)*	// helps with formatting properly and de-nesting the AST
-				(ELSE		stmt)?					# IfStmt
-			|	SWITCH	LPAREN cond=expr RPAREN	LCURLY
-				caseBlock+ 	defaultBlock?	RCURLY	# SwitchStmt
-			|	LOOP	body=stmt					# LoopStmt
-			|	FOR LPAREN init=stmt	// TODO: add the syntax: for( a : b )
-				cond=expr? SEMI
-				iter=expr? RPAREN	body=stmt
-				(ELSE				els=stmt)?		# ForStmt
-			|	WHILE	LPAREN cond=expr RPAREN
-						body=stmt
-				(ELSE	els=stmt)?					# WhileStmt
-			|	DO		body=stmt
-				WHILE	LPAREN cond=expr RPAREN		# DoWhileStmt
-			|	DO? count=expr TIMES
-				(name=id ((PLUS|MINUS) INTEGER_LIT)? )?
-						body=stmt					# TimesStmt
-			|	TRY		stmt
-			// funcTypeDef is wrong, but works for easy cases
-				(CATCH	funcTypeDef?	stmt)+		# TryCatchStmt		// TODO
-			|	DEFER	stmt						# DeferStmt			// TODO, scope_exit(,fail,success)
-													// #include <experimental/scope>
-													// std::experimental::scope_exit guard([]{ cout << "Exit!" << endl; });
-			|	expr	(assignOP		expr)+ SEMI	# MultiAssignStmt
-			|	expr	aggrAssignOP	expr SEMI	# AggrAssignStmt
-			|	expr	SEMI						# ExpressionStmt
 			;

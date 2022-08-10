@@ -133,10 +133,10 @@ string[set]			-> unordered_set<string>
 string[set,16]		-> unordered_set<string> // reserve 16 is possible
 string[set,<]		-> set<string>
 string[set,>]		-> set<string,greater>
-string[<set]		-> set<string>
-string[>set]		-> set<string,greater>
-string[<+set]		-> set<string>
-string[>set]		-> set<string,greater>
+string[set<]		-> set<string>
+string[set>]		-> set<string,greater>
+string[set<+]		-> multiset<string>
+string[set+>]		-> multiset<string,greater>
 
 string[deque]		-> deque<string>
 string[heap]		-> priority_queue<string>
@@ -144,13 +144,22 @@ string[list]		-> list<string>
 string[stack]		-> stack<string>
 
 [ // rule file myll::magic
+default_defines=[debug,release,assert],
+
+magic_this_ref=[self],  // hardcoded right now
+magic_this_class=[This,Self],
+magic_base_ctor=[base,super],
+magic_base_class=[Base,Super],
+magic_base_on_multi_inherit=true, // will be the first inherited base
 magic_return_val=[ret,result],
 magic_param_val=other,
 magic_param_ref=other,
 magic_param_ptr=that,
-magic_uscore=true,
+magic_uscore=true,  // write_only?
 magic_autoindex=true,
+magic_flagsenum_zeroval=[None],
 
+narrowing_conversion=false, // also set related C++ compiler warnings as errors to be sure
 convert_decl=true,
 default_on_semicolon=true,
 support_nullptr=warning,
@@ -181,17 +190,22 @@ dynamic_cast=dynamic_cast<T>,
 const_cast=const_cast<T>,
 reinterpret_cast=reinterpret_cast<T>,
 bit_cast=std::bit_cast<T>,
-narrowing_conversion=false, // also set related C++ compiler warnings as errors to be sure
 ]
 class rule::myll::magic {}
 
+
 [ // rule file myll::retro
+default_defines=[debug,release,assert],
+
 magic_return_val=[],
 magic_param_val=[],
 magic_param_ref=[],
 magic_param_ptr=[],
 magic_uscore=false,
 magic_autoindex=false,
+magic_flagsenum_zeroval=[None],
+
+narrowing_conversion=true,
 convert_decl=false,
 default_on_semicolon=false,
 support_nullptr=true,
@@ -200,9 +214,11 @@ struct_default=[pub],
 method_default=[],
 func_default=[],
 proc_default=[],
+
 unique_pointer=std::unique_ptr<T>,
 shared_pointer=std::shared_ptr<T>,
 weak_pointer=std::weak_ptr<T>,
+
 static_array=false,
 dynamic_array=false,
 static_cast=static_cast<T>,
@@ -210,9 +226,9 @@ dynamic_cast=dynamic_cast<T>,
 const_cast=const_cast<T>,
 reinterpret_cast=reinterpret_cast<T>,
 bit_cast=std::bit_cast<T>,
-narrowing_conversion=true,
 ]
 class rule::myll::retro {}
+
 
 [ // rule file myll::madness
 unique_pointer=T*,
@@ -224,7 +240,7 @@ const_cast=((T)E),
 reinterpret_cast=((T)E),
 bit_cast=((T)E),
 ]
-class rule::myll::madness {}
+class rule::myll::madness : rule::myll::retro {}
 
 
 [virtual=encouraged]
@@ -273,8 +289,8 @@ top
 
 
 shortcut table
-[final]		class	=>	[dispatch=disallow]	if no virtual base class
-					||	[dispatch=final]	if virtual base class
+[final]		class	=>	[dispatch=final]	if base class dispatch=virtual
+					||	[dispatch=disallow]	else
 [pod]		class	=>	[dispatch=disallow]	=> applies [dispatch=static]	func, among other things
 [interface]	class	=>	[dispatch=interface]=> applies [dispatch=abstract]	func
 [nonvirtual]class	=>	[dispatch=forbid]
@@ -288,14 +304,26 @@ shortcut table
 [override]	func	=>	[dispatch=override]
 [final]		func	=>	[dispatch=final]
 
-[manual]	enum	=>	[startcount=nil,counting=manual]
-[]			enum	=>	[startcount=0,	counting=increment]
+[manual]	enum	=>	[init=nil,		iteration=manual]
+[]			enum	=>	[initval=0,		progress=increment]
 [enum]		enum	=>	[startcount=0,	counting=increment]
-[flags]		enum	=>	[startcount=1,	counting=doubling]
-[enum]		enumval	=>	[startcount=???,counting=increment]
-[flags]		enumval	=>	[startcount=???,counting=doubling]
+[flags]		enum	=>	[startval=1,	counting=doubling,	zeroval=@magic_flagsenum_zeroval]
+[enum]		enumval	=>	[				counting=increment]
+[flags]		enumval	=>	[				counting=shift,shifting,leftshift]
 
 [global]	var		=>	[storage=static]
+
+[noblock, something_else]
+{
+    // if you want the containing things to apply attribute "something_else",
+    // but not introduce a block/scope
+}
+
+// flags also gets a None=0 by default
+[flags]
+enum Access { Read, Write, Exec }
+// None = 0, Read = 1, Write = 2, Exec = 4
+// Maybe also provide a named mask by or'ing all flags
 
 Dr K sprach grad über seinen Guru, der sowas ist wie ein Coach...
 und dann dachte ich mir ich mache sowas bei unseren neuen Codern,
@@ -325,6 +353,7 @@ int Blah::i = 0;
 // DO NOT rely on linkage internal/hidden, since merged cpp building might copy multiple files together
 // so a cpp file might have two [internal] var int x; and then fail to compile
 // module linkage can fix this, so rather only use [global] and [module]
+[linkage=module] should be the default
 [linkage=module]				var		int mv;	// visibility internal, but since we have merged module builds...
 [linkage=module]				const	int mc;	// visibility internal, ... (fusion of all cpp) this might work
 [hidden,intern(al),NOT static]	var		int hv;	// visibility internal, other TU can not see this
@@ -359,10 +388,10 @@ Removed in Myll compared to C and C++
 - operator ","
 - operator prefix "+" ???
 - typedef (use "using" instead)
-- non-class enums (use "class enum" instead)
-- directly declare an object of a newly declared type (struct B{} b;)
+- unscoped enums (use "class enum" instead)
+- directly declare an object of a newly declared type (e.g. struct B{} b;)
 - local classes, structs, enums, and functions inside functions. (lambdas can replace local functions)
-- forward declarations (import what you need from other modules)
+- forward declarations (order irrelevant, import what you need from other modules)
 - assignment in expressions
 - throw in expressions
 - goto
@@ -420,3 +449,17 @@ render.DrawLine(...); // working autocompletion and 10 significant chars less to
 // assuming that you did not intentionally sabotage DrawLine by making it unnecesarily virtual.
 // This is not about polymorphism.
 
+
+var int *? weakPtrToInt;
+if(weakPtrToInt)
+{
+    weakPtrToInt->doThings();
+}
+
+// myll -> C++
+
+std::weak_ptr<int> weakPtrToInt;
+if(std::shared_ptr<int> weakPtrToIntLocked = weakPtrToInt.lock())
+{
+    weakPtrToIntLocked->doThings();
+}

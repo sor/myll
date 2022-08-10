@@ -82,10 +82,17 @@ namespace Myll.Core
 		AddressOf,
 
 		Cast_Begin,
+		CopyCast,
 		MoveCast,
+		ForwardCast,
 		StaticCast,
 		DynamicCast,
-		AnyCast, // const_cast & reinterpret_cast
+		AddCVCast,
+		RemoveCVCast,
+		ConstCast,
+		BitCast,
+		ReinterpretCast,
+	//	AnyCast, // const_cast & reinterpret_cast
 		Cast_End,
 
 		SizeOf,
@@ -386,11 +393,17 @@ namespace Myll.Core
 		public override string Gen( bool doBrace = false )
 		{
 			string format = op switch {
-				Operand.StaticCast  => "static_cast<{1}>( {0} )",
-				Operand.DynamicCast => "dynamic_cast<{1}>( {0} )",
-				Operand.AnyCast     => "reinterpret_cast<{1}>( {0} )", // TODO: identify const_cast
-				Operand.MoveCast    => "std::{1}( {0} )",              // TODO: this can handle std::forward as well
-				_                   => null,
+				Operand.CopyCast        => "{1}( {0} )",
+				Operand.MoveCast        => "{1}( {0} )",
+				Operand.ForwardCast     => "{1}( {0} )",
+				Operand.AddCVCast       => "static_cast<{1}<decltype( {0} )>>( {0} )",
+				Operand.RemoveCVCast    => "const_cast<{1}<decltype( {0} )>>( {0} )",
+				Operand.StaticCast      => "static_cast<{1}>( {0} )",
+				Operand.DynamicCast     => "dynamic_cast<{1}>( {0} )",
+				Operand.ConstCast       => "const_cast<{1}>( {0} )",
+				Operand.BitCast         => "std::bit_cast<{1}>( {0} )",
+				Operand.ReinterpretCast => "reinterpret_cast<{1}>( {0} )",
+				_                       => null,
 			};
 			string
 				exprText = expr.Gen(),

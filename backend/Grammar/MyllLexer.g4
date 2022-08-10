@@ -121,7 +121,7 @@ F32			: 'f32';	// single prec. float
 F16			: 'f16';	// (opt) half prec. float
 
 // Arbitrary sized integers (as replacement for bitfields, ": 0" needs a different solution)
-// only works in locals and Structural instance fields, CAN'T have a pointer taken (why though?)
+// only works in locals and Structural instance fields, CAN'T have a pointer taken (why though? because there is no sub-byte addressing)
 //INT_ANY		: 'i' (DIGITNZ DIGIT*);
 //UINT_ANY	: 'u' (DIGITNZ DIGIT*);
 //BIN_ANY		: 'b' (DIGITNZ DIGIT*);

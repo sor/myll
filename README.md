@@ -1,14 +1,13 @@
 ![image](https://user-images.githubusercontent.com/634372/146655353-6066d0ac-cf61-4445-abd3-0b3d0e311900.png)
 
 # Myll
-IPA: /mʏl/, free from »MyLang«. A saner Programming Language that compiles to C++.
+IPA: /mʏl/, free from »MyLang«. A saner Programming Language that compiles to **C++**.
 
 Created by Jan Reitz. Licence undecided (apparently its open source).
 
-## Goals
-Give newcomers an easy onboarding with less bad surprises.
-
-Give professionals the comfort of known semantics with less repetition and fewer accidents.
+## Goals of this Programming Language
+* Provide newcomers an easy onboarding and fewer bad surprises.
+* Provide professionals the comfort of known semantics with less repetition and fewer accidents.
 
 ## Principles
 1. Don't ask the user to repeat themselves

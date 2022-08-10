@@ -28,9 +28,9 @@ namespace Myll.Generator
 
 		public static readonly Dictionary<Access, string>
 			AccessFormat = new() {
-				{ Access.Private,   "{0}  private:" },
-				{ Access.Protected, "{0}  protected:" },
-				{ Access.Public,    "{0}  public:" },
+				{ Access.Private,   "{0}private:" },
+				{ Access.Protected, "{0}protected:" },
+				{ Access.Public,    "{0}public:" },
 			};
 
 		public static readonly string[] UsingFormat = {

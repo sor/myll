@@ -41,8 +41,8 @@ func test() -> int
 	var func*[4](int)->bool hansptrary;
 	hansptrary[0] = hansptr;
 
-	var Derived* my_var;
-	(move)(!Unrelated*)(?Derived*)(Base*)my_var;
+	var Derived const * my_var;
+	(move)(!!Unrelated*)(?Derived*)(-const)(Base const*)my_var;
 	//var int*! blubb;
 
 	cout << hansptr(23);
