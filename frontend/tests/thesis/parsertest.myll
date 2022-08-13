@@ -1,0 +1,61 @@
+#!/bin/myll
+
+module ParserTest;
+
+import std_iostream, c_stdlib;
+
+namespace TestNS {
+	using std, moep;
+	using {
+		[kind=ns]
+		std;
+		[kind=cls]{
+			base_class_ctor;
+		}
+	}
+	alias s = std/*, m = moep*/;
+	alias {
+		[kind=cls]
+		vec<T> = std::vector<T>;
+		[kind=ns]{
+			sx = std;
+		}
+	}
+	enum Moep {}
+	enum Meep : i8 { first, second }
+	enum Meep2 : i64 { first, second, }
+	//enum Meep3 : Meep2 { third, fourth, }
+	struct A {}
+	struct B : A { field int hans; }
+	class C<T> requires std::is_class<T> {}
+	union D { field { A a; B b; } }
+	struct Test {
+		field { int _i = 0; float _f { get; set; }; }
+		convert -> int => _i;
+		convert <- int { _i = other; }
+		convert int -> { _i = other; }
+		[default] ctor;
+		ctor(int i, float f) : _i(i), _f(f) {}
+		ctor {
+			(int i) : ctor( i, 9.0 ) {}
+			move { _i = other._i; }
+			convert int -> { _i = other._i; }
+		}
+		dtor { delete this; }
+		operator "+"(int lhs, int rhs) -> int { return lhs + rhs; }
+		operator move= o { _i = o._i; }
+		func dbl(i8 value) -> i16 => value * 2;
+		proc setGlob(int value) { someGlobal = value; }
+		method setI(int value) { _i = value; }
+		func all() {
+			using std;
+			alias a = b;
+			var u32 blah;
+			if( blah == 0 )
+				cout << "blah zero";
+			switch( blah ) {
+				case 1, 2: cout << "one or two";
+			}
+		}
+	}
+}

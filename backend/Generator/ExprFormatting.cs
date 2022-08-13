@@ -47,7 +47,8 @@ namespace Myll.Generator
 				{ Operand.And, "{0} && {1}" },
 				{ Operand.Or, "{0} || {1}" },
 
-				{ Operand.DeleteAry, "delete[] {0}" },
+				{ Operand.Delete,		"delete {0}" },
+				{ Operand.DeleteAry,	"delete[] {0}" },
 			};
 
 		private static readonly IDictionary<Operand, string>

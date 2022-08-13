@@ -251,7 +251,8 @@ namespace Myll
 						type   = t
 					} )
 				.ToMulti();
-			AddChildren( ret.decls );
+			// TODO: add usings differently
+			//AddChildren( ret.decls );
 			return ret;
 		}
 
@@ -289,7 +290,8 @@ namespace Myll
 			// do not reset curAccess because there is no change inside enums
 			PushScope( ret );
 			{
-				AddChildren( VisitEnumEntrys( c.idExprs() ) );
+				if( c.idExprs() != null )
+					AddChildren( VisitEnumEntrys( c.idExprs() ) );
 			}
 			PopScope();
 

@@ -155,19 +155,22 @@ magic_return_val=[ret,result],
 magic_param_val=other,
 magic_param_ref=other,
 magic_param_ptr=that,
-magic_uscore=true,  // write_only?
+magic_accessor_call=true, // getter without (), setter with assignment syntax
+magic_uscore=true,  // write_only? unnecessary since it's all auto generated
 magic_autoindex=true,
 magic_flagsenum_zeroval=[None],
 
 narrowing_conversion=false, // also set related C++ compiler warnings as errors to be sure
 convert_decl=true,
-default_on_semicolon=true,
+default_impl_on_semicolon=true,
 support_nullptr=warning,
 class_default=[priv,rule_of_n],
 struct_default=[pub,pod],
 method_default=[instance],
+accessor_default=[instance,pure,pub_if_auto,inline_if_auto],
 func_default=[global,pure],
 proc_default=[global],
+switch_default=[fall_or_break, break_default],
 
 unique_pointer=std::unique_ptr<T>,
 shared_pointer=std::shared_ptr<T>,
@@ -207,7 +210,7 @@ magic_flagsenum_zeroval=[None],
 
 narrowing_conversion=true,
 convert_decl=false,
-default_on_semicolon=false,
+default_impl_on_semicolon=false,
 support_nullptr=true,
 class_default=[priv],
 struct_default=[pub],
