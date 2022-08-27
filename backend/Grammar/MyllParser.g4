@@ -8,7 +8,8 @@ prog		:	module?
 				imports*
 			//	rule?
 			//	defines?
-				decl*;
+				decl*
+				EOF;
 
 module		:	MODULE id SEMI;
 imports		:	IMPORT id (COMMA id)* COMMA? SEMI;
@@ -22,6 +23,7 @@ attribBlk	:	LBRACK	attrib (COMMA attrib)* COMMA? RBRACK;
 attrib		:	attribId
 				(	'=' idOrLit
 				|	'(' idOrLit (COMMA idOrLit)* COMMA? ')'
+			//	|	'(' idOrLitx+=~')' (COMMA idOrLitx+=~')')* COMMA? ')'
 				)?;
 attribId	:	id | CONST | FALL | THROW | DEFAULT;
 
@@ -53,8 +55,8 @@ defDecl		:	declNamespace
 			;
 
 declNamespace:	NAMESPACE	( defNamespace									);
-declUsing	:	USING		( defUsing SEMI	| LCURLY attrUsing*		RCURLY	);
-declAlias	:	ALIAS		( defAlias SEMI	| LCURLY attrAlias*		RCURLY	);
+declUsing	:	USING		( defUsing		| LCURLY attrUsing*		RCURLY	);
+declAlias	:	ALIAS		( defAlias		| LCURLY attrAlias*		RCURLY	);
 declAspect	:	ASPECT		( defAspect										);
 declConcept	:	CONCEPT		( defConcept									);
 declEnum	:	ENUM		( defEnum										);
@@ -77,8 +79,8 @@ defNamespace:	id (SCOPE id)*
 				|	COLON
 				|	LCURLY	decl*		RCURLY);
 
-defUsing	:	typespecsNested;
-defAlias	:	id	tplParams?	ASSIGN	typespec;	// TODO: needs COMMA multiple support
+defUsing	:	typespecsNested SEMI;
+defAlias	:	id	tplParams?	ASSIGN	typespec SEMI;	// TODO: needs COMMA multiple support
 
 defAspect	:	id	tplParams?;		// TODO
 defConcept	:	id	tplParams?		// TODO
@@ -86,10 +88,10 @@ defConcept	:	id	tplParams?		// TODO
 					LCURLY	decl*		RCURLY;
 defEnum		:	id
 				(COLON		bases=typespecBasic)?	// TODO: enum inheritance
-					LCURLY	idExprs			RCURLY;
+					LCURLY	idExprs?	RCURLY;
 defStruct	:	id	tplParams?
 				(COLON		bases=typespecsNested)?
-				(REQUIRES 	reqs=typespecsNested)?	// TODO
+				(REQUIRES 	reqs=typespecsNested)?	// TODO: should this rather be "expr" instead of typespecsNested?
 					LCURLY	decl*		RCURLY;
 
 defConvert	:	(	RARROW		to=typespec					// convert -> TYPE	- convert to TYPE	- operator TYPE
@@ -120,7 +122,7 @@ defCoreFunc	:	tplParams?	funcTypeDef?
 				//(REQUIRES	typespecsNested)?;
 
 defVar		:	typedIdAcors;
-
+			//	typespec 	idAccessors	SEMI
 
 // STMTs
 
@@ -173,6 +175,9 @@ stmtReturn	:	RETURN		expr?							SEMI;
 stmtReturnIf:	DO RETURN	expr?	IF LPAREN expr RPAREN	SEMI; // same for throw and break, or make this a general contruct? replace "if" with "when"?
 stmtThrow	:	THROW		expr							SEMI;
 stmtBreak	:	BREAK		INTEGER_LIT?					SEMI;
+stmtContinue:	CONTINUE	INTEGER_LIT?					SEMI;
+stmtContinue2:	CONTINUE	(CASE expr|DEFAULT|ELSE)		SEMI;
+// or goto like in C#?
 
 stmtAssign	:	expr	(assignOP		expr)+	SEMI;
 stmtAggregate:	expr	aggrAssignOP	expr	SEMI;
@@ -280,8 +285,11 @@ funcTypeDef	:	LPAREN	(param (COMMA param)* COMMA?)?	RPAREN;
 
 // can't contain expr, will fck up through idTplArgs with multiple templates (e.g. op | from enums)
 tplArg		:	lit | typespec;
-tplArgs		:	LT tplArg	(COMMA tplArg)*	COMMA? GT;
-tplParams	:	LT id		(COMMA id)*		COMMA? GT;
+tplArgs		:	LT	tplArg	(COMMA tplArg)*	COMMA?	GT;
+tplParams	:	LT	id		(COMMA id)*		COMMA?	GT;
+//tplParams2	:	LT	cs[id]							GT;
+//cs[object id] returns [object[] ret]:	ret+=id (COMMA ret+=id)* COMMA?;
+
 
 threeWay	:	(relOP | equalOP)	COLON	expr;
 
@@ -359,14 +367,14 @@ idAccessors	:	idAccessor	(COMMA idAccessor)*	COMMA?;
 idExprs		:	idExpr		(COMMA idExpr)*		COMMA?;
 typedIdAcors:	typespec 	idAccessors	SEMI;
 
-caseBlock	:	CASE expr (COMMA expr)*
+caseBlock	:	CASE expr (COMMA expr)* COMMA?
 				(	COLON		stmt* (FALL SEMI)?
 				|	LCURLY		stmt* (FALL SEMI)? RCURLY
-				|	PHATRARROW	stmt);
+				|	PHATRARROW	stmt); // expr?
 defaultBlock:	(ELSE|DEFAULT)
 				(	COLON		stmt*
 				|	LCURLY		stmt* RCURLY
-				|	PHATRARROW	stmt);
+				|	PHATRARROW	stmt); // expr?
 
 initList	:	COLON
 				(	id		funcCall (COMMA id funcCall)*	COMMA?
@@ -377,14 +385,6 @@ initList	:	COLON
 funcBody	:	PHATRARROW expr SEMI
 			|	stmt;
 accessorDef	:	attribBlk?	qual* v=( GET | REFGET | SET ) funcBody;
-funcDef		:	id			tplParams?	funcTypeDef?
-				(RARROW		typespec)?
-				(REQUIRES	typespecsNested)?
-				funcBody;
-opDef		:	STRING_LIT	tplParams?	funcTypeDef?
-				(RARROW		typespec)?
-				(REQUIRES	typespecsNested)?
-				funcBody;
 
 // remove this?
 condThen	:	LPAREN	expr	RPAREN	stmt

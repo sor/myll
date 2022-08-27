@@ -375,6 +375,18 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitStmtBreak([NotNull] MyllParser.StmtBreakContext context);
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.stmtContinue"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitStmtContinue([NotNull] MyllParser.StmtContinueContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="MyllParser.stmtContinue2"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitStmtContinue2([NotNull] MyllParser.StmtContinue2Context context);
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.stmtAssign"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
@@ -926,18 +938,6 @@ public interface IMyllParserVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitAccessorDef([NotNull] MyllParser.AccessorDefContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.funcDef"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitFuncDef([NotNull] MyllParser.FuncDefContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="MyllParser.opDef"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitOpDef([NotNull] MyllParser.OpDefContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="MyllParser.condThen"/>.
 	/// </summary>

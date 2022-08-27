@@ -337,6 +337,10 @@ namespace ctor_fun {
 
 func main( int argc, const char*[] argv ) -> int
 {
+	using std;
+	defer cout << "World!\n";
+	cout << "Hello ";
+
 	problem_3351::test();
 	//problem_3331::C::test();
 	return 0;// mainX( argc, argv );

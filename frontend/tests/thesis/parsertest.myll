@@ -54,7 +54,8 @@ namespace TestNS {
 			if( blah == 0 )
 				cout << "blah zero";
 			switch( blah ) {
-				case 1, 2: cout << "one or two";
+				case 1, 2: cout << "less than three\n";
+				else: cout << "more than two\n";
 			}
 		}
 	}

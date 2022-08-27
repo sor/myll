@@ -130,8 +130,10 @@ NAMESPACE	: 'namespace';
 MODULE		: 'module';
 IMPORT		: 'import';
 VOLATILE	: 'volatile';
+// remove
 STABLE		: 'stable';			// antonym to volatile
 CONST		: 'const';
+// remove
 MUTABLE		: 'mut'|'mutable';	// antonym to const
 USING		: 'using';
 ALIAS       : 'alias';
@@ -171,11 +173,12 @@ DTOR		: 'dtor';//|'destructor';
 FUNC		: /*'fn'|*/'func';//|'function';
 PROC		: 'proc';//|'procedure';
 METHOD		: 'meth'|'method';
+//ACCESSOR	: 'acor'|'accessor';	// like func
 ENUM		: 'enum';
 ASPECT		: 'aspect';
 CONCEPT		: 'concept';
 REQUIRES	: 'requires';
-PROP		: 'prop';
+//PROP		: 'prop'|'property';	// like var
 GET			: 'get';
 REFGET		: 'refget';
 SET			: 'set';
@@ -257,3 +260,5 @@ CONSUME		: 'consume';
 PRODUCE		: 'produce';
 REPLACE		: 'replace';
 */
+
+ANY: . ;
