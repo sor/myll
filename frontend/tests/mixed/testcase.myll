@@ -174,5 +174,5 @@ namespace MyNamespace
 			class SubSubClass{}
 		}
 	}
-//*/
 }
+//*/
