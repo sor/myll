@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net6.0</TargetFramework>
 		<LangVersion>9</LangVersion>
 		<Nullable>enable</Nullable>
 		<AssemblyName>myll</AssemblyName>
@@ -17,6 +16,7 @@
 		<AssemblyVersion>0.0.1</AssemblyVersion>
 		<NeutralLanguage>en</NeutralLanguage>
 		<FileVersion></FileVersion>
+		<TargetFrameworks>net6.0;net10.0</TargetFrameworks>
 	</PropertyGroup>
 
 	<PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
