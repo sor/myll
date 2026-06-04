@@ -68,11 +68,11 @@ namespace problem_3321 {
 namespace problem_3322 {
 	func problem_3322() {
 		var int						i,			j;
-		var int*					ip = &i,	jp = &j;
-		var std::unique_ptr<int>	iu1, 		ju1;
-		var int*!					iu2, 		ju2;
-		var int&					ir =  i,	jr =  j;
+		var int&					ir	=  i,	jr	=  j;
+		var int*					ip	= &i,	jp	= &j;
 		var int[10]					ia,			ja;
+		var std::unique_ptr<int>	iu1,		ju1;
+		var int*!					iu2,		ju2;
 	}
 }
 
@@ -312,6 +312,8 @@ namespace ctor_fun {
 		ctor convert bool			{ f = other ? 1 : 2; }	// same as above
 		ctor convert <- bool		{ f = other ? 1 : 2; }	// same as above
 		ctor convert bool ->		{ f = other ? 1 : 2; }	// same as above
+	//	ctor <- bool				{ f = other ? 1 : 2; }	// same as above
+	//	ctor bool ->				{ f = other ? 1 : 2; }	// same as above
 		convert <- bool b			{ f = b ? 1 : 2; }		// same as above
 		convert bool b ->			{ f = b ? 1 : 2; }		// same as above
 

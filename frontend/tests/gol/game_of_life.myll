@@ -105,6 +105,9 @@ class GameOfLife
 		let Map2D&	zeroMap	= doubleBufferedMap[0],
 					oneMap	= doubleBufferedMap[1];
 
+	//  do sizeY, sizeX times y, x in p = Point( x, y )
+	//  do y = sizeY, x = sizeX times p = Point( x, y )
+	//  do y = sizeY times
 		do sizeY times y
 			do sizeX times x
 				if( zeroMap[y][x] != oneMap[y][x] )

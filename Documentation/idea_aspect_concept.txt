@@ -17,7 +17,7 @@ aspect pure
 aspect pre // or post
 	: operator // makes the op a pre or post increment
 
-aspect symmetric
+aspect symmetric // special handling for "op<" calling "op>" ?
 	: operator, func // makes the op or func symmetric, f(b,a) calls f(a,b) 
 
 aspect asymmetric
@@ -28,12 +28,132 @@ aspect asymmetric
 
 concept Compareable<TL,TR>
 {
-	[symetric]	// for operators and functions, generates a (TR r, TL l) mirrored equivalent op/func 
+	[symetric]	// for operators and functions, generates a (TR r, TL l) mirrored equivalent op/func, in this case it requires a mirrored equivalent 
 	operator "<" (TL l, TR r) -> bool;
 }
 
+[require = Comparable<T,int>]
 func hans<T>(T& val) -> V
 requires Compareable<T,int>
 {
 	return val == 6;
 }
+
+class A
+{
+	field int a, b;
+	[primary] ctor();			// ctor( int a, int b ) { this->a = a; this->b = b; }
+	[primary,named=no] ctor();	// would prevent named arguments
+}
+var A     a1	= ( 1, 2 );			// calls primary ctor
+var A     a2	= ( a: 1, b: 2 );	// calls primary ctor with named args (if it is avail), left side of ":" needs to be literal identifier
+var A     a3	= ( b: 2 );			// same as above, but omitting a, so a is default init
+var A     a4	= { a: 1, b: 2 };	// ?? calls primary ctor with named args (if it is avail), left side of ":" needs to be literal identifier
+var A     a5	= { b: 2 };			// ?? same as above, but omitting a, so a is default init
+var int[] ar1	= { [2] = 99 };		// array [0,0,99], this is how C does it
+var int[] ar2	= [ 2: 99 ];		// array [0,0,99]... now that I write how I expect it to contain things, I realize I want it to look close to this :D
+
+var { i32 i, f32 f }
+
+var int[,] twoDimArray;
+twoDimArray[x, y] = 99;			// could become something like: twoDimArray[make_pair(x, y)] = 99; or twoDimArray[y][x] = 99; depending on how it is internally done
+// or like this, where it always will be two nested arrays
+var int[][] twoDimArray;
+twoDimArray[47, 11] = 99;			// could become something like: twoDimArray[47][11] = 99;
+// also:
+var int[x:,y:] namedTwoDimArray;	// just int[x,y] would dimension the array with sizes provided in vars x and y 
+namedTwoDimArray[x: 47, y: 11] = 99;
+
+var Map<int, string>             map = { 99: "Hans", 2357: "3 minutes before midnight" };	// init_list of k/v pair, "key: value", not named parameters, left side of ":" can be variable
+var Vec<Tuple<i32, f32, string>> vec = [ { 99, 6.28, "Moep" }, {} ];						// second entry is default init
+var Vec<Tuple<i32, f32, string>> vec = [ [ 99, 6.28, "Moep" ], [] ];						// second entry is default init, here init is better, default init maybe worse?!
+
+constructor
+	return type
+	exceptions
+	no-init
+	Problems when calling virtual function
+	OR calling non-virtual function, which transitively calls a virtual function (same problem, but less obvious/visible)
+	Myll needs to notice if a non-virt function calls a virt one, then gets marked as virt-calling, those then complain when being used in ctor
+	CRTP in ctors possible?!
+	CRTP: class Derived : public Base<Self> // the general Self replaces the specific Derived
+		// this way you get around copy-paste errors which might not update the TParam in Base like this:
+		class Derived2 : public Base<Derived1>
+	CRTP: 3+ levels deep, how?
+		C++:
+			template <typename Derived = MyBase>		class MyBase											{/*...*/};
+			template <typename Derived = MyDerived>		class MyDerived		: public MyBase<MyDerived>			{/*...*/};
+			template <typename Derived = MyDeepDerived>	class MyDeepDerived	: public MyDerived<MyDeepDerived>	{/*...*/};
+		Myll:
+			[CRTP]	class MyBase					{...}	// Creates a type Derived which is the type of the most derived type, like shown above as template param
+			[CRTP]	class MyDerived		: MyBase	{...}
+			[CRTP]	class MyDeepDerived	: MyDerived	{...}
+		Error cases that could be cought in Myll:
+					class RawBase					{...}
+			[CRTP]	class MyDerived2	: RawBase	{...} // would complain that RawBase is not marked as [CRTP], if intentional to start at this inheritance level set [CRTP=start]
+					class RawDeepDerived: MyDerived	{...} // would complain that it's not marked as [CRTP], if intentional to stop at this inheritance level set [CRTP=stop]
+
+// diese Klasse ist abstrakt, weil sie eine nicht implementierte methode enthält
+[CRTP] class MyBase {
+	[abstract] func impl(); // nicht virtuell, nicht implementiert
+}
+
+One could split the [CRTP] attribute in two, one that tells something is being able to be used as base "[CRTP] class Base",
+and one where the inheritance happens "class MyConcrete : [CRTP] Base"... but the second one is kind of unnecessary as Base knows that it is CRTP and therefore
+needs the TDerived passed in... BUT it is explicit, therefore more clear when just reading MyConcrete
+
+Instead     of using this, provide dhis/dthis/dptr (derived-this), expanding to this->derivedPtr()
+And instead of using self, provide delf/dself/dref (derived-self), expanding to this->derivedRef()
+OR when we have a CRTP, then this/self are just replaced by the properly cast types?!?
+
+Add the "friend" trick from fluentCPP to prevent misusage! Or is it even necessary? As Myll can check more in depth what needs to be fulfilled there.
+Manually implementing a Ctor might change what is automatically generated and this might not work with deeper CRTP hierarchies
+
+For Mixin usage of CRTP, the MixinBase does not tell which methods need to be implemented,
+Myll could do better, allow for non-virtual abstract methods to tell what needs to be implemented
+
+maybe_const		Const-overloaded methods
+	Derived* derived() {
+		return static_cast<Derived*>(this);
+	}
+	const Derived* derived() const {
+		return static_cast<const Derived*>(this);
+	}
+	
+	// dies hier erzeugt die beiden obengenannten
+	schroedingers_const Derived* derived() schroedingers_const {
+		return static_cast<schroedingers_const Derived*>(this);
+	}
+	maybe_const Derived* derived() maybe_const {
+		return static_cast<maybe_const Derived*>(this);
+	}
+	cond_const, adapt_const
+
+	mutable	Derived* derived() mutable	{...}
+	const	Derived* derived() const	{...}
+			Derived* derived()			{...}	// both of the above
+
+"flexible"
+"dynamic":		Betont die Möglichkeit zur Veränderung zur Laufzeit.
+"adaptable":	Deutet auf die Anpassungsfähigkeit des Objekts hin.
+"mutable_maybe":	Eine Erweiterung des existierenden "mutable", die die Flexibilität betont.
+"variable":		Direkt auf die Veränderbarkeit bezogen, könnte aber mit Variablen verwechselt werden.
+"fluid":		Impliziert Formbarkeit und Anpassungsfähigkeit.
+"changeable":	Sehr direkt in Bezug auf die Veränderbarkeit.
+"alterable":	Ähnlich wie "changeable", aber etwas formeller.
+"modifiable":	Betont die Möglichkeit zur Modifikation.
+"adjustable":	Impliziert feine Anpassungen.
+"volatile":		Bereits in C++ verwendet, aber in einem anderen Kontext. Könnte umgedeutet werden.
+"malleable":	Betont die Formbarkeit und Anpassungsfähigkeit.
+"adaptive":		Ähnlich wie "adaptable", aber mit einer aktiveren Konnotation.
+
+	void foo()	&	{...}
+	void foo()	&&	{...}
+	void foo()		{...} // both of the above
+
+
+	void does_this_make_sense(maybe_const int * i) {
+		*i = 99; // would fail for the const variant
+	}
+
+Myll: Disallow object slicing (is it slicing if the derived class only adds methods?)

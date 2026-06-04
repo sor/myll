@@ -243,6 +243,9 @@ namespace Myll
 			return ret;
 		}
 
+		// TODO: Add a way to disable a < b < c
+		//                      to be a < b && b < c
+		// do braces help?
 		private class FlattenRelational
 		{
 			private readonly List<Expr>    exprs = new( 4 );

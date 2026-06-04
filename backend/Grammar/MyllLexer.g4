@@ -133,7 +133,7 @@ VOLATILE	: 'volatile';
 // remove
 STABLE		: 'stable';			// antonym to volatile
 CONST		: 'const';
-// remove
+// remove as C++'s mutable will be a attribute, doesn't need to be a keyword
 MUTABLE		: 'mut'|'mutable';	// antonym to const
 USING		: 'using';
 ALIAS       : 'alias';
@@ -146,6 +146,7 @@ DTOR		: 'dtor';//|'destructor';
 // # Read as "convert from OTHER"
 // explicit ctor( OTHER o )	{...}	// manual, converting ctor, convert from type OTHER
 // convert <- OTHER o 		{...}	// is a ctor like above
+// convert from OTHER o 	{...}	// is a ctor like above
 // convert OTHER o ->		{...}	// same as above, alternative syntax
 // ctor convert <- OTHER o	{...}	// same as above, with ctor
 // ctor convert OTHER o ->	{...}	// same as above, alternative syntax
@@ -154,6 +155,7 @@ DTOR		: 'dtor';//|'destructor';
 // # Read as "convert to OTHER"
 // explicit operator OTHER(){...}	// manual, converting operator, convert self to type OTHER
 // convert -> OTHER			{...}	// is a convert operator like above, pure by default
+// convert to OTHER			{...}	// is a convert operator like above, pure by default
 // operator convert -> OTHER{...}	// same as "convert -> OTHER", alternative syntax
 // operator convert OTHER	{...}	// same as above, no arrow syntax
 
@@ -163,7 +165,10 @@ DTOR		: 'dtor';//|'destructor';
 // ctor copy				{...}	// same as above
 // ctor( SELF && other )	{...}	// manual
 // ctor move				{...}	// same as above
-// ctor forward : BASE		{...}	template <typename... Args, typename = decltype(BASE(std::declval<Args>()...))> SELF(Args&&... args) : BASE(std::forward<Args>(args)...) {}
+// ctor forward : BASE		{...}	// ": BASE" optional
+//      template <typename... Args, typename = decltype(BASE(std::declval<Args>()...))>
+//      SELF(Args&&... args) : BASE(std::forward<Args>(args)...) {}
+//      https://stackoverflow.com/a/36373595/2433616
 //
 // operator "=" ( const SELF & o )	{...}	// manual
 // operator copy =					{...}

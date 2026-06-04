@@ -152,3 +152,8 @@ Den Aufruf innerhalb main in b.A::a(9.0) zu ändern führt auch dazu das der dou
 Dies ist nicht optimal und besonders hässlich im zweiten Fall.
 
 
+// Sealed Class
+Nur innerhalb der selben Lib ableitbar, dadurch kann man die "exaustiveness" der Behandlung aller Ableitungen gewärleisten
+Late sealing? Also eine Lib benutzt eine non-sealed class und erstellt ableitungen einer Klasse, sagt dann das diese baseclass sealed ist,
+heist das nur die Lib und das aktuelle Projekt ableiten dürfen.
+

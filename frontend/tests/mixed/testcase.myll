@@ -1,4 +1,4 @@
-#!/usr/bin/myll // ignored by the compiler
+#!/usr/bin/myll // currently ignored by the compiler
 
 module testcase;
 
@@ -9,6 +9,36 @@ class Derived : Base	{ [pub]:				[virtual]dtor(){} }
 class Unrelated			{ [default] ctor(); }
 
 alias belanna = func(int)->bool*;
+
+/*
+func loops()
+{
+	for{}                   // infinite
+	for(){}                 // infinite
+	for(16)                 // iterate 16 times, no iter var
+	for(int i=16)           // iterate 16 times, i 0 to 15
+	for(var int i=16)       // iterate 16 times, i 0 to 15
+	for(0...15){}           // interval 0 to 15, no iter var, same as above
+	for(i=0...15){}         // interval 0 to 15, auto typed
+	for(i=[0...15]){}       // interval 0 to 15, auto typed
+	for(auto i=[0...15]){}  // interval 0 to 15, auto typed
+	for(int i=[0...15]){}   // interval 0 to 15
+	for(var int i=0...15){} // interval 0 to 15
+	for(int i=0...15,j=15...0){}// interval i 0 to 15, j 15 to 0
+	for(a:as){}             // range based, auto typed
+	for(auto a:as){}        // range based, auto typed
+	for(type a:as){}        // range based
+	for(var type a:as){}    // range based
+	for(const type a:as){}  // range based, const
+	for(i<=16){i++;}        // manual while, 0 to 16
+	for(post:i<=16){i++;}   // manual do-while, 0 to 16
+	for([post]i<=16){i++;}  // manual do-while, 0 to 16
+	[post]for(i<=16){i++;}  // manual do-while, 0 to 16
+	for(int i=0; i<=16; i++){}      // manual for, 0 to 16
+	for(int i=0; post:i<=16; i++){} // manual do-for, 0 to 16
+	for([0<=...<=16])
+}
+*/
 
 func test() -> int
 {
@@ -68,6 +98,35 @@ operator "|" (MyEnum lhs, MyEnum rhs) -> MyEnum
 	);
 }
 */
+
+class Init
+{
+	field
+	{
+		i32 dontInit = uninit;  // alt.: var = --, var = void // null would not work, as it would init a ptr
+		i32 lateInit = late;    // alt.: var = later
+	}
+}
+
+[pack=4, align=8]
+class PackAndAlign
+{
+	field f32* iptr;
+	field f32  f;
+}
+var PackAndAlign pna;
+/*
+// Becomes this:
+#pragma pack(push, 4)
+class PackAndAlign {
+    f32 * ptr;
+    f32   f;
+};
+#pragma pack(pop)
+
+alignas(8) PackAndAlign pna;
+*/
+
 namespace MyNS
 {
 	class MyClassX

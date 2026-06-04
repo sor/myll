@@ -94,6 +94,8 @@ defStruct	:	id	tplParams?
 				(REQUIRES 	reqs=typespecsNested)?	// TODO: should this rather be "expr" instead of typespecsNested?
 					LCURLY	decl*		RCURLY;
 
+// convert is implicit by default?
+// ctor    is explicit by default?
 defConvert	:	(	RARROW		to=typespec					// convert -> TYPE	- convert to TYPE	- operator TYPE
 				|				from=typespec	id?	RARROW	// convert TYPE ->	- convert from TYPE	- ctor( TYPE ) // not very analogous to the return type definition
 				|	LARROW		from=typespec	id?			// convert <- TYPE	- convert from TYPE	- ctor( TYPE )
@@ -305,6 +307,7 @@ capture		:	LBRACK	args?	RBRACK;
 //		+volatile	= static_cast adding volatile
 //		!			= std::bit_cast
 //		!!			= reinterpret_cast
+
 // TODO REMOVE THEM ALL, IN CODE TOO
 //					xxx
 //preOpExpr	:	preOP;
