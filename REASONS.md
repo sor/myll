@@ -28,3 +28,26 @@ All includes sorted alphabetically.
 Types like `std::int8_t` in `StmtFormatting.cs` are left as-is. C++ guarantees that
 `<cstdint>` provides these in `std::` namespace. Myll targets C++ only (no C mode),
 so `int8_t` in global namespace is irrelevant.
+
+## 2026-06-10 — Intentionally Unimplemented Features
+
+### Problem
+Several keywords exist in the grammar and parser but have no stable design yet.
+Accidentally implementing them now would lock in bad decisions and create
+migration pain when the real design emerges.
+
+### What Is Intentionally Unimplemented
+| Feature | Grammar Status | Why Not Implemented |
+|---------|----------------|---------------------|
+| `aspect` | Parsed, visitor stub | Concept not finalized |
+| `concept` | Parsed, visitor stub | Concept not finalized |
+| `defer` | Parsed, no visitor | Needs ownership/borrowing semantics first |
+| `convert` | Parsed, visitor stub | Syntax direction (`->` vs `<-`) undecided |
+
+### What Changed
+No code changes. These remain as `throw new NotImplementedException` in the
+visitor, but now with an explicit comment: `// RESERVED: do not implement`.
+
+### Where to Track
+See `AGENTS.md` → "Planned Work" for the active priority list.
+This file (`REASONS.md`) remains the decision log.

@@ -19,9 +19,9 @@ Version: 0.0.1, early beta state. License undecided.
 - Targets: net6.0;net10.0
 
 ## Test Examples (via CLI)
-- Thesis:   `dotnet run --project frontend -- -i frontend/tests/thesis/*.myll -o frontend/tests/thesis/generated -cr`
-- GameLof:  `dotnet run --project frontend -- -i frontend/tests/gol/*.myll -o frontend/tests/gol/generated -cr`
-- Mixed:    `dotnet run --project frontend -- -i frontend/tests/mixed/*.myll -o frontend/tests/mixed/generated -cr`
+- Thesis:     `dotnet run --project frontend -- -i frontend/tests/thesis/*.myll -o frontend/tests/thesis/generated -cr`
+- GameOfLife: `dotnet run --project frontend -- -i frontend/tests/gol/*.myll -o frontend/tests/gol/generated -cr`
+- Mixed:      `dotnet run --project frontend -- -i frontend/tests/mixed/*.myll -o frontend/tests/mixed/generated -cr`
 
 ## ANTLR
 - Grammar files: backend/Grammar/MyllLexer.g4, MyllParser.g4
@@ -50,6 +50,8 @@ Version: 0.0.1, early beta state. License undecided.
 
 ## Planned Work
 1. Testing + CI/CD first — harness existing .myll files into automated validation
-2. Implement reachable NotImplementedException features (named args, null coalescing call, copy-cast, else-on-loop, discard, empty stmt)
+2. Implement reachable NotImplementedException features:
+     - named args, null coalescing call, copy-cast, else-on-loop, discard, empty stmt
+     - **NOT** aspect, concept, defer, convert — see REASONS.md (2026-06-10)
 3. Cleanup — oldParser/oldCodeGen removal, TODO triage, HACK resolution
 4. .idea/ misc.xml shared ANTLR config added to .gitignore exception
