@@ -63,13 +63,22 @@ namespace Myll.Tests
 			Assert.Equal( 0, myllResult.ExitCode );
 			Assert.False( myllResult.TimedOut, "Myll compiler timed out" );
 
+			bool expectCppCompileFailure = CaseConfig.ExpectCppCompileFailure( caseName );
+
 			// 2. Golden file comparison
-			string goldenDir = Path.Combine( RepoRoot, "testing", "golden", caseName );
-			bool goldenMatch = GoldenFileComparer.Compare( generatedDir, goldenDir, out string diffReport );
-			if( !goldenMatch )
+			if( !expectCppCompileFailure )
 			{
-				output.WriteLine( "Golden file mismatch:\n" + diffReport );
-				Assert.True( goldenMatch, diffReport );
+				string goldenDir = Path.Combine( RepoRoot, "testing", "golden", caseName );
+				bool goldenMatch = GoldenFileComparer.Compare( generatedDir, goldenDir, out string diffReport );
+				if( !goldenMatch )
+				{
+					output.WriteLine( "Golden file mismatch:\n" + diffReport );
+					Assert.True( goldenMatch, diffReport );
+				}
+			}
+			else
+			{
+				output.WriteLine( "Skipping golden comparison; case is configured to expect C++ compile failure." );
 			}
 
 			// 3. Optional C++ compile + run
@@ -83,10 +92,10 @@ namespace Myll.Tests
 			if( cppFiles.Length == 0 )
 				return;
 
-			CompileAndRunCpp( cppFiles, generatedDir, caseName );
+			CompileAndRunCpp( cppFiles, generatedDir, caseName, expectCppCompileFailure );
 		}
 
-		private void CompileAndRunCpp( string[] cppFiles, string workingDir, string caseName )
+		private void CompileAndRunCpp( string[] cppFiles, string workingDir, string caseName, bool expectFailure )
 		{
 			string executable = RuntimeInformation.IsOSPlatform( OSPlatform.Windows )
 				? "test.exe"
@@ -94,15 +103,15 @@ namespace Myll.Tests
 
 			string binaryPath = Path.Combine( workingDir, executable );
 			string cppArgList = string.Join( " ", cppFiles.Select( Quote ) );
-			string cxxFlags   = "-std=c++20 ";
 
-			// Prefer clang++, fall back to g++
 			(string compiler, bool found)[] compilers = {
 				("clang++", CompilerExists( "clang++" )),
 				("g++", CompilerExists( "g++" )),
+				("cl", CompilerExists( "cl" )),
 			};
 
-			bool anyCompiled = false;
+			bool anyFound = false;
+			bool anySucceeded = false;
 			foreach( var (compiler, found) in compilers )
 			{
 				if( !found )
@@ -111,7 +120,11 @@ namespace Myll.Tests
 					continue;
 				}
 
-				string args = $"{cxxFlags}{cppArgList} -o {Quote( binaryPath )}";
+				anyFound = true;
+
+				string args = compiler == "cl"
+					? $"/nologo /std:c++20 /EHsc {cppArgList} /Fe:{Quote( binaryPath )}"
+					: $"-std=c++20 {cppArgList} -o {Quote( binaryPath )}";
 				output.WriteLine( $"Running: {compiler} {args}" );
 				ProcessResult compileResult = ProcessRunner.Run( compiler, args, workingDirectory: workingDir,
 					timeout: CaseConfig.CompileTimeout( caseName ) );
@@ -122,16 +135,30 @@ namespace Myll.Tests
 
 				if( compileResult.ExitCode == 0 )
 				{
-					anyCompiled = true;
-					break;
+					anySucceeded = true;
+				}
+				else if( !expectFailure )
+				{
+					Assert.Fail( $"C++ compiler {compiler} failed with exit code {compileResult.ExitCode}." );
 				}
 			}
 
-			if( !anyCompiled )
+			if( !anyFound )
 			{
-				output.WriteLine( "No C++ compiler succeeded; skipping binary execution." );
+				if( expectFailure )
+					Assert.Fail( "No C++ compiler available; cannot verify expected compile failure." );
+
+				output.WriteLine( "No C++ compiler available; skipping binary execution." );
 				return;
 			}
+
+			if( expectFailure )
+			{
+				Assert.False( anySucceeded, "Expected C++ compile to fail, but at least one compiler succeeded." );
+				return;
+			}
+
+			Assert.True( anySucceeded, "No C++ compiler succeeded; cannot run generated binary." );
 
 			// Run the binary
 			output.WriteLine( $"Running: {binaryPath}" );
@@ -150,8 +177,9 @@ namespace Myll.Tests
 		{
 			try
 			{
-				ProcessResult r = ProcessRunner.Run( "which", name, timeout: TimeSpan.FromSeconds( 5 ) );
-				return r.ExitCode == 0 && !string.IsNullOrWhiteSpace( r.StdOut );
+				string args = name == "cl" ? "/nologo /?" : "--version";
+				ProcessResult r = ProcessRunner.Run( name, args, timeout: TimeSpan.FromSeconds( 5 ) );
+				return r.ExitCode == 0;
 			}
 			catch
 			{

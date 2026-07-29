@@ -1,0 +1,11 @@
+func test01() {
+	var int i = 4, j = 7;
+	i + j;
+	i * j;
+	i - j;
+	i / j;
+	i % j;
+
+	i | j;
+	i & j;
+}

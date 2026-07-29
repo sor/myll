@@ -1,0 +1,124 @@
+//#! myll -Ccri tests/gol/*.myll -o tests/gol/generated
+
+//module game_of_life; // this is game_of_life by default
+
+import std_thread;
+//import std_iostream;
+
+namespace JanSordid;
+
+class GameOfLife
+{
+	alias Map2D = char[16][40];
+
+	const i32		sizeX = 40,
+					sizeY = 16;
+	field u8		currentIndex = 0;
+	field Map2D[2]	doubleBufferedMap; // = {{{0}}};
+
+[pub]:
+	ctor()
+	{
+		var Map2D & dstMap = doubleBufferedMap[currentIndex];
+
+		// Exploration: Two nested loops like this?
+		//do sizeY, sizeX times y, x {}
+		//do [sizeY, sizeX] times [y, x] {}
+		//do sizeY times y, sizeX times x {}
+		//do sizeY times y do sizeX times x {} // should work already
+		//do( y: sizeY ) times {}
+		//do( y: sizeY, x: sizeX ) times {}
+		//do times( y: sizeY, x: sizeX ) {}
+		do sizeY times y
+		{
+			do sizeX times x
+			{
+				if( 0 < y < sizeY-1
+				 && 0 < x < sizeX-1 )
+				{
+					dstMap[y][x] = (rand() % 4 == 0) ? 'o' : ' ';
+				}
+				else
+				{
+					dstMap[y][x] = 'X';
+				}
+			}
+		}
+	}
+
+	func iterate()
+	{
+		let u8		nextIndex	= 1 - currentIndex;
+		let Map2D&	srcMap		= doubleBufferedMap[currentIndex];
+		var Map2D&	dstMap		= doubleBufferedMap[nextIndex];
+
+		do sizeY times y
+		{
+			do sizeX times x
+			{
+				if( srcMap[y][x] == 'X' )
+				{
+					dstMap[y][x] = 'X';
+				}
+				else
+				{
+					const bool aliveSelf = srcMap[y][x] == 'o';
+					const int  aliveNeighborCount =
+						  (srcMap[y-1][x-1] == 'o')
+						+ (srcMap[y-1][x  ] == 'o')
+						+ (srcMap[y-1][x+1] == 'o')
+						+ (srcMap[y  ][x-1] == 'o')
+						+ (srcMap[y  ][x+1] == 'o')
+						+ (srcMap[y+1][x-1] == 'o')
+						+ (srcMap[y+1][x  ] == 'o')
+						+ (srcMap[y+1][x+1] == 'o');
+					const bool aliveDst = aliveSelf
+						? (aliveNeighborCount == 2 || aliveNeighborCount == 3)
+						: (aliveNeighborCount == 3);
+
+					dstMap[y][x] = aliveDst ? 'o' : ' ';
+				}
+			}
+		}
+
+		currentIndex = nextIndex;
+	}
+
+	//func output( std::ostream& stream )
+	func output<T>( T& stream )
+	{
+		const Map2D& srcMap = doubleBufferedMap[currentIndex];
+
+		do sizeY times y
+		{
+			do sizeX times x
+			{
+				stream << srcMap[y][x];
+			}
+			stream << '\n';
+		}
+	}
+
+	[pure]
+	func hasConverged() -> bool
+	{
+		let Map2D&	zeroMap	= doubleBufferedMap[0],
+					oneMap	= doubleBufferedMap[1];
+
+		do sizeY times y
+			do sizeX times x
+				if( zeroMap[y][x] != oneMap[y][x] )
+					return false;
+
+		return true;
+	}
+}
+
+/*
+TODO:
+- abstrahieren von den doppel loops und den üblichen Zugriffen darauf
+	- Lösung via der vereinfachten lambda syntax?
+- do-times offsetbar z.B. i+1 loopt nicht von 0 bis n-1 sondern von 1 bis n
+- grenzwert abfragen möglich machen
+- [*] funzen noch nicht?!
+*/

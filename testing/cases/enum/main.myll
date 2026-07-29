@@ -1,8 +1,15 @@
 module main;
-import basic;
+import basic, numbered, flags;
 
 func main() -> int
 {
-	var Test test = Test::A;
-	return 0;
+	var int r = basic_test();
+	if( r != 0 )
+		return r;
+
+	r = numbered_test();
+	if( r != 0 )
+		return r;
+
+	return flags_test();
 }

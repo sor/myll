@@ -3,7 +3,11 @@
     "globalFactor": 1,
     "myll": { "default": 10 },
     "compile": { "default": 10 },
-    "run": { "default": 5 }
+    "run": {
+      "default": 5,
+      "gol": 30
+    }
   },
-  "myllCompileRun": [ "enum" ]
+  "myllCompileRun": [ "enum" ],
+  "expectedCppCompileFailures": [ "cpp_fail" ]
 }
