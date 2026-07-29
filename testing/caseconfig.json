@@ -1,0 +1,9 @@
+{
+  "timeouts": {
+    "globalFactor": 1,
+    "myll": { "default": 10 },
+    "compile": { "default": 10 },
+    "run": { "default": 5 }
+  },
+  "myllCompileRun": [ "enum" ]
+}

@@ -1,0 +1,8 @@
+module main;
+import basic;
+
+func main() -> int
+{
+	var Test test = Test::A;
+	return 0;
+}
