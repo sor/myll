@@ -121,7 +121,7 @@ namespace Myll.Generator
 						? Format( "#include <{0}>", i.Substring( 4 ) )
 						: i.StartsWith( "c_" )
 						? Format( "#include <c{0}>", i.Substring( 2 ) )
-						: Format( "#include \"{0}.h\"", i ) );
+						: Format( "#include \"{0}.hpp\"", i ) );
 
 			IStrings declList = GenDecl();
 			IStrings decl = DefaultIncludes
@@ -173,7 +173,7 @@ namespace Myll.Generator
 			Strings implList = GenImpl();
 			if( implList.Count != 0 ) {
 				GlobalNamespace globalNS = (GlobalNamespace) hierarchical;
-				IStrings        impl     = implList.Prepend( Format( "#include \"{0}.h\"", globalNS.module ) );
+				IStrings        impl     = implList.Prepend( Format( "#include \"{0}.hpp\"", globalNS.module ) );
 				return impl;
 			}
 			else {
