@@ -18,10 +18,13 @@ These can be implemented with the current AST only.
 
 #### Empty statement
 - Syntax: `;`
-- C++ output: `;`
-- Implementation: make `EmptyStmt.Gen()` return the same as
-  `GenWithoutCurly()`.
-- Files: `backend/Core/Stmt.cs`
+- C++ output: `;` on its own line, indented to the surrounding scope.
+- Implementation:
+  - `EmptyStmt.Gen()` and `GenWithoutCurly()` both return `";".IndentAll(level)`.
+  - `MultiStmt` keeps an `EmptyStmt` when it is the *only* statement via `NonEmptyStmts()`; other stray empties are still filtered out.
+  - Loop bodies go through `VisitBlockify()` so they stay as `MultiStmt` scopes, and an empty body is rendered as `{ ; }`.
+- Files: `backend/Core/Stmt.cs`, `backend/Visitor/VStmt.cs`
+- Cleanup: later avoid generating `{}` around an empty loop body; emit `for(...);` / `while(...);` / `do; while(...);` instead.
 
 ### M2: Type information needed
 The following features need the resolved type of an expression or the
