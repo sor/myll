@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -21,6 +22,7 @@ namespace Myll.Tests
 			string fileName,
 			string arguments,
 			string? workingDirectory = null,
+			IReadOnlyDictionary<string, string>? environment = null,
 			TimeSpan? timeout = null )
 		{
 			timeout ??= TimeSpan.FromSeconds( 30 );
@@ -36,6 +38,10 @@ namespace Myll.Tests
 
 			if( workingDirectory != null )
 				psi.WorkingDirectory = workingDirectory;
+
+			if( environment != null )
+				foreach( var pair in environment )
+					psi.Environment[pair.Key] = pair.Value;
 
 			using var process = Process.Start( psi )
 			             ?? throw new InvalidOperationException( $"Failed to start process: {fileName}" );

@@ -163,6 +163,7 @@ namespace Myll.Tests
 			// Run the binary
 			output.WriteLine( $"Running: {binaryPath}" );
 			ProcessResult runResult = ProcessRunner.Run( binaryPath, "", workingDirectory: workingDir,
+				environment: new Dictionary<string, string> { ["MYLL_TEST"] = "1" },
 				timeout: CaseConfig.RunTimeout( caseName ) );
 
 			output.WriteLine( runResult.StdOut );

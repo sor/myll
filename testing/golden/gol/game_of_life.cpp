@@ -47,7 +47,7 @@ bool JanSordid::GameOfLife::hasConverged() const
 int main()
 {
     using namespace JanSordid;
-    const auto sleepTime = milliseconds( 166 );
+    const auto sleepTime = std::getenv( "MYLL_TEST" ) != nullptr ? milliseconds( 0 ) : milliseconds( 166 );
     GameOfLife gol = GameOfLife();
     while( true ) {
         gol.output( std::cout );
