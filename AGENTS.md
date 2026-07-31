@@ -33,6 +33,11 @@ Version: 0.0.1, early beta state. License undecided.
 - Visitor pattern: VExpr, VDecl, VStmt, VTypes walk the ANTLR parse tree → Core AST → Generator produces C++
 - No unit test project. Tests are .myll source files that should compile to valid C++.
 
+## Documentation & Code Formatting Rules
+- Markdown files (`*.md`): do not insert manual line breaks inside sentences. Break only at full stops (`. `). Let the editor / viewer wrap to window width.
+- C# source (`*.cs`) and Myll source (`*.myll`): keep lines around 120 characters. Do not break if it is only a few characters above, but always break before 160 characters.
+- Technical docs (plans, specs, ADRs): use relaxed Simplified Technical English style. Keep sentences short. Use active voice. Put one main action per bullet.
+
 ## Current State & Priorities
 - No automated tests, no CI/CD
 - 108+ TODO/FIXME/HACK comments in backend
@@ -47,6 +52,7 @@ Version: 0.0.1, early beta state. License undecided.
 - **Commits**: Small, focused messages. Prefer many small commits over large batches
 - **Testing**: Validate with `dotnet build` and at least one compiled test suite after any backend change
 - **ANTLR**: Grammar changes → regenerate → commit generated files with the grammar change
+- **Wrap-up**: Before ending a workday or switching to a different topic, check whether `AGENTS.md`, `plan/*.md`, or other docs need updates so they stay consistent with the current state.
 
 ## Planned Work
 1. Testing + CI/CD first — harness existing .myll files into automated validation

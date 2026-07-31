@@ -1,19 +1,18 @@
 # Expression Features Plan
 
 ## Goal
-Finish the expression-level features that are already parsed but not yet
-lowered to C++, and add the missing `discard` support.
+Complete the expression-level features that the parser already accepts, convert them to C++, and add `discard` support.
 
 ## Milestones
 
 ### M1: No type information needed
-These can be implemented with the current AST only.
+You can implement these features with only the current AST.
 
 #### Discard assignment
 - Syntax: `_ = <expr>;`
 - C++ output: `(void)(<expr>);`
-- Implementation: special-case `leftExpr is Discard` in `AggrAssign.Gen()`
-  for `Operand.Assign`.
+- Use cases: call something for side effects and ignore its return value, show that you do not need the result, or avoid `[[nodiscard]]` warnings without a dummy variable.
+- Implementation: in `MultiAssign.Gen()`, check whether the first expression is a `Discard`. If it is, emit `(void)(<last expression>);`.
 - Files: `backend/Core/Stmt.cs`
 
 #### Empty statement
@@ -21,46 +20,44 @@ These can be implemented with the current AST only.
 - C++ output: `;` on its own line, indented to the surrounding scope.
 - Implementation:
   - `EmptyStmt.Gen()` and `GenWithoutCurly()` both return `";".IndentAll(level)`.
-  - `MultiStmt` keeps an `EmptyStmt` when it is the *only* statement via `NonEmptyStmts()`; other stray empties are still filtered out.
-  - Loop bodies go through `VisitBlockify()` so they stay as `MultiStmt` scopes, and an empty body is rendered as `{ ; }`.
+  - `MultiStmt` keeps an `EmptyStmt` when it is the only statement via `NonEmptyStmts()`. Other stray empty statements are still filtered out.
+  - Loop bodies use `VisitBlockify()`. They stay as `MultiStmt` scopes. An empty body becomes `{ ; }`.
 - Files: `backend/Core/Stmt.cs`, `backend/Visitor/VStmt.cs`
-- Cleanup: later avoid generating `{}` around an empty loop body; emit `for(...);` / `while(...);` / `do; while(...);` instead.
+- Cleanup: later avoid generating `{}` around an empty loop body. Emit `for(...);`, `while(...);`, or `do; while(...);` instead.
 
 ### M2: Type information needed
-The following features need the resolved type of an expression or the
-expected type from the surrounding context.
+The following features need the type of an expression or the type that the surrounding context expects.
 
 #### Discard as a value
-- Syntax: `inOutFunc(_);` or `return _;`
+- Syntax:
+  - `inOutFunc(_);`
+  - `(_, y) = split();` (needs multi-value assignment / destructuring first)
+- Not planned: `switch` wildcard case. `default:` already covers this, and we may alias it as `else:` for consistency with `if` and loops.
 - Requirements:
   - Know the expected parameter / return type.
   - Generate a temporary of that type so C++ can bind it.
 - Examples:
-  - `inOutFunc(_)` with parameter `int&` should become something like
-    `int __discard_tmp; inOutFunc(__discard_tmp);`.
-  - `return _` should likely be a semantic error until the language defines
-    what it means; or it needs the function return type.
-- Files: `backend/Core/Expr.cs`, `backend/Core/Mixed.cs`,
-  `backend/Core/Stmt.cs`
+  - `inOutFunc(_)` with parameter `int&` becomes something like `int __discard_tmp; inOutFunc(__discard_tmp);`.
+  - `return _` is probably a semantic error until the language defines what it means.
+- Files: `backend/Core/Expr.cs`, `backend/Core/Mixed.cs`, `backend/Core/Stmt.cs`
 
 #### Copy-cast `(copy)(expr)`
 - Syntax: `(copy)(expr)`
 - Requirements:
   - Resolve the value type of `expr` (strip references).
   - Emit a copy construction or functional cast: `T(expr);`.
-- Note: grammar and visitor already have scaffolding (`COPY` token,
-  `Operand.CopyCast`), but `VExpr.cs` currently throws.
+- Note: the grammar and visitor already contain the needed parts (`COPY` token, `Operand.CopyCast`). `VExpr.cs` currently throws an exception.
 - Files: `backend/Visitor/VExpr.cs`, `backend/Core/Expr.cs`
 
 #### Move-cast `(move)(expr)` and forward-cast `(forward)(expr)`
 - Syntax: `(move)(expr)`, `(forward)(expr)`
-- Status: partially scaffolded; verify whether current output compiles.
+- Status: partially scaffolded; verify whether the current output compiles.
 - Requirements:
   - For `forward`, know the template parameter type context.
 - Files: `backend/Visitor/VExpr.cs`, `backend/Core/Expr.cs`
 
 ### M3: Function-call features
-These need function signature information.
+These features need function signature information.
 
 #### Null-coalescing function call
 - Syntax: `obj?.method(args)`
@@ -77,23 +74,20 @@ These need function signature information.
 - Files: `backend/Core/Mixed.cs`
 
 ### M4: Loop sugar
-Small syntax extensions that need a little transformation.
+These are small syntax extensions that need a little transformation.
 
 #### Else on loops
 - Syntax: `while(cond) { ... } else { ... }`, `for(...;...;...) { ... } else { ... }`
-- Implementation: desugar to a flag that tracks whether the loop was exited
-  with `break`, then emit the `else` block only when it was not.
+- Implementation: add a flag that tracks whether the loop exits with `break`. Emit the `else` block only when it did not.
 - Files: `backend/Core/Stmt.cs`
 
 #### Multi-statement for init
 - Syntax: `for(a; b; c, d) { ... }`
-- Implementation: allow `MultiStmt` in the init position and emit the
-  statements separated by commas.
+- Implementation: allow `MultiStmt` in the init position and emit the statements separated by commas.
 - Files: `backend/Core/Stmt.cs`
 
 ## Open questions
 - Should `return _` be a semantic error, or should it mean "return default"?
-- Do we want a separate `discard` type in the type system, or treat `_`
-  purely as a parser-level marker?
-- For `(copy)(expr)`, should it be allowed to return a prvalue copy even
-  when the source is already a prvalue?
+- Do we want a separate `discard` type in the type system, or treat `_` purely as a parser-level marker?
+- For `(copy)(expr)`, should it be allowed to return a prvalue copy even when the source is already a prvalue?
+- Should `switch` support `else:` as an alias for `default:`? This would make the fallback keyword consistent with `if` and loops. Should we deprecate `default:`?
