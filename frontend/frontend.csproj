@@ -32,12 +32,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Content Include="tests\gol\game_of_life.myll">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </Content>
-	  <Content Include="tests\gol\main.myll">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </Content>
 	  <Content Include="tests\mixed\enum.myll">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </Content>
