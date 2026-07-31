@@ -8,15 +8,17 @@ Version: 0.0.1, early beta state. License undecided.
 ## Architecture
 - backend/ — library (myll_lib). ANTLR grammar, parser, visitor pattern, AST (Core/), and C++ code generator (Generator/).
 - frontend/ — CLI executable (myll). Parses .myll files, invokes backend, outputs .h/.cpp files.
-- frontend/tests/ — .myll test cases (enums, game of life, thesis, mixed, etc.)
-- run/ — Rider run configurations that compile test suites
-- Documentation/ — doc files and spec examples
-- oldParser/, oldCodeGen/ — legacy, not in use
+- frontend/tests/ — original .myll test cases (enums, game of life, thesis, mixed, etc.) that are being ported to testing/cases/.
+- testing/ — xUnit integration-test harness that compiles and runs the ported .myll cases.
+- run/ — Rider run configurations that compile test suites.
+- Documentation/ — doc files and spec examples.
+- oldParser/, oldCodeGen/ — legacy, not in use.
 
 ## Build & Run
 - `dotnet build` — builds both projects
 - `dotnet run --project frontend -- <args>` — runs the compiler
-- Targets: net6.0;net10.0
+- `dotnet test testing/` — runs the xUnit integration tests
+- Targets: net10.0
 
 ## Test Examples (via CLI)
 - Thesis:     `dotnet run --project frontend -- -i frontend/tests/thesis/*.myll -o frontend/tests/thesis/generated -cr`
@@ -31,7 +33,7 @@ Version: 0.0.1, early beta state. License undecided.
 ## Conventions
 - C# 9, nullable enabled (frontend), nullable warnings (backend)
 - Visitor pattern: VExpr, VDecl, VStmt, VTypes walk the ANTLR parse tree → Core AST → Generator produces C++
-- No unit test project. Tests are .myll source files that should compile to valid C++.
+- No unit test project in the traditional sense. Tests are .myll source files that should compile to valid C++ plus an xUnit harness under testing/ that drives them.
 
 ## Documentation & Code Formatting Rules
 - Markdown files (`*.md`): do not insert manual line breaks inside sentences. Break only at full stops (`. `). Let the editor / viewer wrap to window width.
@@ -50,14 +52,14 @@ Version: 0.0.1, early beta state. License undecided.
 - **Planned Work**: Keep the "Planned Work" section current — that's our shared priority list
 - **Before big changes**: Propose a plan first, get approval, then execute
 - **Commits**: Small, focused messages. Prefer many small commits over large batches
-- **Testing**: Validate with `dotnet build` and at least one compiled test suite after any backend change
+- **Testing**: Validate with `dotnet build` and `dotnet test testing/` after any backend change
 - **ANTLR**: Grammar changes → regenerate → commit generated files with the grammar change
 - **Wrap-up**: Before ending a workday or switching to a different topic, check whether `AGENTS.md`, `plan/*.md`, or other docs need updates so they stay consistent with the current state.
 
 ## Planned Work
-1. Testing + CI/CD first — harness existing .myll files into automated validation
+1. Testing + CI/CD — xUnit harness is in place under testing/; remaining work is CI/CD.
 2. Implement reachable NotImplementedException features:
-     - named args, null coalescing call, copy-cast, else-on-loop, discard, empty stmt
+     - named args, null coalescing call, copy-cast, else-on-loop, discard (empty stmt done)
      - **NOT** aspect, concept, defer, convert — see REASONS.md (2026-06-10)
 3. Cleanup — oldParser/oldCodeGen removal, TODO triage, HACK resolution
 4. .idea/ misc.xml shared ANTLR config added to .gitignore exception
