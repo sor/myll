@@ -34,7 +34,7 @@ func mainX( int argc, const char*[] argv ) -> int {
 	return 0;
 }
 
-// all the same (4 a bit different)
+// all the same (#4 a bit different)
 func hans1() -> auto => 9;
 func hans2() -> auto return 9;
 func hans3() -> auto {return 9;}
