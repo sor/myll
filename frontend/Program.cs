@@ -254,7 +254,7 @@ namespace Myll
 				Process process = new();
 				process.StartInfo = new() {
 					WindowStyle = ProcessWindowStyle.Hidden,
-					FileName    = "clang++-15",			//"cmd.exe",
+					FileName    = "clang++",				//"cmd.exe",
 					Arguments   = cxxFlags + cppFiles,	//"/C touch Hans"
 				};
 				process.Start();

@@ -56,7 +56,7 @@ dotnet run --project frontend/frontend.csproj -- \
 | `-d` | `--deep` | Search subdirectories for input files |
 | `-k` | `--keep` | Keep going when errors are encountered |
 | `-n` | `--nofile` | Do not generate files |
-| `-c` | `--compile` | Pass generated `.cpp` files to `clang++-15` |
+| `-c` | `--compile` | Pass generated `.cpp` files to `clang++` |
 | `-C` | `--clear` | Clear target directory of old build artifacts |
 | `-g` | `--debug` | Generate debug executable via C++ compiler |
 | `-O` | `--optimize` | Set C++ compiler optimization level |
