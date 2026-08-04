@@ -39,13 +39,18 @@ namespace Myll.Tests
 		[MemberData( nameof( GetTestCases ) )]
 		public void RunCase( string caseName )
 		{
-			string caseDir    = Path.Combine( RepoRoot, "testing", "cases", caseName );
-			string generatedDir = Path.Combine( RepoRoot, "testing", "generated", caseName );
+			string caseDir      = Path.Combine( RepoRoot, "testing", "cases", caseName );
+			string generatedDir = UseTempOutputDirectory()
+				? Path.Combine( RepoRoot, "testing", "generated", $"tmp_{caseName}_{Guid.NewGuid():N}" )
+				: Path.Combine( RepoRoot, "testing", "generated", caseName );
 
-			Directory.CreateDirectory( generatedDir );
+			bool cleanupGeneratedDir = UseTempOutputDirectory();
+			try
+			{
+				Directory.CreateDirectory( generatedDir );
 
-			string[] myllFiles = Directory.GetFiles( caseDir, "*.myll" );
-			Assert.NotEmpty( myllFiles );
+				string[] myllFiles = Directory.GetFiles( caseDir, "*.myll" );
+				Assert.NotEmpty( myllFiles );
 
 			// The frontend treats each '-i' argument as a search pattern relative to the current working directory.
 			// Run the compiler from inside the case directory with a simple "*.myll" pattern.
@@ -93,6 +98,12 @@ namespace Myll.Tests
 				return;
 
 			CompileAndRunCpp( cppFiles, generatedDir, caseName, expectCppCompileFailure );
+			}
+			finally
+			{
+				if( cleanupGeneratedDir )
+					TryDeleteDirectory( generatedDir );
+			}
 		}
 
 		private void CompileAndRunCpp( string[] cppFiles, string workingDir, string caseName, bool expectFailure )
@@ -190,5 +201,24 @@ namespace Myll.Tests
 
 		private static string Quote( string path )
 			=> $"\"{path}\"";
+
+		private static bool UseTempOutputDirectory()
+		{
+			string? value = Environment.GetEnvironmentVariable( "MYLL_TEST_TEMP" );
+			return !string.IsNullOrEmpty( value );
+		}
+
+		private static void TryDeleteDirectory( string path )
+		{
+			try
+			{
+				if( Directory.Exists( path ) )
+					Directory.Delete( path, true );
+			}
+			catch
+			{
+				// Best-effort cleanup only.
+			}
+		}
 	}
 }
