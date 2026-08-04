@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Myll;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -113,63 +114,25 @@ namespace Myll.Tests
 				: "test.out";
 
 			string binaryPath = Path.Combine( workingDir, executable );
-			string cppArgList = string.Join( " ", cppFiles.Select( Quote ) );
+			CppCompilerInvocation invocation = CppCompiler.CreateInvocation( cppFiles, outputPath: binaryPath );
 
-			(string compiler, bool found)[] compilers = {
-				("clang++", CompilerExists( "clang++" )),
-				("g++", CompilerExists( "g++" )),
-				("cl", CompilerExists( "cl" )),
-			};
+			output.WriteLine( string.Format( "Running: {0} {1}", invocation.Compiler, invocation.Arguments ) );
+			ProcessResult compileResult = ProcessRunner.Run(
+				invocation.Compiler, invocation.Arguments, workingDirectory: workingDir,
+				timeout: CaseConfig.CompileTimeout( caseName ) );
 
-			bool anyFound = false;
-			bool anySucceeded = false;
-			foreach( var (compiler, found) in compilers )
-			{
-				if( !found )
-				{
-					output.WriteLine( $"Skipping {compiler}: not found." );
-					continue;
-				}
-
-				anyFound = true;
-
-				string args = compiler == "cl"
-					? $"/nologo /std:c++20 /EHsc {cppArgList} /Fe:{Quote( binaryPath )}"
-					: $"-std=c++20 {cppArgList} -o {Quote( binaryPath )}";
-				output.WriteLine( $"Running: {compiler} {args}" );
-				ProcessResult compileResult = ProcessRunner.Run( compiler, args, workingDirectory: workingDir,
-					timeout: CaseConfig.CompileTimeout( caseName ) );
-
-				output.WriteLine( compileResult.StdOut );
-				if( !string.IsNullOrEmpty( compileResult.StdErr ) )
-					output.WriteLine( "STDERR: " + compileResult.StdErr );
-
-				if( compileResult.ExitCode == 0 )
-				{
-					anySucceeded = true;
-				}
-				else if( !expectFailure )
-				{
-					Assert.Fail( $"C++ compiler {compiler} failed with exit code {compileResult.ExitCode}." );
-				}
-			}
-
-			if( !anyFound )
-			{
-				if( expectFailure )
-					Assert.Fail( "No C++ compiler available; cannot verify expected compile failure." );
-
-				output.WriteLine( "No C++ compiler available; skipping binary execution." );
-				return;
-			}
+			output.WriteLine( compileResult.StdOut );
+			if( !string.IsNullOrEmpty( compileResult.StdErr ) )
+				output.WriteLine( "STDERR: " + compileResult.StdErr );
 
 			if( expectFailure )
 			{
-				Assert.False( anySucceeded, "Expected C++ compile to fail, but at least one compiler succeeded." );
+				Assert.False( compileResult.ExitCode == 0,
+					string.Format( "Expected C++ compile to fail, but {0} succeeded.", invocation.Compiler ) );
 				return;
 			}
 
-			Assert.True( anySucceeded, "No C++ compiler succeeded; cannot run generated binary." );
+			Assert.Equal( 0, compileResult.ExitCode );
 
 			// Run the binary
 			output.WriteLine( $"Running: {binaryPath}" );
@@ -183,20 +146,6 @@ namespace Myll.Tests
 
 			Assert.Equal( 0, runResult.ExitCode );
 			Assert.False( runResult.TimedOut, "Generated binary timed out" );
-		}
-
-		private static bool CompilerExists( string name )
-		{
-			try
-			{
-				string args = name == "cl" ? "/nologo /?" : "--version";
-				ProcessResult r = ProcessRunner.Run( name, args, timeout: TimeSpan.FromSeconds( 5 ) );
-				return r.ExitCode == 0;
-			}
-			catch
-			{
-				return false;
-			}
 		}
 
 		private static string Quote( string path )

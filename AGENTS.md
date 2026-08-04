@@ -56,12 +56,20 @@ dotnet run --project frontend/frontend.csproj -- \
 | `-d` | `--deep` | Search subdirectories for input files |
 | `-k` | `--keep` | Keep going when errors are encountered |
 | `-n` | `--nofile` | Do not generate files |
-| `-c` | `--compile` | Pass generated `.cpp` files to `clang++` |
+| `-c` | `--compile` | Pass generated `.cpp` files to a C++ compiler |
 | `-C` | `--clear` | Clear target directory of old build artifacts |
 | `-g` | `--debug` | Generate debug executable via C++ compiler |
 | `-O` | `--optimize` | Set C++ compiler optimization level |
 | `-r` | `--run` | Run the compiled binary |
 | `-M` | `--main` | Specify module containing `main()` |
+
+### Environment variables
+
+| Variable | Description |
+|----------|-------------|
+| `MYLL_CXX` | If set, use this executable as the C++ compiler for the internal `-c` / `-cr` path. When unset, Myll tries `clang++`, `g++`, and `cl` in platform order. |
+| `MYLL_TEST_TEMP` | If set, each test case uses an isolated temp directory under `testing/generated/` instead of the fixed case directory. This prevents concurrent test runs from interfering and avoids relying on `/tmp`, which is often mounted `noexec`. |
+| `MYLL_TEST` | If set, generated test binaries such as game of life reduce delays so automated test runs complete faster. |
 
 ## Project Layout
 

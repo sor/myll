@@ -246,16 +246,17 @@ namespace Myll
 
 				Directory.SetCurrentDirectory( opt.OutPath );
 
-				string cppFiles = Directory.GetFiles( ".", "*.cpp" ).Join( " " );
-				string cxxFlags = "-std=c++20 "
-				                + (opt.IsDebug ? "-g " : "")
+				string[] cppFiles = Directory.GetFiles( ".", "*.cpp" );
+				string cxxFlags = (opt.IsDebug ? "-g " : "")
 				                + (opt.OptimizationLevel > 0 ? "-O " + opt.OptimizationLevel : "");
 
-				Process process = new();
+				CppCompilerInvocation invocation = CppCompiler.CreateInvocation( cppFiles, cxxFlags );
+
+				using Process process = new();
 				process.StartInfo = new() {
 					WindowStyle = ProcessWindowStyle.Hidden,
-					FileName    = "clang++",				//"cmd.exe",
-					Arguments   = cxxFlags + cppFiles,	//"/C touch Hans"
+					FileName    = invocation.Compiler,
+					Arguments   = invocation.Arguments,
 				};
 				process.Start();
 				process.WaitForExit();
@@ -275,9 +276,13 @@ namespace Myll
 
 					return process2.ExitCode;
 				}
+				else if( process.ExitCode != 0 ) {
+					return process.ExitCode;
+				}
 			}
 
 			return 0;
 		}
+
 	}
 }

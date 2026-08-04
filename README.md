@@ -87,6 +87,9 @@ Created by Jan Reitz. Licence undecided (apparently its open source).
         - solve by having compile time descisions handled in the language itself, via attribute sections
     - default arguments possible from callsite (like LINE and FILE)
 
+## Compiler invocation
+The full CLI reference is in `AGENTS.md`. `-c` / `-cr` compiles the generated C++ using `clang++`, `g++`, or `cl`. Set `MYLL_CXX` to force a specific compiler executable.
+
 # Modules
 C++'s modules already foreshadow and Myll already supports the idea, although a bit different in their current form.
 Myll modules specify in which .cpp/.h file things end up, when you specify "module test;" in 2 .myll files they will merge their output to a test.h and test.cpp file.

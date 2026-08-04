@@ -28,7 +28,7 @@ namespace Myll
 		public bool IsNoFile { get; init; } = false;
 		public bool IsFileOut => !IsNoFile;
 
-		[Option( 'c', "compile", HelpText = "Pass the generated .cpp files to a C++ compiler", Default = false )]
+		[Option( 'c', "compile", HelpText = "Pass generated .cpp files to a C++ compiler; use MYLL_CXX to override", Default = false )]
 		public bool IsCompile { get; init; } = false;
 
 		[Option( 'C', "clear", HelpText = "Clear the target directory of old *.cpp, *.hpp, and a.out/a.exe files", Default = false )]
