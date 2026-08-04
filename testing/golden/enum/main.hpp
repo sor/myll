@@ -1,0 +1,12 @@
+#pragma once
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <utility>
+#include "basic.hpp"
+#include "numbered.hpp"
+#include "flags.hpp"
+int main();

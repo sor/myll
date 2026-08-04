@@ -265,6 +265,7 @@ paket-files/
 
 # JetBrains Rider
 .idea/
+!.idea/.idea.myll/.idea/misc.xml
 *.sln.iml
 
 # CodeRush
@@ -290,3 +291,6 @@ __pycache__/
 /Documentation/.~lock.Myll.odt#
 **/*.tokens
 **/*.interp
+
+# Test harness transient output
+testing/generated/

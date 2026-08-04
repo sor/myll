@@ -184,11 +184,10 @@ namespace Myll.Core
 	public class EmptyStmt : Stmt
 	{
 		public override Strings GenWithoutCurly( int level )
-			=> new() { ";" };
-			//			=> throw new NotImplementedException( "Would this just work as a semicolon?" );
+			=> ";".IndentAll( level );
 
 		public override Strings Gen( int level )
-			=> throw new NotImplementedException( "Would this just work as a semicolon?" );
+			=> ";".IndentAll( level );
 	}
 
 	// This class should be phased out in the far future, but for now it's just too useful
@@ -464,6 +463,12 @@ namespace Myll.Core
 		public bool isEmpty => stmts.IsEmpty();
 
 		[Pure]
+		private IEnumerable<Stmt> NonEmptyStmts()
+			=> stmts.Count == 1 && stmts[0] is EmptyStmt
+				? stmts
+				: stmts.Where( s => s is not EmptyStmt );
+
+		[Pure]
 		public override IEnumerable<Stmt> EnumerateDF {
 			get {
 				foreach( Stmt stmt in stmts )
@@ -484,8 +489,7 @@ namespace Myll.Core
 			=> stmts.ForEach( v => v.AssignAttribs( inAttribs ) );
 
 		public override Strings GenWithoutCurly( int level )
-			=> stmts
-				.Where( s => s is not EmptyStmt )
+			=> NonEmptyStmts()
 				.SelectMany( s => s.Gen( level ) )
 				.ToList();
 
@@ -493,8 +497,7 @@ namespace Myll.Core
 		{
 			// Block to Block needs to indent further else it's ok to remain same level
 			// The curly braces need to be outdentented one level
-			Strings ret = stmts
-				.Where( s => s is not EmptyStmt )
+			Strings ret = NonEmptyStmts()
 				.SelectMany( s => s.Gen( isScope ? level + 1 : level ) )
 				.Curly( level, isScope )
 				.ToList();

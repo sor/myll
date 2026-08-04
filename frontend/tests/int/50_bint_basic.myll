@@ -1,10 +1,51 @@
-var bint i = 0x01, j = 0x11;
-i + j; // or, merge
-i * j; // and, mask
-i - j; // diff, select j?
-i / j; // implikation
-i ^ j; // exor
+func test50(){
+	var bint
+		i = 0x0011,
+		j = 0x0110; // binary-int, just usable as bit-patterns
+	var bint k = i + j; // bitwise addition is same as bitwise or, should generate this in c++: i | j
+	var bint l = i * j; // bitwise multiplication is same as bitwise and, should generate this in c++: i & j
+	var bint m = i - j; // bitwise diff, select j?
+	var bint n = i / j; // bitwise implikation i ->  j, i <= j
+	var bint n2= j / i; // bitwise implikation i <-  j, i >= j
+	var bint n3= i ? j; // bitwise implikation i -!> j, i >  j
+	var bint n4= j ? i; // bitwise implikation i <!- j, i <  j
+	var bint o = i ^ j; // bitwise exor,       i <!> j, i != j
+//	var bint e = i ? j; // bitwise equivalence,i <-> j, i == j undecided operator
 
-i | j; // or != 0
-i & j; // != 0 and != 0
+	var bint p = i | j; // bitwise or, merge, to avoid confusion keep the original behaviour
+	var bint q = i & j; // bitwise and, mask, to avoid confusion keep the original behaviour
 
+	// These are undecided what they do of if they return bint or bool
+	var bint r = +i; // maybe the same as `any`
+	var bint s = -i; // usually is ~i+1
+	var bint t = !i;
+	var bint u = ~i;	// negate all individual bits
+
+	assert( k == 0x0111 );
+	assert( l == 0x0010 );
+	assert( m == 0x0001 );
+	assert( n == 0x1110 );
+	assert( o == 0x0101 );
+
+	assert( p == 0x0111 );
+	assert( q == 0x0010 );
+
+	// Evaluating the contents of the
+	// Ideas from Regex
+	// i.?  0 to N ones but not all
+	// i.*  0 to all ones (not interesting for this)
+	// i.+  1 to all ones
+
+	// Readable text Idea (ADL like does not need bitset::all )
+	// i is all     OR i has all     OR all of i  // i has all bits set
+	// i is any     OR i has any     OR any of i  // i has at least 1 bit set
+	// i is some    OR i has some    OR some of i // i has some bits set but not all and not none, opposite of `allSame`
+	// i is allSame OR i has allSame OR some of i // i has all or none bits set, opposite of `some`
+	// i is none    OR i has none    OR none of i // i has no bits set
+	// all, some and none are non-overlapping, any equals all or some
+	// everything can be negated
+	// i is not all  OR i has not all  OR not all of i  // i has not all bits set
+	// i is not any  OR i has not any  OR not any of i  // `i has none` is the easier alternative
+	// i is not some OR i has not some OR not some of i // i has either all or none bits set (e.g. all bits are `votes` and we have `consent`)
+	// i is not none OR i has not none OR not none of i // `i has any` is the easier alternative
+}

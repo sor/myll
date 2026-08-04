@@ -303,9 +303,11 @@ namespace ctor_fun {
 			ctor{}
 		//}
 
-		ctor( const Test & other )	{ f = other.f;	}
-		ctor copy					{ f = other.f;	}	// same as above
-		ctor copy o					{ f = o.f;		}	// same as above
+		ctor( const Test & other )  { f = other.f; }
+		ctor copy                   { f = other.f; }	// same as above
+		ctor copy other             { f = other.f; }	// same as above
+		copy ctor                   { f = other.f; }	// same as above
+		copy ctor other             { f = other.f; }	// same as above
 
 		[implicit] ctor( bool b )	{ f = b ? 1 : 2; }
 		ctor convert bool b			{ f = b ? 1 : 2; }		// same as above
@@ -316,6 +318,20 @@ namespace ctor_fun {
 	//	ctor bool ->				{ f = other ? 1 : 2; }	// same as above
 		convert <- bool b			{ f = b ? 1 : 2; }		// same as above
 		convert bool b ->			{ f = b ? 1 : 2; }		// same as above
+		[implicit] ctor( bool b )	{ f = b ? 1 : 2; }
+		ctor convert bool b			{ f = b ? 1 : 2; }		// same as above
+		ctor convert bool			{ f = other ? 1 : 2; }	// same as above
+		ctor convert <- bool		{ f = other ? 1 : 2; }	// same as above
+		ctor convert bool ->		{ f = other ? 1 : 2; }	// same as above
+		convert <- bool b			{ f = b ? 1 : 2; }		// same as above
+		convert bool b ->			{ f = b ? 1 : 2; }		// same as above
+		[implicit] ctor( bool other ) { f = other ? 1 : 2; }
+		ctor convert bool other       { f = other ? 1 : 2; }	// same as above
+		ctor convert bool             { f = other ? 1 : 2; }	// same as above
+		ctor convert <- bool          { f = other ? 1 : 2; }	// same as above
+		ctor convert bool ->          { f = other ? 1 : 2; }	// same as above
+		convert <- bool other         { f = other ? 1 : 2; }	// same as above
+		convert bool other ->         { f = other ? 1 : 2; }	// same as above
 
 		dtor()	{}
 		dtor	{}	// same as above

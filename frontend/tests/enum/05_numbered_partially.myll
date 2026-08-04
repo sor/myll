@@ -1,6 +1,0 @@
-enum Test {
-	A = 1,
-	B,
-	C
-}
-

@@ -326,7 +326,7 @@ namespace Myll
 		{
 			WhileStmt ret = new() {
 				cond = c.cond.Visit(),
-				body = c.body.Visit(),
+				body = VisitBlockify( c.body ),
 				els  = c.els?.Visit(),
 			};
 			return ret;

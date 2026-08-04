@@ -1,13 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net6.0</TargetFramework>
 		<LangVersion>9</LangVersion>
 		<AssemblyName>myll_lib</AssemblyName>
 		<RootNamespace>Myll</RootNamespace>
 		<Authors>Jan "SoRDiD" Reitz</Authors>
 		<Description>Backend of the Myll Programming Language</Description>
 		<Nullable>warnings</Nullable>
+		<TargetFramework>net10.0</TargetFramework>
 	</PropertyGroup>
 
 	<PropertyGroup Condition=" '$(Configuration)' == 'Release' ">

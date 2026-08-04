@@ -164,7 +164,7 @@ namespace Myll
 
 			IStrings decl = gen.GenDeclGlobal();
 			IStrings impl = gen.GenImplGlobal();
-			if( decl != null ) ret.Add( (string.Format( "{0}.h",   global_ns.module ), decl) );
+			if( decl != null ) ret.Add( (string.Format( "{0}.hpp", global_ns.module ), decl) );
 			if( impl != null ) ret.Add( (string.Format( "{0}.cpp", global_ns.module ), impl) );
 
 			//Console.WriteLine( "Time elapsed after GenerateFiles  {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
@@ -205,7 +205,7 @@ namespace Myll
 			if( opt.IsClear && Directory.Exists( opt.OutPath ) ) {
 				bool OldFileFilter( string s ) => s.EndsWith( Path.DirectorySeparatorChar + Executable )
 				                               || s.EndsWith( ".cpp" )
-				                               || s.EndsWith( ".h" );
+				                               || s.EndsWith( ".hpp" );
 
 				Directory
 					.EnumerateFiles( opt.OutPath )

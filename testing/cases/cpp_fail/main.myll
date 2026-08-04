@@ -1,0 +1,16 @@
+module cpp_fail;
+
+class A
+{
+	[priv]:
+	func secret() -> void
+	{
+	}
+}
+
+func main() -> int
+{
+	var A a;
+	a.secret();
+	return 0;
+}

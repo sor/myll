@@ -11,7 +11,9 @@ func main() -> int
 	// the literals themselves do not work e.g. 200ms
 	//using std::chrono_literals;
 
-	let auto sleepTime = milliseconds( 166 );
+	let auto sleepTime = std::getenv( "MYLL_TEST" ) != null
+		? milliseconds( 0 )
+		: milliseconds( 166 );
 	var GameOfLife gol = GameOfLife();
 
 	loop

@@ -10,14 +10,14 @@ namespace Myll.Generator
 	{
 		internal static readonly Strings DefaultIncludes = new() {
 			"#pragma once",
-			"#include <memory>",      // smart pointer (expensive)
-			"#include <utility>",     // move, pair, swap
 			"#include <cmath>",       // math
-			"#include <type_traits>", // underlying_type
-			//	"#include <iostream>",  // in and output
-			//	"#include <vector>",    // dynamically sized array
-			//	"#include <map>",    	// hash map (expensive)
-			//	"#include <algorithm>", // algorithms
+			"#include <cstddef>",     // std::byte, size_t, nullptr_t
+			"#include <cstdint>",     // std::int8_t, std::uint64_t, etc.
+			"#include <memory>",      // smart pointer (expensive)
+			"#include <string>",      // std::string
+			"#include <type_traits>", // underlying_type, remove_const_t
+			"#include <utility>",     // move, pair, swap
+			//	"#include <algorithm>", // algorithms — undecided, may add later
 		};
 
 		//internal static readonly string IndentString = "\t";
