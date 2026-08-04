@@ -124,6 +124,52 @@ myll/
 - Manual testing: compile `.myll` files via the CLI and inspect generated `.cpp`/`.h` output. Also pass generated C++ code to a C++ compiler with sane warnings.
 - See `docs/analysis/06-test-coverage.md` for test inventory and earlier harness design notes.
 
+## Container / CI Notes
+
+A `Dockerfile` and `.dockerignore` are provided at the repository root. They target `mcr.microsoft.com/dotnet/sdk:10.0` and install the latest `g++-14`, `clang-20`, and `antlr4` from Ubuntu 24.04 for build/test runs.
+
+- Build image: `podman build -t myll .`
+- Run tests: `podman run --rm myll`
+
+Tests run with `MYLL_TEST_TEMP=1` so each test case uses an isolated temp directory under `testing/generated/`. This prevents concurrent runs from interfering and avoids relying on `/tmp`, which is often mounted `noexec`.
+
+### Podman storage and temp space
+
+If `/opt/podman` exists, rootless podman storage and build temp files are redirected there to avoid filling `/home` and `/var/tmp`:
+
+- `~/.config/containers/storage.conf` sets `graphroot = "/opt/podman/storage"` and `runroot = "/opt/podman/run"`.
+- The interactive shell alias routes podman build temp files to `/opt/podman/tmp`:
+
+```bash
+if [ -d /opt/podman ]; then
+    alias podman='TMPDIR=/opt/podman/tmp podman'
+fi
+```
+
+For non-interactive use — scripts, Makefiles, or agents running shell commands — the alias is not effective. Use the explicit form or set `TMPDIR` in the environment:
+
+```bash
+TMPDIR=/opt/podman/tmp podman build -t myll .
+```
+
+### Cleaning up dangling images
+
+Each `podman build` keeps the previous image as an untagged `<none>:<none>` image. They share most layers with the current image, so they usually do not consume much extra disk space, but they can clutter `podman images` output.
+
+To remove dangling images:
+
+```bash
+TMPDIR=/opt/podman/tmp podman image prune
+```
+
+Run this at the end of the day or after a lot of builds to keep Podman storage tidy.
+
+To remove everything not currently in use (including the base `dotnet/sdk` image, which will be re-downloaded on the next build):
+
+```bash
+TMPDIR=/opt/podman/tmp podman system prune -a
+```
+
 ## Known Pitfalls
 
 Commented out code does not always mean that it is old or obsolete. Maybe it just does not compile yet. It possibly is the goal.

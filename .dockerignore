@@ -1,0 +1,17 @@
+**/bin/
+**/obj/
+**/.idea/
+.git/
+.gitignore
+*.user
+*.suo
+*.userprefs
+frontend/tests/*/generated/
+testing/generated/
+tests/bin/
+tests/obj/
+Documentation/
+oldParser/
+oldCodeGen/
+plan/
+docs/
