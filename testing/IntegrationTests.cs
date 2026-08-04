@@ -16,7 +16,16 @@ namespace Myll.Tests
 		private static readonly string RepoRoot = Path.GetFullPath(
 			Path.Combine( AppContext.BaseDirectory, "..", "..", "..", ".." ) );
 
-		private static readonly string FrontendDll = Path.Combine( RepoRoot, "frontend", "bin", "Debug", "net10.0", "myll.dll" );
+		private static readonly string FrontendDll = GetFrontendDll();
+
+		private static string GetFrontendDll()
+		{
+			string testingBin = AppContext.BaseDirectory.TrimEnd( Path.DirectorySeparatorChar );
+			string frameworkDir = Path.GetFileName( testingBin );
+			string configDir    = Path.GetFileName( Path.GetDirectoryName( testingBin ) )!;
+
+			return Path.Combine( RepoRoot, "frontend", "bin", configDir, frameworkDir, "myll.dll" );
+		}
 
 		public IntegrationTests( ITestOutputHelper output )
 		{
