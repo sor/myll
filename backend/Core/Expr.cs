@@ -1,4 +1,6 @@
-﻿using System;
+﻿#nullable enable
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
@@ -212,7 +214,7 @@ namespace Myll.Core
 	/// Unary Operation - one operand
 	public class UnOp : Expr
 	{
-		public Expr expr { get; set; }
+		public Expr expr { get; set; } = null!;
 
 		public override string Gen( bool doBrace = false )
 		{
@@ -236,8 +238,8 @@ namespace Myll.Core
 	/// Binary Operation - two operands
 	public class BinOp : Expr
 	{
-		public Expr left  { get; set; }
-		public Expr right { get; set; }
+		public Expr left  { get; set; } = null!;
+		public Expr right { get; set; } = null!;
 
 		public override string Gen( bool doBrace = false )
 		{
@@ -266,9 +268,9 @@ namespace Myll.Core
 	/// Ternary Operation - three operands, currently only: if ? then : else
 	public class TernOp : Expr
 	{
-		public Expr left  { get; set; }
-		public Expr mid   { get; set; }
-		public Expr right { get; set; }
+		public Expr left  { get; set; } = null!;
+		public Expr mid   { get; set; } = null!;
+		public Expr right { get; set; } = null!;
 
 		public override string Gen( bool doBrace = false )
 		{
@@ -292,7 +294,7 @@ namespace Myll.Core
 
 	public class Lambda : Expr
 	{
-		public Func func;
+		public Func func = null!;
 
 		public override string Gen( bool doBrace = false )
 		{
@@ -321,7 +323,7 @@ namespace Myll.Core
 
 	public class ScopedExpr : Expr
 	{
-		public List<IdTplArgs> idTpls;
+		public List<IdTplArgs> idTpls = null!;
 
 		public override string Gen( bool doBrace = false )
 		{
@@ -358,7 +360,7 @@ namespace Myll.Core
 	*/
 	public class IdExpr : Expr
 	{
-		public IdTplArgs idTplArgs;
+		public IdTplArgs idTplArgs = null!;
 
 		public override string Gen( bool doBrace = false )
 		{
@@ -380,7 +382,7 @@ namespace Myll.Core
 	// ^    UnOp.expr    ^  funcCall  ^
 	public class FuncCallExpr : UnOp
 	{
-		public FuncCall funcCall;
+		public FuncCall funcCall = null!;
 
 		public override string Gen( bool doBrace = false )
 		{
@@ -391,7 +393,7 @@ namespace Myll.Core
 
 	public class CastExpr : UnOp
 	{
-		public Typespec type;
+		public Typespec type = null!;
 
 		public override string Gen( bool doBrace = false )
 		{
@@ -406,14 +408,11 @@ namespace Myll.Core
 				Operand.ConstCast       => "const_cast<{1}>( {0} )",
 				Operand.BitCast         => "std::bit_cast<{1}>( {0} )",
 				Operand.ReinterpretCast => "reinterpret_cast<{1}>( {0} )",
-				_                       => null,
+				_                       => throw new Exception( Format( "Invalid cast of {0} to {1}", expr?.Gen() ?? "", type.Gen() ) ),
 			};
 			string
 				exprText = expr.Gen(),
 				typeText = type.Gen();
-
-			if( format == null )
-				throw new Exception( Format( "Invalid cast of {0} to {1}", exprText, typeText ) );
 
 			string ret = Format( format, exprText, typeText );
 			return ret.Brace( doBrace );
@@ -422,16 +421,16 @@ namespace Myll.Core
 
 	public class NewExpr : Expr
 	{
-		public Typespec type;
-		public FuncCall funcCall;
+		public Typespec type = null!;
+		public FuncCall funcCall = null!;
 
 		public override string Gen( bool doBrace = false )
 		{
 			string       ret;
-			Pointer      ptr        = type.ptrs?.FirstOrDefault(); // needs to be a variable to keep it accessible
+			Pointer?     ptr        = type.ptrs?.FirstOrDefault(); // needs to be a variable to keep it accessible
 			if( ptr != null && ptr.kind.Between( Pointer.Kind.SmartPtr_Begin, Pointer.Kind.SmartPtr_End ) ) {
 				// remove the pointer that is about to be replaced by custom code
-				type.ptrs.RemoveAt( 0 );
+				type.ptrs!.RemoveAt( 0 );
 				string ptrFmt = ptr.kind switch {
 					Pointer.Kind.Unique		 => "std::make_unique<{0}>({1})",
 					Pointer.Kind.UniqueArray => "std::make_unique<{0}[]>({1})",
@@ -439,7 +438,7 @@ namespace Myll.Core
 					Pointer.Kind.SharedArray => "std::make_shared<{0}[]>({1})",
 					_						 => throw new Exception("weak_ptr can not be new'ed"),
 				};
-				ret = Format( ptrFmt, type.Gen(), ptr.expr.Gen( false ) );
+				ret = Format( ptrFmt, type.Gen(), ptr.expr?.Gen( false ) ?? "" );
 			}
 			else {
 				ret = Format( "new {0}{1}", type.Gen(), funcCall.Gen() );
@@ -451,7 +450,7 @@ namespace Myll.Core
 	// TODO
 	public class Literal : Expr
 	{
-		public string text;
+		public string text = null!;
 
 		public override string Gen( bool doBrace = false )
 		{
