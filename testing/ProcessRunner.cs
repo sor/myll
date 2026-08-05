@@ -44,7 +44,7 @@ namespace Myll.Tests
 					psi.Environment[pair.Key] = pair.Value;
 
 			using var process = Process.Start( psi )
-			             ?? throw new InvalidOperationException( $"Failed to start process: {fileName}" );
+			             ?? throw new InvalidOperationException( "Failed to start process: " + fileName );
 
 			StringBuilder output = new();
 			StringBuilder error  = new();

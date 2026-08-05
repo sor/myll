@@ -89,6 +89,7 @@ namespace Myll
 							MyllParser.EM   => Pointer.Kind.Unique,
 							MyllParser.PLUS => Pointer.Kind.Shared,
 							MyllParser.QM   => Pointer.Kind.Weak,
+							_ => throw new UnreachableException( c.suffix ),
 						},
 					};
 				}
@@ -98,6 +99,7 @@ namespace Myll
 							MyllParser.EM   => Pointer.Kind.UniqueArray,
 							MyllParser.PLUS => Pointer.Kind.SharedArray,
 							MyllParser.QM   => Pointer.Kind.WeakArray,
+							_ => throw new UnreachableException( c.suffix ),
 						},
 					};
 				}
@@ -114,6 +116,7 @@ namespace Myll
 							MyllParser.EM   => Pointer.Kind.UniqueArray,
 							MyllParser.PLUS => Pointer.Kind.SharedArray,
 							MyllParser.QM   => Pointer.Kind.WeakArray,
+							_ => throw new UnreachableException( c.suffix ),
 						},
 					};
 				}

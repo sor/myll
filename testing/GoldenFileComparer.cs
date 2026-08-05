@@ -33,7 +33,7 @@ namespace Myll.Tests
 				var genPath = Path.Combine( generatedDir, gf );
 				if( !File.Exists( genPath ) )
 				{
-					diffReport += $"Missing generated file: {gf}\n";
+					diffReport += "Missing generated file: " + gf + "\n";
 					match = false;
 					continue;
 				}
@@ -43,7 +43,7 @@ namespace Myll.Tests
 
 				if( !goldenBytes.SequenceEqual( genBytes ) )
 				{
-					diffReport += $"Mismatch: {gf}\n";
+					diffReport += "Mismatch: " + gf + "\n";
 					match = false;
 				}
 			}
@@ -52,7 +52,7 @@ namespace Myll.Tests
 			{
 				if( !goldenFiles.Contains( gf ) )
 				{
-					diffReport += $"Unexpected generated file not in golden: {gf}\n";
+					diffReport += "Unexpected generated file not in golden: " + gf + "\n";
 					match = false;
 				}
 			}

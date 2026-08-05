@@ -111,6 +111,7 @@ myll/
 - **Naming**: Mixed conventions in legacy code (`camelCase` and `PascalCase` coexist). Follow existing file patterns.
 - **No `System.Func` conflicts**: The AST has a `Decl.Func` class — be careful with `using System;` at file scope.
 - **Visitor pattern**: `VExpr`, `VDecl`, `VStmt`, `VTypes` walk the ANTLR parse tree → `Core` AST → `Generator` produces C++.
+- **No interpolated strings**: Do not use C# interpolated strings (`$"..."`). Prefer `String.Format` or plain concatenation.
 
 ## Documentation & Code Formatting Rules
 

@@ -51,7 +51,7 @@ namespace Myll.Tests
 		{
 			string caseDir      = Path.Combine( RepoRoot, "testing", "cases", caseName );
 			string generatedDir = UseTempOutputDirectory()
-				? Path.Combine( RepoRoot, "testing", "generated", $"tmp_{caseName}_{Guid.NewGuid():N}" )
+				? Path.Combine( RepoRoot, "testing", "generated", String.Format( "tmp_{0}_{1:N}", caseName, Guid.NewGuid() ) )
 				: Path.Combine( RepoRoot, "testing", "generated", caseName );
 
 			bool cleanupGeneratedDir = UseTempOutputDirectory();
@@ -65,9 +65,9 @@ namespace Myll.Tests
 			// The frontend treats each '-i' argument as a search pattern relative to the current working directory.
 			// Run the compiler from inside the case directory with a simple "*.myll" pattern.
 			string myllFlags = CaseConfig.UseMyllCompileRun( caseName ) ? "-Ccr" : "-C";
-			string myllArgs  = $"exec \"{FrontendDll}\" -i \"*.myll\" -o {Quote( generatedDir )} {myllFlags}";
+			string myllArgs  = String.Format( "exec \"{0}\" -i \"*.myll\" -o {1} {2}", FrontendDll, Quote( generatedDir ), myllFlags );
 
-			output.WriteLine( $"Running: dotnet {myllArgs} in {caseDir}" );
+			output.WriteLine( "Running: dotnet " + myllArgs + " in " + caseDir );
 			ProcessResult myllResult = ProcessRunner.Run( "dotnet", myllArgs, workingDirectory: caseDir,
 				timeout: CaseConfig.MyllTimeout( caseName ) );
 
@@ -144,7 +144,7 @@ namespace Myll.Tests
 			Assert.Equal( 0, compileResult.ExitCode );
 
 			// Run the binary
-			output.WriteLine( $"Running: {binaryPath}" );
+			output.WriteLine( "Running: " + binaryPath );
 			ProcessResult runResult = ProcessRunner.Run( binaryPath, "", workingDirectory: workingDir,
 				environment: new Dictionary<string, string> { ["MYLL_TEST"] = "1" },
 				timeout: CaseConfig.RunTimeout( caseName ) );
@@ -158,7 +158,7 @@ namespace Myll.Tests
 		}
 
 		private static string Quote( string path )
-			=> $"\"{path}\"";
+			=> String.Format( "\"{0}\"", path );
 
 		private static bool UseTempOutputDirectory()
 		{
