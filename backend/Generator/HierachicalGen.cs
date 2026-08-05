@@ -347,13 +347,20 @@ namespace Myll.Generator
 				}
 
 				if( !isExternal ) {
+					if( obj.body == null )
+						throw new InvalidOperationException( String.Format( "Non-external function '{0}' must have a body", obj.FullyQualifiedName ) );
+
 					if( hasTpl )
 						targetDecl.Add( tplDecl );
+
 					targetDecl.Add( headlineDecl );
 					targetDecl.AddRange( obj.body.Gen( LevelDecl ) );
 				}
 			}
 			else {
+				if( obj.body == null )
+					throw new InvalidOperationException( String.Format( "Non-external function '{0}' must have a body", obj.FullyQualifiedName ) );
+
 				string headlineImpl = Format(
 					FuncFormat[0],
 					indentImpl,
@@ -364,10 +371,12 @@ namespace Myll.Generator
 
 				if( hasTpl )
 					targetProto.Add( tplDecl );
+
 				targetProto.Add( headlineDecl + ";" );
 
 				if( hasTpl )
 					targetImpl.Add( tplImpl );
+
 				targetImpl.Add( headlineImpl );
 				targetImpl.AddRange( obj.body.Gen( LevelImpl ) );
 			}
@@ -406,36 +415,28 @@ namespace Myll.Generator
 				targetDecl.Add( tpl );
 			}
 
-			var objNamespace = gen.hierarchical as Namespace;
-			var objEnum      = gen.hierarchical as Enumeration;
-			var objStruct    = gen.hierarchical as Structural;
-
 			bool isGlobal    = gen.hierarchical is GlobalNamespace;
-			bool isNamespace = objNamespace != null;
-			bool isEnum      = objEnum      != null;
-			bool isStruct    = objStruct    != null;
+			bool isNamespace = gen.hierarchical is Namespace;
+			bool isEnum      = gen.hierarchical is Enumeration;
 
 			string keyword, bases;
 			if( isNamespace ) {
 				keyword = StructFormat[7];
 				bases   = "";
 			}
-			else if( isEnum ) {
+			else if( gen.hierarchical is Enumeration objEnum ) {
 				keyword = StructFormat[6];
 				bases = (objEnum.baseType != null)
 					? " : " + objEnum.baseType.GenType()
 					: "";
 			}
-			else if( isStruct ) {
+			else if( gen.hierarchical is Structural objStruct ) {
 				keyword = objStruct.kind switch {
 					Structural.Kind.Struct => StructFormat[3],
 					Structural.Kind.Class  => StructFormat[4],
 					Structural.Kind.Union  => StructFormat[5],
-					_                      => null,
+					_                      => throw new Exception( Format( "no correct keyword determined: {0}", objStruct ) ),
 				};
-
-				if( keyword == null )
-					throw new Exception( Format( "no correct keyword determined: {0}", objStruct ) );
 
 				bases = (objStruct.basetypes.Count < 1)
 					? ""
@@ -473,7 +474,7 @@ namespace Myll.Generator
 				targetDecl.Add( Format( CurlyOpen, indent ) );
 
 				// TODO: wrong spot? move towards the inside or create an alias-decl beforehand
-				if( isStruct && objStruct.basetypes.Count >= 1 ) {
+				if( gen.hierarchical is Structural objStruct && objStruct.basetypes.Count >= 1 ) {
 					targetDecl.Add(
 						Format(
 							UsingFormat[0],
@@ -537,10 +538,17 @@ namespace Myll.Generator
 
 			if( isInline ) {
 				targetDecl.Add( headlineDecl );
-				if( !isDefault && !isDisabled )
+				if( !isDefault && !isDisabled ) {
+					if( obj.body == null )
+						throw new InvalidOperationException( String.Format( "Non-default/non-disabled constructor/destructor '{0}' must have a body", obj.FullyQualifiedName ) );
+
 					targetDecl.AddRange( obj.body.Gen( LevelDecl ) );
+				}
 			}
 			else {
+				if( obj.body == null )
+					throw new InvalidOperationException( String.Format( "Non-default/non-disabled constructor/destructor '{0}' must have a body", obj.FullyQualifiedName ) );
+
 				string headlineImpl = Format(
 					FuncFormat[1],
 					indentImpl,

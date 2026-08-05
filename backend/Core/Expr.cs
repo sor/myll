@@ -301,6 +301,9 @@ namespace Myll.Core
 				.Select( p => p.Gen() )
 				.Join( ", " );
 
+			if( func.body == null )
+				throw new InvalidOperationException( String.Format( "Lambda at {0} must have a body", func.srcPos?.ToString() ?? "<unknown location>" ) );
+
 			List<string> body        = func.body.GenWithoutCurly( 1 );
 			bool         shortLambda = body.Count <= 1;
 			if( shortLambda )
@@ -425,9 +428,8 @@ namespace Myll.Core
 		public override string Gen( bool doBrace = false )
 		{
 			string       ret;
-			Pointer      ptr        = type.ptrs.FirstOrDefault(); // needs to be a variable to keep it accessible
-			bool         isSmartPtr = ptr?.kind.Between( Pointer.Kind.SmartPtr_Begin, Pointer.Kind.SmartPtr_End ) ?? false;
-			if( isSmartPtr ) {
+			Pointer      ptr        = type.ptrs?.FirstOrDefault(); // needs to be a variable to keep it accessible
+			if( ptr != null && ptr.kind.Between( Pointer.Kind.SmartPtr_Begin, Pointer.Kind.SmartPtr_End ) ) {
 				// remove the pointer that is about to be replaced by custom code
 				type.ptrs.RemoveAt( 0 );
 				string ptrFmt = ptr.kind switch {

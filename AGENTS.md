@@ -112,6 +112,9 @@ myll/
 - **No `System.Func` conflicts**: The AST has a `Decl.Func` class — be careful with `using System;` at file scope.
 - **Visitor pattern**: `VExpr`, `VDecl`, `VStmt`, `VTypes` walk the ANTLR parse tree → `Core` AST → `Generator` produces C++.
 - **No interpolated strings**: Do not use C# interpolated strings (`$"..."`). Prefer `String.Format` or plain concatenation.
+- **Blank line after braceless exit `if`**: Put an empty line after a simple `if` whose body exits the current block (e.g. `return` or `throw`). For other braceless `if`s the blank line is optional but still encouraged.
+- **Indent with tabs**: Use tabs for indentation. Use tabs for alignment too whenever possible. Only use spaces for alignment that cannot be expressed with tabs.
+- **Rider links**: When running inside Rider’s terminal, file-line references like `backend/Core/Expr.cs:42` are clickable. If using the `jetbrains://rd/navigate/reference?...` URI from the shell, the `line` value is zero-based, so subtract 1 from the 1-based source line.
 
 ## Documentation & Code Formatting Rules
 
