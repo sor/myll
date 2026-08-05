@@ -8,26 +8,38 @@
 		<Description>Backend of the Myll Programming Language</Description>
 		<Nullable>warnings</Nullable>
 		<TargetFramework>net10.0</TargetFramework>
+		<Antlr4UseStandardTool>true</Antlr4UseStandardTool>
 	</PropertyGroup>
 
 	<PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-	  <NoWarn>1701;1702;3021</NoWarn>
+		<NoWarn>1701;1702;3021</NoWarn>
 	</PropertyGroup>
 
 	<PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-	  <NoWarn>1701;1702;3021;CS8632;CS8764</NoWarn>
+		<NoWarn>1701;1702;3021;CS8632;CS8764</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Antlr4.Runtime.Standard" Version="4.10.1" />
+		<PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1"/>
+		<PackageReference Include="Antlr4BuildTasks" Version="12.14.0" PrivateAssets="all"/>
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Remove="Grammar\Generated\Myll\MyllLexer.interp" />
-	  <None Remove="Grammar\Generated\Myll\MyllLexer.tokens" />
-	  <None Remove="Grammar\Generated\Myll\MyllParser.interp" />
-	  <None Remove="Grammar\Generated\Myll\MyllParser.tokens" />
-	  <None Remove="Grammar\MyllLexer.tokens" />
+		<Antlr4 Include="Grammar/MyllLexer.g4">
+			<Listener>false</Listener>
+			<Visitor>false</Visitor>
+			<Package>Myll</Package>
+			<TargetLanguage>CSharp</TargetLanguage>
+		</Antlr4>
+		<Antlr4 Include="Grammar/MyllParser.g4">
+			<Listener>false</Listener>
+			<Visitor>true</Visitor>
+			<Package>Myll</Package>
+			<TargetLanguage>CSharp</TargetLanguage>
+		</Antlr4>
+	</ItemGroup>
+
+	<ItemGroup>
 	  <None Remove="backend.csproj.DotSettings" />
 	</ItemGroup>
 

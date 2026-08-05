@@ -17,8 +17,8 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0
 # Install the latest stable C++ compilers available in Ubuntu 24.04:
 # - g++ 14.2 (GCC C++ compiler; pulls in gcc-14 as a dependency)
 # - clang++ 20.1 (LLVM C++ compiler)
-# Also install antlr4 (pulls in OpenJDK) for grammar regeneration when .g4
-# files change. A normal build/test does NOT regenerate grammar files.
+# Also install antlr4 (pulls in OpenJDK). The Antlr4BuildTasks NuGet package
+# regenerates the parser/lexer from the .g4 files during dotnet build.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         g++-14 \
