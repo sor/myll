@@ -10,8 +10,8 @@ using static Myll.MyllParser;
 namespace Myll
 {
 	/**
-	 * Only Visit can receive null and will return null, the
-	 * other Visit... methods do not support null parameters
+	 * Visit rejects a null tree by throwing, just like StmtVisitor.
+	 * The other Visit... methods do not support null parameters.
 	 */
 	public class ExprVisitor
 		: ExtendedVisitor<Expr>
@@ -19,10 +19,13 @@ namespace Myll
 		public ExprVisitor( Stack<Scope> scopeStack ) : base( scopeStack ) {}
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public override Expr Visit( IParseTree? c )
-			=> c == null
-				? null
-				: base.Visit( c );
+		public override Expr Visit( IParseTree c )
+		{
+			if( c == null )
+				throw new ArgumentNullException();
+
+			return base.Visit( c );
+		}
 
 		public override ScopedExpr VisitScopedExpr( ScopedExprContext c )
 		{

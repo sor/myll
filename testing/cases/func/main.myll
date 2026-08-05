@@ -1,0 +1,12 @@
+module main;
+
+func takesInt(int) -> int
+{
+	return 42;
+}
+
+func main() -> int
+{
+	var int unused = takesInt( 7 );
+	return 0;
+}

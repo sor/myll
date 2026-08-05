@@ -163,7 +163,7 @@ namespace Myll
 			global_ns.AddToGen( gen );
 
 			IStrings decl = gen.GenDeclGlobal();
-			IStrings impl = gen.GenImplGlobal();
+			IStrings? impl = gen.GenImplGlobal();
 			if( decl != null ) ret.Add( (string.Format( "{0}.hpp", global_ns.module ), decl) );
 			if( impl != null ) ret.Add( (string.Format( "{0}.cpp", global_ns.module ), impl) );
 

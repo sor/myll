@@ -1,5 +1,3 @@
-#nullable enable
-
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -88,8 +86,8 @@ namespace Myll
 			return ret;
 		}
 
-		public override Stmt? VisitAttrUsing(	AttrUsingContext	c ) => VisitAttrAnyStmt( c.attribBlk(), c.defUsing(), c.attrUsing() );
-		public override Stmt? VisitAttrAlias(	AttrAliasContext	c ) => VisitAttrAnyStmt( c.attribBlk(), c.defAlias(), c.attrAlias() );
+		public override Stmt VisitAttrUsing(	AttrUsingContext	c ) => VisitAttrAnyStmt( c.attribBlk(), c.defUsing(), c.attrUsing() )!;
+		public override Stmt VisitAttrAlias(	AttrAliasContext	c ) => VisitAttrAnyStmt( c.attribBlk(), c.defAlias(), c.attrAlias() )!;
 
 		// no override
 		public Stmt? VisitAttrAnyStmt<TDefContext, TAttrContext>(
@@ -234,16 +232,15 @@ namespace Myll
 		// no override
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
 		public new IfStmt.CondThen VisitCondThen( CondThenContext c )
-			=> new() {
-				cond = c.expr().Visit(),
-				then = c.stmt().Visit(),
-			};
+			=> new(
+				c.expr().Visit(),
+				c.stmt().Visit() );
 
 		public override IfStmt VisitStmtIf( StmtIfContext c )
 		{
 			IfStmt ret = new() {
 				ifThens = c.condThen().Select( VisitCondThen ).ToList(),
-				els     = c.stmt().Visit(),
+				els     = c.stmt()?.Visit(),
 			};
 
 			return ret;
@@ -272,10 +269,9 @@ namespace Myll
 				body.stmts.Add( new BreakStmt() );
 			}
 
-			SwitchStmt.CaseBlock ret = new() {
-				compare = c.expr().Select( q => q.Visit() ).ToList(),
-				then    = body,
-			};
+			SwitchStmt.CaseBlock ret = new(
+				c.expr().Select( q => q.Visit() ).ToList(),
+				body );
 			return ret;
 		}
 

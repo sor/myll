@@ -32,7 +32,7 @@ namespace Myll.Core
 	/// </summary>
 	public abstract class Typespec
 	{
-		public SrcPos         srcPos;
+		public SrcPos         srcPos = null!;
 		public Qualifier      qual;
 		public List<Pointer>? ptrs;
 
@@ -42,6 +42,7 @@ namespace Myll.Core
 
 		public virtual string Gen( string name = "" )
 			=> PointerizeName( GenQualifiers() + GenType(), name );
+
 
 		// r-padded qualifiers TODO: do properly
 		[Pure]
@@ -130,7 +131,7 @@ namespace Myll.Core
 	// this means the Template part is not visible in the resulting type of the function pointer
 	public class TypespecFunc : Typespec
 	{
-		public List<Param> paras;
+		public List<Param> paras   = new();
 		public Typespec    retType = new TypespecBasic { kind = TypespecBasic.Kind.Void }; // opt
 
 		public override string GenType()
@@ -154,7 +155,7 @@ namespace Myll.Core
 	public class TypespecNested : Typespec
 	{
 		// TODO remember if a Ctor/Dtor was in the last spot, eg *::ctor
-		public List<IdTplArgs> idTpls;
+		public List<IdTplArgs> idTpls = new();
 
 		public override string GenType()
 			=> idTpls

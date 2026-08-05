@@ -4,8 +4,8 @@ namespace Myll.Core
 {
 	public class ScopeLeaf
 	{
-		public Scope parent; // only global scope has this set to null
-		public Decl  decl;
+		public Scope? parent; // only global scope has this set to null
+		public Decl?  decl;
 
 		public bool HasDecl => decl != null;
 	}
@@ -17,10 +17,10 @@ namespace Myll.Core
 	public class Scope : ScopeLeaf
 	{
 		public Scope UpToGlobal    => parent?.UpToGlobal ?? this;
-		public Scope UpToNamespace => decl is Namespace ? this : parent.UpToNamespace;
+		public Scope UpToNamespace => decl is Namespace ? this : parent?.UpToNamespace ?? this;
 
 		// opt
-		public new Hierarchical decl {
+		public new Hierarchical? decl {
 			get => base.decl as Hierarchical;
 			set => base.decl = value;
 		}
@@ -29,11 +29,11 @@ namespace Myll.Core
 			children = new();
 
 		// unresolved???
-		public List<Scope> importedScopes; // (base) Class(es) and (using) Namespaces
+		public List<Scope> importedScopes = new(); // (base) Class(es) and (using) Namespaces
 
 		public void AddChild( ScopeLeaf scope )
 		{
-			Decl child = scope.decl;
+			Decl child = scope.decl!;
 			decl?.AddChild( child );
 			child.scope = scope;
 			AddToDict( scope, child );
@@ -41,7 +41,7 @@ namespace Myll.Core
 
 		public void AddChild( Scope scope )
 		{
-			Hierarchical child = scope.decl;
+			Hierarchical child = (scope.decl as Hierarchical)!;
 			decl?.AddChild( child );
 			child.scope = scope;
 			AddToDict( scope, child );
@@ -49,7 +49,7 @@ namespace Myll.Core
 
 		private void AddToDict( ScopeLeaf scopeLeaf, Decl child )
 		{
-			if( !children.TryGetValue( child.name, out List<ScopeLeaf> list ) ) {
+			if( !children.TryGetValue( child.name, out List<ScopeLeaf>? list ) ) {
 				list = new List<ScopeLeaf>( 1 );
 				children.Add( child.name, list );
 			}

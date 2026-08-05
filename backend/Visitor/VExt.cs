@@ -25,13 +25,13 @@ namespace Myll
 	public partial class ExtendedVisitor<Result>
 		: MyllParserBaseVisitor<Result>
 	{
-		protected override Result? AggregateResult( Result? aggregate, Result? nextResult )
+		protected override Result AggregateResult( Result aggregate, Result nextResult )
 			=> nextResult ?? aggregate;
 
-		protected new IEnumerable<Arg> VisitArgs( ArgsContext cs )
+		protected new IEnumerable<Arg> VisitArgs( ArgsContext? cs )
 			=> cs?.arg().Select(
 				   c => new Arg {
-					   name = c.id().Visit(),
+					   name = c.id()?.Visit(),
 					   expr = c.expr().Visit(),
 				   } )
 			?? Enumerable.Empty<Arg>();
@@ -45,15 +45,15 @@ namespace Myll
 
 		protected new FuncCall VisitFuncCall( FuncCallContext c )
 			=> new() {
-				args     = VisitArgs( c?.args() ).ToList(),
-				nullCoal = c?.ary.Type == QM_LPAREN,
+				args     = VisitArgs( c.args() ).ToList(),
+				nullCoal = c.ary.Type == QM_LPAREN,
 				indexer  = false,
 			};
 
 		protected new IEnumerable<Param> VisitFuncTypeDef( FuncTypeDefContext? cs )
 			=> cs?.param().Select(
 				c => new Param {
-					name = c.id().Visit(),
+					name = c.id()?.Visit(),
 					type = VisitTypespec( c.typespec() )
 				} ) ?? Enumerable.Empty<Param>();
 
@@ -198,7 +198,7 @@ namespace Myll
 		// this will become more specialized most likely, don't depend on current behavior
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static string Visit( this Parser.IdContext c )
-			=> c?.GetText();
+			=> c.GetText();
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static List<string> Visit( this Parser.IdContext[] c )
@@ -207,7 +207,7 @@ namespace Myll
 		// this will become more specialized most likely, don't depend on current behavior
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static string Visit( this Parser.IdOrLitContext c )
-			=> c?.GetText();
+			=> c.GetText();
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static List<string> Visit( this Parser.IdOrLitContext[] c )
@@ -226,12 +226,14 @@ namespace Myll
 		public static Literal Visit( this Parser.LitContext c )
 			=> ExprVis.VisitLit( c );
 
-		// TODO those null tolerant methods need to be removed
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
 		public static Stmt Visit( this Parser.StmtContext c )
-			=> c == null
-				? null
-				: StmtVis.Visit( c );
+		{
+			if( c == null )
+				throw new ArgumentNullException();
+
+			return StmtVis.Visit( c );
+		}
 
 		// TODO those null tolerant methods need to be removed
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
@@ -244,12 +246,14 @@ namespace Myll
 		//public static Block VisitBlockify( this ParserRuleContext c )
 		//	=> StmtVis.VisitBlockify( c );
 
-		// TODO those null tolerant methods need to be removed
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
 		public static Decl Visit( this Parser.DeclContext c )
-			=> c == null
-				? null
-				: DeclVis.Visit( c );
+		{
+			if( c == null )
+				throw new ArgumentNullException();
+
+			return DeclVis.Visit( c );
+		}
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Qualifier Visit( this Parser.QualContext[] c )

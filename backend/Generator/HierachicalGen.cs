@@ -168,7 +168,7 @@ namespace Myll.Generator
 			return ret;
 		}
 
-		public IStrings GenImplGlobal()
+		public IStrings? GenImplGlobal()
 		{
 			Strings implList = GenImpl();
 			if( implList.Count != 0 ) {
@@ -334,8 +334,8 @@ namespace Myll.Generator
 					tplContent );
 			}
 			else {
-				tplDecl = null;
-				tplImpl = null;
+				tplDecl = string.Empty;
+				tplImpl = string.Empty;
 			}
 
 			// TODO: move inlines to bottom of header

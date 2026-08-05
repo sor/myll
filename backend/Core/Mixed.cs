@@ -14,7 +14,7 @@ namespace Myll.Core
 			public int col;
 		}
 
-		public string  file;
+		public string  file = null!;
 		public LineCol from;
 		public LineCol to;
 
@@ -35,18 +35,18 @@ namespace Myll.Core
 
 		public Kind      kind;
 		public Qualifier qual;
-		public Stmt      body; // opt
+		public Stmt?     body; // opt
 	}
 
 	// func blah(  int  n     )
 	//           \ type name /
 	public class Param
 	{
-		public Typespec type;
+		public Typespec type = null!;
 		public string?  name;
 
 		public string Gen()
-			=> type.Gen( name );
+			=> type.Gen( name ?? "" );
 	}
 
 	// blah(  n:   1+2   )
@@ -54,7 +54,7 @@ namespace Myll.Core
 	public class Arg // Decl
 	{
 		public string? name;
-		public Expr    expr;
+		public Expr    expr = null!;
 
 		public string Gen()
 		{
@@ -70,7 +70,7 @@ namespace Myll.Core
 	//     \      args       / indexer \args/
 	public class FuncCall
 	{
-		public List<Arg> args;
+		public List<Arg> args = new();
 		public bool      indexer;
 		public bool      nullCoal;
 
@@ -105,7 +105,7 @@ namespace Myll.Core
 
 	public class IdTplArgs
 	{
-		public string       id;
+		public string       id      = null!;
 		public List<TplArg> tplArgs = new();
 
 		public string Gen()
@@ -124,16 +124,17 @@ namespace Myll.Core
 
 	public class TplArg // literal OR type
 	{
-		public Typespec typespec;
-		public Literal  lit;
+		public Typespec? typespec;
+		public Literal?  lit;
 
 		public string Gen()
 			=> lit?.Gen()
-			?? typespec?.Gen();
+			?? typespec?.Gen()
+			?? throw new InvalidOperationException( "TplArg has neither literal nor typespec" );
 	}
 
 	public class TplParam
 	{
-		public string name;
+		public string name = null!;
 	}
 }

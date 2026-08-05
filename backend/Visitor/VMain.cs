@@ -19,15 +19,13 @@ namespace Myll
 		public GlobalNamespace GenerateGlobalScope( string module )
 		{
 			GlobalNamespace global = new() {
-				name     = "",   // global
-				srcPos   = null, // no pos since it exists for multiple files
+				name     = "", // global, no source position because it spans multiple files
 				withBody = true,
 				imps     = new HashSet<string>(),
 				module   = module,
 			};
 			Scope scope = new() {
-				parent = null,
-				decl   = global,
+				decl = global,
 			};
 			scopeStack.Push( scope );
 			return global;
@@ -36,7 +34,7 @@ namespace Myll
 		public void CleanBodylessNamespace()
 		{
 			// TODO: This needs to be mentioned in the THESIS, unreadable SHIT!
-			while( !((Namespace) scopeStack.Peek().decl).withBody )
+			while( !((Namespace) scopeStack.Peek().decl!).withBody )
 				PopScope();
 		}
 
@@ -87,7 +85,6 @@ namespace Myll
 			Scope parent = scopeStack.Peek();
 			Scope scope = new() {
 				parent = parent,
-				decl   = null,
 			};
 			scopeStack.Push( scope );
 		}

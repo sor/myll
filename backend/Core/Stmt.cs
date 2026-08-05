@@ -17,18 +17,16 @@ namespace Myll.Core
 	public abstract class Stmt
 	{
 		// TODO: If there is no srcPos on myself, redirect to parent
-		public  SrcPos  srcPos;
-		private Attribs attribs { get; set; }
+		public  SrcPos  srcPos = null!;
+		private Attribs attribs { get; set; } = new();
 
 		public bool IsStatic => HasAttrib( "static" );
 
 		public bool HasAttrib( string attrib )
-			=> attribs != null
-			&& attribs.ContainsKey( attrib );
+			=> attribs.ContainsKey( attrib );
 
 		public bool IsAttrib( string attrib, string value )
-			=> attribs != null
-			&& attribs.TryGetValue( attrib, out Strings values )
+			=> attribs.TryGetValue( attrib, out Strings? values )
 			&& values.Contains( value );
 
 		// Enumerate (depth first) through all contained Stmt and itself
@@ -78,8 +76,8 @@ namespace Myll.Core
 	public class VarStmt : Stmt
 	{
 		public VarDecl.Kind kind;
-		public string       name;
-		public Typespec     type; // contains Qualifier
+		public string       name = null!;
+		public Typespec     type = null!; // contains Qualifier
 		public Expr?        init;
 
 		public override Strings Gen( int level )
@@ -100,8 +98,8 @@ namespace Myll.Core
 
 	public class UsingStmt : Stmt
 	{
-		public Typespec type;
-		public string   name;
+		public Typespec type = null!;
+		public string?  name;
 
 		// in locations where C++ does not support "using namespace" this must not be printed
 		// but instead the unqualified types need to be changed to qualified ones
@@ -130,7 +128,7 @@ namespace Myll.Core
 
 	public class ThrowStmt : Stmt
 	{
-		public Expr expr;
+		public Expr expr = null!;
 
 		public override Strings Gen( int level )
 			=> Format( "throw {0};", expr.Gen() ).IndentAll( level );
@@ -152,7 +150,7 @@ namespace Myll.Core
 
 	public class MultiAssign : Stmt
 	{
-		public List<Expr> exprs;
+		public List<Expr> exprs = new();
 
 		public override Strings Gen( int level )
 			=> (exprs
@@ -163,8 +161,8 @@ namespace Myll.Core
 	public class AggrAssign : Stmt
 	{
 		public Operand op;
-		public Expr    leftExpr;
-		public Expr    rightExpr;
+		public Expr    leftExpr = null!;
+		public Expr    rightExpr = null!;
 
 		public override Strings Gen( int level )
 			=> Format(
@@ -175,7 +173,7 @@ namespace Myll.Core
 
 	public class ExprStmt : Stmt
 	{
-		public Expr expr;
+		public Expr expr = null!;
 
 		public override Strings Gen( int level )
 			=> Format( "{0};", expr.Gen() ).IndentAll( level );
@@ -207,13 +205,19 @@ namespace Myll.Core
 	// 1-2-n scopes
 	public class IfStmt : Stmt
 	{
-		public struct CondThen
+		public class CondThen
 		{
 			public Expr cond;
 			public Stmt then;
+
+			public CondThen( Expr cond, Stmt then )
+			{
+				this.cond = cond;
+				this.then = then;
+			}
 		}
 
-		public List<CondThen> ifThens;
+		public List<CondThen> ifThens = new();
 		public Stmt?          els;
 
 		[Pure]
@@ -255,14 +259,20 @@ namespace Myll.Core
 
 	public class SwitchStmt : Stmt
 	{
-		public struct CaseBlock
+		public class CaseBlock
 		{
 			public List<Expr> compare; // can have multiple ORed conditions
 			public MultiStmt  then;    // isScope = true
+
+			public CaseBlock( List<Expr> compare, MultiStmt then )
+			{
+				this.compare = compare;
+				this.then    = then;
+			}
 		}
 
-		public Expr            cond;
-		public List<CaseBlock> cases;
+		public Expr            cond = null!;
+		public List<CaseBlock> cases = new();
 		public MultiStmt?      els; // isScope = true
 
 		[Pure]
@@ -304,7 +314,7 @@ namespace Myll.Core
 	// 1 scope
 	public class LoopStmt : Stmt
 	{
-		public Stmt body;
+		public Stmt body = null!;
 
 		[Pure]
 		public override IEnumerable<Stmt> EnumerateDF {
@@ -331,7 +341,7 @@ namespace Myll.Core
 	public class ForStmt : Stmt
 	{
 		public Stmt? body;
-		public Stmt  init;
+		public Stmt  init = null!;
 		public Expr? cond;
 		public Expr? iter;
 		public Stmt? els; // TODO: not implemented yet
@@ -379,8 +389,8 @@ namespace Myll.Core
 	// +0-1 scope
 	public class WhileStmt : Stmt
 	{
-		public Stmt  body;
-		public Expr  cond;
+		public Stmt  body = null!;
+		public Expr  cond = null!;
 		public Stmt? els;
 
 		[Pure]
@@ -411,8 +421,8 @@ namespace Myll.Core
 
 	public class DoWhileStmt : Stmt
 	{
-		public Stmt body;
-		public Expr cond;
+		public Stmt body = null!;
+		public Expr cond = null!;
 
 		public override Strings Gen( int level )
 		{
@@ -431,8 +441,8 @@ namespace Myll.Core
 		public static int    randomNumber = 1;
 		public static string randomName => "myll_times_" + ++randomNumber;
 
-		public Stmt    body;
-		public Expr    count;
+		public Stmt    body = null!;
+		public Expr    count = null!;
 		public string? name;
 		public long    offset = 0;
 

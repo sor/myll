@@ -243,7 +243,7 @@ namespace Myll
 			return ret;
 		}
 
-		public List<TypespecNested> VisitTypespecsNested( TypespecNestedContext[] c )
+		public List<TypespecNested> VisitTypespecsNested( TypespecNestedContext[]? c )
 			=> c?.Select( VisitTypespecNested ).ToList()
 			?? new List<TypespecNested>();
 

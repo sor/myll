@@ -1,6 +1,4 @@
-﻿//#nullable enable
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -31,9 +29,9 @@ namespace Myll.Core
 	/// </summary>
 	public abstract class Decl : Stmt
 	{
-		public string    name { get; init; }
+		public string    name { get; init; } = null!;
 		public Access    access = Access.Public;
-		public ScopeLeaf scope;
+		public ScopeLeaf scope = null!;
 
 		// recursively check if there is anything templated surrounding
 		public bool IsTemplateUp {
@@ -49,7 +47,7 @@ namespace Myll.Core
 
 		public bool IsExternal => HasAttrib( "extern" );
 		public bool IsInline   => HasAttrib( "inline" ) || IsTemplateUp;
-		public bool IsInStruct => scope.parent.decl is Structural;
+		public bool IsInStruct => scope.parent?.decl is Structural;
 
 		// TODO Symbol?
 
@@ -73,7 +71,7 @@ namespace Myll.Core
 			get {
 				Strings ret = new();
 				for( ScopeLeaf cur = scope; cur?.parent != null; cur = cur.parent ) {
-					Decl   decl     = cur.decl;
+					Decl?  decl     = cur.decl;
 					string declName = decl?.name ?? "unknown_fix_me";
 					if( decl is ITplParams curStruct )
 						if( curStruct.TplParams.Count >= 1 )
@@ -105,7 +103,7 @@ namespace Myll.Core
 		public readonly List<Decl> children = new();
 
 		public new Scope scope {
-			get => base.scope as Scope;
+			get => (base.scope as Scope)!;
 			set => base.scope = value;
 		}
 
@@ -133,9 +131,9 @@ namespace Myll.Core
 		public Kind                 kind;
 		public List<TplParam>       TplParams { get; init; } = new();
 		public List<TypespecNested> Requires  { get; init; } = new(); // TODO: replace with dedicated type
-		public List<Param>          paras;
+		public List<Param>          paras   = new();
 		public MultiStmt?           body; // isScope = true
-		public Typespec             retType;
+		public Typespec             retType = null!;
 
 		public bool IsVirtual  => HasAttrib( "virtual" );
 		public bool IsConst    => HasAttrib( "const" ) || HasAttrib( "pure" );
@@ -164,7 +162,7 @@ namespace Myll.Core
 		}
 
 		public Kind        kind;
-		public List<Param> paras;
+		public List<Param> paras = new();
 		public MultiStmt?  body; // isScope = true
 
 		public bool IsVirtual  => HasAttrib( "virtual" );
@@ -189,7 +187,7 @@ namespace Myll.Core
 		// but instead the unqualified types need to be changed to qualified ones
 		//public List<TypespecNested> types;
 		// TODO: add distinction to alias and using ns decls
-		public Typespec type;
+		public Typespec type = null!;
 
 		public override void AddToGen( HierarchicalGen gen )
 		{
@@ -218,8 +216,8 @@ namespace Myll.Core
 		}
 
 		public Kind           kind;
-		public Typespec       type;     // contains Qualifier
-		public List<Accessor> accessor; // opt, structural or global
+		public Typespec       type     = null!; // contains Qualifier
+		public List<Accessor> accessor = new(); // opt, structural or global
 		public Expr?          init;
 
 		public override void AddToGen( HierarchicalGen gen )
@@ -267,7 +265,7 @@ namespace Myll.Core
 
 	public class Enumeration : Hierarchical
 	{
-		public TypespecBasic baseType;
+		public TypespecBasic? baseType;
 
 		public bool IsFlags     => HasAttrib( "flags" );
 		public bool IsOpBitwise => IsAttrib( "operators", "bitwise" );
@@ -468,8 +466,8 @@ namespace Myll.Core
 
 	public class GlobalNamespace : Namespace
 	{
-		public string          module;
-		public HashSet<string> imps;
+		public string          module = null!;
+		public HashSet<string> imps = new();
 	}
 
 	public class Structural : Hierarchical, ITplParams
@@ -482,9 +480,9 @@ namespace Myll.Core
 		}
 
 		public Kind                 kind;
-		public List<TplParam>       TplParams { get; set; }
-		public List<TypespecNested> basetypes;
-		public List<TypespecNested> reqs;
+		public List<TplParam>       TplParams { get; set; } = new();
+		public List<TypespecNested> basetypes = new();
+		public List<TypespecNested> reqs = new();
 
 		// default access for child elements
 		public override Access defaultAccess

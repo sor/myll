@@ -1,5 +1,3 @@
-#nullable enable
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -70,12 +68,12 @@ namespace Myll
 			return global;
 		}
 
-		public override Decl? VisitDecl(		DeclContext			c ) => VisitAttrAnyDecl( c.attribBlk(), c.defDecl(), c.decl(), c.COLON() != null );
-		public override Decl? VisitAttrUsing(	AttrUsingContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defUsing(), c.attrUsing(), c.COLON() != null );
-		public override Decl? VisitAttrAlias(	AttrAliasContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defAlias(), c.attrAlias(), c.COLON() != null );
-		public override Decl? VisitAttrConvert(	AttrConvertContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defConvert(), c.attrConvert(), c.COLON() != null );
-		public override Decl? VisitAttrCtor(	AttrCtorContext		c ) => VisitAttrAnyDecl( c.attribBlk(), c.defCtor(), c.attrCtor(), c.COLON() != null );
-		public override Decl? VisitAttrOp( 		AttrOpContext		c ) => VisitAttrAnyDecl( c.attribBlk(), c.defOp(), c.attrOp(), c.COLON() != null );
+		public override Decl VisitDecl(		DeclContext			c ) => VisitAttrAnyDecl( c.attribBlk(), c.defDecl(), c.decl(), c.COLON() != null )!;
+		public override Decl VisitAttrUsing(	AttrUsingContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defUsing(), c.attrUsing(), c.COLON() != null )!;
+		public override Decl VisitAttrAlias(	AttrAliasContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defAlias(), c.attrAlias(), c.COLON() != null )!;
+		public override Decl VisitAttrConvert(	AttrConvertContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defConvert(), c.attrConvert(), c.COLON() != null )!;
+		public override Decl VisitAttrCtor(		AttrCtorContext		c ) => VisitAttrAnyDecl( c.attribBlk(), c.defCtor(), c.attrCtor(), c.COLON() != null )!;
+		public override Decl VisitAttrOp(		AttrOpContext		c ) => VisitAttrAnyDecl( c.attribBlk(), c.defOp(), c.attrOp(), c.COLON() != null )!;
 
 		// no override
 		public Decl? VisitAttrAnyDecl<TDefContext, TAttrContext>(
@@ -333,13 +331,13 @@ namespace Myll
 		public override Structor VisitDefCtor( DefCtorContext c )
 		{
 			Scope parent = scopeStack.Peek();
-			if( !parent.HasDecl || !(parent.decl is Structural) )
+			if( parent.decl is not Structural structuralParent )
 				throw new Exception( "parent of ctor has no decl or is not a structural" );
 
 			PushScope();
 			Structor ret = new() {
 				srcPos = c.ToSrcPos(),
-				name   = parent.decl.name, //.FullyQualifiedName;,
+				name   = structuralParent.name,
 				access = curAccess,
 				kind   = Structor.Kind.Constructor,
 				paras  = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
@@ -354,13 +352,13 @@ namespace Myll
 		public override Structor VisitDefDtor( DefDtorContext c )
 		{
 			Scope parent = scopeStack.Peek();
-			if( !parent.HasDecl || !(parent.decl is Structural) )
+			if( parent.decl is not Structural structuralParent )
 				throw new Exception( "parent of dtor has no decl or is not a structural" );
 
 			PushScope();
 			Structor ret = new() {
 				srcPos = c.ToSrcPos(),
-				name   = "~" + parent.decl.name,
+				name   = "~" + structuralParent.name,
 				access = curAccess,
 				kind   = Structor.Kind.Destructor,
 				paras  = new(),
@@ -386,10 +384,10 @@ namespace Myll
 					if( !isCopy && !isMove )
 						throw new NotSupportedException( "only copy and move special assignment ops are supported" );
 
-					if( !parent.HasDecl || !(parent.decl is Structural) )
+					if( parent.decl is not Structural structuralParent )
 						throw new Exception( "parent of operator= copy or move has no decl or is not a structural" );
 
-					string className = parent.decl.name; //.FullyQualifiedName;
+					string className = structuralParent.name;
 					List<IdTplArgs> classIdTpls = new() {
 						new() { id = className },
 					};
