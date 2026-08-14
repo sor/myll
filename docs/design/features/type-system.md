@@ -19,7 +19,7 @@ func foo() {        // return type inferred from body
 `auto` is also available for explicit inference:
 
 ```
-var x: auto = complex_expr;
+var auto x = complex_expr;
 ```
 
 ## Type Aliases
@@ -32,11 +32,13 @@ alias Callback = func(int) -> void;
 ## Qualifiers
 
 ```
-var c: const int;       // const qualifier
-var v: volatile int;    // volatile qualifier
-var s: stable int;      // Myll's antonym for volatile [may be removed]
-var m: mutable int;     // mutable qualifier
+var const int c;       // const qualifier
+var volatile int v;    // volatile qualifier
 ```
+
+`const` and `volatile` can be used as type qualifiers in declarations.
+`stable` and `mutable` are reserved for casts: `(stable)expr` removes `volatile`, and `(mutable)expr` removes `const`.
+Using `stable` or `mutable` as variable modifiers is a compile-time error, except that `mutable` may still appear on class fields.
 
 ## Templates
 

@@ -6,16 +6,17 @@ C++ smart pointers are verbose and require cognitive overhead:
 - `std::unique_ptr<T>` — 16 characters, awkward to type
 - Semantics are hidden in the template name, not visually obvious at the declaration site
 
-The author argues that messy smart pointer parameter lists are not contrived examples — real production code is often far worse than any constructed demonstration.
+The author argues that messy smart pointer parameter lists are not contrived examples.
+Real production code is often far worse than any constructed demonstration.
 
 ## Solution
 
 Myll adds single-character suffixes to the familiar pointer syntax:
 
 ```
-var up: T*!;    // unique_ptr
-var sp: T*+;    // shared_ptr
-var wp: T*?;    // weak_ptr
+var T*! up;    // unique_ptr
+var T*+ sp;    // shared_ptr
+var T*? wp;    // weak_ptr
 ```
 
 ## Rationale for Each Symbol
@@ -36,8 +37,8 @@ Named types like `unique_ptr<T>` were considered but rejected because:
 ## Extension to Arrays
 
 ```
-var arr: T[]!;   // unique_ptr<T[]>
-var arr: T[]+;   // shared_ptr<T[]>
+var T[]! arr;   // unique_ptr<T[]>
+var T[]+ arr;   // shared_ptr<T[]>
 ```
 
 The array bracket form reuses the same suffixes, maintaining consistency.

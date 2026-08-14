@@ -2,7 +2,8 @@
 
 ## Problem
 
-C provides a lightweight cast syntax: `(Type)expr`. However, in C++ this syntax is dangerous because the compiler tries multiple cast strategies in order and picks the first that compiles:
+C provides a lightweight cast syntax: `(Type)expr`.
+However, in C++ this syntax is dangerous because the compiler tries multiple cast strategies in order and picks the first that compiles:
 
 1. `const_cast`
 2. `static_cast` (with extensions)
@@ -10,7 +11,8 @@ C provides a lightweight cast syntax: `(Type)expr`. However, in C++ this syntax 
 4. `reinterpret_cast`
 5. `reinterpret_cast` + `const_cast`
 
-This "try everything" behavior means `(Type)expr` might silently perform a `reinterpret_cast` when a `static_cast` was intended. Many C++ projects ban C-style casts entirely.
+This "try everything" behavior means `(Type)expr` might silently perform a `reinterpret_cast` when a `static_cast` was intended.
+Many C++ projects ban C-style casts entirely.
 
 Meanwhile, the named C++ casts are verbose:
 - `static_cast<T>(expr)` -- 16 characters
@@ -32,7 +34,9 @@ Myll revives the parenthesized cast syntax but makes each cast kind **determinis
 
 ### Default Behavior: static_cast
 
-`(Type)expr` -- no prefix marker -- is always `static_cast`. This is safe because `static_cast` is the most common and least dangerous cast. It cannot cast away `const` or perform bit-level reinterpretation.
+`(Type)expr` -- no prefix marker -- is always `static_cast`.
+This is safe because `static_cast` is the most common and least dangerous cast.
+It cannot cast away `const` or perform bit-level reinterpretation.
 
 ### Prefix Markers
 
@@ -65,20 +69,32 @@ For adding or removing `const`/`volatile` in generic code:
 (-volatile)expr     // std::remove_volatile_t
 ```
 
+### Readable Aliases
+
+```
+(const)expr         // same as (+const)expr
+(mutable)expr       // same as (-const)expr
+(volatile)expr      // same as (+volatile)expr
+(stable)expr        // same as (-volatile)expr
+```
+
+`stable` and `mutable` are only valid inside casts.
+Using them as variable modifiers (`var mutable int x;` or `var stable int x;`) is a compile-time error, except that `mutable` may still be used on class fields.
+
 ## Examples
 
 ```
-var basePtr: Base* = new Derived();
-var derivedPtr = (?Derived*)basePtr;    // dynamic_cast
+var Base*    basePtr    = new Derived();
+var Derived* derivedPtr = (?Derived*)basePtr;    // dynamic_cast
 
-var constVal: const int = 42;
-var mutableVal = (-int)constVal;        // const_cast
+const int constVal   = 42;
+var   int mutableVal = (-int)constVal;        // const_cast
 
-var intBits: int = 0x3F800000;
-var floatVal = (!float)intBits;         // std::bit_cast
+var int   intBits  = 0x3F800000;
+var float floatVal = (!float)intBits;         // std::bit_cast
 
-var rawPtr: void* = &intBits;
-var typedPtr = (!!int*)rawPtr;          // reinterpret_cast
+var void* rawPtr   = &intBits;
+var int*  typedPtr = (!!int*)rawPtr;          // reinterpret_cast
 
 // Chaining casts (reads left-to-right)
 (?Derived*)(-const)(Base const*)my_var;
@@ -102,7 +118,8 @@ var typedPtr = (!!int*)rawPtr;          // reinterpret_cast
 
 - Familiar to C/C++ programmers -- no new syntax to learn for the common case.
 - Prefix markers fit naturally inside parentheses -- `(?Type)` clearly signals something special before the type name.
-- Postfix syntax (`expr as Type`) was considered but would require Myll to adopt postfix style more broadly to avoid inconsistency. Spaces in postfix casts also complicate parsing.
+- Postfix syntax (`expr as Type`) was considered but would require Myll to adopt postfix style more broadly to avoid inconsistency.
+Spaces in postfix casts also complicate parsing.
 
 **Why is `!` bit_cast and `!!` reinterpret_cast?**
 
@@ -115,7 +132,9 @@ The C++ named casts (`static_cast<T>(expr)`, etc.) remain valid Myll syntax for 
 
 ## Future Considerations
 
-A postfix cast syntax (`expr as Type`) was considered for easier chaining (e.g., `expr as Type as OtherType`). This would only work well if Myll moved more fully toward postfix notation. Currently not implemented.
+A postfix cast syntax (`expr as Type`) was considered for easier chaining (e.g., `expr as Type as OtherType`).
+This would only work well if Myll moved more fully toward postfix notation.
+Currently not implemented.
 
 ## Implementation Notes
 

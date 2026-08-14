@@ -14,25 +14,27 @@ This document covers all declaration forms in Myll: variables, functions, types,
 ### Forms
 
 ```
-var name: Type = init;      // mutable, optionally initialized
-let name: Type = init;      // immutable binding
-const name: Type = init;    // compile-time constant (constexpr)
-global name: Type = init;   // global scope variable
+var Type name = init;       // variable declaration; mutable unless Type is const-qualified
+const Type name = init;     // preferred form for immutable variables
+let Type name = init;       // immutable binding; currently behaves the same as const
+global Type name = init;    // global scope variable
 ```
+
+`const Type name` is the preferred form and is equivalent to `var const Type name`. For a true compile-time constant, use `[ct] const Type name = init;`.
 
 ### Multi-Declaration
 
 ```
-var a, b, c: int = 1, 2, 3;
+var int a = 1, b = 2, c = 3;
 ```
 
 Multiple names can share a type and initializer list. The number of names and initializers must match.
 
 ### Rationale for Keywords
 
-- `var`: General mutable variable. Familiar from many modern languages.
-- `let`: Immutable. Signals that the binding won't change. Borrowed from Rust/ES6.
-- `const`: Compile-time constant. Stronger than `let` — requires compile-time computable initializer.
+- `var`: Universal variable declaration marker. Works with any type, including const-qualified template parameters.
+- `let`: Immutable binding. Currently behaves the same as `const`.
+- `const`: Shorthand for `var const`. The `const` qualifier may also appear inside the type.
 - `global`: Indicates module-level or namespace-level storage. Distinguishes from locals.
 
 ### Future Directions

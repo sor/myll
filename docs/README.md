@@ -9,6 +9,7 @@ Welcome to the Myll project documentation. This folder contains living documents
 
 ### I want to know the syntax
 → Read [`design/02-myll-language.md`](design/02-myll-language.md) for the full specification.
+→ Skim [`design/05-examples.md`](design/05-examples.md) for a quick, example-driven tour.
 
 ### I want to understand how Myll relates to C++
 → Read [`design/03-cpp-relationship.md`](design/03-cpp-relationship.md) for the semantic contract.
@@ -40,6 +41,7 @@ docs/
 │   ├── 02-myll-language.md         # Full language specification (living)
 │   ├── 03-cpp-relationship.md      # C++ semantic contract & deviations
 │   ├── 04-other-languages.md       # Inspiration from other languages
+│   ├── 05-examples.md              # Example-driven language tour
 │   ├── features/                   # High-level feature families (Approach A)
 │   │   ├── declarations.md
 │   │   ├── memory-model.md

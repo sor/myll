@@ -2,7 +2,8 @@
 
 ## Core Rule
 
-**Myll preserves C++ semantics.** Any valid Myll program should compile to C++ that behaves identically to how a C++ programmer would expect. Deviations from C++ behavior are intentional, documented here, and require explicit syntax.
+**Myll preserves C++ semantics.** Any valid Myll program should compile to C++ that behaves identically to how a C++ programmer would expect.
+Deviations from C++ behavior are intentional, documented here, and require explicit syntax.
 
 ## What We Preserve
 
@@ -33,8 +34,8 @@ These deviations are the core value proposition of Myll. Each addresses a specif
 
 **Myll Solution:**
 ```
-var name: Type;     // Always unambiguously a variable declaration
-let name: Type;     // Immutable binding
+var Type name;     // Always unambiguously a variable declaration
+let Type name;     // Immutable binding
 ```
 
 ### 2. Pointer, Reference & Array Syntax
@@ -43,9 +44,9 @@ let name: Type;     // Immutable binding
 
 **Myll Solution:**
 ```
-var a: int*;        // pointer follows type, applies to all declared names
-var a: int[*];      // array/vector type
-var a: int[][];     // array of arrays (pointer to pointer)
+var int* a;        // pointer follows type, applies to all declared names
+var int[*] a;      // array/vector type
+var int[][] a;     // array of arrays (pointer to pointer)
 ```
 
 ### 3. Function Pointer Syntax
@@ -54,7 +55,7 @@ var a: int[][];     // array of arrays (pointer to pointer)
 
 **Myll Solution:**
 ```
-var fp: func(int) -> void;     // vs. void (*fp)(int) in C++
+var func(int) -> void fp;     // vs. void (*fp)(int) in C++
 ```
 
 ### 4. Smart Pointer Syntax
@@ -63,9 +64,9 @@ var fp: func(int) -> void;     // vs. void (*fp)(int) in C++
 
 **Myll Solution:**
 ```
-var up: T*!;        // unique_ptr
-var sp: T*+;        // shared_ptr
-var wp: T*?;        // weak_ptr
+var T*! up;        // unique_ptr
+var T*+ sp;        // shared_ptr
+var T*? wp;        // weak_ptr
 ```
 
 ### 5. Constructor/Destructor Defaults
@@ -98,10 +99,14 @@ var wp: T*?;        // weak_ptr
 
 ### 8. Cast Syntax
 
-**C++ Problem:** C-style casts `(T)expr` are dangerous because the compiler tries multiple cast kinds in order (`const_cast` → `static_cast` → `reinterpret_cast` → `reinterpret_cast` + `const_cast`) and picks the first that compiles, even if it's not what was intended. Meanwhile, the named casts (`static_cast`, `dynamic_cast`, etc.) are verbose and inconsistent.
+**C++ Problem:** C-style casts `(T)expr` are dangerous.
+The compiler tries `const_cast`, then `static_cast`, then `reinterpret_cast`, and finally `reinterpret_cast` + `const_cast`.
+It stops at the first one that compiles, even if it's not what was intended.
+Meanwhile, the named casts (`static_cast`, `dynamic_cast`, etc.) are verbose and inconsistent.
 
 **Myll Solution:**
-Myll revives the parenthesized cast syntax but gives each cast kind a **deterministic, single-purpose prefix marker**. The dangerous multi-attempt behavior of C-style casts is removed.
+Myll revives the parenthesized cast syntax but gives each cast kind a **deterministic, single-purpose prefix marker**.
+The dangerous multi-attempt behavior of C-style casts is removed.
 
 ```
 (Type)expr          // static_cast only — the most common case
@@ -161,7 +166,9 @@ These don't change semantics, just syntax:
 ## What Myll Does Not Change (And Why)
 
 ### Address-of and Dereference Operators
-The `&` and `*` operators remain as in C++. Swapping them was considered (making `*` create a pointer and `&` dereference, which some find more intuitive), but this would break with every C-family language including C#, Rust, D, and Go. Rejected for ecosystem consistency.
+The `&` and `*` operators remain as in C++. Swapping them was considered (making `*` create a pointer and `&` dereference, which some find more intuitive).
+But this would break with every C-family language including C#, Rust, D, and Go.
+Rejected for ecosystem consistency.
 
 ### Operator Precedence
 Precedence is largely preserved. The only changes are where ambiguity was resolved (e.g., power operator `**`).
@@ -171,7 +178,9 @@ Precedence is largely preserved. The only changes are where ambiguity was resolv
 
 ## What Requires the C++ Compiler
 
-Myll does not replicate the full C++ type checker. The generated C++ code is expected to be compiled by a standards-compliant C++ compiler (currently targeting `clang++-15` with `-std=c++20`). This means:
+Myll does not replicate the full C++ type checker.
+The generated C++ code is expected to be compiled by a standards-compliant C++ compiler (currently targeting `clang++-15` with `-std=c++20`).
+This means:
 
 - Template instantiation errors are caught by the C++ compiler, not Myll.
 - Overload resolution is delegated.

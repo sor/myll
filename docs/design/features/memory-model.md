@@ -15,20 +15,20 @@ Myll moves all type modifiers to follow the base type in a consistent, unambiguo
 ## Raw Pointers and References
 
 ```
-var p: int*;        // int* (pointer)
-var r: int&;        // int& (lvalue reference)
-var rr: int&&;      // int&& (rvalue reference)
+var int* p;        // int* (pointer)
+var int& r;        // int& (lvalue reference)
+var int&& rr;      // int&& (rvalue reference)
 
 // Multi-declaration is unambiguous:
-var a, b: int*;     // BOTH a and b are int* — impossible in C++
+var int* a, b;     // BOTH a and b are int* — impossible in C++
 ```
 
 ## Arrays
 
 ```
-var arr: int[*];        // std::vector<int>  (dynamic array)
-var arr: int[@N];       // std::array<int, N> (fixed size) — N from context
-var raw: int[];         // int* (raw array/pointer)
+var int[*] arr;        // std::vector<int>  (dynamic array)
+var int[@N] arr;       // std::array<int, N> (fixed size) — N from context
+var int[] raw;         // int* (raw array/pointer)
 ```
 
 The `[*]` syntax was chosen over `[]` for dynamic arrays to distinguish from raw pointers and to visually suggest "box/container".
@@ -38,9 +38,9 @@ The `[*]` syntax was chosen over `[]` for dynamic arrays to distinguish from raw
 Suffixes on the pointer syntax:
 
 ```
-var up: T*!;        // std::unique_ptr<T>
-var sp: T*+;        // std::shared_ptr<T>
-var wp: T*?;        // std::weak_ptr<T>
+var T*! up;        // std::unique_ptr<T>
+var T*+ sp;        // std::shared_ptr<T>
+var T*? wp;        // std::weak_ptr<T>
 ```
 
 Mnemonic:
@@ -51,25 +51,25 @@ Mnemonic:
 ### Smart Arrays
 
 ```
-var up_arr: T[]!;   // std::unique_ptr<T[]>
-var sp_arr: T[]+;   // std::shared_ptr<T[]>
-var wp_arr: T[]?;   // std::weak_ptr<T[]>
+var T[]! up_arr;   // std::unique_ptr<T[]>
+var T[]+ sp_arr;   // std::shared_ptr<T[]>
+var T[]? wp_arr;   // std::weak_ptr<T[]>
 ```
 
 ## Complex Combinations
 
 ```
-var p_arr: int*[*];     // std::vector<int*> (vector of pointers)
-var arr_p: int[*]*;     // pointer to vector of ints
-var func_ptr: func(int) -> void*;  // function returning void pointer
+var int*[*] p_arr;     // std::vector<int*> (vector of pointers)
+var int[*]* arr_p;     // pointer to vector of ints
+var func(int) -> void* func_ptr;  // function returning void pointer
 ```
 
 ## Function Pointer Types
 
 ```
-var fp: func(int) -> void;              // vs. void (*fp)(int) in C++
-var fp: func(int, int) -> int*;         // function returning int*
-var fp: func() -> func(int) -> void;    // function returning function pointer
+var func(int) -> void fp;              // vs. void (*fp)(int) in C++
+var func(int, int) -> int* fp;         // function returning int*
+var func() -> func(int) -> void fp;    // function returning function pointer
 ```
 
 The `func()` syntax is borrowed from type-as-usage philosophy: you describe how the value is used.
@@ -93,7 +93,8 @@ delete[] arr;
 
 ### RAII
 
-Myll relies on C++'s RAII semantics. Smart pointers and containers manage their own memory. `new`/`delete` are available for low-level scenarios but are discouraged.
+Myll relies on C++'s RAII semantics. Smart pointers and containers manage their own memory.
+`new`/`delete` are available for low-level scenarios but are discouraged.
 
 ## Future Directions
 

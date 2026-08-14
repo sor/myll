@@ -32,13 +32,20 @@ This is a living document. Features marked [planned] exist in the grammar or des
 `alias`, `class`, `concept` [planned], `const`, `enum`, `func`, `let`, `method`, `module`, `namespace`, `operator`, `proc`, `struct`, `union`, `using`, `var`
 
 ### Control Flow
-`break`, `catch` [planned], `continue` [planned], `defer` [planned], `do`, `else`, `fall`, `for` [range-based planned], `if`, `loop`, `return`, `return_if` [planned], `switch`, `throw`, `times`, `try` [planned], `while`
+`break`, `catch` [planned], `continue` [planned], `defer` [planned], `do`, `else`, `fall`,
+`for` [range-based planned], `if`, `loop`, `return`, `return_if` [planned], `switch`, `throw`, `times`, `try` [planned], `while`
 
 ### Types & Modifiers
-`auto`, `bool`, `char`, `codepoint` [planned], `f16`, `f32`, `f64`, `i8`, `i16`, `i32`, `i64`, `int`, `isize`, `mutable`, `stable`, `string`, `u8`, `u16`, `u32`, `u64`, `uint`, `unit` [internal], `usize`, `void`, `volatile`
+
+**Integer types:** `i8`, `i16`, `i32`, `i64`, `int`, `iptr` [planned], `isize`, `u8`, `u16`, `u32`, `u64`, `uint`, `uptr` [planned], `usize`
+
+**Other types:** `auto`, `bool`, `char`, `codepoint` [planned], `f16`, `f32`, `f64`, `string`, `void`, `unit` [internal]
+
+**Modifiers:** `const`, `mutable`, `stable`, `volatile`
 
 ### Special
-`as`, `bit`, `delete`, `dynamic`, `forward`, `move`, `new`, `nullptr`, `reinterpret`, `requires` [planned], `sizeof`, `static`, `static_cast` [planned], `this`, `typename`
+`as`, `bit`, `delete`, `dynamic`, `forward`, `move`, `new`, `nullptr`, `reinterpret`, `requires` [planned],
+`sizeof`, `static`, `static_cast` [planned], `this`, `typename`
 
 ## Modules
 
@@ -66,15 +73,19 @@ namespace my_ns;
 ### Variable Declarations
 
 ```
-var name: Type = init;      // mutable variable
-let name: Type = init;      // immutable (const) variable
-const name: Type = init;    // compile-time constant
-global name: Type = init;   // global variable [partial]
+var Type name = init;       // variable declaration; mutable unless Type is const-qualified
+const Type name = init;     // preferred form for immutable variables
+let Type name = init;       // immutable binding; currently behaves the same as const
+global Type name = init;    // global variable [partial]
 ```
+
+The `const` keyword can either start a declaration (`const int c = 1;`) or qualify the type inside a `var` declaration (`var const int c = 1;`).
+Both forms are equivalent, but the leading `const` form is preferred for readability.
+`var const Type t;` is the explicit form and is required when the type comes from a template parameter that may be const-qualified.
 
 Multi-declaration:
 ```
-var a, b, c: int = 1, 2, 3;
+var int a = 1, b = 2, c = 3;
 ```
 
 ### Function Declarations
@@ -140,7 +151,7 @@ using namespace std;
 ### Properties / Accessors [parsed but not generated]
 
 ```
-var count: int {
+var int count {
     get { return _count; }
     set { _count = value; }
 }
@@ -179,19 +190,21 @@ ctor Name(other: OtherType)          // converting
 | i16 | 2 | int16_t |
 | i32 | 4 | int32_t |
 | i64 | 8 | int64_t |
-| int | 4 | int |
-| isize | varies | intptr_t |
+| int | ~4 | int |
+| isize | varies | ptrdiff_t |
 | u8 | 1 | uint8_t |
 | u16 | 2 | uint16_t |
 | u32 | 4 | uint32_t |
 | u64 | 8 | uint64_t |
-| uint | 4 | unsigned int |
-| usize | varies | uintptr_t |
+| uint | ~4 | unsigned int |
+| usize | varies | size_t |
 | f32 | 4 | float |
 | f64 | 8 | double |
 | char | 1 | char |
 | string | varies | std::string |
 | auto | inferred | auto |
+
+`isize`, `usize`, and planned `iptr`/`uptr` vary with the target. On most systems their size equals the CPU bit-size in bytes.
 
 ### Pointer & Reference Types
 
@@ -412,7 +425,16 @@ expr--
 (-const)expr        // remove const via std::remove_const_t
 (+volatile)expr     // add volatile
 (-volatile)expr     // remove volatile
+
+// Readable aliases
+(const)expr         // same as (+const)expr
+(mutable)expr       // same as (-const)expr
+(volatile)expr      // same as (+volatile)expr
+(stable)expr        // same as (-volatile)expr
 ```
+
+`mutable` and `stable` are only valid inside casts.
+Using them as variable modifiers (`var mutable int x;` or `var stable int x;`) is a compile-time error, except that `mutable` may still be used on class fields.
 
 Myll revives the C-style cast syntax but removes its dangerous multi-attempt behavior.
 `(Type)expr` is *only* `static_cast` — the most common case. The verbose C++ named casts remain available when explicit documentation is needed.
@@ -479,6 +501,8 @@ Attributes are enclosed in square brackets and can appear before declarations:
 [nothrow]          // noexcept
 [throw]            // may throw
 [chain]            // method chaining (returns *this)
+
+[ct]               // compile-time constant (generates constexpr)
 
 [flags]            // enum is bitwise flags
 [operators(bitwise)] // generate bitwise ops for enum
