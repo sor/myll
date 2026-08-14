@@ -8,6 +8,6 @@
       "gol": 30
     }
   },
-  "myllCompileRun": [ "enum", "func" ],
+  "myllCompileRun": [ "enum", "func", "ct" ],
   "expectedCppCompileFailures": [ "cpp_fail" ]
 }

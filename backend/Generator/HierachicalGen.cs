@@ -216,10 +216,10 @@ namespace Myll.Generator
 			AccessStrings targetDecl = obj.IsStatic ? staticFieldDecl : fieldDecl;
 			Strings ret = new() {
 				Format(
-					VarFormat[4],
+					EntryFormat[0],
 					indent,
 					name,
-					obj.value != null ? VarFormat[3] + obj.value.Gen() : "" )
+					obj.value != null ? EntryFormat[1] + obj.value.Gen() : "" )
 			};
 			targetDecl.Add( (obj.access, ret) );
 		}
@@ -243,23 +243,26 @@ namespace Myll.Generator
 
 			bool          isInsideStruct = obj.IsInStruct;
 			bool          isStatic       = obj.IsStatic;
+			bool          isCompileTime  = obj.IsCompileTime;
 			string        indentDecl     = IndentDecl;
 			string        indentImpl     = IndentImpl;
 			string        nameDecl       = obj.name;
 			string        nameImpl       = obj.FullyQualifiedName;
 			AccessStrings targetDecl     = isStatic ? staticFieldDecl : fieldDecl;
 			AccessStrings targetImpl     = isStatic ? staticFieldImpl : fieldImpl;
+
 			Strings retDecl = new() {
-				//"{0}{1}{2}{3};",
-				// 0 indent, 1 typename, 2 type & name, 3 init
+				//"{0}{1}{2}{3}{4}{5};",
+				// 0 indent, 1 static, 2 constexpr, 3 typename, 4 type & name, 5 init
 				Format(
 					VarFormat[0],
 					indentDecl,
-					isStatic ? VarFormat[1] : "", // TODO add inline if initialized
-					needsTypename ? VarFormat[2] : "",
+					isStatic      ? VarFormat[1] : "", // TODO add inline if initialized
+					isCompileTime ? VarFormat[2] : "",
+					needsTypename ? VarFormat[3] : "",
 					obj.type.Gen( nameDecl ),
 					(obj.init != null && !isStatic)
-						? VarFormat[3] + obj.init.Gen()
+						? VarFormat[4] + obj.init.Gen()
 						: "" )
 			};
 			targetDecl.Add( (obj.access, retDecl) );
@@ -274,9 +277,10 @@ namespace Myll.Generator
 					VarFormat[0],
 					indentImpl,
 					"",
-					needsTypename ? VarFormat[2] : "",
+					isCompileTime ? VarFormat[2] : "",
+					needsTypename ? VarFormat[3] : "",
 					obj.type.Gen( nameImpl ),
-					obj.init != null ? VarFormat[3] + obj.init.Gen() : "" )
+					obj.init != null ? VarFormat[4] + obj.init.Gen() : "" )
 			};
 			targetImpl.Add( (obj.access, retImpl) );
 		}

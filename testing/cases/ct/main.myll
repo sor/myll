@@ -1,0 +1,11 @@
+module main;
+import basic;
+
+func main() -> int
+{
+	var int r = basic_test();
+	if( r != 0 )
+		return r;
+
+	return 0;
+}
