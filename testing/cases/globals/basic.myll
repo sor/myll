@@ -1,0 +1,27 @@
+module basic;
+
+[hide] var int hiddenGlobal = 42;
+[hide] var int hiddenGlobal2 = hiddenGlobal; // Seldom order dependant case
+var int normalGlobal = 1;
+[inline] var int inlineGlobal = 2;
+const int constGlobal = 3;
+[ct] const int ctGlobal = 4;
+
+func outside_check() -> int
+{
+	static_assert(ctGlobal == 4, "ctGlobal must be 4");
+
+	if( hiddenGlobal != 42 )
+		return 1;
+	if( hiddenGlobal2 != 42 )
+		return 111;
+	if( normalGlobal != 1 )
+		return 2;
+	if( inlineGlobal != 2 )
+		return 3;
+	if( constGlobal != 3 )
+		return 4;
+	if( ctGlobal != 4 )
+		return 5;
+	return 0;
+}

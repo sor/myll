@@ -1,0 +1,17 @@
+module cls;
+
+class Cls
+{
+	[pub]:
+	[static, inline] var int inlineField = 7;
+	[static] var int normalField = 11;
+}
+
+func cls_check() -> int
+{
+	if( Cls::inlineField != 7 )
+		return 1;
+	if( Cls::normalField != 11 )
+		return 2;
+	return 0;
+}
