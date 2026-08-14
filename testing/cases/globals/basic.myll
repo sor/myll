@@ -1,5 +1,7 @@
 module basic;
 
+[extern] var int extGlobal;
+
 [hide] var int hiddenGlobal = 42;
 [hide] var int hiddenGlobal2 = hiddenGlobal; // Seldom order dependant case
 var int normalGlobal = 1;
@@ -23,5 +25,7 @@ func outside_check() -> int
 		return 4;
 	if( ctGlobal != 4 )
 		return 5;
+	if( extGlobal != 7 )
+		return 6;
 	return 0;
 }

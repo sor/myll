@@ -111,6 +111,12 @@ myll/
 - **Naming**: Mixed conventions in legacy code (`camelCase` and `PascalCase` coexist). Follow existing file patterns.
 - **No `System.Func` conflicts**: The AST has a `Decl.Func` class — be careful with `using System;` at file scope.
 - **Visitor pattern**: `VExpr`, `VDecl`, `VStmt`, `VTypes` walk the ANTLR parse tree → `Core` AST → `Generator` produces C++.
+- **Generator formatting**:
+  - Do not embed literal C++ keywords (e.g. `"constexpr "` or `"static "`) directly in `Gen()` methods.
+  - Put every format fragment in the `*Format` arrays in `backend/Generator/StmtFormatting.cs` (or the matching file for the construct).
+  - Compose tokens in the call site and pass them as arguments to `String.Format`.
+  - If you add a new keyword slot to a shared format, update every call site.
+  - Consider giving unrelated constructs their own dedicated format array so index shifts do not break them.
 - **No interpolated strings**: Do not use C# interpolated strings (`$"..."`). Prefer `String.Format` or plain concatenation.
 - **Blank line after braceless exit `if`**: Put an empty line after a simple `if` whose body exits the current block (e.g. `return` or `throw`). For other braceless `if`s the blank line is optional but still encouraged.
 - **Indent with tabs**: Use tabs for indentation. Use tabs for alignment too whenever possible. Only use spaces for alignment that cannot be expressed with tabs.
@@ -118,7 +124,7 @@ myll/
 
 ## Documentation & Code Formatting Rules
 
-- Markdown files (`*.md`): do not insert manual line breaks inside sentences. Break only at full stops (`. `). Let the editor / viewer wrap to window width.
+- Markdown files (`*.md`): do not insert manual line breaks inside sentences. Break only at full stops (`. `). There is no maximum line length for Markdown files. Let the editor / viewer wrap to window width.
 - C# source (`*.cs`) and Myll source (`*.myll`): keep lines around 120 characters. Do not break if it is only a few characters above, but always break before 160 characters.
 - Technical docs (plans, specs, ADRs): use relaxed Simplified Technical English style. Keep sentences short. Use active voice. Put one main action per bullet.
 

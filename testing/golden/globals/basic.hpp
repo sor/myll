@@ -6,6 +6,7 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+extern int extGlobal;
 extern int normalGlobal;
 inline int inlineGlobal = 2;
 const int constGlobal = 3;

@@ -13,6 +13,15 @@ namespace Myll.Generator
 	using AccessStrings  = List<(Access access, List<string> gen)>;
 	using IAccessStrings = IEnumerable<(Access access, List<string> gen)>;
 
+	[Flags]
+	public enum GenerateAt
+	{
+		Nowhere    = 0,
+		Decl       = 1 << 0,
+		Impl       = 1 << 1,
+		Everywhere = Decl | Impl,
+	}
+
 	internal class PPPStrings
 	{
 		public readonly Strings
@@ -68,6 +77,10 @@ namespace Myll.Generator
 			staticFieldImpl = new(),
 			fieldDecl       = new(),
 			fieldImpl       = new();
+
+		// TODO/HACK: provisional duplicate-name check. Replace with ScopeStack-based name
+		//            resolution once that is wired up, so namespaces and nested scopes are respected.
+		private readonly HashSet<string> declaredVars = new();
 
 		// Super memory inefficient but I don't care for the moment
 		private readonly PPPStrings
@@ -241,48 +254,94 @@ namespace Myll.Generator
 		{
 			bool needsTypename = false; // TODO how to determine this
 
-			bool          isInsideStruct = obj.IsInStruct;
-			bool          isStatic       = obj.IsStatic;
-			bool          isCompileTime  = obj.IsCompileTime;
-			string        indentDecl     = IndentDecl;
-			string        indentImpl     = IndentImpl;
-			string        nameDecl       = obj.name;
-			string        nameImpl       = obj.FullyQualifiedName;
-			AccessStrings targetDecl     = isStatic ? staticFieldDecl : fieldDecl;
-			AccessStrings targetImpl     = isStatic ? staticFieldImpl : fieldImpl;
+			bool isInsideStruct = obj.IsInStruct;
+			bool isStatic       = obj.IsStatic;
+			bool isHidden       = obj.IsHidden;
+			bool isCompileTime  = obj.IsCompileTime;
+			bool isInline       = obj.IsInline;
+			bool isExtern       = obj.IsExternal;
+			bool isConstType    = (obj.type.qual & Qualifier.Const) != 0;
 
-			Strings retDecl = new() {
-				//"{0}{1}{2}{3}{4}{5};",
-				// 0 indent, 1 static, 2 constexpr, 3 typename, 4 type & name, 5 init
-				Format(
-					VarFormat[0],
-					indentDecl,
-					isStatic      ? VarFormat[1] : "", // TODO add inline if initialized
-					isCompileTime ? VarFormat[2] : "",
-					needsTypename ? VarFormat[3] : "",
-					obj.type.Gen( nameDecl ),
-					(obj.init != null && !isStatic)
-						? VarFormat[4] + obj.init.Gen()
-						: "" )
-			};
-			targetDecl.Add( (obj.access, retDecl) );
+			// TODO: report source location (file, line, column) for all of these attribute/duplicate errors.
+			if( isInsideStruct ) {
+				if( isHidden )                   throw new NotSupportedException( "[hide]/[hidden] is only valid at module/namespace scope." );
+				if( isExtern )                   throw new NotSupportedException( "[extern] is only valid at module/namespace scope." );
+				if( isInline      && !isStatic ) throw new NotSupportedException( "[inline] on a class field requires [static]." );
+				if( isCompileTime && !isStatic ) throw new NotSupportedException( "[ct] on a class field requires [static]." );
+			} else {
+				if( isStatic )              throw new NotSupportedException( "[static] is only valid on class fields; use [hide]/[hidden] for module-level variables." );
+				if( isInline && isHidden )  throw new NotSupportedException( "[inline] and [hide] are mutually exclusive." );
+				if( isExtern ) {
+					if( isInline )          throw new NotSupportedException( "[extern] and [inline] are mutually exclusive." );
+					if( isHidden )          throw new NotSupportedException( "[extern] and [hide]/[hidden] are mutually exclusive." );
+					if( isCompileTime )     throw new NotSupportedException( "[extern] cannot be used with [ct]." );
+					if( isConstType )       throw new NotSupportedException( "[extern] cannot be used with const." );
+					if( obj.init != null )  throw new NotSupportedException( "[extern] variables cannot have an initializer." );
+				}
+			}
 
-			if( !isStatic && isInsideStruct )
-				return;
+			if( !declaredVars.Add( obj.name ) )
+				throw new NotSupportedException( String.Format( "Duplicate variable/field declaration: {0}", obj.name ) );
 
-			// only static fields here
-			// TODO prepend "template <typename ...>" if needed
-			Strings retImpl = new() {
-				Format(
-					VarFormat[0],
-					indentImpl,
-					"",
-					isCompileTime ? VarFormat[2] : "",
-					needsTypename ? VarFormat[3] : "",
-					obj.type.Gen( nameImpl ),
-					obj.init != null ? VarFormat[4] + obj.init.Gen() : "" )
-			};
-			targetImpl.Add( (obj.access, retImpl) );
+			AccessStrings targetDecl = isStatic ? staticFieldDecl : fieldDecl;
+			AccessStrings targetImpl = isStatic ? staticFieldImpl : fieldImpl;
+
+			bool       externKw      = !isInsideStruct && ( isExtern || !( isHidden || isInline || isCompileTime || isConstType ) );
+			bool       needsInline   = isInline || (isInsideStruct && isStatic && isCompileTime);
+			GenerateAt emitAt        = GenerateAt.Decl;
+			GenerateAt initIn        = GenerateAt.Decl;
+
+			if( isInsideStruct ) {
+				if( isStatic && !needsInline ) {
+					emitAt = GenerateAt.Everywhere;
+					initIn = GenerateAt.Impl;
+				}
+			} else {
+				if( isExtern ) {
+					initIn   = GenerateAt.Nowhere;
+				} else if( isHidden ) {
+					emitAt   = GenerateAt.Impl;
+					initIn   = GenerateAt.Impl;
+				} else if( isInline || isCompileTime || isConstType ) {
+					// nothing else to set
+				} else {
+					emitAt   = GenerateAt.Everywhere;
+					initIn   = GenerateAt.Impl;
+				}
+			}
+
+			// 0 indent, 1 extern, 2 inline, 3 static, 4 constexpr, 5 typename, 6 type & name, 7 init
+			if( (emitAt & GenerateAt.Decl) != 0 ) {
+				Strings retDecl = new() {
+					Format(
+						VarFormat[0],
+						IndentDecl,
+						externKw             ? VarFormat[1] : "",
+						needsInline          ? VarFormat[2] : "",
+						isStatic || isHidden ? VarFormat[3] : "",
+						isCompileTime        ? VarFormat[4] : "",
+						needsTypename        ? VarFormat[5] : "",
+						obj.type.Gen( obj.name ),
+						(initIn & GenerateAt.Decl) != 0 && obj.init != null ? VarFormat[6] + obj.init.Gen() : "" )
+				};
+				targetDecl.Add( (obj.access, retDecl) );
+			}
+
+			if( (emitAt & GenerateAt.Impl) != 0 ) {
+				Strings retImpl = new() {
+					Format(
+						VarFormat[0],
+						IndentImpl,
+						"",
+						"",
+						isHidden      ? VarFormat[3] : "",
+						"",
+						needsTypename ? VarFormat[5] : "",
+						obj.type.Gen( obj.FullyQualifiedName ),
+						(initIn & GenerateAt.Impl) != 0 && obj.init != null ? VarFormat[6] + obj.init.Gen() : "" )
+				};
+				targetImpl.Add( (obj.access, retImpl) );
+			}
 		}
 
 		public void AddFunc( Func obj )

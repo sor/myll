@@ -39,7 +39,9 @@ namespace Myll.Generator
 		};
 
 		public static readonly string[] VarFormat = {
-			"{0}{1}{2}{3}{4}{5};", // 0 indent, 1 static, 2 constexpr, 3 typename, 4 type & name, 5 init
+			"{0}{1}{2}{3}{4}{5}{6}{7};", // 0 indent, 1 extern, 2 inline, 3 static, 4 constexpr, 5 typename, 6 type & name, 7 init
+			"extern ",
+			"inline ",
 			"static ",
 			"constexpr ",
 			"typename ",

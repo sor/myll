@@ -128,9 +128,20 @@ public ExprVisitor ExprVis { get; } = new ExprVisitor();
 - Compare output against reference `.cpp`/`.h` (if exists)
 - Flag differences
 
+### 13. Attach Source Locations to Compiler Errors
+
+**Files:** `backend/Generator/HierachicalGen.cs`, `backend/Visitor/*.cs`, `backend/Core/Node.cs` (or wherever AST nodes store token/line info)
+**Impact:** User-facing errors (invalid attribute combinations, duplicate declarations, unsupported constructs, etc.) currently report only a message. The user has to search the file manually.
+**Estimated Effort:** 4–8 hours
+
+**Fix:**
+- Ensure every AST node can carry source location (file path, line, column) from its originating `IToken`/parser context.
+- Introduce a `CompilerException` or `Diagnostic` type that stores location and message.
+- Update CLI and test harness to print diagnostics as `file:line:column: error: message`.
+
 ## 🔵 Low — Nice to Have
 
-### 13. Implement `ToString()` Diagnostics Without Reflection
+### 14. Implement `ToString()` Diagnostics Without Reflection
 
 **Files:** `Decl.cs`, `Expr.cs`
 **Estimated Effort:** 1–2 hours
@@ -166,4 +177,5 @@ If implementing sequentially, the recommended order is:
 9. **Build test harness** — 4–8 hours
 10. **Add CLI toolchain options** — 30 min
 11. **Extract stdlib names** — 1 hour
-12. **Integrate `Symbol.cs` and `Attribute` enums** (semantic analysis prep) — 1–2 days
+12. **Attach source locations to compiler errors** — 4–8 hours
+13. **Integrate `Symbol.cs` and `Attribute` enums** (semantic analysis prep) — 1–2 days

@@ -23,5 +23,8 @@ int outside_check()
     if( ctGlobal != 4 ) {
         return 5;
     }
+    if( extGlobal != 7 ) {
+        return 6;
+    }
     return 0;
 }

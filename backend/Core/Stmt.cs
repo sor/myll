@@ -22,6 +22,7 @@ namespace Myll.Core
 
 		public bool IsStatic      => HasAttrib( "static" );
 		public bool IsCompileTime => HasAttrib( "ct" );
+		public bool IsHidden      => HasAttrib( "hide" ) || HasAttrib( "hidden" );
 
 		public bool HasAttrib( string attrib )
 			=> attribs.ContainsKey( attrib );
@@ -84,15 +85,17 @@ namespace Myll.Core
 		public override Strings Gen( int level )
 		{
 			bool   needsTypename = false; // TODO how to determine this
-			string initStr       = init != null ? VarFormat[4] + init.Gen() : "";
+			string initStr       = init != null ? VarFormat[6] + init.Gen() : "";
 			string typeAndName   = type.Gen( name );
 
 			string ret = Format(
 				VarFormat[0],
 				"",
-				IsStatic      ? VarFormat[1] : "",
-				IsCompileTime ? VarFormat[2] : "",
-				needsTypename ? VarFormat[3] : "",
+				"",                           // extern
+				"",                           // inline
+				IsStatic      ? VarFormat[3] : "",
+				IsCompileTime ? VarFormat[4] : "",
+				needsTypename ? VarFormat[5] : "",
 				typeAndName,
 				initStr );
 			return ret.IndentAll( level );
