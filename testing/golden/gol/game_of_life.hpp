@@ -6,7 +6,6 @@
 #include <string>
 #include <type_traits>
 #include <utility>
-#include "game_of_life.hpp"
 #include <iostream>
 #include <cstdlib>
 #include <thread>

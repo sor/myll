@@ -129,6 +129,7 @@ namespace Myll.Generator
 			// throw if not global
 			GlobalNamespace globalNS = (GlobalNamespace) hierarchical;
 			IStrings includes = globalNS.imps
+				.Where( i => i != globalNS.module )
 				.Select(
 					i => i.StartsWith( "std_" )
 						? Format( "#include <{0}>", i.Substring( 4 ) )
