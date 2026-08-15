@@ -175,6 +175,13 @@ namespace Myll
 		{
 			Console.WriteLine( "Myll compiler. Version {0}\n", Version );
 
+			if( args.Length == 0 ) {
+				Console.WriteLine( "Usage: myll -i <input.myll>... -o <output> [options]" );
+				Console.WriteLine( "       myll --test" );
+				Console.WriteLine( "Use --help for the full option list." );
+				return 1;
+			}
+
 			opt = ParseCommandLine( args );
 
 			start = DateTime.Now;
