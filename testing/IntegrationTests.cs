@@ -75,6 +75,17 @@ namespace Myll.Tests
 			if( !string.IsNullOrEmpty( myllResult.StdErr ) )
 				output.WriteLine( "STDERR: " + myllResult.StdErr );
 
+			bool expectRunFailure = CaseConfig.ExpectRunFailure( caseName );
+			if( expectRunFailure && CaseConfig.UseMyllCompileRun( caseName ) )
+			{
+				output.WriteLine( "Case is configured to expect a run failure via Myll's internal -cr path." );
+				Assert.True(
+					myllResult.ExitCode != 0 && !myllResult.TimedOut,
+					string.Format( "Expected the generated binary to fail, but Myll returned exit code {0}{1}.",
+						myllResult.ExitCode, myllResult.TimedOut ? " after timing out" : "" ) );
+				return;
+			}
+
 			Assert.Equal( 0, myllResult.ExitCode );
 			Assert.False( myllResult.TimedOut, "Myll compiler timed out" );
 
