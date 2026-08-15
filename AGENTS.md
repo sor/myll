@@ -189,7 +189,7 @@ Before making changes, read these in `docs/analysis/`:
 1. **`Decl` inherits from `Stmt`** — widely considered the worst design decision. Future refactors should make them siblings under a common `Node` base. See `01-architecture.md`.
 2. **Static visitor state** — `VExt.cs` holds static `ScopeStack` and visitor instances. This makes the compiler non-thread-safe despite PLINQ parallel parsing. See `01-architecture.md`.
 3. **Broken AST traversal** — `ForStmt`, `WhileStmt`, `DoWhileStmt`, and `TimesStmt` have broken `EnumerateDF` that silently skips loop bodies. See `03-ast-core.md`.
-4. **Mutating code generation** — `NewExpr.Gen()` mutates the AST (`type.ptrs.RemoveAt(0)`), destroying it for any subsequent pass. See `03-ast-core.md`.
+4. **Mutating code generation** — `NewExpr.Gen()` used to mutate the AST (`type.ptrs.RemoveAt(0)`). Fixed in `backend/Core/Expr.cs`; the method now temporarily replaces the pointer list and restores it. See `03-ast-core.md` and `plan/suspicious-warnings.md`.
 5. **Dead/future code** — `Symbol.cs` and `Attribute.cs` enums exist but are disconnected. They are stubs intended for semantic analysis. See `07-future-stubs.md`.
 
 ## Current State & Priorities

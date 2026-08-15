@@ -38,7 +38,7 @@ foreach (var child in base.EnumerateDF) yield return child;
 
 Same pattern for `WhileStmt` (missing `body`), `DoWhileStmt` (needs override), and `TimesStmt` (needs override).
 
-### 2. Mutating Code Generation: `NewExpr.Gen()`
+### 2. Mutating Code Generation: `NewExpr.Gen()` — fixed
 
 **Severity: Critical**
 
@@ -49,9 +49,9 @@ public override string Gen(...) {
 }
 ```
 
-**Impact:** Second pass over the AST produces incorrect output. Any visitor that walks the tree after generation sees corrupted types.
+**Impact:** Second pass over the AST produced incorrect output. Any visitor that walked the tree after generation saw corrupted types.
 
-**Fix:** Compute the string representation without modifying the `ptrs` list. Clone or use index-based access.
+**Fix:** `NewExpr.Gen()` now saves the original `type.ptrs` list, temporarily replaces it with the list minus the smart pointer, generates the inner type, and restores the original list. Constructor arguments are also passed through to `std::make_unique` / `std::make_shared`. See `backend/Core/Expr.cs` and `plan/suspicious-warnings.md`.
 
 ### 3. NullReferenceException in `Scope.UpToNamespace`
 

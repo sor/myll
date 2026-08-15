@@ -424,21 +424,48 @@ namespace Myll.Core
 
 		public override string Gen( bool doBrace = false )
 		{
-			string       ret;
-			Pointer?     ptr        = type.ptrs?.FirstOrDefault(); // needs to be a variable to keep it accessible
-			if( ptr != null && ptr.kind.Between( Pointer.Kind.SmartPtr_Begin, Pointer.Kind.SmartPtr_End ) ) {
-				// remove the pointer that is about to be replaced by custom code
-				type.ptrs!.RemoveAt( 0 );
+			if( Dialect.StrictNew && ( type.ptrs == null || type.ptrs.Count == 0 ) )
+				throw new Exception( "StrictNew is enabled: bare `new T` is not allowed; use an explicit pointer type such as `new T*` or `new T*!`." );
+
+			string      ret;
+			Pointer?    ptr = type.ptrs?.LastOrDefault(); // needs to be a variable to keep it accessible
+			List<Pointer> savedPtrs = type.ptrs ?? new();
+
+			if( ptr?.kind == Pointer.Kind.RawPtr ) {
+				// `new` already returns a raw pointer, so the outermost raw pointer
+				// is consumed by the allocation rather than being part of the allocated type.
+				type.ptrs = savedPtrs.Take( savedPtrs.Count - 1 ).ToList();
+				string innerType = type.Gen();
+				type.ptrs = savedPtrs;
+
+				ret = Format( "new {0}{1}", innerType, funcCall.Gen() );
+			}
+			else if( ptr != null && ptr.kind.Between( Pointer.Kind.SmartPtr_Begin, Pointer.Kind.SmartPtr_End ) ) {
 				string ptrFmt = ptr.kind switch {
-					Pointer.Kind.Unique		 => "std::make_unique<{0}>({1})",
+					Pointer.Kind.Unique      => "std::make_unique<{0}>({1})",
 					Pointer.Kind.UniqueArray => "std::make_unique<{0}[]>({1})",
-					Pointer.Kind.Shared		 => "std::make_shared<{0}>({1})",
+					Pointer.Kind.Shared      => "std::make_shared<{0}>({1})",
 					Pointer.Kind.SharedArray => "std::make_shared<{0}[]>({1})",
-					_						 => throw new Exception("weak_ptr can not be new'ed"),
+					_                        => throw new Exception( "weak_ptr can not be new'ed" ),
 				};
-				ret = Format( ptrFmt, type.Gen(), ptr.expr?.Gen( false ) ?? "" );
+
+				// remove the outermost smart pointer from the type without mutating the AST
+				type.ptrs = savedPtrs.Take( savedPtrs.Count - 1 ).ToList();
+				string innerType = type.Gen();
+				type.ptrs = savedPtrs;
+
+				string args = ptr.kind switch {
+					Pointer.Kind.Unique      => funcCall.args.Select( a => a.Gen() ).Join( ", " ),
+					Pointer.Kind.Shared      => funcCall.args.Select( a => a.Gen() ).Join( ", " ),
+					Pointer.Kind.UniqueArray => ptr.expr?.Gen() ?? "",
+					Pointer.Kind.SharedArray => ptr.expr?.Gen() ?? "",
+					_                        => throw new Exception( "weak_ptr can not be new'ed" ),
+				};
+
+				ret = Format( ptrFmt, innerType, args );
 			}
 			else {
+				// bare types and raw arrays are used literally after `new`
 				ret = Format( "new {0}{1}", type.Gen(), funcCall.Gen() );
 			}
 			return ret.Brace( doBrace );

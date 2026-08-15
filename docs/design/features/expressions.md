@@ -113,5 +113,5 @@ sizeof expr
 - `ExprFormatting.cs` maps `Operand` enum values to C++ format strings.
 - `Precedence` tables handle operator precedence and parenthesization.
 - `FlattenRelational` handles chained comparisons (`a < b < c`).
-- `NewExpr.Gen()` mutates the AST — critical bug.
+- `NewExpr.Gen()` no longer mutates the AST and passes constructor arguments to `std::make_unique` / `std::make_shared`.
 - Several null-coalescing expression variants exist in `Operand` enum but are not fully handled in `Gen()`.

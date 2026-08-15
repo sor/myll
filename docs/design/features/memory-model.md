@@ -79,10 +79,24 @@ The `func()` syntax is borrowed from type-as-usage philosophy: you describe how 
 ### Allocation
 
 ```
-var p = new T;          // raw allocation
-var p = new T(args);    // constructed allocation
-var arr = new T[N];     // array allocation
+var p = new T;          // raw allocation, returns T*
+var p = new T(args);    // constructed raw allocation
+var arr = new T[N];     // array allocation, returns T[] (pointer to first element)
+
+var up = new T*!;       // unique_ptr<T>
+var sp = new T*+;       // shared_ptr<T>
 ```
+
+`new` consumes the outermost pointer. For raw pointers, the first `*` is implicit, so `new T` and `new T*` both produce a `T*`. Additional `*` increase indirection (`new T**` produces `T**`).
+
+```
+var T*   p  = new T;       // bare type gets an implicit raw *, returns T*
+var T*   q  = new T*;      // explicit single *, same result
+var T**  pp = new T**(p);  // allocate a T*, returns T**
+var T*!* up = new T*!*(p); // allocate a unique_ptr<T>, returns a pointer to it
+var T**! ur = new T**!(p); // allocate a T*, returns unique_ptr<T*>
+```
+
 
 ### Deallocation
 
@@ -106,4 +120,4 @@ Myll relies on C++'s RAII semantics. Smart pointers and containers manage their 
 
 - `Typespec.Pointer` handles the C++ declarator "spiral" syntax generation via `PointerizeName()`.
 - Smart pointer template strings are currently hardcoded to `std::unique_ptr`, `std::shared_ptr`, `std::weak_ptr`.
-- `NewExpr.Gen()` currently mutates the AST (`type.ptrs.RemoveAt(0)`) — a critical bug. See `../analysis/03-ast-core.md`.
+- `NewExpr.Gen()` temporarily replaces `type.ptrs` while generating the inner type, then restores it. Constructor arguments are passed through to `std::make_unique` / `std::make_shared`. See `../analysis/03-ast-core.md`.

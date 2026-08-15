@@ -27,13 +27,13 @@ public override IEnumerable<Stmt> EnumerateDF {
 
 **Also fix:** `WhileStmt` (add `body`), `DoWhileStmt` (create override), `TimesStmt` (create override).
 
-### 2. Remove AST Mutation from `NewExpr.Gen()`
+### 2. Remove AST Mutation from `NewExpr.Gen()` — done
 
 **File:** `backend/Core/Expr.cs`
-**Impact:** `type.ptrs.RemoveAt(0)` destroys the AST for subsequent passes.
-**Estimated Effort:** 15 minutes
+**Impact:** `type.ptrs.RemoveAt(0)` destroyed the AST for subsequent passes.
+**Status:** Fixed.
 
-**Fix:** Clone or index the list without modifying it.
+**Fix:** `NewExpr.Gen()` now temporarily replaces `type.ptrs` with a copy that excludes the smart pointer and restores the original list after generation. Constructor arguments are passed to `std::make_unique` / `std::make_shared` for scalar smart pointers.
 
 ### 3. Fix `Scope.UpToNamespace()` NullReference
 

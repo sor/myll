@@ -81,7 +81,7 @@ Several constructs are parsed and represented in `oldParser` but are stubbed or 
 
 ### Expressions
 
-- `sizeof`, `new`, `delete`, `delete[]` are modeled in oldParser. The current backend has grammar support and generators for these, but `NewExpr.Gen()` mutates the AST and related handling is rough.
+- `sizeof`, `new`, `delete`, `delete[]` are modeled in oldParser. The current backend has grammar support and generators for these, and `NewExpr.Gen()` no longer mutates the AST. Smart-pointer `new` now passes constructor arguments to `std::make_unique` / `std::make_shared`.
 - C-style cast `(type) expr` is present.
 
 ### Smart pointers and container syntax
