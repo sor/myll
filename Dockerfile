@@ -24,6 +24,7 @@ RUN apt-get update \
         g++-14 \
         clang-20 \
         antlr4 \
+        make \
     && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100 \
     && update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-20 100 \
     && rm -rf /var/lib/apt/lists/*
