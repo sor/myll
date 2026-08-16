@@ -294,3 +294,6 @@ __pycache__/
 
 # Test harness transient output
 testing/generated/
+
+# Unix app generated sources/binaries
+frontend/apps/unix/gen/

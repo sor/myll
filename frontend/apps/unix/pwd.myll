@@ -1,0 +1,9 @@
+module pwd;
+
+import std_iostream, std_filesystem;
+
+func main() -> int
+{
+	std::cout << (string)std::filesystem::current_path().generic_string() << "\n";
+	return 0;
+}

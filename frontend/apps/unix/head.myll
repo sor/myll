@@ -1,0 +1,41 @@
+module head;
+
+import std_iostream, std_fstream, std_string;
+
+func headStream( std::istream & in, const int n ) -> void
+{
+	var string line;
+	var int count = 0;
+	while( count < n && std::getline(in, line) ) {
+		std::cout << line << "\n";
+		++count;
+	}
+}
+
+func main( const int argc, const char *[] argv ) -> int
+{
+	var int n = 10;
+	var int i = 1;
+
+	if( argc > 2 && (string)argv[1] == "-n" ) {
+		n = std::stoi( (string)argv[2] );
+		i = 3;
+	}
+
+	if( argc <= i ) {
+		headStream( std::cin, n );
+		return 0;
+	}
+
+	while( i < argc ) {
+		var std::ifstream file = std::ifstream( argv[i] );
+		if( !file ) {
+			std::cerr << "head: " << argv[i] << ": cannot open file\n";
+			return 1;
+		}
+		headStream( file, n );
+		++i;
+	}
+
+	return 0;
+}

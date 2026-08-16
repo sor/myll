@@ -1,0 +1,13 @@
+module yes;
+
+import std_iostream;
+
+func main( const int argc, const char *[] argv ) -> int
+{
+	const string s = argc > 1 ? (string)argv[1] : "y";
+
+	while( true )
+		std::cout << s << "\n";
+
+	return 0;
+}

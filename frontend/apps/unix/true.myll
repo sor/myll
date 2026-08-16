@@ -1,0 +1,6 @@
+module true;
+
+func main() -> int
+{
+	return 0;
+}

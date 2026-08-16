@@ -1,0 +1,34 @@
+module cat;
+
+import std_iostream, std_fstream;
+
+func copyStream( std::istream & in ) -> void
+{
+	std::cout << in.rdbuf();
+}
+
+func main( const int argc, const char *[] argv ) -> int
+{
+	var int i = 1;
+	if( argc <= 1 ) {
+		copyStream( std::cin );
+		return 0;
+	}
+
+	while( i < argc ) {
+		if( (string)argv[i] == "-" ) {
+			copyStream( std::cin );
+		}
+		else {
+			var std::ifstream file = std::ifstream( argv[i] );
+			if( !file ) {
+				std::cerr << "cat: " << argv[i] << ": cannot open file\n";
+				return 1;
+			}
+			copyStream( file );
+		}
+		++i;
+	}
+
+	return 0;
+}
