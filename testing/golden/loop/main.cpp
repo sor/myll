@@ -37,5 +37,14 @@ int main()
         ++count;
         sum = sum + 1;
     } while( count < 3 );
+    i = 0;
+    int contSum = 0;
+    while( i < 5 ) {
+        ++i;
+        if( i == 2 ) {
+            continue;
+        }
+        contSum = contSum + i;
+    }
     return 0;
 }

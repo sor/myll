@@ -229,6 +229,18 @@ namespace Myll
 			return ret;
 		}
 
+		public override ContinueStmt VisitStmtContinue( StmtContinueContext c )
+		{
+			ContinueStmt ret = new() {
+				depth = c.INTEGER_LIT()?.ToInt() ?? 1,
+			};
+			return ret;
+		}
+
+		public override Stmt VisitStmtContinue2( StmtContinue2Context c )
+			=> throw new NotImplementedException(
+				"continue case/default/else is not implemented yet" );
+
 		// no override
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
 		public new IfStmt.CondThen VisitCondThen( CondThenContext c )

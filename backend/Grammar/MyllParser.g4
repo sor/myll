@@ -145,6 +145,7 @@ defStmt		:	declUsing
 			|	stmtReturnIf
 			|	stmtThrow
 			|	stmtBreak
+			|	stmtContinue
 			|	stmtAssign
 			|	stmtAggregate
 			|	stmtDefer

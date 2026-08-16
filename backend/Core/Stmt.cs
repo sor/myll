@@ -154,6 +154,20 @@ namespace Myll.Core
 		}
 	}
 
+	public class ContinueStmt : Stmt
+	{
+		public int depth = 1; // C++ default is 1, continue the innermost loop
+
+		public override Strings Gen( int level )
+		{
+			if( depth != 1 )
+				throw new NotImplementedException(
+					"no depth except 1 supported directly, analyze step must take care of this!" );
+
+			return Format( "continue;" ).IndentAll( level );
+		}
+	}
+
 	public class MultiAssign : Stmt
 	{
 		public List<Expr> exprs = new();

@@ -48,5 +48,15 @@ func main() -> int
 		sum = sum + 1;
 	} while( count < 3 );
 
+	// continue statement
+	i = 0;
+	var int contSum = 0;
+	while( i < 5 ) {
+		++i;
+		if( i == 2 )
+			continue;
+		contSum = contSum + i;
+	}
+
 	return 0;
 }
