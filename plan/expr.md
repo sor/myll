@@ -86,6 +86,63 @@ These are small syntax extensions that need a little transformation.
 - Implementation: allow `MultiStmt` in the init position and emit the statements separated by commas.
 - Files: `backend/Core/Stmt.cs`
 
+### M5: Constructor shortcut
+
+#### Motivation
+Long type names make variable initialization noisy and error-prone, especially when the desired constructor is just the type itself. The C++ form `MyType name(args);` is also famously ambiguous with a function declaration, so Myll intentionally avoids it. A self-describing keyword avoids both of these problems while still being obvious to new users.
+
+#### Proposed syntax
+The first supported form should be the explicit-assignment form because it reuses existing expression machinery and is unambiguous:
+
+- `var Type name = ctor(args);`
+- Example: `var std::filesystem::path p = ctor(argv[1]);` emits `std::filesystem::path p(argv[1]);` or an equivalent construction.
+
+Later forms, which need grammar work to accept braced lists in a definition statement:
+
+- `var Type name = { args };`
+- `var Type name { args };`
+
+Rejected form:
+
+- `Type name(args);` — looks like a function declaration, so it will not be valid Myll.
+
+#### Why it only works in contexts that provide a type
+`ctor()` is a shortcut that says "construct an instance of the type I already told you about." In a direct variable declaration that type is explicit on the left-hand side, so resolution is local and unambiguous. A `return` statement inside a function with a declared return type has the same property, because C++ already accepts `return {42, 13};` when the return type is known.
+
+Contexts that provide a type for the initial implementation:
+
+- `var Type name = ctor(args);` — type from the variable declaration.
+- `return ctor(args);` — type from the enclosing function signature.
+
+Contexts without enough type information, so they are out of scope at first:
+
+- `auto x = ctor();` — no declared type to fill in, so the meaning is ambiguous.
+- `f(ctor());` — the parameter type is not yet resolved in the current pipeline, even though C++ could infer it from the overload set.
+
+#### Implementation sketch
+- Add a new AST expression node that records the constructor arguments and a flag that marks it as a shortcut.
+- In the variable-definition visitor, when the initializer is a `ctor(...)` shortcut, replace it with a normal constructor call whose type is the declared type from the definition.
+- Optionally extend the grammar so `ctor` can appear as a generic callable expression, but type-check it later so it only passes where the expected type is available.
+- Files: `backend/Grammar/MyllParser.g4`, `backend/Visitor/VStmt.cs`, `backend/Visitor/VExpr.cs`, `backend/Core/Expr.cs`, `backend/Generator/...`.
+
+## Known parser issue: chained `[][]` with `&&`
+
+Single chained indexing and simple comparisons parse correctly:
+
+```myll
+var char c = argv[1][0];
+if( argv[i][0] == '-' ) { }
+```
+
+However, combining two chained-index comparisons with `&&` currently fails:
+
+```myll
+if( argv[i][0] == '-' && argv[i][1] == '\0' ) { }
+// mismatched input '==' expecting ')'
+```
+
+This was discovered while porting Unix utilities. Using a single string comparison (`(string)argv[i] == "-"`) works around it for that use case; the underlying expression-grammar interaction still needs a real fix.
+
 ## Open questions
 - Should `return _` be a semantic error, or should it mean "return default"?
 - Do we want a separate `discard` type in the type system, or treat `_` purely as a parser-level marker?

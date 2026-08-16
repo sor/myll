@@ -22,6 +22,16 @@ global Type name = init;    // global scope variable
 
 `const Type name` is the preferred form and is equivalent to `var const Type name`. For a true compile-time constant, use `[ct] const Type name = init;`.
 
+### Constructor initialization
+
+Use the assignment form for types that must be constructed with arguments.
+
+```
+var std::ifstream file = std::ifstream("path");
+```
+
+The C++ form `var Type name(args);` is intentionally not supported, because it reads like a function declaration. A `ctor(args)` keyword shortcut is planned as a more readable alternative.
+
 ### Multi-Declaration
 
 ```

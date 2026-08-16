@@ -8,7 +8,7 @@ import std_iostream;
 //[hidden] var float no_collide = 9.0;
 //[global] var float do_collide = 9.0;
 
-func mainX( int argc, const char*[] argv ) -> int {
+func mainX( int argc, const char *[] argv ) -> int {
 	using std, JanSordid::Container;
 
 	var MyStack<i8> stack = MyStack<i8>(4);

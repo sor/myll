@@ -120,6 +120,7 @@ myll/
 - **No interpolated strings**: Do not use C# interpolated strings (`$"..."`). Prefer `String.Format` or plain concatenation.
 - **Blank line after braceless exit `if`**: Put an empty line after a simple `if` whose body exits the current block (e.g. `return` or `throw`). For other braceless `if`s the blank line is optional but still encouraged.
 - **Indent with tabs**: Use tabs for indentation. Use tabs for alignment too whenever possible. Only use spaces for alignment that cannot be expressed with tabs.
+- **Myll indirection declarator spacing**: Put spaces on both sides of the reference/pointer block. Examples: `std::istream & in`, `T * ptr`, `const char *[] argv`. Exception: pure array brackets stay tight, e.g. `var int[4] myArray;`.
 - **Rider links**: When running inside Rider’s terminal, file-line references like `backend/Core/Expr.cs:42` are clickable. If using the `jetbrains://rd/navigate/reference?...` URI from the shell, the `line` value is zero-based, so subtract 1 from the 1-based source line.
 
 ## Documentation & Code Formatting Rules
@@ -191,6 +192,7 @@ Before making changes, read these in `docs/analysis/`:
 3. **Broken AST traversal** — `ForStmt`, `WhileStmt`, `DoWhileStmt`, and `TimesStmt` have broken `EnumerateDF` that silently skips loop bodies. See `03-ast-core.md`.
 4. **Mutating code generation** — `NewExpr.Gen()` used to mutate the AST (`type.ptrs.RemoveAt(0)`). Fixed in `backend/Core/Expr.cs`; the method now temporarily replaces the pointer list and restores it. See `03-ast-core.md` and `plan/suspicious-warnings.md`.
 5. **Dead/future code** — `Symbol.cs` and `Attribute.cs` enums exist but are disconnected. They are stubs intended for semantic analysis. See `07-future-stubs.md`.
+6. **Local target-framework override** — The working tree may temporarily change `.csproj` and Rider `.run.xml` files from `net10.0` to `net6.0` to match a local SDK. Keep these changes unstaged and do **not** commit them; the repository target remains `net10.0`.
 
 ## Current State & Priorities
 
@@ -206,6 +208,7 @@ Before making changes, read these in `docs/analysis/`:
 - **Planned Work**: Keep the "Planned Work" section current — that is our shared priority list.
 - **Before big changes**: Propose a plan first, get approval, then execute.
 - **Commits**: Small, focused messages. Prefer many small commits over large batches.
+- **Preserve indentation**: Before constructing an `Edit`, re-check the exact leading tabs (and any spaces) from the `Read` output. Match them exactly in the replacement so the file's indentation stays intact.
 - **Testing**: Validate with `dotnet build` and `dotnet test testing/` after any backend change.
 - **ANTLR**: Grammar changes → regenerate → commit generated files with the grammar change.
 - **Wrap-up**: Before ending a workday or switching topic, check whether `AGENTS.md`, `plan/*.md`, or other docs need updates so they stay consistent with the current state.

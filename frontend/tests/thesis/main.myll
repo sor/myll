@@ -353,7 +353,7 @@ namespace ctor_fun {
 }
 //*/
 
-func main( int argc, const char*[] argv ) -> int
+func main( int argc, const char *[] argv ) -> int
 {
 	using std;
 	defer cout << "World!\n";

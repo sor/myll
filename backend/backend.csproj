@@ -8,6 +8,7 @@
 		<Description>Backend of the Myll Programming Language</Description>
 		<TargetFramework>net10.0</TargetFramework>
 		<Nullable>enable</Nullable>
+		<SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
 		<Antlr4UseStandardTool>true</Antlr4UseStandardTool>
 	</PropertyGroup>
 

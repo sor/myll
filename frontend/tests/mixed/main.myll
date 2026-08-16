@@ -4,7 +4,7 @@ module main; // the name of this file "main.myll" would make it "module main" by
 
 import std_iostream, std_string, stack, my_enum;
 
-func main( int argc, const char*[] argv ) -> int
+func main( int argc, const char *[] argv ) -> int
 {
 	using std;
 	using Rethmann::OOA::Uebung2_3;

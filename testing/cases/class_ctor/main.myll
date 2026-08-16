@@ -26,34 +26,34 @@ func main() -> int
 	if( a.x != 0 || a.y != 0 )
 		return 1;
 
-	var Widget* b = new Widget( 3, 4 );
+	var Widget * b = new Widget( 3, 4 );
 	if( b->x != 3 || b->y != 4 )
 		return 2;
 
-	var Widget* c = new Widget*( 9, 10 ); // As above but with "correct" number of * on rhs
+	var Widget * c = new Widget*( 9, 10 ); // As above but with "correct" number of * on rhs
 	if( c->x != 9 || c->y != 10 )
 		return 3;
 
-	var Widget** d = new Widget**( b );
+	var Widget ** d = new Widget**( b );
 	if( (*d)->x != 3 || (*d)->y != 4 )
 		return 4;
 
-	var Widget*! p = new Widget*!( 5, 6 );
+	var Widget *! p = new Widget*!( 5, 6 );
 	if( p->x != 5 || p->y != 6 )
 		return 5;
 
-	var Widget* wp = new Widget( 7, 8 );
-	var Widget*!* wpp = new Widget*!*( wp );
+	var Widget * wp = new Widget( 7, 8 );
+	var Widget *!* wpp = new Widget*!*( wp );
 	if( (*wpp)->x != 7 || (*wpp)->y != 8 )
 		return 6;
 
-	var Widget* raw = new Widget*( 11, 12 );
-	var Widget**! upRaw = new Widget**!( raw );
+	var Widget * raw = new Widget*( 11, 12 );
+	var Widget **! upRaw = new Widget**!( raw );
 	if( (*upRaw)->x != 11 || (*upRaw)->y != 12 )
 		return 7;
 
-	var Widget* wp2 = new Widget*( 13, 14 );
-	var Widget*!*! upup = new Widget*!*!( wp2 );
+	var Widget * wp2 = new Widget*( 13, 14 );
+	var Widget *!*! upup = new Widget*!*!( wp2 );
 	if( (*upup)->x != 13 || (*upup)->y != 14 )
 		return 8;
 
