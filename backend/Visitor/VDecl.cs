@@ -54,7 +54,7 @@ namespace Myll
 			foreach( ProgContext c in cs ) {
 				global.imps.UnionWith(
 					c.imports()
-						.SelectMany( i => i.id() )
+						.SelectMany( i => i.importName() )
 						.Select( i => i.GetText() )
 						.ToList() );
 

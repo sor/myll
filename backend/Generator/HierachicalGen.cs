@@ -135,6 +135,8 @@ namespace Myll.Generator
 						? Format( "#include <{0}>", i.Substring( 4 ) )
 						: i.StartsWith( "c_" )
 						? Format( "#include <c{0}>", i.Substring( 2 ) )
+						: i.Contains( "." )
+						? Format( "#include \"{0}\"", i )
 						: Format( "#include \"{0}.hpp\"", i ) );
 
 			IStrings declList = GenDecl();
