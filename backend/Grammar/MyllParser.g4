@@ -93,7 +93,7 @@ defEnum		:	id
 defStruct	:	id	tplParams?
 				(COLON		bases=typespecsNested)?
 				(REQUIRES 	reqs=typespecsNested)?	// TODO: should this rather be "expr" instead of typespecsNested?
-					LCURLY	decl*		RCURLY;
+					LCURLY	decl*		RCURLY	SEMI?;
 
 // convert is implicit by default?
 // ctor    is explicit by default?

@@ -28,3 +28,82 @@ Clean build results:
 - Debug: 0 C# warnings, 1 package warning
 
 Remaining work: clean up the 43 `= null!` initializers by introducing real constructors or nullable annotations where appropriate.
+
+## Clarify `var` in function parameter lists
+
+Writing a reference/out parameter with `var` currently produces a confusing parser error:
+
+```myll
+func f( var int & argi ) -> void  // error: cryptic message
+func f( int & argi )    -> void  // ok
+```
+
+`var`/`let`/`const` make sense for variable declarations because they introduce a new name, but in a parameter list the type is required. The parser should either:
+
+- Reject `var`/`let`/`const` in a parameter with a clear message such as "function parameters cannot use 'var'; write the type directly (e.g. 'int & argi')"; or
+- Silently ignore the redundant keyword, since it carries no useful information in that position.
+
+The latter is more forgiving; the former teaches the language model. Either way is better than the current diagnostic.
+
+Files: `backend/Grammar/MyllParser.g4`, `backend/Visitor/VDecl.cs` or parser validation step.
+
+## Import/include paths cannot contain slashes
+
+Dotted import names map directly to a quoted C++ include:
+
+```myll
+import cxxopts.hpp;
+// -> #include "cxxopts.hpp"
+```
+
+This works as long as the header lives directly on the include path (via `-I...`), but it cannot currently express a subdirectory:
+
+```myll
+import some.lib.header.hpp;  // -> #include "some.lib.header.hpp", not "some/lib/header.hpp"
+```
+
+Options to resolve this later:
+
+- Allow `/` in import names and translate it to a path separator in the generator.
+- Introduce an explicit string-form import for paths, e.g. `import "some/lib/header.hpp";`.
+- Establish a convention that `.` in import names maps to `/` (breaks filenames that contain real dots).
+
+No implementation yet — needs a design decision first.
+
+## `try`/`catch` statements are parsed but not code-generated
+
+The grammar accepts `try`/ `catch` blocks, but the C++ generator does not produce valid code for them.
+
+Example input:
+
+```myll
+try {
+    risky();
+}
+catch( const std::exception & e ) {
+    std::cerr << e.what() << "\n";
+}
+```
+
+Observed behavior: the generated `.cpp` contains the body of the `catch` block (with the exception variable missing), but the `try` block and the catch declaration itself are dropped.
+
+This means exceptions currently cannot be caught in Myll code. Options:
+
+- Implement `try`/`catch` code generation properly.
+- Remove the grammar rules until the feature is ready, so users get a clear "not implemented" error instead of broken C++.
+
+Files: `backend/Grammar/MyllParser.g4`, `backend/Core/Stmt.cs`, `backend/Visitor/VStmt.cs`, `backend/Generator/StmtGen.cs`.
+
+## Audit visitor overrides for unimplemented grammar rules
+
+The parser accepts more constructs than the C++ generator/visitor currently handles. Some rules throw `NotImplementedException` or `NotSupportedException` at runtime; others silently produce broken or missing code (see the `try`/`catch` case above).
+
+We should systematically go through the generated visitor base class and every override in `backend/Visitor/` to identify:
+
+- Grammar rules that have **no override** and fall back to the generated base (which may silently skip the node).
+- Overrides that **throw** `NotImplementedException`/`NotSupportedException` and decide whether to implement, remove, or improve the error message.
+- Overrides that **generate partial/broken C++** (e.g. `try`/`catch`).
+
+Where a construct is accepted by the grammar but cannot yet be lowered, the backend should throw a clear `NotImplementedException` or `NotSupportedException` rather than silently emit partial or broken C++. Silent mis-generation is much harder to debug than an explicit runtime error.
+
+Files: `backend/Grammar/Generated/` (generated visitor base), `backend/Visitor/*.cs`, `backend/Generator/*.cs`.
