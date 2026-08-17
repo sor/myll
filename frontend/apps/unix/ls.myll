@@ -1,0 +1,81 @@
+module ls;
+
+import std_iostream, std_filesystem, std_vector, std_string, std_algorithm;
+
+class DirEntry
+{
+	field {
+		std::filesystem::path _path;
+		u64                   _size = 0;
+		bool                  _isDirectory = false;
+	}
+
+[pub]:
+	ctor( const std::filesystem::path & path )
+	{
+		_path = path;
+		_isDirectory = std::filesystem::is_directory( _path );
+		if( !_isDirectory ) {
+			try {
+				_size = std::filesystem::file_size( _path );
+			}
+			catch() {
+				_size = 0;
+			}
+		}
+	}
+
+	[pure]
+	func name() -> string => (string)_path.filename().generic_string();
+
+	[pure]
+	func size() -> u64 => _size;
+
+	[pure]
+	func isDirectory() -> bool => _isDirectory;
+}
+
+func printEntry( DirEntry * e ) -> void
+{
+	std::cout << e->size() << " " << e->name();
+	if( e->isDirectory() )
+		std::cout << "/";
+	std::cout << "\n";
+}
+
+func entryNameLess( const DirEntry & a, const DirEntry & b ) -> bool
+{
+	return a.name() < b.name();
+}
+
+func main( const int argc, const char *[] argv ) -> int
+{
+	var std::filesystem::path target = std::filesystem::path( "." );
+	if( argc > 1 )
+		target = std::filesystem::path( (string)argv[1] );
+
+	if( !std::filesystem::exists( target ) || !std::filesystem::is_directory( target ) ) {
+		std::cerr << "ls: " << target.generic_string() << ": no such directory\n";
+		return 1;
+	}
+
+	var std::vector<DirEntry> entries = std::vector<DirEntry>();
+
+	var std::filesystem::directory_iterator it  = std::filesystem::directory_iterator( target );
+	var std::filesystem::directory_iterator end = std::filesystem::directory_iterator();
+
+	while( it != end ) {
+		entries.push_back( DirEntry( (*it).path() ) );
+		++it;
+	}
+
+	std::sort( entries.begin(), entries.end(), entryNameLess );
+
+	var usize k = 0;
+	while( k < entries.size() ) {
+		printEntry( &entries[k] );
+		++k;
+	}
+
+	return 0;
+}

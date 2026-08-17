@@ -100,3 +100,119 @@ We should systematically go through the generated visitor base class and every o
 Where a construct is accepted by the grammar but cannot yet be lowered, the backend should throw a clear `NotImplementedException` or `NotSupportedException` rather than silently emit partial or broken C++. Silent mis-generation is much harder to debug than an explicit runtime error.
 
 Files: `backend/Grammar/Generated/` (generated visitor base), `backend/Visitor/*.cs`, `backend/Generator/*.cs`.
+
+## Myll language sharp edges discovered while porting utilities
+
+### Constructor call syntax
+
+Myll currently only supports the assignment-style constructor form:
+
+```myll
+var T name = T(args);
+```
+
+Direct constructor syntax is not accepted:
+
+```myll
+var T name(args);   // error
+T(args);            // error (temporary)
+```
+
+This should be improved so Myll feels more like C++.
+
+### Range-based `for`
+
+Confirmed not implemented. The grammar has a TODO comment:
+
+```g4
+stmtFor		:	FOR		LPAREN	init=stmt	// TODO: add syntax for( a : b )
+```
+
+For now use an iterator-style `while` loop.
+
+### Namespace aliases
+
+Type aliases work:
+
+```myll
+alias path = std::filesystem::path;
+```
+
+Namespace aliases do not yet work. `alias fs = std::filesystem;` currently always generates:
+
+```cpp
+using fs = std::filesystem;
+```
+
+which is invalid because `std::filesystem` is a namespace.
+
+The intended design is for `alias` to dispatch based on the semantic kind of the right-hand side:
+- type -> `using a = b;`
+- namespace -> `namespace a = b;`
+
+That requires semantic analysis to know whether the right-hand side names a type or a namespace, so this is blocked on a proper symbol-resolution pass.
+
+### Class access modifiers: `[]` vs `[]:`
+
+**Expected behavior:**
+
+- `[]:` opens an access section that stays active until another access section.
+- `[]` (without colon) should apply only to the *next* declaration, like `[pure]` does for methods.
+
+Example of section form:
+
+```myll
+class A
+{
+[pub]:
+	func publicMethod() -> void;
+
+[priv]:
+	field int privateField;
+}
+```
+
+Example of per-declaration form:
+
+```myll
+class A
+{
+	[pub] func publicMethod() -> void;
+	[priv] field int privateField;
+}
+```
+
+**Current behavior:**
+
+Only the section form (`[]:`) works. Per-declaration access modifiers like `[priv] field int x;` are currently ignored, so the declaration keeps the previous section's access (or the class default).
+
+**Open work:** decide whether to implement per-declaration access modifiers, or to make the compiler reject them with a clear error so users do not assume they work.
+
+### `field { ... }` block syntax
+
+A `field` declaration can contain a braced block of multiple field declarations with different types:
+
+```myll
+class A
+{
+	field {
+		std::filesystem::path _path;
+		u64                   _size = 0;
+		bool                  _isDirectory = false;
+	}
+}
+```
+
+This is already working and lowers to private fields at the top of the generated C++ class.
+
+### `try`/`catch` catch-clause grammar
+
+The current grammar uses `funcTypeDef` for the catch parameter:
+
+```g4
+catchClause : CATCH funcTypeDef? stmt; // funcTypeDef is wrong, but works for easy cases
+```
+
+This is semantically wrong: a catch clause is `catch( Type name )`, not a function type. It also required a small visitor workaround to accept `catch()` (zero parameters) as a catch-all.
+
+**Open work:** change the grammar to `CATCH LPAREN param? RPAREN stmt` and update the visitor/generator accordingly.
