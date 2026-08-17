@@ -1,0 +1,63 @@
+module wc_cxxopts;
+
+import std_iostream, std_fstream, std_string, std_vector, cxxopts.hpp;
+
+func wcStream( std::istream & in ) -> void
+{
+	var string line;
+	var u64 bytes = 0;
+	var u64 lines = 0;
+	var u64 words = 0;
+	var bool in_word = false;
+
+	while( std::getline( in, line ) )
+	{
+		++lines;
+		bytes += line.length() + 1;
+
+		var usize pos = 0;
+		while( pos < line.length() )
+		{
+			const char c = line[pos];
+			const bool isSpace = c == ' ' || c == '\t' || c == '\r' || c == '\f' || c == '\v';
+			if( !isSpace && !in_word )
+				++words;
+			in_word = !isSpace;
+			++pos;
+		}
+	}
+
+	std::cout << lines << " " << words << " " << bytes << "\n";
+}
+
+func main( const int argc, const char *[] argv ) -> int
+{
+	var cxxopts::Options options = cxxopts::Options( "wc_cxxopts", "wc with cxxopts" );
+	var cxxopts::ParseResult result = options.parse( argc, argv );
+	const std::vector<string> files = result.unmatched();
+
+	if( files.size() == 0 ) {
+		wcStream( std::cin );
+		return 0;
+	}
+
+	var usize i = 0;
+	while( i < files.size() )
+	{
+		const string path = files[i];
+		if( path == "-" ) {
+			wcStream( std::cin );
+		}
+		else {
+			var std::ifstream file = std::ifstream( path );
+			if( !file ) {
+				std::cerr << "wc_cxxopts: " << path << ": cannot open file\n";
+				return 1;
+			}
+			wcStream( file );
+		}
+		++i;
+	}
+
+	return 0;
+}

@@ -1,0 +1,212 @@
+module grep;
+
+import std_iostream, std_fstream, std_string, c_ctype;
+
+struct Options
+{
+	field bool ignore_case;
+	field bool invert;
+	field bool line_number;
+	field bool count;
+	field bool list_files;
+	field bool whole_line;
+	field bool no_filename;
+	field bool with_filename;
+	field string pattern;
+}
+
+func usage() -> int
+{
+	std::cerr << "usage: grep [options] pattern [file...]\n"
+	          << "options: -e pattern  -i  -v  -n  -c  -l  -x  -H  -h\n";
+	return 1;
+}
+
+func charEquals( const char a, const char b, const bool ignore_case ) -> bool
+{
+	if( !ignore_case )
+		return a == b;
+	return std::tolower( a ) == std::tolower( b );
+}
+
+func stringEquals( const string & a, const string & b, const bool ignore_case ) -> bool
+{
+	if( a.length() != b.length() )
+		return false;
+
+	var usize i = 0;
+	while( i < a.length() ) {
+		if( !charEquals( a[i], b[i], ignore_case ) )
+			return false;
+		++i;
+	}
+	return true;
+}
+
+func contains( const string & haystack, const string & needle, const bool ignore_case ) -> bool
+{
+	if( needle.length() == 0 )
+		return true;
+	if( needle.length() > haystack.length() )
+		return false;
+
+	const usize last = haystack.length() - needle.length();
+	var usize i = 0;
+	while( i <= last ) {
+		var usize j = 0;
+		while( j < needle.length() ) {
+			if( !charEquals( haystack[i + j], needle[j], ignore_case ) )
+				break;
+			++j;
+		}
+		if( j == needle.length() )
+			return true;
+		++i;
+	}
+	return false;
+}
+
+func matches( const string & line, const string & pattern, const bool whole_line,
+	const bool ignore_case ) -> bool
+{
+	if( whole_line )
+		return stringEquals( line, pattern, ignore_case );
+	return contains( line, pattern, ignore_case );
+}
+
+func grepStream( const string & file_name, std::istream & in, const Options & opts,
+	const bool print_name ) -> int
+{
+	var string line;
+	var int line_no = 0;
+	var int match_count = 0;
+
+	while( std::getline( in, line ) ) {
+		++line_no;
+		var bool matched = matches( line, opts.pattern, opts.whole_line, opts.ignore_case );
+		if( opts.invert )
+			matched = !matched;
+
+		if( !matched )
+			continue;
+
+		++match_count;
+
+		if( opts.list_files ) {
+			std::cout << file_name << "\n";
+			return 0;
+		}
+
+		if( opts.count )
+			continue;
+
+		if( print_name )
+			std::cout << file_name << ":";
+		if( opts.line_number )
+			std::cout << line_no << ":";
+		std::cout << line << "\n";
+	}
+
+	if( opts.count ) {
+		if( print_name )
+			std::cout << file_name << ":";
+		std::cout << match_count << "\n";
+	}
+
+	return 0;
+}
+
+func parseOptions( const int argc, const char *[] argv, Options & opts, int & argi ) -> int
+{
+	argi = 1;
+
+	while( argi < argc ) {
+		const string arg = (string)argv[argi];
+
+		if( arg == "--" ) {
+			++argi;
+			break;
+		}
+
+		if( arg == "-i" )
+			opts.ignore_case = true;
+		else if( arg == "-v" )
+			opts.invert = true;
+		else if( arg == "-n" )
+			opts.line_number = true;
+		else if( arg == "-c" )
+			opts.count = true;
+		else if( arg == "-l" )
+			opts.list_files = true;
+		else if( arg == "-x" )
+			opts.whole_line = true;
+		else if( arg == "-H" )
+			opts.with_filename = true;
+		else if( arg == "-h" )
+			opts.no_filename = true;
+		else if( arg == "-e" ) {
+			++argi;
+			if( argi >= argc )
+				return usage();
+			opts.pattern = (string)argv[argi];
+		}
+		else if( arg.length() >= 2 && arg[0] == '-' ) {
+			std::cerr << "grep: unknown option " << arg << "\n";
+			return usage();
+		}
+		else if( opts.pattern == "" ) {
+			opts.pattern = arg;
+		}
+		else {
+			break;
+		}
+
+		++argi;
+	}
+
+	if( opts.pattern == "" )
+		return usage();
+
+	return 0;
+}
+
+func main( const int argc, const char *[] argv ) -> int
+{
+	var Options opts = Options();
+	var int argi = 1;
+
+	if( parseOptions( argc, argv, opts, argi ) != 0 )
+		return 1;
+
+	var bool print_name = false;
+	if( !opts.no_filename ) {
+		if( opts.with_filename )
+			print_name = true;
+		else if( argc - argi > 1 )
+			print_name = true;
+	}
+
+	if( argi >= argc ) {
+		return grepStream( "-", std::cin, opts, print_name );
+	}
+
+	while( argi < argc ) {
+		const string path = (string)argv[argi];
+
+		if( path == "-" ) {
+			grepStream( "-", std::cin, opts, print_name );
+		}
+		else {
+			var std::ifstream file = std::ifstream( path );
+			if( !file ) {
+				std::cerr << "grep: " << path << ": cannot open file\n";
+				return 1;
+			}
+			grepStream( path, file, opts, print_name );
+		}
+
+		++argi;
+	}
+
+	return 0;
+}

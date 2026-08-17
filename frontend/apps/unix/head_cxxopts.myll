@@ -1,0 +1,49 @@
+module head_cxxopts;
+
+import std_iostream, std_fstream, std_string, std_vector, cxxopts.hpp;
+
+func headStream( std::istream & in, const int n ) -> void
+{
+	var string line;
+	var int count = 0;
+	while( count < n && std::getline( in, line ) )
+	{
+		std::cout << line << "\n";
+		++count;
+	}
+}
+
+func main( const int argc, const char *[] argv ) -> int
+{
+	var cxxopts::Options options = cxxopts::Options( "head_cxxopts", "head with cxxopts" );
+	options.add_options()
+		( "n,lines", "Number of lines", cxxopts::value<int>()->default_value( "10" ) );
+
+	var cxxopts::ParseResult result = options.parse( argc, argv );
+	const int n = result["lines"].as<int>();
+	const std::vector<string> files = result.unmatched();
+
+	var usize i = 0;
+	if( files.size() == 0 ) {
+		headStream( std::cin, n );
+		return 0;
+	}
+
+	while( i < files.size() ) {
+		const string path = files[i];
+		if( path == "-" ) {
+			headStream( std::cin, n );
+		}
+		else {
+			var std::ifstream file = std::ifstream( path );
+			if( !file ) {
+				std::cerr << "head_cxxopts: " << path << ": cannot open file\n";
+				return 1;
+			}
+			headStream( file, n );
+		}
+		++i;
+	}
+
+	return 0;
+}

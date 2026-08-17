@@ -8,7 +8,7 @@ MYLL_ROOT ?= ../../..
 MYLL      := dotnet run --project $(MYLL_ROOT)/frontend -- -i '*.myll' -o gen
 
 CXX      ?= g++
-CXXFLAGS ?= -std=c++20
+CXXFLAGS ?= -std=c++20 -Ithird_party
 
 TOOLS    := $(basename $(wildcard *.myll))
 BINS     := $(addprefix gen/,$(TOOLS))

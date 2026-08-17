@@ -1,0 +1,17 @@
+module yes_cxxopts;
+
+import std_iostream, std_vector, cxxopts.hpp;
+
+func main( const int argc, const char *[] argv ) -> int
+{
+	var cxxopts::Options options = cxxopts::Options( "yes_cxxopts", "yes with cxxopts" );
+	var cxxopts::ParseResult result = options.parse( argc, argv );
+	const std::vector<string> args = result.unmatched();
+
+	const string s = args.size() > 0 ? args[0] : "y";
+
+	while( true )
+		std::cout << s << "\n";
+
+	return 0;
+}

@@ -1,0 +1,33 @@
+module basename_cxxopts;
+
+import std_iostream, std_filesystem, std_vector, cxxopts.hpp;
+
+func main( const int argc, const char *[] argv ) -> int
+{
+	var cxxopts::Options options = cxxopts::Options( "basename_cxxopts", "basename with cxxopts" );
+	var cxxopts::ParseResult result = options.parse( argc, argv );
+	const std::vector<string> args = result.unmatched();
+
+	if( args.size() < 1 ) {
+		std::cerr << "basename_cxxopts: missing operand\n";
+		return 1;
+	}
+
+	const string path = args[0];
+	var string base = (string)std::filesystem::path( path ).filename().generic_string();
+
+	if( args.size() == 2 ) {
+		const string suffix = args[1];
+		const usize suffix_len = suffix.length();
+		if( base.length() >= suffix_len
+			&& base.compare( base.length() - suffix_len, suffix_len, suffix ) == 0 )
+			base = base.substr( 0, base.length() - suffix_len );
+	}
+	else if( args.size() > 2 ) {
+		std::cerr << "basename_cxxopts: too many operands\n";
+		return 1;
+	}
+
+	std::cout << base << "\n";
+	return 0;
+}

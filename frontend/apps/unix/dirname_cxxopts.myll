@@ -1,0 +1,24 @@
+module dirname_cxxopts;
+
+import std_iostream, std_filesystem, std_vector, cxxopts.hpp;
+
+func main( const int argc, const char *[] argv ) -> int
+{
+	var cxxopts::Options options = cxxopts::Options( "dirname_cxxopts", "dirname with cxxopts" );
+	var cxxopts::ParseResult result = options.parse( argc, argv );
+	const std::vector<string> args = result.unmatched();
+
+	if( args.size() < 1 ) {
+		std::cerr << "dirname_cxxopts: missing operand\n";
+		return 1;
+	}
+
+	const string path = args[0];
+	var string dir = (string)std::filesystem::path( path ).parent_path().generic_string();
+
+	if( dir == "" )
+		dir = ".";
+
+	std::cout << dir << "\n";
+	return 0;
+}

@@ -1,0 +1,30 @@
+module echo_cxxopts;
+
+import std_iostream, std_string, std_vector, cxxopts.hpp;
+
+func main( const int argc, const char *[] argv ) -> int
+{
+	var cxxopts::Options options = cxxopts::Options( "echo_cxxopts", "echo with cxxopts" );
+	options.add_options()
+		( "n,newline", "Do not print trailing newline",
+		  cxxopts::value<bool>()->default_value( "false" ) );
+
+	var cxxopts::ParseResult result = options.parse( argc, argv );
+	const bool no_newline = result["newline"].as<bool>();
+	const std::vector<string> args = result.unmatched();
+
+	var bool first = true;
+	var usize i = 0;
+	while( i < args.size() ) {
+		if( !first )
+			std::cout << " ";
+		std::cout << args[i];
+		first = false;
+		++i;
+	}
+
+	if( !no_newline )
+		std::cout << "\n";
+
+	return 0;
+}
