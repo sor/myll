@@ -2,12 +2,19 @@ module ls;
 
 import std_iostream, std_filesystem, std_vector, std_string, std_algorithm;
 
+enum SortMode {
+	Name,
+	Size,
+	Time,
+}
+
 class DirEntry
 {
 	field {
-		std::filesystem::path _path;
-		u64                   _size = 0;
-		bool                  _isDirectory = false;
+		std::filesystem::path               _path;
+		u64                                 _size = 0;
+		std::filesystem::file_time_type     _time;
+		bool                                _isDirectory = false;
 	}
 
 [pub]:
@@ -15,6 +22,12 @@ class DirEntry
 	{
 		_path = path;
 		_isDirectory = std::filesystem::is_directory( _path );
+		try {
+			_time = std::filesystem::last_write_time( _path );
+		}
+		catch() {
+			_time = std::filesystem::file_time_type::min();
+		}
 		if( !_isDirectory ) {
 			try {
 				_size = std::filesystem::file_size( _path );
@@ -32,15 +45,62 @@ class DirEntry
 	func size() -> u64 => _size;
 
 	[pure]
+	func time() -> std::filesystem::file_time_type => _time;
+
+	[pure]
 	func isDirectory() -> bool => _isDirectory;
 }
 
-func printEntry( DirEntry * e ) -> void
+class Formatter
 {
-	std::cout << e->size() << " " << e->name();
-	if( e->isDirectory() )
-		std::cout << "/";
-	std::cout << "\n";
+[pub]:
+	[virtual]
+	func format( const DirEntry & e ) -> string => "";
+}
+
+func humanSize( u64 bytes ) -> string
+{
+	if( bytes >= 1024 * 1024 * 1024 )
+		return std::to_string( bytes / (1024 * 1024 * 1024) ) + "G";
+	if( bytes >= 1024 * 1024 )
+		return std::to_string( bytes / (1024 * 1024) ) + "M";
+	if( bytes >= 1024 )
+		return std::to_string( bytes / 1024 ) + "K";
+	return std::to_string( bytes );
+}
+
+class DetailedFormatter : Formatter
+{
+	field bool _humanReadable = false;
+
+[pub]:
+	ctor( bool humanReadable )
+	{
+		_humanReadable = humanReadable;
+	}
+
+	[override]
+	func format( const DirEntry & e ) -> string
+	{
+		var string s = (_humanReadable ? humanSize( e.size() ) : std::to_string( e.size() ))
+			+ " " + e.name();
+		if( e.isDirectory() )
+			s += "/";
+		return s + "\n";
+	}
+}
+
+class NameOnlyFormatter : Formatter
+{
+[pub]:
+	[override]
+	func format( const DirEntry & e ) -> string
+	{
+		var string s = e.name();
+		if( e.isDirectory() )
+			s += "/";
+		return s + "\n";
+	}
 }
 
 func entryNameLess( const DirEntry & a, const DirEntry & b ) -> bool
@@ -48,11 +108,57 @@ func entryNameLess( const DirEntry & a, const DirEntry & b ) -> bool
 	return a.name() < b.name();
 }
 
+func entrySizeLess( const DirEntry & a, const DirEntry & b ) -> bool
+{
+	if( a.size() != b.size() )
+		return a.size() > b.size();
+	return a.name() < b.name();
+}
+
+func entryTimeLess( const DirEntry & a, const DirEntry & b ) -> bool
+{
+	if( a.time() != b.time() )
+		return a.time() > b.time();
+	return a.name() < b.name();
+}
+
+func isHidden( const DirEntry & e ) -> bool
+{
+	return e.name().length() > 0 && e.name().compare( 0, 1, "." ) == 0;
+}
+
 func main( const int argc, const char *[] argv ) -> int
 {
+	var bool     showHidden    = false;
+	var bool     nameOnly      = false;
+	var bool     humanReadable = false;
+	var SortMode sortMode      = SortMode::Name;
+	var int      i = 1;
+
+	while( argc > i ) {
+		const string arg = (string)argv[i];
+		if( arg.length() > 1 && arg[0] == '-' ) {
+			switch( arg[1] ) {
+				case 'a': showHidden    = true;
+				case 'n': nameOnly      = true;
+				case 'h': humanReadable = true;
+				case 's': sortMode      = SortMode::Size;
+				case 't': sortMode      = SortMode::Time;
+				default:
+					std::cerr << "ls: unknown option " << arg << "\n";
+					return 1;
+			}
+			++i;
+		}
+		else {
+			// args ended, all are now file/dir-names
+			break;
+		}
+	}
+
 	var std::filesystem::path target = std::filesystem::path( "." );
-	if( argc > 1 )
-		target = std::filesystem::path( (string)argv[1] );
+	if( argc > i )
+		target = std::filesystem::path( (string)argv[i] );
 
 	if( !std::filesystem::exists( target ) || !std::filesystem::is_directory( target ) ) {
 		std::cerr << "ls: " << target.generic_string() << ": no such directory\n";
@@ -69,11 +175,23 @@ func main( const int argc, const char *[] argv ) -> int
 		++it;
 	}
 
-	std::sort( entries.begin(), entries.end(), entryNameLess );
+	if( sortMode == SortMode::Name )
+		std::sort( entries.begin(), entries.end(), entryNameLess );
+	else if( sortMode == SortMode::Size )
+		std::sort( entries.begin(), entries.end(), entrySizeLess );
+	else
+		std::sort( entries.begin(), entries.end(), entryTimeLess );
+
+	var Formatter *! fmt;
+	if( nameOnly )
+		fmt = new NameOnlyFormatter*!;
+	else
+		fmt = new DetailedFormatter*!( humanReadable );
 
 	var usize k = 0;
 	while( k < entries.size() ) {
-		printEntry( &entries[k] );
+		if( showHidden || !isHidden( entries[k] ) )
+			std::cout << fmt->format( entries[k] );
 		++k;
 	}
 

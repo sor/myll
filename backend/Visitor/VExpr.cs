@@ -84,7 +84,9 @@ namespace Myll
 			NewExpr ret = new() {
 				op       = Operand.New,
 				type     = VisitTypespec( c.typespec() ),
-				funcCall = VisitFuncCall( c.funcCall() ),
+				funcCall = c.funcCall() != null
+					? VisitFuncCall( c.funcCall() )
+					: new FuncCall(),
 			};
 			return ret;
 		}

@@ -3,6 +3,17 @@
 This file tracks general cleanup work that does not require a design decision.
 It is separate from `suspicious-warnings.md`, which is reserved for warning clusters that expose deeper behavioral problems.
 
+## Recently completed
+
+- Visitor override audit: added `plan/visitor-audit.md`.
+- Added fail-loudly visitor overrides for `defer`, `do return if`, `range` expressions, `throw` expressions, and `continue case/default/else`.
+- `aspect`/`concept`/`convert` now throw `NotSupportedException` instead of silently doing nothing.
+- `var` in function parameter lists is now accepted by the grammar and produces a clear `NotSupportedException`.
+- `catch()` with no parameter now works (minimal fix in `VStmt.VisitStmtTryCatch`).
+- `new T*`/`new T*!` no longer require empty parentheses.
+- Added `-Wsuggest-override` to the Unix app Makefile.
+- Implemented a class-heavy `ls` vertical slice with inheritance, virtual formatters, smart-pointer shorthand, sorting options, and hidden-file filtering.
+
 ## Remove null-forgiving initializers (`= null!`)
 
 When migrating files to `#nullable enable`, late-bound fields and properties (typically filled in by the visitor after construction) were initialized with `= null!` to silence `CS8618` without immediately rewriting every call site.

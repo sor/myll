@@ -301,9 +301,10 @@ namespace Myll
 
 			bool hasNoStmt = body.stmts.IsEmpty();
 			bool isFall    = c.FALL() != null;
-			// TODO: check if either break or fall is set, throw if necessary
-			// breaks will be inside the body.stmts
-			// need info from the switch in here if there is a default case
+			// The current behavior is ImplicitBreak (see Dialect.SwitchFallthroughMode).
+			// TODO: honor Dialect.SwitchFallthrough instead of always inserting a break.
+			//       In Explicit mode every non-empty case must end with break, return, or fallthrough.
+			//       In ImplicitFallthrough mode do not insert a break at all.
 			if( hasNoStmt ) {
 				// OK, consecutive case stmt, silent fallthrough
 			}
