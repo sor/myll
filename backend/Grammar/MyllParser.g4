@@ -284,7 +284,7 @@ args		:	arg (COMMA arg)* COMMA?;
 funcCall	:	ary=( QM_LPAREN | LPAREN )	args?	RPAREN;
 indexCall	:	ary=( QM_LBRACK | LBRACK )	args	RBRACK;
 
-param		:	typespec id?;
+param		:	VAR?	typespec	id?;
 funcTypeDef	:	LPAREN	(param (COMMA param)* COMMA?)?	RPAREN;
 
 // can't contain expr, will fck up through idTplArgs with multiple templates (e.g. op | from enums)

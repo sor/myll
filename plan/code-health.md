@@ -31,21 +31,18 @@ Remaining work: clean up the 43 `= null!` initializers by introducing real const
 
 ## Clarify `var` in function parameter lists
 
-Writing a reference/out parameter with `var` currently produces a confusing parser error:
+Writing a reference/out parameter with `var` used to produce a confusing parser error:
 
 ```myll
 func f( var int & argi ) -> void  // error: cryptic message
 func f( int & argi )    -> void  // ok
 ```
 
-`var`/`let`/`const` make sense for variable declarations because they introduce a new name, but in a parameter list the type is required. The parser should either:
+`var` makes sense for variable declarations because it introduces a new name, but in a parameter list the type is required. The grammar now accepts an optional `VAR` keyword in a parameter, and `VisitParam` throws a clear `NotSupportedException` with the message:
 
-- Reject `var`/`let`/`const` in a parameter with a clear message such as "function parameters cannot use 'var'; write the type directly (e.g. 'int & argi')"; or
-- Silently ignore the redundant keyword, since it carries no useful information in that position.
+> function parameters cannot use 'var'; write the type directly (e.g. 'int & argi')
 
-The latter is more forgiving; the former teaches the language model. Either way is better than the current diagnostic.
-
-Files: `backend/Grammar/MyllParser.g4`, `backend/Visitor/VDecl.cs` or parser validation step.
+Files: `backend/Grammar/MyllParser.g4`, `backend/Visitor/VExt.cs`.
 
 ## Import/include paths cannot contain slashes
 

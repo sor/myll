@@ -50,12 +50,32 @@ namespace Myll
 				indexer  = false,
 			};
 
+		protected new Param VisitParam( ParamContext c )
+		{
+			if( c.VAR() != null ) {
+				string raw = c.Start.InputStream.GetText(
+					new Antlr4.Runtime.Misc.Interval(
+						c.Start.StartIndex,
+						c.Stop.StopIndex ) );
+
+				string corrected = raw
+					.Replace( c.VAR().GetText(), "" )
+					.Trim();
+
+				throw new NotSupportedException(
+					String.Format(
+						"function parameters cannot use 'var'; write the type directly: '{0}'",
+						corrected ) );
+			}
+
+			return new Param {
+				name = c.id()?.Visit(),
+				type = VisitTypespec( c.typespec() ),
+			};
+		}
+
 		protected new IEnumerable<Param> VisitFuncTypeDef( FuncTypeDefContext? cs )
-			=> cs?.param().Select(
-				c => new Param {
-					name = c.id()?.Visit(),
-					type = VisitTypespec( c.typespec() )
-				} ) ?? Enumerable.Empty<Param>();
+			=> cs?.param().Select( VisitParam ) ?? Enumerable.Empty<Param>();
 
 		protected IEnumerable<EnumEntry> VisitEnumEntrys( IdExprsContext cs )
 			=> cs.idExpr().Select(
