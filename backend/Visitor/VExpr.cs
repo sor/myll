@@ -434,5 +434,15 @@ namespace Myll
 			};
 			return ret;
 		}
+
+		public override Expr VisitRangeExpr( RangeExprContext c )
+			=> throw new NotImplementedException( "range expressions are not implemented yet" );
+
+		public override Expr VisitThrowExpr( ThrowExprContext c )
+			=> throw new NotImplementedException( "throw expressions are not implemented yet" );
+
+		public override Expr VisitThreeWayConditionalExpr( ThreeWayConditionalExprContext c )
+			=> throw new NotImplementedException(
+				"three-way conditional expressions are not implemented yet" );
 	}
 }

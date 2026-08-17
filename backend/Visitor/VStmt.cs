@@ -241,6 +241,12 @@ namespace Myll
 			=> throw new NotImplementedException(
 				"continue case/default/else is not implemented yet" );
 
+		public override Stmt VisitStmtDefer( StmtDeferContext c )
+			=> throw new NotImplementedException( "defer is not implemented yet" );
+
+		public override Stmt VisitStmtReturnIf( StmtReturnIfContext c )
+			=> throw new NotImplementedException( "do return if is not implemented yet" );
+
 		public override TryCatchStmt VisitStmtTryCatch( StmtTryCatchContext c )
 		{
 			TryCatchStmt ret = new() {

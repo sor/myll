@@ -270,10 +270,12 @@ namespace Myll
 		}
 
 		// TODO
-		public override Decl VisitDefAspect( DefAspectContext c ) => base.VisitDefAspect( c );
+		public override Decl VisitDefAspect( DefAspectContext c )
+			=> throw new NotSupportedException( "aspect is not supported; see REASONS.md" );
 
 		// TODO
-		public override Decl VisitDefConcept( DefConceptContext c ) => base.VisitDefConcept( c );
+		public override Decl VisitDefConcept( DefConceptContext c )
+			=> throw new NotSupportedException( "concept is not supported; see REASONS.md" );
 
 		public override Enumeration VisitDefEnum( DefEnumContext c )
 		{
@@ -326,7 +328,8 @@ namespace Myll
 		}
 
 		// TODO
-		public override Decl VisitDefConvert( DefConvertContext c ) => base.VisitDefConvert( c );
+		public override Decl VisitDefConvert( DefConvertContext c )
+			=> throw new NotSupportedException( "convert is not supported; see REASONS.md" );
 
 		public override Structor VisitDefCtor( DefCtorContext c )
 		{
