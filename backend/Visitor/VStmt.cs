@@ -261,6 +261,7 @@ namespace Myll
 				if( cc.funcTypeDef() != null ) {
 					List<Param> paras = VisitFuncTypeDef( cc.funcTypeDef() ).ToList();
 					clause.param = paras.Count switch {
+						0 => null,
 						1 => paras[0],
 						_ => throw new NotImplementedException(
 							"catch clause must have exactly one parameter or none" ),
