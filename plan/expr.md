@@ -125,23 +125,23 @@ Contexts without enough type information, so they are out of scope at first:
 - Optionally extend the grammar so `ctor` can appear as a generic callable expression, but type-check it later so it only passes where the expected type is available.
 - Files: `backend/Grammar/MyllParser.g4`, `backend/Visitor/VStmt.cs`, `backend/Visitor/VExpr.cs`, `backend/Core/Expr.cs`, `backend/Generator/...`.
 
-## Known parser issue: chained `[][]` with `&&`
+## Fixed: null character literal `\0`
 
-Single chained indexing and simple comparisons parse correctly:
-
-```myll
-var char c = argv[1][0];
-if( argv[i][0] == '-' ) { }
-```
-
-However, combining two chained-index comparisons with `&&` currently fails:
+The `\0` escape was missing from the lexer escape fragments (`STR_ESC`/`CH_ESC`). That caused code like:
 
 ```myll
-if( argv[i][0] == '-' && argv[i][1] == '\0' ) { }
+if( argv[i][1] == '\0' ) { }
 // mismatched input '==' expecting ')'
 ```
 
-This was discovered while porting Unix utilities. Using a single string comparison (`(string)argv[i] == "-"`) works around it for that use case; the underlying expression-grammar interaction still needs a real fix.
+to fail because `\0` was tokenized as `\` followed by a stray `0`. After adding `'0'` to both fragments the same line parses and generates the expected C++.
+
+Single and double-indexed comparisons with `&&` work as expected:
+
+```myll
+var char c = argv[1][0];
+if( argv[i][0] == '-' && argv[i][1] == '\0' ) { }
+```
 
 ## Open questions
 - Should `return _` be a semantic error, or should it mean "return default"?

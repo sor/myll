@@ -9,8 +9,8 @@ COMMENT		:	(	'#!' ~('\r'|'\n')*	// ignore shebang for now
 
 STRING_LIT	: '"' (STR_ESC | ~('\\' | '"'  | '\r' | '\n'))* '"';
 CHAR_LIT	: '\'' (CH_ESC | ~('\\' | '\'' | '\r' | '\n')) '\'';
-fragment STR_ESC: '\\' ('\\' | '"'  | 'a' | 'b' | 'f' | 'n' | 't' | 'r' | 'v');
-fragment CH_ESC:  '\\' ('\\' | '\'' | 'a' | 'b' | 'f' | 'n' | 't' | 'r' | 'v');
+fragment STR_ESC: '\\' ('\\' | '"'  | '0' | 'a' | 'b' | 'f' | 'n' | 't' | 'r' | 'v');
+fragment CH_ESC:  '\\' ('\\' | '\'' | '0' | 'a' | 'b' | 'f' | 'n' | 't' | 'r' | 'v');
 
 ARROW_STAR	: '->*';
 POINT_STAR	: '.*';
