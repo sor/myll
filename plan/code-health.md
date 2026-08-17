@@ -70,11 +70,11 @@ Options to resolve this later:
 
 No implementation yet — needs a design decision first.
 
-## `try`/`catch` statements are parsed but not code-generated
+## `try`/`catch` code generation
 
-The grammar accepts `try`/ `catch` blocks, but the C++ generator does not produce valid code for them.
+Implemented. `try`/`catch` blocks now lower to valid C++.
 
-Example input:
+Supported forms:
 
 ```myll
 try {
@@ -83,16 +83,12 @@ try {
 catch( const std::exception & e ) {
     std::cerr << e.what() << "\n";
 }
+catch() {
+    std::cerr << "unknown error\n";
+}
 ```
 
-Observed behavior: the generated `.cpp` contains the body of the `catch` block (with the exception variable missing), but the `try` block and the catch declaration itself are dropped.
-
-This means exceptions currently cannot be caught in Myll code. Options:
-
-- Implement `try`/`catch` code generation properly.
-- Remove the grammar rules until the feature is ready, so users get a clear "not implemented" error instead of broken C++.
-
-Files: `backend/Grammar/MyllParser.g4`, `backend/Core/Stmt.cs`, `backend/Visitor/VStmt.cs`, `backend/Generator/StmtGen.cs`.
+Files touched: `backend/Core/Stmt.cs`, `backend/Visitor/VStmt.cs`, `backend/Generator/StmtFormatting.cs`.
 
 ## Audit visitor overrides for unimplemented grammar rules
 

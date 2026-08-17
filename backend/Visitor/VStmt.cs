@@ -241,6 +241,32 @@ namespace Myll
 			=> throw new NotImplementedException(
 				"continue case/default/else is not implemented yet" );
 
+		public override TryCatchStmt VisitStmtTryCatch( StmtTryCatchContext c )
+		{
+			TryCatchStmt ret = new() {
+				tryBody = Visit( c.stmt() ),
+			};
+
+			foreach( CatchClauseContext cc in c.catchClause() ) {
+				CatchClause clause = new() {
+					body = Visit( cc.stmt() ),
+				};
+
+				if( cc.funcTypeDef() != null ) {
+					List<Param> paras = VisitFuncTypeDef( cc.funcTypeDef() ).ToList();
+					clause.param = paras.Count switch {
+						1 => paras[0],
+						_ => throw new NotImplementedException(
+							"catch clause must have exactly one parameter or none" ),
+					};
+				}
+
+				ret.catches.Add( clause );
+			}
+
+			return ret;
+		}
+
 		// no override
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
 		public new IfStmt.CondThen VisitCondThen( CondThenContext c )

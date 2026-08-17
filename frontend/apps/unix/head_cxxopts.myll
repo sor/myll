@@ -15,35 +15,41 @@ func headStream( std::istream & in, const int n ) -> void
 
 func main( const int argc, const char *[] argv ) -> int
 {
-	var cxxopts::Options options = cxxopts::Options( "head_cxxopts", "head with cxxopts" );
-	options.add_options()
-		( "n,lines", "Number of lines", cxxopts::value<int>()->default_value( "10" ) );
+	try {
+		var cxxopts::Options options = cxxopts::Options( "head_cxxopts", "head with cxxopts" );
+		options.add_options()
+			( "n,lines", "Number of lines", cxxopts::value<int>()->default_value( "10" ) );
 
-	var cxxopts::ParseResult result = options.parse( argc, argv );
-	const int n = result["lines"].as<int>();
-	const std::vector<string> files = result.unmatched();
+		var cxxopts::ParseResult result = options.parse( argc, argv );
+		const int n = result["lines"].as<int>();
+		const std::vector<string> files = result.unmatched();
 
-	var usize i = 0;
-	if( files.size() == 0 ) {
-		headStream( std::cin, n );
+		var usize i = 0;
+		if( files.size() == 0 ) {
+			headStream( std::cin, n );
+			return 0;
+		}
+
+		while( i < files.size() ) {
+			const string path = files[i];
+			if( path == "-" ) {
+				headStream( std::cin, n );
+			}
+			else {
+				var std::ifstream file = std::ifstream( path );
+				if( !file ) {
+					std::cerr << "head_cxxopts: " << path << ": cannot open file\n";
+					return 1;
+				}
+				headStream( file, n );
+			}
+			++i;
+		}
+
 		return 0;
 	}
-
-	while( i < files.size() ) {
-		const string path = files[i];
-		if( path == "-" ) {
-			headStream( std::cin, n );
-		}
-		else {
-			var std::ifstream file = std::ifstream( path );
-			if( !file ) {
-				std::cerr << "head_cxxopts: " << path << ": cannot open file\n";
-				return 1;
-			}
-			headStream( file, n );
-		}
-		++i;
+	catch( const std::exception & e ) {
+		std::cerr << "head_cxxopts: " << e.what() << "\n";
+		return 1;
 	}
-
-	return 0;
 }

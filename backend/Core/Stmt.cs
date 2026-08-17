@@ -168,6 +168,42 @@ namespace Myll.Core
 		}
 	}
 
+	public class CatchClause
+	{
+		public Param? param;
+		public Stmt   body = null!;
+	}
+
+	public class TryCatchStmt : Stmt
+	{
+		public Stmt              tryBody = null!;
+		public List<CatchClause> catches = new();
+
+		public override Strings Gen( int level )
+		{
+			Strings ret    = new();
+			string  indent = IndentString.Repeat( level );
+
+			ret.Add( Format( TryCatchFormat[0], indent ) );
+			ret.Add( Format( CurlyOpen, indent ) );
+			ret.AddRange( tryBody.GenWithoutCurly( level + 1 ) );
+			ret.Add( Format( CurlyClose, indent ) );
+
+			foreach( CatchClause cc in catches ) {
+				if( cc.param != null )
+					ret.Add( Format( TryCatchFormat[1], indent, cc.param.Gen() ) );
+				else
+					ret.Add( Format( TryCatchFormat[2], indent ) );
+
+				ret.Add( Format( CurlyOpen, indent ) );
+				ret.AddRange( cc.body.GenWithoutCurly( level + 1 ) );
+				ret.Add( Format( CurlyClose, indent ) );
+			}
+
+			return ret;
+		}
+	}
+
 	public class MultiAssign : Stmt
 	{
 		public List<Expr> exprs = new();

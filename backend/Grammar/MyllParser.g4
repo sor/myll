@@ -172,8 +172,8 @@ stmtDoWhile	:	DO				body=stmt
 stmtTimes	:	DO? 			count=expr	TIMES
 				(name=id ((PLUS|MINUS) INTEGER_LIT)? )? body=stmt;
 
-stmtTryCatch:	TRY						stmt
-				(CATCH	funcTypeDef?	stmt)+; // funcTypeDef is wrong, but works for easy cases
+stmtTryCatch:	TRY                     stmt	catchClause+;
+catchClause	:	CATCH	funcTypeDef?	stmt;	// funcTypeDef is wrong, but works for easy cases
 
 stmtReturn	:	RETURN		expr?							SEMI;
 stmtReturnIf:	DO RETURN	expr?	IF LPAREN expr RPAREN	SEMI; // same for throw and break, or make this a general contruct? replace "if" with "when"?

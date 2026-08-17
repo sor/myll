@@ -38,6 +38,12 @@ namespace Myll.Generator
 			"{0}using namespace {2};",
 		};
 
+		public static readonly string[] TryCatchFormat = {
+			"{0}try",
+			"{0}catch( {1} )",
+			"{0}catch( ... )",
+		};
+
 		public static readonly string[] VarFormat = {
 			"{0}{1}{2}{3}{4}{5}{6}{7};", // 0 indent, 1 extern, 2 inline, 3 static, 4 constexpr, 5 typename, 6 type & name, 7 init
 			"extern ",
