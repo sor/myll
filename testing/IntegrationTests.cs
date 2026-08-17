@@ -62,63 +62,64 @@ namespace Myll.Tests
 				string[] myllFiles = Directory.GetFiles( caseDir, "*.myll" );
 				Assert.NotEmpty( myllFiles );
 
-			// The frontend treats each '-i' argument as a search pattern relative to the current working directory.
-			// Run the compiler from inside the case directory with a simple "*.myll" pattern.
-			string myllFlags = CaseConfig.UseMyllCompileRun( caseName ) ? "-Ccr" : "-C";
-			string myllArgs  = String.Format( "exec \"{0}\" -i \"*.myll\" -o {1} {2}", FrontendDll, Quote( generatedDir ), myllFlags );
+				// The frontend treats each '-i' argument as a search pattern relative to the current working directory.
+				// Run the compiler from inside the case directory with a simple "*.myll" pattern.
+				string myllFlags = CaseConfig.UseMyllCompileRun( caseName ) ? "-Ccr" : "-C";
+				string myllArgs = String.Format( "exec \"{0}\" -i \"*.myll\" -o {1} {2}", FrontendDll,
+					Quote( generatedDir ), myllFlags );
 
-			output.WriteLine( "Running: dotnet " + myllArgs + " in " + caseDir );
-			ProcessResult myllResult = ProcessRunner.Run( "dotnet", myllArgs, workingDirectory: caseDir,
-				timeout: CaseConfig.MyllTimeout( caseName ) );
+				output.WriteLine( "Running: dotnet " + myllArgs + " in " + caseDir );
+				ProcessResult myllResult = ProcessRunner.Run( "dotnet", myllArgs, workingDirectory: caseDir,
+					timeout: CaseConfig.MyllTimeout( caseName ) );
 
-			output.WriteLine( myllResult.StdOut );
-			if( !string.IsNullOrEmpty( myllResult.StdErr ) )
-				output.WriteLine( "STDERR: " + myllResult.StdErr );
+				output.WriteLine( myllResult.StdOut );
+				if( !string.IsNullOrEmpty( myllResult.StdErr ) )
+					output.WriteLine( "STDERR: " + myllResult.StdErr );
 
-			bool expectRunFailure = CaseConfig.ExpectRunFailure( caseName );
-			if( expectRunFailure && CaseConfig.UseMyllCompileRun( caseName ) )
-			{
-				output.WriteLine( "Case is configured to expect a run failure via Myll's internal -cr path." );
-				Assert.True(
-					myllResult.ExitCode != 0 && !myllResult.TimedOut,
-					string.Format( "Expected the generated binary to fail, but Myll returned exit code {0}{1}.",
-						myllResult.ExitCode, myllResult.TimedOut ? " after timing out" : "" ) );
-				return;
-			}
-
-			Assert.Equal( 0, myllResult.ExitCode );
-			Assert.False( myllResult.TimedOut, "Myll compiler timed out" );
-
-			bool expectCppCompileFailure = CaseConfig.ExpectCppCompileFailure( caseName );
-
-			// 2. Golden file comparison
-			if( !expectCppCompileFailure )
-			{
-				string goldenDir = Path.Combine( RepoRoot, "testing", "golden", caseName );
-				bool goldenMatch = GoldenFileComparer.Compare( generatedDir, goldenDir, out string diffReport );
-				if( !goldenMatch )
+				bool expectRunFailure = CaseConfig.ExpectRunFailure( caseName );
+				if( expectRunFailure && CaseConfig.UseMyllCompileRun( caseName ) )
 				{
-					output.WriteLine( "Golden file mismatch:\n" + diffReport );
-					Assert.True( goldenMatch, diffReport );
+					output.WriteLine( "Case is configured to expect a run failure via Myll's internal -cr path." );
+					Assert.True(
+						myllResult.ExitCode != 0 && !myllResult.TimedOut,
+						string.Format( "Expected the generated binary to fail, but Myll returned exit code {0}{1}.",
+							myllResult.ExitCode, myllResult.TimedOut ? " after timing out" : "" ) );
+					return;
 				}
-			}
-			else
-			{
-				output.WriteLine( "Skipping golden comparison; case is configured to expect C++ compile failure." );
-			}
 
-			// 3. Optional C++ compile + run
-			if( CaseConfig.UseMyllCompileRun( caseName ) )
-			{
-				output.WriteLine( "Skipping harness C++ compile/run; Myll's internal -cr path was used." );
-				return;
-			}
+				Assert.Equal( 0, myllResult.ExitCode );
+				Assert.False( myllResult.TimedOut, "Myll compiler timed out" );
 
-			string[] cppFiles = Directory.GetFiles( generatedDir, "*.cpp" );
-			if( cppFiles.Length == 0 )
-				return;
+				bool expectCppCompileFailure = CaseConfig.ExpectCppCompileFailure( caseName );
 
-			CompileAndRunCpp( cppFiles, generatedDir, caseName, expectCppCompileFailure );
+				// 2. Golden file comparison
+				if( !expectCppCompileFailure )
+				{
+					string goldenDir = Path.Combine( RepoRoot, "testing", "golden", caseName );
+					bool goldenMatch = GoldenFileComparer.Compare( generatedDir, goldenDir, out string diffReport );
+					if( !goldenMatch )
+					{
+						output.WriteLine( "Golden file mismatch:\n" + diffReport );
+						Assert.True( goldenMatch, diffReport );
+					}
+				}
+				else
+				{
+					output.WriteLine( "Skipping golden comparison; case is configured to expect C++ compile failure." );
+				}
+
+				// 3. Optional C++ compile + run
+				if( CaseConfig.UseMyllCompileRun( caseName ) )
+				{
+					output.WriteLine( "Skipping harness C++ compile/run; Myll's internal -cr path was used." );
+					return;
+				}
+
+				string[] cppFiles = Directory.GetFiles( generatedDir, "*.cpp" );
+				if( cppFiles.Length == 0 )
+					return;
+
+				CompileAndRunCpp( cppFiles, generatedDir, caseName, expectCppCompileFailure );
 			}
 			finally
 			{

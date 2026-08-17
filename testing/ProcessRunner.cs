@@ -44,13 +44,23 @@ namespace Myll.Tests
 					psi.Environment[pair.Key] = pair.Value;
 
 			using var process = Process.Start( psi )
-			             ?? throw new InvalidOperationException( "Failed to start process: " + fileName );
+				?? throw new InvalidOperationException( "Failed to start process: " + fileName );
 
-			StringBuilder output = new();
-			StringBuilder error  = new();
+			List<string> output = new();
+			List<string> error  = new();
+			object       outputLock = new();
+			object       errorLock  = new();
 
-			process.OutputDataReceived += ( _, e ) => { if( e.Data != null ) output.AppendLine( e.Data ); };
-			process.ErrorDataReceived  += ( _, e ) => { if( e.Data != null ) error.AppendLine( e.Data ); };
+			process.OutputDataReceived += ( _, e ) => {
+				if( e.Data != null )
+					lock( outputLock )
+						output.Add( e.Data );
+			};
+			process.ErrorDataReceived += ( _, e ) => {
+				if( e.Data != null )
+					lock( errorLock )
+						error.Add( e.Data );
+			};
 
 			process.BeginOutputReadLine();
 			process.BeginErrorReadLine();
@@ -70,10 +80,18 @@ namespace Myll.Tests
 
 			sw.Stop();
 
+			string stdOut;
+			lock( outputLock )
+				stdOut = String.Join( "\n", output );
+
+			string stdErr;
+			lock( errorLock )
+				stdErr = String.Join( "\n", error );
+
 			return new ProcessResult(
 				ExitCode: timedOut ? -1 : process.ExitCode,
-				StdOut: output.ToString().TrimEnd(),
-				StdErr: error.ToString().TrimEnd(),
+				StdOut: stdOut,
+				StdErr: stdErr,
 				Duration: sw.Elapsed,
 				TimedOut: timedOut
 			);

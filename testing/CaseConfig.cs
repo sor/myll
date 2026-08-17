@@ -28,20 +28,21 @@ namespace Myll.Tests
 				try
 				{
 					string json = File.ReadAllText( configPath );
-					JsonSerializerOptions options = new() {
+					JsonSerializerOptions options = new()
+					{
 						PropertyNameCaseInsensitive = true,
 					};
 					Config = JsonSerializer.Deserialize<ConfigData>( json, options ) ?? new();
 				}
-			catch
+				catch
+				{
+					Config = new();
+				}
+			}
+			else
 			{
 				Config = new();
 			}
-		}
-		else
-		{
-			Config = new();
-		}
 		}
 
 		public static TimeSpan MyllTimeout( string caseName )

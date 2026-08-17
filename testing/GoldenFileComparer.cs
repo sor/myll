@@ -66,8 +66,10 @@ namespace Myll.Tests
 			string name = Path.GetFileNameWithoutExtension( relativePath ).ToLowerInvariant();
 			if( ext is ".exe" or ".out" )
 				return true;
+
 			if( string.IsNullOrEmpty( ext ) && ( name == "a" || name == "test" ) )
 				return true;
+
 			return false;
 		}
 	}
