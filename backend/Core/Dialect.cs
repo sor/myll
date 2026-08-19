@@ -18,6 +18,7 @@ namespace Myll.Core
 		Zero  = 1 << 0,
 		Three = 1 << 1,
 		Five  = 1 << 2,
+		Any   = Zero | Three | Five,
 	}
 
 	public static class Dialect
