@@ -231,4 +231,6 @@ Before making changes, read these in `docs/analysis/`:
 - C++ relationship: `docs/design/03-cpp-relationship.md`
 - Architecture: `docs/analysis/01-architecture.md`
 - Actionable fixes: `docs/analysis/08-actionable-fixes.md`
+- Removed C/C++ features: `docs/design/06-removed-features.md`
 - Decision log: `REASONS.md`
+- Legacy attribute/dialect ideas: `Documentation/design_doc_cpp_myll_1.cpp` contains early design notes including the original `rule` concept, which is now referred to as "dialect". Treat as reference material, not the current spec.
