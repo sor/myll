@@ -25,6 +25,10 @@ namespace Myll
 			this.context = context;
 		}
 
+		protected CompilationContext Context
+			=> context ?? throw new InvalidOperationException(
+				"No CompilationContext is available for this visitor." );
+
 		public GlobalNamespace GenerateGlobalScope( string module )
 		{
 			GlobalNamespace global = new() {

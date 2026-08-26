@@ -34,7 +34,7 @@ namespace Myll
 			ScopedExpr ret = new() {
 				op     = Operand.Scoped,
 				idTpls = c.idTplArgs().Select( VisitIdTplArgs ).ToList(),
-			//	expr   = c.expr().Visit(),
+			//	expr   = c.expr().Visit( Context ),
 			};
 			return ret;
 		}
@@ -42,7 +42,7 @@ namespace Myll
 		public override Expr VisitPostExpr( PostExprContext c )
 		{
 			Expr ret;
-			Expr left = c.expr().Visit();
+			Expr left = c.expr().Visit( Context );
 			if( c.postOP() != null ) {
 				ret = new UnOp {
 					expr = left,
@@ -96,7 +96,7 @@ namespace Myll
 		public override Expr VisitPreExpr( PreExprContext c )
 		{
 			Expr ret;
-			Expr expr = c.expr().Visit();
+			Expr expr = c.expr().Visit( Context );
 
 			if( c.LPAREN() != null ) {
 				// c style cast
@@ -194,8 +194,8 @@ namespace Myll
 		{
 			BinOp ret = new() {
 				op    = c.memAccPtrOP().v.ToOp(),
-				left  = c.expr( 0 ).Visit(),
-				right = c.expr( 1 ).Visit(),
+				left  = c.expr( 0 ).Visit( Context ),
+				right = c.expr( 1 ).Visit( Context ),
 			};
 			return ret;
 		}
@@ -204,8 +204,8 @@ namespace Myll
 		{
 			BinOp ret = new() {
 				op    = Operand.Pow,
-				left  = c.expr( 0 ).Visit(),
-				right = c.expr( 1 ).Visit(),
+				left  = c.expr( 0 ).Visit( Context ),
+				right = c.expr( 1 ).Visit( Context ),
 			};
 			return ret;
 		}
@@ -214,8 +214,8 @@ namespace Myll
 		{
 			BinOp ret = new() {
 				op    = c.multOP().v.ToOp(),
-				left  = c.expr( 0 ).Visit(),
-				right = c.expr( 1 ).Visit(),
+				left  = c.expr( 0 ).Visit( Context ),
+				right = c.expr( 1 ).Visit( Context ),
 			};
 			return ret;
 		}
@@ -224,8 +224,8 @@ namespace Myll
 		{
 			BinOp ret = new() {
 				op    = c.addOP().v.ToOp(),
-				left  = c.expr( 0 ).Visit(),
-				right = c.expr( 1 ).Visit(),
+				left  = c.expr( 0 ).Visit( Context ),
+				right = c.expr( 1 ).Visit( Context ),
 			};
 			return ret;
 		}
@@ -234,8 +234,8 @@ namespace Myll
 		{
 			BinOp ret = new() {
 				op    = c.shiftOP().LSHIFT() != null ? Operand.LeftShift : Operand.RightShift,
-				left  = c.expr( 0 ).Visit(),
-				right = c.expr( 1 ).Visit(),
+				left  = c.expr( 0 ).Visit( Context ),
+				right = c.expr( 1 ).Visit( Context ),
 			};
 			return ret;
 		}
@@ -244,8 +244,8 @@ namespace Myll
 		{
 			BinOp ret = new() {
 				op    = Operand.Comparison,
-				left  = c.expr( 0 ).Visit(),
-				right = c.expr( 1 ).Visit(),
+				left  = c.expr( 0 ).Visit( Context ),
+				right = c.expr( 1 ).Visit( Context ),
 			};
 			return ret;
 		}
@@ -255,22 +255,28 @@ namespace Myll
 		// do braces help?
 		private class FlattenRelational
 		{
-			private readonly List<Expr>    exprs = new( 4 );
-			private readonly List<Operand> ops   = new( 4 );
+			private readonly List<Expr>          exprs   = new( 4 );
+			private readonly List<Operand>       ops     = new( 4 );
+			private readonly CompilationContext  context;
 
-			public FlattenRelational(IRelEqExprContext c) => Descent( c );
+			public FlattenRelational( IRelEqExprContext c, CompilationContext context )
+			{
+				this.context = context;
+				Descent( c );
+			}
+
 			private void Descent( IRelEqExprContext c )
 			{
 				{
 					ExprContext l = c.expr( 0 );
 					if( l is IRelEqExprContext lre ) Descent( lre );
-					else exprs.Add( l.Visit() );
+					else exprs.Add( l.Visit( context ) );
 				}
 				ops.Add( c.Op );
 				{
 					ExprContext r = c.expr( 1 );
 					if( r is IRelEqExprContext rre ) Descent( rre );
-					else exprs.Add( r.Visit() );
+					else exprs.Add( r.Visit( context ) );
 				}
 			}
 
@@ -301,14 +307,14 @@ namespace Myll
 
 		public override BinOp VisitRelationExpr( RelationExprContext c )
 		{
-			FlattenRelational flat = new( c );
+			FlattenRelational flat = new( c, Context );
 			BinOp             ret  = flat.VisitWithAnd();
 			return ret;
 		}
 
 		public override BinOp VisitEqualityExpr( EqualityExprContext c )
 		{
-			FlattenRelational flat = new( c );
+			FlattenRelational flat = new( c, Context );
 			BinOp             ret  = flat.VisitWithAnd();
 			return ret;
 		}
@@ -317,8 +323,8 @@ namespace Myll
 		{
 			BinOp ret = new() {
 				op    = Operand.And,
-				left  = c.expr( 0 ).Visit(),
-				right = c.expr( 1 ).Visit(),
+				left  = c.expr( 0 ).Visit( Context ),
+				right = c.expr( 1 ).Visit( Context ),
 			};
 			return ret;
 		}
@@ -327,8 +333,8 @@ namespace Myll
 		{
 			BinOp ret = new() {
 				op    = Operand.Or,
-				left  = c.expr( 0 ).Visit(),
-				right = c.expr( 1 ).Visit(),
+				left  = c.expr( 0 ).Visit( Context ),
+				right = c.expr( 1 ).Visit( Context ),
 			};
 			return ret;
 		}
@@ -337,8 +343,8 @@ namespace Myll
 		{
 			BinOp ret = new() {
 				op    = Operand.NullCoalesce,
-				left  = c.expr( 0 ).Visit(),
-				right = c.expr( 1 ).Visit(),
+				left  = c.expr( 0 ).Visit( Context ),
+				right = c.expr( 1 ).Visit( Context ),
 			};
 			return ret;
 		}
@@ -347,9 +353,9 @@ namespace Myll
 		{
 			TernOp ret = new() {
 				op    = Operand.Conditional,
-				left  = c.expr( 0 ).Visit(),
-				mid   = c.expr( 1 ).Visit(),
-				right = c.expr( 2 ).Visit(),
+				left  = c.expr( 0 ).Visit( Context ),
+				mid   = c.expr( 1 ).Visit( Context ),
+				right = c.expr( 2 ).Visit( Context ),
 			};
 			return ret;
 		}
@@ -363,7 +369,7 @@ namespace Myll
 				srcPos    = c.ToSrcPos(),
 				TplParams = VisitTplParams( c.tplParams() ),
 				paras     = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
-				body      = c.funcBody().Visit(),
+				body      = c.funcBody().Visit( Context ),
 			};
 			func.retType = c.typespec() != null ? VisitTypespec( c.typespec() ) :
 				func.IsReturningSomething ?
@@ -385,7 +391,7 @@ namespace Myll
 		{
 			UnOp ret = new() {
 				op   = Operand.Parens,
-				expr = c.expr().Visit(),
+				expr = c.expr().Visit( Context ),
 			};
 			return ret;
 		}

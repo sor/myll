@@ -149,9 +149,7 @@ namespace Myll
 		{
 			CompilationContext context = new();
 			//Console.WriteLine( "Time elapsed after CompileModule  {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
-			return CompilationContext.WithActive(
-				context,
-				() => context.DeclVisitor.VisitProgs( progContext ) );
+			return context.DeclVisitor.VisitProgs( progContext );
 		}
 
 		private static List<(string, IStrings)> GenerateFiles( GlobalNamespace global_ns )

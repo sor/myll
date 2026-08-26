@@ -347,7 +347,7 @@ namespace Myll
 				access = curAccess,
 				kind   = Structor.Kind.Constructor,
 				paras  = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
-				body   = c.funcBody().Visit(),
+				body   = c.funcBody().Visit( Context ),
 				// TODO: cc.initList(); // opt
 			};
 			PopScope();
@@ -368,7 +368,7 @@ namespace Myll
 				access = curAccess,
 				kind   = Structor.Kind.Destructor,
 				paras  = new(),
-				body   = c.funcBody().Visit(),
+				body   = c.funcBody().Visit( Context ),
 			};
 			PopScope();
 			AddChild( ret );
@@ -412,7 +412,7 @@ namespace Myll
 						srcPos   = c.ToSrcPos(),
 						name     = "operator=",
 						access   = curAccess,
-						body     = c.funcBody().Visit(),
+						body     = c.funcBody().Visit( Context ),
 						Requires = VisitTypespecsNested( c.typespecsNested() ),
 						paras    = new() { param },
 						retType = new TypespecNested() {
@@ -433,7 +433,7 @@ namespace Myll
 						TplParams = VisitTplParams( c.tplParams() ),
 						Requires  = VisitTypespecsNested( c.typespecsNested() ),
 						paras     = new(),
-						body      = c.funcBody().Visit(),
+						body      = c.funcBody().Visit( Context ),
 						retType   = VisitTypespec( c.typespec() ),
 					};
 				}
@@ -445,7 +445,7 @@ namespace Myll
 						cleanedOp,
 						Func.Kind.Operator,
 						VisitTypespecsNested( c.typespecsNested() ),
-						c.funcBody().Visit() );
+						c.funcBody().Visit( Context ) );
 				}
 			}
 			PopScope();
@@ -464,7 +464,7 @@ namespace Myll
 				c.id().Visit(),
 				kind,
 				VisitTypespecsNested( c.typespecsNested() ),
-				c.funcBody().Visit() );
+				c.funcBody().Visit( Context ) );
 
 			PopScope();
 			AddChild( ret );
@@ -529,8 +529,8 @@ namespace Myll
 						kind     = kind,
 						access   = curAccess,
 						type     = type,
-						init     = q.expr()?.Visit(),
-						accessor = q.accessorDef().Visit(),
+						init     = q.expr()?.Visit( Context ),
+						accessor = q.accessorDef().Visit( Context ),
 						// TODO: Accessors, is this still valid?
 					} as Decl )
 				.ToList();

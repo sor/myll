@@ -78,7 +78,7 @@ namespace Myll
 			else if( c.expr() != null ) { // Phatarrow
 				ret = new ReturnStmt {    // TODO: return makes no sense for c/dtor
 					srcPos = c.ToSrcPos(),
-					expr   = c.expr().Visit(),
+					expr   = c.expr().Visit( Context ),
 				}.ToBlock();
 			}
 			else {
@@ -177,7 +177,7 @@ namespace Myll
 						name     = q.id().GetText(),
 						kind     = kind,
 						type     = type,
-						init     = q.expr()?.Visit(),
+						init     = q.expr()?.Visit( Context ),
 					} as Stmt )
 				.ToList();
 			// TODO local scope
@@ -210,7 +210,7 @@ namespace Myll
 		public override ReturnStmt VisitStmtReturn( StmtReturnContext c )
 		{
 			ReturnStmt ret = new() {
-				expr = c.expr().Visit(),
+				expr = c.expr().Visit( Context ),
 			};
 			return ret;
 		}
@@ -218,7 +218,7 @@ namespace Myll
 		public override ThrowStmt VisitStmtThrow( StmtThrowContext c )
 		{
 			ThrowStmt ret = new() {
-				expr = c.expr().Visit(),
+				expr = c.expr().Visit( Context ),
 			};
 			return ret;
 		}
@@ -280,14 +280,14 @@ namespace Myll
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
 		public new IfStmt.CondThen VisitCondThen( CondThenContext c )
 			=> new(
-				c.expr().Visit(),
-				c.stmt().Visit() );
+				c.expr().Visit( Context ),
+				c.stmt().Visit( Context ) );
 
 		public override IfStmt VisitStmtIf( StmtIfContext c )
 		{
 			IfStmt ret = new() {
 				ifThens = c.condThen().Select( VisitCondThen ).ToList(),
-				els     = c.stmt()?.Visit(),
+				els     = c.stmt()?.Visit( Context ),
 			};
 
 			return ret;
@@ -318,7 +318,7 @@ namespace Myll
 			}
 
 			SwitchStmt.CaseBlock ret = new(
-				c.expr().Select( q => q.Visit() ).ToList(),
+				c.expr().Select( q => q.Visit( Context ) ).ToList(),
 				body );
 			return ret;
 		}
@@ -339,7 +339,7 @@ namespace Myll
 		public override SwitchStmt VisitStmtSwitch( StmtSwitchContext c )
 		{
 			SwitchStmt ret = new() {
-				cond  = c.cond.Visit(),
+				cond  = c.cond.Visit( Context ),
 				cases = c.caseBlock().Select( VisitCaseBlock ).ToList(),
 				els   = VisitDefaultBlock( c.defaultBlock() ),
 			};
@@ -349,7 +349,7 @@ namespace Myll
 		public override LoopStmt VisitStmtLoop( StmtLoopContext c )
 		{
 			LoopStmt ret = new() {
-				body = c.body.Visit(),
+				body = c.body.Visit( Context ),
 			};
 			return ret;
 		}
@@ -357,11 +357,11 @@ namespace Myll
 		public override ForStmt VisitStmtFor( StmtForContext c )
 		{
 			ForStmt ret = new() {
-				init = c.init.Visit(),
-				cond = c.cond?.Visit(),
-				iter = c.iter?.Visit(),
+				init = c.init.Visit( Context ),
+				cond = c.cond?.Visit( Context ),
+				iter = c.iter?.Visit( Context ),
 				body = VisitBlockify( c.body ),
-				els  = c.els?.Visit(),
+				els  = c.els?.Visit( Context ),
 			};
 			return ret;
 		}
@@ -369,9 +369,9 @@ namespace Myll
 		public override WhileStmt VisitStmtWhile( StmtWhileContext c )
 		{
 			WhileStmt ret = new() {
-				cond = c.cond.Visit(),
+				cond = c.cond.Visit( Context ),
 				body = VisitBlockify( c.body ),
-				els  = c.els?.Visit(),
+				els  = c.els?.Visit( Context ),
 			};
 			return ret;
 		}
@@ -379,7 +379,7 @@ namespace Myll
 		public override DoWhileStmt VisitStmtDoWhile( StmtDoWhileContext c )
 		{
 			DoWhileStmt ret = new() {
-				cond = c.cond.Visit(),
+				cond = c.cond.Visit( Context ),
 				body = VisitBlockify( c.body ),
 			};
 			return ret;
@@ -388,7 +388,7 @@ namespace Myll
 		public override TimesStmt VisitStmtTimes( StmtTimesContext c )
 		{
 			TimesStmt ret = new() {
-				count = c.count.Visit(),
+				count = c.count.Visit( Context ),
 				name  = c.name?.Visit(),
 				body  = VisitBlockify( c.body ),
 			};
@@ -408,8 +408,8 @@ namespace Myll
 		{
 			AggrAssign ret = new() {
 				op        = c.aggrAssignOP().v.ToOp(),
-				leftExpr  = c.expr( 0 ).Visit(),
-				rightExpr = c.expr( 1 ).Visit(),
+				leftExpr  = c.expr( 0 ).Visit( Context ),
+				rightExpr = c.expr( 1 ).Visit( Context ),
 			};
 			return ret;
 		}
@@ -417,7 +417,7 @@ namespace Myll
 		public override MultiAssign VisitStmtAssign( StmtAssignContext c )
 		{
 			MultiAssign ret = new() {
-				exprs = c.expr().Select( q => q.Visit() ).ToList(),
+				exprs = c.expr().Select( q => q.Visit( Context ) ).ToList(),
 			};
 			return ret;
 		}
@@ -425,7 +425,7 @@ namespace Myll
 		public override ExprStmt VisitStmtExpr( StmtExprContext c )
 		{
 			ExprStmt ret = new() {
-				expr = c.expr().Visit(),
+				expr = c.expr().Visit( Context ),
 			};
 			return ret;
 		}

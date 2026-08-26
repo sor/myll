@@ -32,7 +32,7 @@ namespace Myll
 			=> cs?.arg().Select(
 				   c => new Arg {
 					   name = c.id()?.Visit(),
-					   expr = c.expr().Visit(),
+					   expr = c.expr().Visit( Context ),
 				   } )
 			?? Enumerable.Empty<Arg>();
 
@@ -82,20 +82,12 @@ namespace Myll
 				c => new EnumEntry {
 					srcPos = c.ToSrcPos(),
 					name   = c.id().Visit(),
-					value  = c.expr()?.Visit(),
+					value  = c.expr()?.Visit( Context ),
 				} );
 	}
 
 	public static class VisitorExtensions
 	{
-		// HACK: static visitor state is being replaced by per-module CompilationContext.
-		// These fields remain only as a fallback for callers that have not migrated yet.
-		// All extension methods route through CompilationContext.Current.
-		private static readonly CompilationContext defaultContext = new();
-
-		[Obsolete( "Use a CompilationContext instead. See plan/semantic-analysis.md." )]
-		public static DeclVisitor DeclVis => defaultContext.DeclVisitor;
-
 		private static readonly Dictionary<int, Operand>
 			ToPreOperand = new() {
 				{ Parser.DBL_PLUS,	Operand.PreIncr },
@@ -236,45 +228,45 @@ namespace Myll
 			=> c.Select( i => i.Visit() ).ToList();
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static Expr Visit( this Parser.ExprContext c )
+		public static Expr Visit( this Parser.ExprContext c, CompilationContext context )
 		{
 			if( c == null )
 				throw new ArgumentNullException();
 
-			return CompilationContext.Current.ExprVisitor.Visit( c );
+			return context.ExprVisitor.Visit( c );
 		}
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static Literal Visit( this Parser.LitContext c )
-			=> CompilationContext.Current.ExprVisitor.VisitLit( c );
+		public static Literal Visit( this Parser.LitContext c, CompilationContext context )
+			=> context.ExprVisitor.VisitLit( c );
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
-		public static Stmt Visit( this Parser.StmtContext c )
+		public static Stmt Visit( this Parser.StmtContext c, CompilationContext context )
 		{
 			if( c == null )
 				throw new ArgumentNullException();
 
-			return CompilationContext.Current.StmtVisitor.Visit( c );
+			return context.StmtVisitor.Visit( c );
 		}
 
 		// TODO those null tolerant methods need to be removed
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
-		public static MultiStmt Visit( this Parser.FuncBodyContext c )
+		public static MultiStmt Visit( this Parser.FuncBodyContext c, CompilationContext context )
 			=> c == null
 				? throw new ArgumentNullException( "arg can not be null" )
-				: CompilationContext.Current.StmtVisitor.VisitFuncBody( c );
+				: context.StmtVisitor.VisitFuncBody( c );
 
 		//[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
 		//public static Block VisitBlockify( this ParserRuleContext c )
-		//	=> CompilationContext.Current.StmtVisitor.VisitBlockify( c );
+		//	=> context.StmtVisitor.VisitBlockify( c );
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
-		public static Decl Visit( this Parser.DeclContext c )
+		public static Decl Visit( this Parser.DeclContext c, CompilationContext context )
 		{
 			if( c == null )
 				throw new ArgumentNullException();
 
-			return CompilationContext.Current.DeclVisitor.Visit( c );
+			return context.DeclVisitor.Visit( c );
 		}
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
@@ -283,16 +275,16 @@ namespace Myll
 
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static Accessor Visit( this Parser.AccessorDefContext c )
+		public static Accessor Visit( this Parser.AccessorDefContext c, CompilationContext context )
 			=> new() {
-				body = c.funcBody().Visit(),
+				body = c.funcBody().Visit( context ),
 				qual = c.qual().Visit(),
 				kind = c.v.ToAccessorKind(),
 			};
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static List<Accessor> Visit( this Parser.AccessorDefContext[] c )
-			=> c.Select( Visit ).ToList();
+		public static List<Accessor> Visit( this Parser.AccessorDefContext[] c, CompilationContext context )
+			=> c.Select( ac => ac.Visit( context ) ).ToList();
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Attribs Visit( this Parser.AttribBlkContext c )
