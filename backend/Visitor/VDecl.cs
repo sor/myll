@@ -20,6 +20,9 @@ namespace Myll
 		public DeclVisitor( Stack<Scope> scopeStack )
 			: base( scopeStack ) {}
 
+		public DeclVisitor( CompilationContext context )
+			: base( context ) {}
+
 		public string ProbeModule( ProgContext c )
 		{
 			string module = c.module()?.id().GetText()

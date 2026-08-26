@@ -18,6 +18,8 @@ namespace Myll
 	{
 		public ExprVisitor( Stack<Scope> scopeStack ) : base( scopeStack ) {}
 
+		public ExprVisitor( CompilationContext context ) : base( context ) {}
+
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public override Expr Visit( IParseTree c )
 		{

@@ -11,9 +11,18 @@ namespace Myll
 	{
 		protected readonly Stack<Scope> scopeStack;
 
+		// Temporary bridge; see CompilationContext for details.
+		protected readonly CompilationContext? context;
+
 		public ExtendedVisitor( Stack<Scope> scopeStack )
 		{
 			this.scopeStack = scopeStack;
+		}
+
+		public ExtendedVisitor( CompilationContext context )
+			: this( context.ScopeStack )
+		{
+			this.context = context;
 		}
 
 		public GlobalNamespace GenerateGlobalScope( string module )

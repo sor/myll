@@ -88,11 +88,13 @@ namespace Myll
 
 	public static class VisitorExtensions
 	{
-		// HACK these must become non-static
-		private static readonly Stack<Scope> ScopeStack = new();
-		private static readonly ExprVisitor  ExprVis    = new( ScopeStack );
-		private static readonly StmtVisitor  StmtVis    = new( ScopeStack );
-		public static readonly  DeclVisitor  DeclVis    = new( ScopeStack );
+		// HACK: static visitor state is being replaced by per-module CompilationContext.
+		// These fields remain only as a fallback for callers that have not migrated yet.
+		// All extension methods route through CompilationContext.Current.
+		private static readonly CompilationContext defaultContext = new();
+
+		[Obsolete( "Use a CompilationContext instead. See plan/semantic-analysis.md." )]
+		public static DeclVisitor DeclVis => defaultContext.DeclVisitor;
 
 		private static readonly Dictionary<int, Operand>
 			ToPreOperand = new() {
@@ -239,12 +241,12 @@ namespace Myll
 			if( c == null )
 				throw new ArgumentNullException();
 
-			return ExprVis.Visit( c );
+			return CompilationContext.Current.ExprVisitor.Visit( c );
 		}
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Literal Visit( this Parser.LitContext c )
-			=> ExprVis.VisitLit( c );
+			=> CompilationContext.Current.ExprVisitor.VisitLit( c );
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
 		public static Stmt Visit( this Parser.StmtContext c )
@@ -252,7 +254,7 @@ namespace Myll
 			if( c == null )
 				throw new ArgumentNullException();
 
-			return StmtVis.Visit( c );
+			return CompilationContext.Current.StmtVisitor.Visit( c );
 		}
 
 		// TODO those null tolerant methods need to be removed
@@ -260,11 +262,11 @@ namespace Myll
 		public static MultiStmt Visit( this Parser.FuncBodyContext c )
 			=> c == null
 				? throw new ArgumentNullException( "arg can not be null" )
-				: StmtVis.VisitFuncBody( c );
+				: CompilationContext.Current.StmtVisitor.VisitFuncBody( c );
 
 		//[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
 		//public static Block VisitBlockify( this ParserRuleContext c )
-		//	=> StmtVis.VisitBlockify( c );
+		//	=> CompilationContext.Current.StmtVisitor.VisitBlockify( c );
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
 		public static Decl Visit( this Parser.DeclContext c )
@@ -272,7 +274,7 @@ namespace Myll
 			if( c == null )
 				throw new ArgumentNullException();
 
-			return DeclVis.Visit( c );
+			return CompilationContext.Current.DeclVisitor.Visit( c );
 		}
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
