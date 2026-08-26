@@ -137,10 +137,12 @@ var PI<T>: T = 3.14159265358979;
 
 **Both steps are explicitly noted as "not fully implemented in the current prototype."**
 
-The three-step architecture is sound. When returning to semantic analysis:
-1. Step 1 already works (global name collection during CST walk).
-2. Step 2 needs the symbol-resolution algorithm (see `Symbol.cs` stub).
-3. Step 3 needs function-body resolution with scope stack.
+The current thinking is documented in `plan/semantic-analysis.md`. The plan replaces the earlier three-step view with a pipeline that builds per-module scope trees first, then runs a fixed-point resolver across the import graph, supporting cyclic imports and order-independent declarations.
+
+When reviving semantic analysis:
+1. Use `Scope` and `ScopeLeaf` from `backend/Core/Scope.cs` for the per-module tree.
+2. Revive `Symbol.cs` as the resolved representation attached to AST nodes.
+3. Use fact-based resolution records so the same implementation can later run in parallel worker rounds.
 
 ## Non-Type Template Parameters
 

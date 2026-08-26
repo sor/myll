@@ -27,10 +27,11 @@ import other_module;
 
 ## How It Works
 
-1. All `.myll` files declaring the same module merge into a single AST namespace.
+1. All `.myll` files declaring the same module merge into a single logical module. A module is not a namespace; module names do not create scopes.
 2. The compiler generates `my_module.h` and `my_module.cpp`.
 3. Imports resolve names against the parsed module, not by text inclusion.
-4. Order independence is guaranteed — the module interface is the complete set of exports.
+4. Order independence is guaranteed — the module interface is the complete set of non-hidden exports.
+5. Cyclic imports are allowed; a fixed-point resolver resolves names across the import graph.
 
 ## Why Keep `.h`/`.cpp` Output?
 
@@ -53,10 +54,11 @@ This reduces boilerplate for small projects.
 
 - Binary module interfaces (`.bmi` equivalent) for faster builds.
 - Module versioning and dependency management.
-- Selective exports: `export` keyword for public interface subset.
+- Finer export controls beyond `[hide]`/`[hidden]`.
 
 ## Implementation Notes
 
 - `ProbeModule` discovers modules from parsed files.
-- Parallel parsing is supported for independent modules.
-- Module grouping happens before code generation.
+- Parallel parsing is supported for independent files.
+- Per-module AST + scope-tree building is parallel across modules.
+- Cross-module name resolution uses a fixed-point resolver. See `plan/semantic-analysis.md`.

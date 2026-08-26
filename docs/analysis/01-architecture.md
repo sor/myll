@@ -84,8 +84,9 @@ public static DeclVisitor DeclVis = new DeclVisitor();
 
 **Future Outlook:**
 - Make visitors instance-based.
-- Pass `ScopeStack` as a constructor parameter or context object.
-- Use thread-local storage as a minimal workaround.
+- Introduce a per-module `CompilationContext` that owns the scope stack and visitor instances.
+- Pass the context through the frontend pipeline instead of relying on static state.
+- Thread-local storage is only a temporary workaround and should not be the final design.
 
 ### 4. Reflection-Based Diagnostics
 

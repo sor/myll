@@ -11,11 +11,12 @@
 
 1. **Parse**: ANTLR4 tokenization and parsing (parallel via PLINQ)
 2. **Classify**: Group files by module
-3. **Compile**: Build AST via visitors
-4. **Generate**: Produce C++ declarations and implementations
-5. **Emit**: Write files or output to stdout
-6. **Compile C++**: Optional invocation of `clang++-15`
-7. **Run**: Optional execution
+3. **Compile**: Build per-module AST + scope tree via instance-based visitors
+4. **Resolve**: Cross-module name and type resolution (fixed-point; handles cyclic imports)
+5. **Generate**: Produce C++ declarations and implementations
+6. **Emit**: Write files or output to stdout
+7. **Compile C++**: Optional invocation of `clang++-15`
+8. **Run**: Optional execution
 
 ## Strengths
 
@@ -60,13 +61,17 @@ try {
 **Impact:** Swallows all exceptions, makes debugging harder.
 
 **Fix:** Catch specific ANTLR exceptions.
-
 ### Thread Pool Configuration
+
 ```csharp
 ThreadPool.SetMinThreads(cpus * 2, cpus * 2);
 ```
 
 This is arbitrary. PLINQ typically manages its own thread pool.
+
+### Static ScopeStack
+
+`backend/Visitor/VExt.cs` uses a single static `Stack<Scope>` shared by all visitors. This breaks parallel module compilation and test isolation. The fix is to make visitors instance-based and give each module its own `CompilationContext`. See `plan/semantic-analysis.md` and `docs/analysis/01-architecture.md`.
 
 ## CLI Options
 

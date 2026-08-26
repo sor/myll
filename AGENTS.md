@@ -217,12 +217,13 @@ Before making changes, read these in `docs/analysis/`:
 
 ## Planned Work
 
-1. Testing + CI/CD — xUnit harness is in place under `testing/`; remaining work is CI/CD.
-2. Implement reachable NotImplementedException features:
+1. **Finish ScopeStack / semantic analysis (endboss)** — resolve names to declarations, type-check expressions, and disambiguate constructs that currently rely on string matching or syntactic guesswork. Blocks namespace aliases, per-declaration access modifiers, overload resolution, and many generator hacks. See `plan/semantic-analysis.md`, `backend/Core/Scope.cs`, `backend/Visitor/VExt.cs`, `backend/Core/Symbol.cs`.
+2. Testing + CI/CD — xUnit harness is in place under `testing/`; remaining work is CI/CD.
+3. Implement reachable NotImplementedException features:
    - named args, null coalescing call, copy-cast, else-on-loop, discard (empty stmt done)
    - **NOT** aspect, concept, defer, convert — see `REASONS.md` (2026-06-10)
-3. Cleanup — `oldParser`/`oldCodeGen` removal, TODO triage, HACK resolution.
-4. `.idea/` misc.xml shared ANTLR config added to `.gitignore` exception.
+4. Cleanup — `oldParser`/`oldCodeGen` removal, TODO triage, HACK resolution.
+5. `.idea/` misc.xml shared ANTLR config added to `.gitignore` exception.
 
 ## Documentation Index
 
