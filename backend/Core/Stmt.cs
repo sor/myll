@@ -409,6 +409,10 @@ namespace Myll.Core
 					foreach( Stmt subStmt in init.EnumerateDF )
 						yield return subStmt;
 
+				if( body != null )
+					foreach( Stmt subStmt in body.EnumerateDF )
+						yield return subStmt;
+
 				if( els != null )
 					foreach( Stmt subStmt in els.EnumerateDF )
 						yield return subStmt;
@@ -452,6 +456,10 @@ namespace Myll.Core
 		[Pure]
 		public override IEnumerable<Stmt> EnumerateDF {
 			get {
+				if( body != null )
+					foreach( Stmt subStmt in body.EnumerateDF )
+						yield return subStmt;
+
 				if( els != null )
 					foreach( Stmt subStmt in els.EnumerateDF )
 						yield return subStmt;
@@ -480,6 +488,18 @@ namespace Myll.Core
 		public Stmt body = null!;
 		public Expr cond = null!;
 
+		[Pure]
+		public override IEnumerable<Stmt> EnumerateDF {
+			get {
+				if( body != null )
+					foreach( Stmt subStmt in body.EnumerateDF )
+						yield return subStmt;
+
+				foreach( Stmt baseStmt in base.EnumerateDF )
+					yield return baseStmt;
+			}
+		}
+
 		public override Strings Gen( int level )
 		{
 			Strings ret    = new();
@@ -501,6 +521,18 @@ namespace Myll.Core
 		public Expr    count = null!;
 		public string? name;
 		public long    offset = 0;
+
+		[Pure]
+		public override IEnumerable<Stmt> EnumerateDF {
+			get {
+				if( body != null )
+					foreach( Stmt subStmt in body.EnumerateDF )
+						yield return subStmt;
+
+				foreach( Stmt baseStmt in base.EnumerateDF )
+					yield return baseStmt;
+			}
+		}
 
 		public override Strings Gen( int level )
 		{

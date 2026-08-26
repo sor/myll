@@ -82,3 +82,4 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 - `var` parameter error message.
 - ProcessRunner thread-safety fix.
 - `ls` vertical slice with classes, inheritance, smart-pointer shorthand, sorting, and hidden files.
+- Fixed `EnumerateDF` for `ForStmt`, `WhileStmt`, `DoWhileStmt`, and `TimesStmt` and added unit tests in `testing/LoopEnumerationTests.cs`.
