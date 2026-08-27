@@ -7,14 +7,11 @@ namespace Myll.Tests
 {
 	public enum TestDepth
 	{
-		Run,
-		Generate,
 		GenerateFailing,
+		Generate,
 		Compile,
-		CompileFailing,
 		Link,
-		LinkFailing,
-		RunFailing,
+		Run,
 	}
 
 	public static class CaseConfig
@@ -73,20 +70,14 @@ namespace Myll.Tests
 		{
 			DepthConfig d = Config.Depth;
 
-			if( d.Generate.Contains( caseName ) )
-				return TestDepth.Generate;
 			if( d.GenerateFailing.Contains( caseName ) )
 				return TestDepth.GenerateFailing;
+			if( d.Generate.Contains( caseName ) )
+				return TestDepth.Generate;
 			if( d.Compile.Contains( caseName ) )
 				return TestDepth.Compile;
-			if( d.CompileFailing.Contains( caseName ) )
-				return TestDepth.CompileFailing;
 			if( d.Link.Contains( caseName ) )
 				return TestDepth.Link;
-			if( d.LinkFailing.Contains( caseName ) )
-				return TestDepth.LinkFailing;
-			if( d.RunFailing.Contains( caseName ) )
-				return TestDepth.RunFailing;
 
 			return TestDepth.Run;
 		}
@@ -118,13 +109,11 @@ namespace Myll.Tests
 
 	internal class DepthConfig
 	{
-		public HashSet<string> Generate { get; set; } = new();
 		public HashSet<string> GenerateFailing { get; set; } = new();
+		public HashSet<string> Generate { get; set; } = new();
 		public HashSet<string> Compile { get; set; } = new();
-		public HashSet<string> CompileFailing { get; set; } = new();
 		public HashSet<string> Link { get; set; } = new();
-		public HashSet<string> LinkFailing { get; set; } = new();
-		public HashSet<string> RunFailing { get; set; } = new();
+		public HashSet<string> Run { get; set; } = new();
 	}
 
 	internal class TimeoutSection

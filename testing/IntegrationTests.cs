@@ -62,8 +62,6 @@ namespace Myll.Tests
 
 			bool cleanupGeneratedDir = UseTempOutputDirectory();
 			TestDepth depth = CaseConfig.GetDepth( caseName );
-			bool useMyllCr = CaseConfig.UseMyllCompileRun( caseName )
-				&& depth is TestDepth.Run or TestDepth.RunFailing;
 
 			try
 			{
@@ -72,6 +70,7 @@ namespace Myll.Tests
 				string[] myllFiles = Directory.GetFiles( caseDir, "*.myll" );
 				Assert.NotEmpty( myllFiles );
 
+				bool useMyllCr = CaseConfig.UseMyllCompileRun( caseName ) && depth == TestDepth.Run;
 				string myllFlags = useMyllCr ? "-Ccr" : "-C";
 				string myllArgs = String.Format( "exec \"{0}\" -i \"*.myll\" -o {1} {2}", FrontendDll,
 					Quote( generatedDir ), myllFlags );
@@ -107,13 +106,10 @@ namespace Myll.Tests
 
 				if( useMyllCr )
 				{
-					output.WriteLine( "Myll's internal -cr path was used; treating exit code as the run outcome." );
-					AssertRunOutcome( myllResult, depth, "Myll -cr" );
+					output.WriteLine( "Myll's internal -cr path was used; checking final exit code." );
+					AssertRunSuccess( myllResult, "Myll -cr" );
 					return;
 				}
-
-				if( depth == TestDepth.Generate )
-					return;
 
 				string[] cppFiles = Directory.GetFiles( generatedDir, "*.cpp" );
 				if( cppFiles.Length == 0 )
@@ -132,6 +128,7 @@ namespace Myll.Tests
 		private void RunBuildPhases( string[] cppFiles, string workingDir, string caseName, TestDepth depth )
 		{
 			var objectFiles = new List<string>();
+			bool anyCompileFailed = false;
 
 			foreach( string cppFile in cppFiles )
 			{
@@ -153,26 +150,59 @@ namespace Myll.Tests
 
 				if( result.ExitCode != 0 || result.TimedOut )
 				{
-					if( depth == TestDepth.CompileFailing )
-					{
-						output.WriteLine( "C++ compilation failed as expected for compileFailing case." );
-						return;
-					}
-
-					Assert.Fail( string.Format( "C++ compilation failed for {0}.", Path.GetFileName( cppFile ) ) );
+					anyCompileFailed = true;
+					output.WriteLine( string.Format( "Compilation of {0} failed.", Path.GetFileName( cppFile ) ) );
 				}
 			}
 
-			if( depth == TestDepth.Compile )
-				return;
-
-			if( depth == TestDepth.CompileFailing )
+			if( depth == TestDepth.Generate )
 			{
-				Assert.Fail( "C++ compilation succeeded, but the case is configured as compileFailing." );
+				Assert.True( anyCompileFailed,
+					"generate case: C++ compilation was expected to fail, but it succeeded. "
+					+ "Consider moving this case to a deeper category." );
 				return;
 			}
 
-			string binaryPath = Path.Combine( workingDir, ExecutableName );
+			Assert.False( anyCompileFailed,
+				"Compilation failed, but the case is configured for a deeper depth than generate." );
+
+			if( depth == TestDepth.Compile )
+			{
+				string binaryPath = Path.Combine( workingDir, ExecutableName );
+				ProcessResult linkResult = LinkObjects( objectFiles, binaryPath, workingDir, caseName );
+				Assert.True(
+					linkResult.ExitCode != 0 || linkResult.TimedOut,
+					"compile case: link was expected to fail, but it succeeded. "
+					+ "Consider moving this case to the 'link' category." );
+				return;
+			}
+
+			// Link must succeed for Link and Run depths.
+			string runBinaryPath = Path.Combine( workingDir, ExecutableName );
+			ProcessResult finalLinkResult = LinkObjects( objectFiles, runBinaryPath, workingDir, caseName );
+			Assert.Equal( 0, finalLinkResult.ExitCode );
+			Assert.False( finalLinkResult.TimedOut, "Link timed out" );
+
+			if( depth == TestDepth.Link )
+			{
+				ProcessResult runResult = RunBinary( runBinaryPath, workingDir, caseName );
+				Assert.True(
+					runResult.ExitCode != 0 || runResult.TimedOut,
+					"link case: run was expected to fail, but it succeeded. "
+					+ "Consider moving this case to the 'run' category." );
+				return;
+			}
+
+			ProcessResult finalRunResult = RunBinary( runBinaryPath, workingDir, caseName );
+			AssertRunSuccess( finalRunResult, "generated binary" );
+		}
+
+		private ProcessResult LinkObjects(
+			IReadOnlyCollection<string> objectFiles,
+			string                      binaryPath,
+			string                      workingDir,
+			string                      caseName )
+		{
 			CppCompilerInvocation linkInvocation = CppCompiler.CreateLinkInvocation(
 				objectFiles, binaryPath );
 
@@ -185,51 +215,19 @@ namespace Myll.Tests
 			if( !string.IsNullOrEmpty( linkResult.StdErr ) )
 				output.WriteLine( "STDERR: " + linkResult.StdErr );
 
-			if( linkResult.ExitCode != 0 || linkResult.TimedOut )
-			{
-				if( depth == TestDepth.LinkFailing )
-				{
-					output.WriteLine( "Link failed as expected for linkFailing case." );
-					return;
-				}
-
-				Assert.Fail( string.Format( "Link failed with exit code {0}{1}.",
-					linkResult.ExitCode, linkResult.TimedOut ? " after timing out" : "" ) );
-			}
-
-			if( depth == TestDepth.Link )
-				return;
-
-			if( depth == TestDepth.LinkFailing )
-			{
-				Assert.Fail( "Link succeeded, but the case is configured as linkFailing." );
-				return;
-			}
-
-			// Run
-			output.WriteLine( "Running: " + binaryPath );
-			ProcessResult runResult = ProcessRunner.Run( binaryPath, "", workingDirectory: workingDir,
-				environment: new Dictionary<string, string> { ["MYLL_TEST"] = "1" },
-				timeout: CaseConfig.RunTimeout( caseName ) );
-
-			output.WriteLine( runResult.StdOut );
-			if( !string.IsNullOrEmpty( runResult.StdErr ) )
-				output.WriteLine( "STDERR: " + runResult.StdErr );
-
-			AssertRunOutcome( runResult, depth, "generated binary" );
+			return linkResult;
 		}
 
-		private void AssertRunOutcome( ProcessResult result, TestDepth depth, string source )
+		private ProcessResult RunBinary( string binaryPath, string workingDir, string caseName )
 		{
-			if( depth == TestDepth.RunFailing )
-			{
-				Assert.True(
-					result.ExitCode != 0 && !result.TimedOut,
-					string.Format( "Expected {0} to fail, but it returned exit code {1}{2}.",
-						source, result.ExitCode, result.TimedOut ? " after timing out" : "" ) );
-				return;
-			}
+			output.WriteLine( "Running: " + binaryPath );
+			return ProcessRunner.Run( binaryPath, "", workingDirectory: workingDir,
+				environment: new Dictionary<string, string> { ["MYLL_TEST"] = "1" },
+				timeout: CaseConfig.RunTimeout( caseName ) );
+		}
 
+		private void AssertRunSuccess( ProcessResult result, string source )
+		{
 			Assert.Equal( 0, result.ExitCode );
 			Assert.False( result.TimedOut, source + " timed out" );
 		}

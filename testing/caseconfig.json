@@ -10,7 +10,10 @@
   },
   "myllCompileRun": [ "enum", "func", "ct", "globals", "class_ctor" ],
   "depth": {
+    "generateFailing": [],
+    "generate": [ "cpp_fail" ],
     "compile": [ "extern" ],
-    "compileFailing": [ "cpp_fail" ]
+    "link": [],
+    "run": []
   }
 }
