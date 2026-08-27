@@ -71,9 +71,11 @@ namespace Myll.Tests
 				Assert.NotEmpty( myllFiles );
 
 				bool useMyllCr = CaseConfig.UseMyllCompileRun( caseName ) && depth == TestDepth.Run;
-				string myllFlags = useMyllCr ? "-Ccr" : "-C";
+				var myllFlags = new List<string> { useMyllCr ? "-Ccr" : "-C" };
+				if( CaseConfig.UseResolve( caseName ) )
+					myllFlags.Add( "-R" );
 				string myllArgs = String.Format( "exec \"{0}\" -i \"*.myll\" -o {1} {2}", FrontendDll,
-					Quote( generatedDir ), myllFlags );
+					Quote( generatedDir ), string.Join( " ", myllFlags ) );
 
 				output.WriteLine( "Running: dotnet " + myllArgs + " in " + caseDir );
 				ProcessResult myllResult = ProcessRunner.Run( "dotnet", myllArgs, workingDirectory: caseDir,
