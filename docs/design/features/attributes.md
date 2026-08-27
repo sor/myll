@@ -117,16 +117,32 @@ Without a severity prefix, an attribute that cannot apply to a declaration is si
 
 ## Dialects (rule sets)
 
-A dialect is a named collection of attribute defaults, propagations, and restrictions that can be applied to a module, namespace, or file. The compiler then enforces the style automatically.
+A dialect is a named collection of attribute defaults, propagations, restrictions, and standard-library mappings that lives in a separate configuration file. It is expected to be referenced near the top of a module file, but the exact placement and syntax are not decided yet.
 
-```myll
-[dialect myGameCode]
-[enforce access=pub|priv]
-[virtual=encouraged]
-[pod=enforced]
-```
+The exact syntax is not decided yet. Options being considered:
 
-Later, applying `[use myGameCode]` to a module or namespace would import that rule set into the current scope. The original design notes called this feature "rule" / "ruleset"; it is now referred to as "dialect".
+- A top-level keyword:
+  ```myll
+  module A;
+  import B;
+  dialect "sor-std-game";
+  func main() -> int { ... }
+  ```
+- An attribute on the first line:
+  ```myll
+  [dialect "sor-std-game"]
+  module A;
+  ```
+
+All files that declare the same module must use the same dialect. Mixing dialects inside one module — for example `QString` in one file and `std::string` in another — would be an error, because the module compiles to a single translation unit with a single set of standard-library mappings.
+
+A dialect can configure which C++ headers/types back Myll built-in keywords:
+
+| Keyword | Default mapping | Possible dialect override |
+|---|---|---|
+| `string` | `std::string` (`<string>`) | `QString`, custom string type, or disabled |
+| smart pointers (`*!`, `*?`) | `std::unique_ptr` / `std::shared_ptr` (`<memory>`) | custom allocator or disabled |
+| math functions | `<cmath>` | disabled |
 
 Dialects are not implemented yet; see `REASONS.md`.
 
