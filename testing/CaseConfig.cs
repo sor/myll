@@ -63,6 +63,9 @@ namespace Myll.Tests
 		public static bool ExpectRunFailure( string caseName )
 			=> Config.ExpectedRunFailures != null && Config.ExpectedRunFailures.Contains( caseName );
 
+		public static bool IsGenerateOnly( string caseName )
+			=> Config.GenerateOnly != null && Config.GenerateOnly.Contains( caseName );
+
 		private static TimeSpan ResolveTimeout( Dictionary<string, int> overrides, string caseName, int fallbackSeconds )
 		{
 			int value = fallbackSeconds;
@@ -87,6 +90,7 @@ namespace Myll.Tests
 		public HashSet<string> MyllCompileRun { get; set; } = new();
 		public HashSet<string> ExpectedCppCompileFailures { get; set; } = new();
 		public HashSet<string> ExpectedRunFailures { get; set; } = new();
+		public HashSet<string> GenerateOnly { get; set; } = new();
 	}
 
 	internal class TimeoutSection

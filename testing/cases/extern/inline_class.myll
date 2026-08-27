@@ -1,0 +1,10 @@
+module inline_class;
+
+[extern] class External {
+	func doThing() -> void;
+}
+
+func use( External * e ) -> int
+{
+	return 42;
+}

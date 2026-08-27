@@ -38,10 +38,11 @@ Children of an `[extern]` class or namespace inherit the external flag, so they 
 
 ## Implementation checklist
 
-- [ ] Update `Program.CollectExternFiles` to discover `.d.myll` and `.decl.myll` (keep `.extern.myll` as legacy).
-- [ ] Add `CompilationContext.IsPrototypeFile` and pass it from input file extension.
-- [ ] Skip `GenerateFiles` for prototype modules.
-- [ ] Extend `[extern]` propagation from namespaces to `Structural` (class/struct/union).
-- [ ] Remove `Namespace.AddToGen` early return on `IsExternal` so inline extern namespaces emit member forward declarations.
-- [ ] Make `Structural.AddToGen` emit a forward declaration when `IsExternal`.
-- [ ] Rename test extern files to `.decl.myll` and add tests for inline `[extern]` class.
+- [x] Update `Program.CollectExternFiles` to discover `.d.myll` and `.decl.myll` (keep `.extern.myll` as legacy).
+- [x] Add `CompilationContext.IsPrototypeFile` and pass it from input file extension.
+- [x] Skip `GenerateFiles` for prototype modules.
+- [x] Extend `[extern]` propagation from namespaces to `Structural` (class/struct/union).
+- [x] Remove `Namespace.AddToGen` early return on `IsExternal` so inline extern namespaces emit member forward declarations.
+- [x] Make `Structural.AddToGen` emit a forward declaration when `IsExternal`.
+- [x] Add a `GenerateOnly` integration-harness flag and an end-to-end golden test for inline `[extern]` class/namespace.
+- [ ] Rename test extern files to `.decl.myll` and add tests for `.decl.myll` prototype files.

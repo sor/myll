@@ -1,0 +1,10 @@
+module inline_namespace;
+
+[extern] namespace Ns {
+	func helper() -> int;
+}
+
+func callHelper() -> int
+{
+	return Ns::helper();
+}

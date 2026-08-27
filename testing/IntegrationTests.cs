@@ -108,18 +108,24 @@ namespace Myll.Tests
 					output.WriteLine( "Skipping golden comparison; case is configured to expect C++ compile failure." );
 				}
 
-				// 3. Optional C++ compile + run
-				if( CaseConfig.UseMyllCompileRun( caseName ) )
-				{
-					output.WriteLine( "Skipping harness C++ compile/run; Myll's internal -cr path was used." );
-					return;
-				}
+			// 3. Optional C++ compile + run
+			if( CaseConfig.UseMyllCompileRun( caseName ) )
+			{
+				output.WriteLine( "Skipping harness C++ compile/run; Myll's internal -cr path was used." );
+				return;
+			}
 
-				string[] cppFiles = Directory.GetFiles( generatedDir, "*.cpp" );
-				if( cppFiles.Length == 0 )
-					return;
+			if( CaseConfig.IsGenerateOnly( caseName ) )
+			{
+				output.WriteLine( "Generate-only case; skipping C++ compile/run." );
+				return;
+			}
 
-				CompileAndRunCpp( cppFiles, generatedDir, caseName, expectCppCompileFailure );
+			string[] cppFiles = Directory.GetFiles( generatedDir, "*.cpp" );
+			if( cppFiles.Length == 0 )
+				return;
+
+			CompileAndRunCpp( cppFiles, generatedDir, caseName, expectCppCompileFailure );
 			}
 			finally
 			{
