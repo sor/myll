@@ -5,6 +5,18 @@ using System.Text.Json;
 
 namespace Myll.Tests
 {
+	public enum TestDepth
+	{
+		Run,
+		Generate,
+		GenerateFailing,
+		Compile,
+		CompileFailing,
+		Link,
+		LinkFailing,
+		RunFailing,
+	}
+
 	public static class CaseConfig
 	{
 		public const int DefaultMyllSeconds    = 10;
@@ -57,14 +69,27 @@ namespace Myll.Tests
 		public static bool UseMyllCompileRun( string caseName )
 			=> Config.MyllCompileRun != null && Config.MyllCompileRun.Contains( caseName );
 
-		public static bool ExpectCppCompileFailure( string caseName )
-			=> Config.ExpectedCppCompileFailures != null && Config.ExpectedCppCompileFailures.Contains( caseName );
+		public static TestDepth GetDepth( string caseName )
+		{
+			DepthConfig d = Config.Depth;
 
-		public static bool ExpectRunFailure( string caseName )
-			=> Config.ExpectedRunFailures != null && Config.ExpectedRunFailures.Contains( caseName );
+			if( d.Generate.Contains( caseName ) )
+				return TestDepth.Generate;
+			if( d.GenerateFailing.Contains( caseName ) )
+				return TestDepth.GenerateFailing;
+			if( d.Compile.Contains( caseName ) )
+				return TestDepth.Compile;
+			if( d.CompileFailing.Contains( caseName ) )
+				return TestDepth.CompileFailing;
+			if( d.Link.Contains( caseName ) )
+				return TestDepth.Link;
+			if( d.LinkFailing.Contains( caseName ) )
+				return TestDepth.LinkFailing;
+			if( d.RunFailing.Contains( caseName ) )
+				return TestDepth.RunFailing;
 
-		public static bool IsGenerateOnly( string caseName )
-			=> Config.GenerateOnly != null && Config.GenerateOnly.Contains( caseName );
+			return TestDepth.Run;
+		}
 
 		private static TimeSpan ResolveTimeout( Dictionary<string, int> overrides, string caseName, int fallbackSeconds )
 		{
@@ -88,9 +113,18 @@ namespace Myll.Tests
 	{
 		public TimeoutSection Timeouts { get; set; } = new();
 		public HashSet<string> MyllCompileRun { get; set; } = new();
-		public HashSet<string> ExpectedCppCompileFailures { get; set; } = new();
-		public HashSet<string> ExpectedRunFailures { get; set; } = new();
-		public HashSet<string> GenerateOnly { get; set; } = new();
+		public DepthConfig Depth { get; set; } = new();
+	}
+
+	internal class DepthConfig
+	{
+		public HashSet<string> Generate { get; set; } = new();
+		public HashSet<string> GenerateFailing { get; set; } = new();
+		public HashSet<string> Compile { get; set; } = new();
+		public HashSet<string> CompileFailing { get; set; } = new();
+		public HashSet<string> Link { get; set; } = new();
+		public HashSet<string> LinkFailing { get; set; } = new();
+		public HashSet<string> RunFailing { get; set; } = new();
 	}
 
 	internal class TimeoutSection

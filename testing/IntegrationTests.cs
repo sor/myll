@@ -18,6 +18,12 @@ namespace Myll.Tests
 
 		private static readonly string FrontendDll = GetFrontendDll();
 
+		private static string ObjectExtension
+			=> RuntimeInformation.IsOSPlatform( OSPlatform.Windows ) ? ".obj" : ".o";
+
+		private static string ExecutableName
+			=> RuntimeInformation.IsOSPlatform( OSPlatform.Windows ) ? "test.exe" : "test.out";
+
 		private static string GetFrontendDll()
 		{
 			string testingBin = AppContext.BaseDirectory.TrimEnd( Path.DirectorySeparatorChar );
@@ -55,6 +61,10 @@ namespace Myll.Tests
 				: Path.Combine( RepoRoot, "testing", "generated", caseName );
 
 			bool cleanupGeneratedDir = UseTempOutputDirectory();
+			TestDepth depth = CaseConfig.GetDepth( caseName );
+			bool useMyllCr = CaseConfig.UseMyllCompileRun( caseName )
+				&& depth is TestDepth.Run or TestDepth.RunFailing;
+
 			try
 			{
 				Directory.CreateDirectory( generatedDir );
@@ -62,9 +72,7 @@ namespace Myll.Tests
 				string[] myllFiles = Directory.GetFiles( caseDir, "*.myll" );
 				Assert.NotEmpty( myllFiles );
 
-				// The frontend treats each '-i' argument as a search pattern relative to the current working directory.
-				// Run the compiler from inside the case directory with a simple "*.myll" pattern.
-				string myllFlags = CaseConfig.UseMyllCompileRun( caseName ) ? "-Ccr" : "-C";
+				string myllFlags = useMyllCr ? "-Ccr" : "-C";
 				string myllArgs = String.Format( "exec \"{0}\" -i \"*.myll\" -o {1} {2}", FrontendDll,
 					Quote( generatedDir ), myllFlags );
 
@@ -76,13 +84,11 @@ namespace Myll.Tests
 				if( !string.IsNullOrEmpty( myllResult.StdErr ) )
 					output.WriteLine( "STDERR: " + myllResult.StdErr );
 
-				bool expectRunFailure = CaseConfig.ExpectRunFailure( caseName );
-				if( expectRunFailure && CaseConfig.UseMyllCompileRun( caseName ) )
+				if( depth == TestDepth.GenerateFailing )
 				{
-					output.WriteLine( "Case is configured to expect a run failure via Myll's internal -cr path." );
 					Assert.True(
 						myllResult.ExitCode != 0 && !myllResult.TimedOut,
-						string.Format( "Expected the generated binary to fail, but Myll returned exit code {0}{1}.",
+						string.Format( "Expected Myll generation to fail, but it returned exit code {0}{1}.",
 							myllResult.ExitCode, myllResult.TimedOut ? " after timing out" : "" ) );
 					return;
 				}
@@ -90,78 +96,117 @@ namespace Myll.Tests
 				Assert.Equal( 0, myllResult.ExitCode );
 				Assert.False( myllResult.TimedOut, "Myll compiler timed out" );
 
-				bool expectCppCompileFailure = CaseConfig.ExpectCppCompileFailure( caseName );
-
-				// 2. Golden file comparison
-				if( !expectCppCompileFailure )
+				// Golden file comparison
+				string goldenDir = Path.Combine( RepoRoot, "testing", "golden", caseName );
+				bool goldenMatch = GoldenFileComparer.Compare( generatedDir, goldenDir, out string diffReport );
+				if( !goldenMatch )
 				{
-					string goldenDir = Path.Combine( RepoRoot, "testing", "golden", caseName );
-					bool goldenMatch = GoldenFileComparer.Compare( generatedDir, goldenDir, out string diffReport );
-					if( !goldenMatch )
-					{
-						output.WriteLine( "Golden file mismatch:\n" + diffReport );
-						Assert.True( goldenMatch, diffReport );
-					}
-				}
-				else
-				{
-					output.WriteLine( "Skipping golden comparison; case is configured to expect C++ compile failure." );
+					output.WriteLine( "Golden file mismatch:\n" + diffReport );
+					Assert.True( goldenMatch, diffReport );
 				}
 
-			// 3. Optional C++ compile + run
-			if( CaseConfig.UseMyllCompileRun( caseName ) )
-			{
-				output.WriteLine( "Skipping harness C++ compile/run; Myll's internal -cr path was used." );
-				return;
-			}
+				if( useMyllCr )
+				{
+					output.WriteLine( "Myll's internal -cr path was used; treating exit code as the run outcome." );
+					AssertRunOutcome( myllResult, depth, "Myll -cr" );
+					return;
+				}
 
-			if( CaseConfig.IsGenerateOnly( caseName ) )
-			{
-				output.WriteLine( "Generate-only case; skipping C++ compile/run." );
-				return;
-			}
+				if( depth == TestDepth.Generate )
+					return;
 
-			string[] cppFiles = Directory.GetFiles( generatedDir, "*.cpp" );
-			if( cppFiles.Length == 0 )
-				return;
+				string[] cppFiles = Directory.GetFiles( generatedDir, "*.cpp" );
+				if( cppFiles.Length == 0 )
+					return;
 
-			CompileAndRunCpp( cppFiles, generatedDir, caseName, expectCppCompileFailure );
+				RunBuildPhases( cppFiles, generatedDir, caseName, depth );
 			}
 			finally
 			{
+				CleanupBuildArtifacts( generatedDir );
 				if( cleanupGeneratedDir )
 					TryDeleteDirectory( generatedDir );
 			}
 		}
 
-		private void CompileAndRunCpp( string[] cppFiles, string workingDir, string caseName, bool expectFailure )
+		private void RunBuildPhases( string[] cppFiles, string workingDir, string caseName, TestDepth depth )
 		{
-			string executable = RuntimeInformation.IsOSPlatform( OSPlatform.Windows )
-				? "test.exe"
-				: "test.out";
+			var objectFiles = new List<string>();
 
-			string binaryPath = Path.Combine( workingDir, executable );
-			CppCompilerInvocation invocation = CppCompiler.CreateInvocation( cppFiles, outputPath: binaryPath );
-
-			output.WriteLine( string.Format( "Running: {0} {1}", invocation.Compiler, invocation.Arguments ) );
-			ProcessResult compileResult = ProcessRunner.Run(
-				invocation.Compiler, invocation.Arguments, workingDirectory: workingDir,
-				timeout: CaseConfig.CompileTimeout( caseName ) );
-
-			output.WriteLine( compileResult.StdOut );
-			if( !string.IsNullOrEmpty( compileResult.StdErr ) )
-				output.WriteLine( "STDERR: " + compileResult.StdErr );
-
-			if( expectFailure )
+			foreach( string cppFile in cppFiles )
 			{
-				Assert.False( compileResult.ExitCode == 0,
-					string.Format( "Expected C++ compile to fail, but {0} succeeded.", invocation.Compiler ) );
+				string objectFile = Path.Combine( workingDir,
+					Path.GetFileNameWithoutExtension( cppFile ) + ObjectExtension );
+				objectFiles.Add( objectFile );
+
+				CppCompilerInvocation invocation = CppCompiler.CreateCompileInvocation(
+					cppFile, outputObject: objectFile );
+
+				output.WriteLine( string.Format( "Compiling: {0} {1}", invocation.Compiler, invocation.Arguments ) );
+				ProcessResult result = ProcessRunner.Run(
+					invocation.Compiler, invocation.Arguments, workingDirectory: workingDir,
+					timeout: CaseConfig.CompileTimeout( caseName ) );
+
+				output.WriteLine( result.StdOut );
+				if( !string.IsNullOrEmpty( result.StdErr ) )
+					output.WriteLine( "STDERR: " + result.StdErr );
+
+				if( result.ExitCode != 0 || result.TimedOut )
+				{
+					if( depth == TestDepth.CompileFailing )
+					{
+						output.WriteLine( "C++ compilation failed as expected for compileFailing case." );
+						return;
+					}
+
+					Assert.Fail( string.Format( "C++ compilation failed for {0}.", Path.GetFileName( cppFile ) ) );
+				}
+			}
+
+			if( depth == TestDepth.Compile )
+				return;
+
+			if( depth == TestDepth.CompileFailing )
+			{
+				Assert.Fail( "C++ compilation succeeded, but the case is configured as compileFailing." );
 				return;
 			}
 
-			Assert.Equal( 0, compileResult.ExitCode );
+			string binaryPath = Path.Combine( workingDir, ExecutableName );
+			CppCompilerInvocation linkInvocation = CppCompiler.CreateLinkInvocation(
+				objectFiles, binaryPath );
 
-			// Run the binary
+			output.WriteLine( string.Format( "Linking: {0} {1}", linkInvocation.Compiler, linkInvocation.Arguments ) );
+			ProcessResult linkResult = ProcessRunner.Run(
+				linkInvocation.Compiler, linkInvocation.Arguments, workingDirectory: workingDir,
+				timeout: CaseConfig.CompileTimeout( caseName ) );
+
+			output.WriteLine( linkResult.StdOut );
+			if( !string.IsNullOrEmpty( linkResult.StdErr ) )
+				output.WriteLine( "STDERR: " + linkResult.StdErr );
+
+			if( linkResult.ExitCode != 0 || linkResult.TimedOut )
+			{
+				if( depth == TestDepth.LinkFailing )
+				{
+					output.WriteLine( "Link failed as expected for linkFailing case." );
+					return;
+				}
+
+				Assert.Fail( string.Format( "Link failed with exit code {0}{1}.",
+					linkResult.ExitCode, linkResult.TimedOut ? " after timing out" : "" ) );
+			}
+
+			if( depth == TestDepth.Link )
+				return;
+
+			if( depth == TestDepth.LinkFailing )
+			{
+				Assert.Fail( "Link succeeded, but the case is configured as linkFailing." );
+				return;
+			}
+
+			// Run
 			output.WriteLine( "Running: " + binaryPath );
 			ProcessResult runResult = ProcessRunner.Run( binaryPath, "", workingDirectory: workingDir,
 				environment: new Dictionary<string, string> { ["MYLL_TEST"] = "1" },
@@ -171,8 +216,22 @@ namespace Myll.Tests
 			if( !string.IsNullOrEmpty( runResult.StdErr ) )
 				output.WriteLine( "STDERR: " + runResult.StdErr );
 
-			Assert.Equal( 0, runResult.ExitCode );
-			Assert.False( runResult.TimedOut, "Generated binary timed out" );
+			AssertRunOutcome( runResult, depth, "generated binary" );
+		}
+
+		private void AssertRunOutcome( ProcessResult result, TestDepth depth, string source )
+		{
+			if( depth == TestDepth.RunFailing )
+			{
+				Assert.True(
+					result.ExitCode != 0 && !result.TimedOut,
+					string.Format( "Expected {0} to fail, but it returned exit code {1}{2}.",
+						source, result.ExitCode, result.TimedOut ? " after timing out" : "" ) );
+				return;
+			}
+
+			Assert.Equal( 0, result.ExitCode );
+			Assert.False( result.TimedOut, source + " timed out" );
 		}
 
 		private static string Quote( string path )
@@ -182,6 +241,27 @@ namespace Myll.Tests
 		{
 			string? value = Environment.GetEnvironmentVariable( "MYLL_TEST_TEMP" );
 			return !string.IsNullOrEmpty( value );
+		}
+
+		private static void CleanupBuildArtifacts( string generatedDir )
+		{
+			if( !Directory.Exists( generatedDir ) )
+				return;
+
+			try
+			{
+				foreach( string file in Directory.GetFiles( generatedDir ) )
+				{
+					string ext = Path.GetExtension( file ).ToLowerInvariant();
+					string name = Path.GetFileName( file );
+					if( ext == ".o" || ext == ".obj" || name == ExecutableName )
+						File.Delete( file );
+				}
+			}
+			catch
+			{
+				// Best-effort cleanup only.
+			}
 		}
 
 		private static void TryDeleteDirectory( string path )
