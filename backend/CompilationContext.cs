@@ -18,8 +18,9 @@ namespace Myll
 
 		public DeclVisitor DeclVisitor { get; }
 
-		public List<UnresolvedId>   UnresolvedIds   { get; } = new();
-		public List<UnresolvedType> UnresolvedTypes { get; } = new();
+		public List<UnresolvedId>      UnresolvedIds      { get; } = new();
+		public List<UnresolvedType>    UnresolvedTypes    { get; } = new();
+		public List<UnresolvedScoped>  UnresolvedScopeds  { get; } = new();
 
 		public CompilationContext()
 		{

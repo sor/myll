@@ -179,6 +179,80 @@ func main() -> int { return helper(); }
 		}
 
 		[Fact]
+		public void QualifiedTypeReference_Resolves()
+		{
+			var (moduleB, contextB) = CompileModule( @"
+module B;
+namespace Ns {
+    namespace Inner {
+        class Foo { }
+    }
+}
+", "B" );
+
+			var (moduleA, contextA) = CompileModule( @"
+module A;
+import B;
+func use() -> void { var Ns::Inner::Foo f; }
+", "A" );
+
+			var (result, diagnostics) = Resolve( (moduleA, contextA), (moduleB, contextB) );
+
+			Assert.Empty( diagnostics );
+			Assert.Single( contextA.UnresolvedTypes );
+			Assert.True(
+				result.Types.TryGetValue( contextA.UnresolvedTypes[0].Node, out Decl? decl ),
+				"qualified type should resolve" );
+			Assert.IsType<Structural>( decl );
+			Assert.Equal( "Foo", decl!.name );
+		}
+
+		[Fact]
+		public void QualifiedExpressionReference_Resolves()
+		{
+			var (moduleB, contextB) = CompileModule( @"
+module B;
+[extern] namespace std {
+    func helper() -> int;
+}
+", "B" );
+
+			var (moduleA, contextA) = CompileModule( @"
+module A;
+import B;
+func main() -> int { return std::helper(); }
+", "A" );
+
+			var (result, diagnostics) = Resolve( (moduleA, contextA), (moduleB, contextB) );
+
+			Assert.Empty( diagnostics );
+			Assert.Single( contextA.UnresolvedScopeds );
+			Assert.True(
+				result.Scopeds.TryGetValue( contextA.UnresolvedScopeds[0].Node, out Decl? decl ),
+				"std::helper should resolve" );
+			Assert.IsType<Func>( decl );
+			Assert.Equal( "helper", decl!.name );
+		}
+
+		[Fact]
+		public void QualifiedPath_UnresolvedMiddleSegment_Diagnostic()
+		{
+			var (module, context) = CompileModule( @"
+module test;
+namespace Ns {
+    class A { }
+}
+func use() -> void { var Ns::Missing::B f; }
+" );
+
+			var (result, diagnostics) = Resolve( (module, context) );
+
+			Assert.Single( diagnostics );
+			Assert.Contains( "Missing", diagnostics[0].Message );
+			Assert.Contains( "Ns", diagnostics[0].Message );
+		}
+
+		[Fact]
 		public void UnresolvedName_ProducesDiagnostic()
 		{
 			var (module, context) = CompileModule( @"

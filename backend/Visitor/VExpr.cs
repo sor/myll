@@ -37,6 +37,7 @@ namespace Myll
 				idTpls = c.idTplArgs().Select( VisitIdTplArgs ).ToList(),
 			//	expr   = c.expr().Visit(),
 			};
+			Context.UnresolvedScopeds.Add( new( ret, Context.ScopeStack.Peek() ) );
 			return ret;
 		}
 

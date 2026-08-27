@@ -24,7 +24,7 @@ namespace Myll.Resolver
 		public static (ResolutionResult Result, IReadOnlyList<Diagnostic> Diagnostics) Resolve(
 			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules )
 		{
-			var exports = BuildModuleExports( modules );
+			var exports     = BuildModuleExports( modules );
 			var result      = new ResolutionResult();
 			var diagnostics = new List<Diagnostic>();
 			var resolver    = new NameResolver( exports, result, diagnostics );
@@ -34,6 +34,7 @@ namespace Myll.Resolver
 				progress = false;
 				foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
 					progress |= resolver.ResolveIds( module, context );
+					progress |= resolver.ResolveScopeds( module, context );
 					progress |= resolver.ResolveTypes( module, context );
 				}
 			} while( progress );
@@ -68,8 +69,7 @@ namespace Myll.Resolver
 
 					exports.Add( name, decl );
 
-					// Recurse into exported namespaces so importers see nested names.
-					if( decl is Namespace ns and Hierarchical h )
+					if( decl is Hierarchical h )
 						CollectExports( h.scope, exports );
 				}
 			}
@@ -78,17 +78,29 @@ namespace Myll.Resolver
 		private bool ResolveIds( GlobalNamespace module, CompilationContext context )
 		{
 			bool progress = false;
-			ModuleExports ownExports = moduleExports[module.module];
-
 			foreach( UnresolvedId unresolved in context.UnresolvedIds ) {
 				if( result.Ids.ContainsKey( unresolved.Node ) )
 					continue;
 
-				string name = unresolved.Node.idTplArgs.id;
+				IdTplArgs[] segments = new[] { unresolved.Node.idTplArgs };
+				Decl? resolved = ResolvePath( segments, unresolved.Scope, module, out _ );
+				if( resolved != null ) {
+					result.Resolve( unresolved.Node, resolved );
+					progress = true;
+				}
+			}
 
-				Decl? resolved = LookupInScope( name, unresolved.Scope )
-				              ?? LookupInImports( name, module );
+			return progress;
+		}
 
+		private bool ResolveScopeds( GlobalNamespace module, CompilationContext context )
+		{
+			bool progress = false;
+			foreach( UnresolvedScoped unresolved in context.UnresolvedScopeds ) {
+				if( result.Scopeds.ContainsKey( unresolved.Node ) )
+					continue;
+
+				Decl? resolved = ResolvePath( unresolved.Node.idTpls, unresolved.Scope, module, out _ );
 				if( resolved != null ) {
 					result.Resolve( unresolved.Node, resolved );
 					progress = true;
@@ -101,20 +113,11 @@ namespace Myll.Resolver
 		private bool ResolveTypes( GlobalNamespace module, CompilationContext context )
 		{
 			bool progress = false;
-
 			foreach( UnresolvedType unresolved in context.UnresolvedTypes ) {
 				if( result.Types.ContainsKey( unresolved.Node ) )
 					continue;
 
-				// Phase 1: single-segment type names only.
-				if( unresolved.Node.idTpls.Count != 1 )
-					continue;
-
-				string name = unresolved.Node.idTpls[0].id;
-
-				Decl? resolved = LookupInScope( name, unresolved.Scope )
-				              ?? LookupInImports( name, module );
-
+				Decl? resolved = ResolvePath( unresolved.Node.idTpls, unresolved.Scope, module, out _ );
 				if( resolved != null ) {
 					result.Resolve( unresolved.Node, resolved );
 					progress = true;
@@ -124,17 +127,74 @@ namespace Myll.Resolver
 			return progress;
 		}
 
-		private Decl? LookupInScope( string name, Scope scope )
+		private Decl? ResolvePath(
+			IReadOnlyList<IdTplArgs> segments,
+			Scope                    startScope,
+			GlobalNamespace          module,
+			out int                  unresolvedSegmentIndex )
+		{
+			unresolvedSegmentIndex = -1;
+			if( segments.Count == 0 )
+				return null;
+
+			string  first   = segments[0].id;
+			Decl?   current = LookupNameInScope( first, startScope )
+			               ?? LookupInImports( first, module );
+			if( current == null ) {
+				unresolvedSegmentIndex = 0;
+				return null;
+			}
+
+			for( int i = 1; i < segments.Count; i++ ) {
+				if( current is not Hierarchical h ) {
+					unresolvedSegmentIndex = i;
+					return null;
+				}
+
+				string name = segments[i].id;
+				Decl? next = LookupSingleInHierarchical( name, h );
+				if( next == null ) {
+					unresolvedSegmentIndex = i;
+					return null;
+				}
+
+				current = next;
+			}
+
+			return current;
+		}
+
+		private Decl? LookupNameInScope( string name, Scope scope )
 		{
 			for( Scope? cur = scope; cur != null; cur = cur.parent ) {
-				if( cur.children.TryGetValue( name, out List<ScopeLeaf>? leaves ) ) {
-					Decl? single = PickSingle( leaves );
-					if( single != null )
-						return single;
+				Decl? fromChildren = LookupSingleInScopeChildren( name, cur );
+				if( fromChildren != null )
+					return fromChildren;
+
+				foreach( Scope imported in cur.importedScopes ) {
+					Decl? fromImport = LookupSingleInScopeChildren( name, imported );
+					if( fromImport != null )
+						return fromImport;
 				}
 			}
 
 			return null;
+		}
+
+		private Decl? LookupSingleInScopeChildren( string name, Scope scope )
+		{
+			if( !scope.children.TryGetValue( name, out List<ScopeLeaf>? leaves ) )
+				return null;
+
+			return PickSingle( leaves );
+		}
+
+		private Decl? LookupSingleInHierarchical( string name, Hierarchical h )
+		{
+			if( !h.scope.children.TryGetValue( name, out List<ScopeLeaf>? leaves ) )
+				return null;
+
+			return PickSingle( leaves );
 		}
 
 		private Decl? LookupInImports( string name, GlobalNamespace module )
@@ -162,11 +222,9 @@ namespace Myll.Resolver
 			if( visible.Count == 0 )
 				return null;
 
-			// If exactly one name exists, use it.
 			if( visible.Count == 1 )
 				return visible[0];
 
-			// Ambiguous or overload set; can't pick a single decl yet.
 			return null;
 		}
 
@@ -178,26 +236,56 @@ namespace Myll.Resolver
 					if( result.Ids.ContainsKey( unresolved.Node ) )
 						continue;
 
-					string name = unresolved.Node.idTplArgs.id;
-					diagnostics.Add( new Diagnostic(
-						unresolved.Node.srcPos,
-						DiagnosticKind.Error,
-						String.Format( "Unresolved identifier '{0}'", name ) ) );
+					IdTplArgs[] segments = new[] { unresolved.Node.idTplArgs };
+					ReportPathUnresolved( "identifier", unresolved.Node.srcPos, segments, 0 );
+				}
+
+				foreach( UnresolvedScoped unresolved in context.UnresolvedScopeds ) {
+					if( result.Scopeds.ContainsKey( unresolved.Node ) )
+						continue;
+
+					ResolvePath( unresolved.Node.idTpls, unresolved.Scope, module, out int idx );
+					if( idx < 0 )
+						idx = 0;
+					ReportPathUnresolved( "identifier", unresolved.Node.srcPos, unresolved.Node.idTpls, idx );
 				}
 
 				foreach( UnresolvedType unresolved in context.UnresolvedTypes ) {
 					if( result.Types.ContainsKey( unresolved.Node ) )
 						continue;
 
-					string name = unresolved.Node.idTpls.Count > 0
-						? unresolved.Node.idTpls[0].id
-						: "<unknown>";
-					diagnostics.Add( new Diagnostic(
-						unresolved.Node.srcPos,
-						DiagnosticKind.Error,
-						String.Format( "Unresolved type '{0}'", name ) ) );
+					ResolvePath( unresolved.Node.idTpls, unresolved.Scope, module, out int idx );
+					if( idx < 0 )
+						idx = 0;
+					ReportPathUnresolved( "type", unresolved.Node.srcPos, unresolved.Node.idTpls, idx );
 				}
 			}
+		}
+
+		private void ReportPathUnresolved(
+			string              kind,
+			SrcPos              srcPos,
+			IReadOnlyList<IdTplArgs> segments,
+			int                 unresolvedSegmentIndex )
+		{
+			string unresolvedName = segments[unresolvedSegmentIndex].id;
+			string message;
+			if( unresolvedSegmentIndex == 0 ) {
+				message = String.Format( "Unresolved {0} '{1}'", kind, unresolvedName );
+			}
+			else {
+				string resolvedPrefix = segments
+					.Take( unresolvedSegmentIndex )
+					.Select( s => s.id )
+					.Join( "::" );
+				message = String.Format(
+					"Unresolved {0} '{1}' in '{2}'",
+					kind,
+					unresolvedName,
+					resolvedPrefix );
+			}
+
+			diagnostics.Add( new Diagnostic( srcPos, DiagnosticKind.Error, message ) );
 		}
 
 		private sealed class ModuleExports
