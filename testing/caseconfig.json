@@ -9,9 +9,7 @@
     }
   },
   "myllCompileRun": [ "enum", "func", "ct", "globals", "class_ctor" ],
-  "resolve": [
-    "class", "cpp_fail", "enum", "extern", "func", "int", "loop"
-  ],
+  "noResolve": [ "class_ctor", "ct", "globals", "gol" ],
   "depth": {
     "generateFailing": [],
     "generate": [ "cpp_fail" ],

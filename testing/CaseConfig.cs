@@ -67,7 +67,7 @@ namespace Myll.Tests
 			=> Config.MyllCompileRun != null && Config.MyllCompileRun.Contains( caseName );
 
 		public static bool UseResolve( string caseName )
-			=> Config.Resolve != null && Config.Resolve.Contains( caseName );
+			=> Config.NoResolve == null || !Config.NoResolve.Contains( caseName );
 
 		public static TestDepth GetDepth( string caseName )
 		{
@@ -107,7 +107,7 @@ namespace Myll.Tests
 	{
 		public TimeoutSection Timeouts { get; set; } = new();
 		public HashSet<string> MyllCompileRun { get; set; } = new();
-		public HashSet<string> Resolve { get; set; } = new();
+		public HashSet<string> NoResolve { get; set; } = new();
 		public DepthConfig Depth { get; set; } = new();
 	}
 
