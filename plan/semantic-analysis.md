@@ -108,10 +108,22 @@ A sequential fixed-point resolver is the first target. The same input/output sha
    Each module builds its own AST + scope tree. Unresolved `IdExpr` and `TypespecNested` references are recorded in the context as they are created.
 
 3. **Sequential fixed-point resolver** ✅  
-   `NameResolver.Resolve` builds per-module export tables and resolves references in rounds until no module makes progress. It handles cyclic imports and produces `Diagnostic` records for unresolved names.
+   `NameResolver.Resolve` builds per-module export tables and resolves references in rounds until no module makes progress. It handles cyclic imports, qualified paths (`std::vector`, `A::B::C`), and produces `Diagnostic` records for unresolved names.
 
-4. **C++ generation uses resolved AST**  
-   Not done. The resolver is currently exercised by unit tests only. Once built-ins and qualified names resolve reliably, wire it into the frontend and update code generation to use the resolution map.
+4. **Scope completeness** ✅  
+   Function parameters, local `var` declarations, lambda parameters, catch-clause variables, and `times` loop index variables are added to the scope tree. Braced blocks introduce real scopes so locals do not leak.
+
+5. **Prototype / extern declaration files**  
+   Not done. See `plan/prototype-files.md`.
+
+6. **Member access resolution**  
+   Not done. For `var MyClass my; my.hello();`, resolve `hello` in `MyClass`'s scope once the variable's type is known.
+
+7. **`using namespace` / `using Name`**  
+   Not done. `Scope.importedScopes` is already checked during lookup, but `using` declarations are not resolved and added yet.
+
+8. **C++ generation uses resolved AST**  
+   Not done. The resolver is currently exercised by unit tests only. Once the above items are reliable, wire it into the frontend and update code generation to consume the resolution map.
 
 ## Relationship to existing stubs
 

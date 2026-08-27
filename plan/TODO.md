@@ -38,6 +38,12 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    - Decide and implement per-declaration access modifiers (`[pub]`, `[priv]`) or reject/warn on them.
    - Emit a clear error when `alias` is used on a namespace until namespace aliases are supported.
 
+4. **Prototype declaration files**
+   - Adopt `.d.myll` and `.decl.myll` as the extensions for silent resolver-only prototypes.
+   - Inline `[extern]` in normal `.myll` files should emit C++ forward declarations.
+   - Extend `[extern]` propagation to classes/structs so members resolve but are not emitted.
+   - See `plan/prototype-files.md`.
+
 ## Medium priority
 
 4. **Language syntax gaps**
@@ -83,3 +89,7 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 - ProcessRunner thread-safety fix.
 - `ls` vertical slice with classes, inheritance, smart-pointer shorthand, sorting, and hidden files.
 - Fixed `EnumerateDF` for `ForStmt`, `WhileStmt`, `DoWhileStmt`, and `TimesStmt` and added unit tests in `testing/LoopEnumerationTests.cs`.
+- Instance-based `CompilationContext` per module; removed static visitor state.
+- Name resolver skeleton with single-segment, cross-module, cyclic-import, and qualified-path resolution.
+- `-R` / `--resolve` flag and `--extern-dir` for opt-in semantic checks.
+- Function parameters, local `var`s, lambdas, catch variables, and `times` indices are now added to the scope tree.
