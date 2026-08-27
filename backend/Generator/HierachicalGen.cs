@@ -558,6 +558,30 @@ namespace Myll.Generator
 			targetImpl.AddRange( gen.GenImpl() );
 		}
 
+		public void AddForwardDecl( Structural structural )
+		{
+			string keyword = structural.kind switch {
+				Structural.Kind.Struct => "struct",
+				Structural.Kind.Class  => "class",
+				Structural.Kind.Union  => "union",
+				_                      => throw new InvalidOperationException( "unknown structural kind" ),
+			};
+
+			Strings target = protoEarly.Target( structural.access );
+			string  indent = DeIndentDecl;
+
+			if( structural.TplParams.Count >= 1 ) {
+				target.Add( Format(
+					"{0}template <{1}>",
+					indent,
+					structural.TplParams
+						.Select( t => "typename " + t.name )
+						.Join( ", " ) ) );
+			}
+
+			target.Add( Format( "{0}{1} {2};", indent, keyword, structural.name ) );
+		}
+
 		public void AddStructor( Structor obj )
 		{
 			if( obj.IsStatic )

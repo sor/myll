@@ -146,9 +146,13 @@ namespace Myll
 			return ret;
 		}
 
-		private static (GlobalNamespace Module, CompilationContext Context) CompileModule( ModuleGroup progContext )
+		private static (GlobalNamespace Module, CompilationContext Context) CompileModule(
+			ModuleGroup progContext,
+			bool        isPrototypeFile )
 		{
-			CompilationContext context = new();
+			CompilationContext context = new() {
+				IsPrototypeFile = isPrototypeFile,
+			};
 			//Console.WriteLine( "Time elapsed after CompileModule  {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
 			GlobalNamespace module = context.DeclVisitor.VisitProgs( progContext );
 			return (module, context);
@@ -170,12 +174,22 @@ namespace Myll
 
 			foreach( string dir in candidates ) {
 				string externDir = opt.ExternDirs.Any() ? dir : Path.Combine( dir, "extern" );
-				if( Directory.Exists( externDir ) ) {
-					foreach( string file in Directory.EnumerateFiles( externDir, "*.extern.myll" ) )
-						yield return file;
-				}
+				if( !Directory.Exists( externDir ) )
+					continue;
+
+				foreach( string file in Directory.EnumerateFiles( externDir, "*.d.myll" ) )
+					yield return file;
+				foreach( string file in Directory.EnumerateFiles( externDir, "*.decl.myll" ) )
+					yield return file;
+				foreach( string file in Directory.EnumerateFiles( externDir, "*.extern.myll" ) )
+					yield return file;
 			}
 		}
+
+		private static bool IsPrototypeFile( string path )
+			=> path.EndsWith( ".d.myll", StringComparison.OrdinalIgnoreCase )
+			|| path.EndsWith( ".decl.myll", StringComparison.OrdinalIgnoreCase )
+			|| path.EndsWith( ".extern.myll", StringComparison.OrdinalIgnoreCase );
 
 		private static List<(string, IStrings)> GenerateFiles( GlobalNamespace global_ns )
 		{
@@ -229,7 +243,9 @@ namespace Myll
 					.GroupBy( ClassifyModule )
 					.ToImmutableArray()
 					// TODO .AsParallel() causes errors, as CompileModule changes globals
-					.Select( CompileModule )
+					.Select( g => CompileModule(
+						g,
+						g.All( p => IsPrototypeFile( p.Start.InputStream.SourceName ) ) ) )
 					.ToList();
 
 			if( opt.IsResolve ) {
@@ -243,6 +259,7 @@ namespace Myll
 
 			IEnumerable<(string, IStrings)> output
 				= modules
+					.Where( m => !m.Context.IsPrototypeFile )
 					.AsParallel()
 					.SelectMany( m => GenerateFiles( m.Module ) )
 					//.ToImmutableArray()

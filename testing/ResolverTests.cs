@@ -366,6 +366,50 @@ func f() -> int {
 		}
 
 		[Fact]
+		public void ExternClass_ChildrenInheritExternalFlag()
+		{
+			var (module, context) = CompileModule( @"
+module test;
+[extern] class A {
+    func method();
+    class Nested { }
+}
+" );
+
+			var a = module.scope.children["A"]
+				.Select( l => l.decl as Structural )
+				.OfType<Structural>()
+				.Single();
+
+			Assert.True( a.IsExternal, "extern class should be external" );
+			Assert.All( a.scope.children.Values.SelectMany( l => l ),
+				leaf => Assert.True( leaf.decl!.IsExternal,
+					"children of extern class should inherit external flag" ) );
+		}
+
+		[Fact]
+		public void ExternNamespace_InNormalFile_ChildrenInheritExternalFlag()
+		{
+			var (module, context) = CompileModule( @"
+module test;
+[extern] namespace Ns {
+    func foo();
+    class Bar;
+}
+" );
+
+			var ns = module.scope.children["Ns"]
+				.Select( l => l.decl as Namespace )
+				.OfType<Namespace>()
+				.Single();
+
+			Assert.True( ns.IsExternal, "extern namespace should be external" );
+			Assert.All( ns.scope.children.Values.SelectMany( l => l ),
+				leaf => Assert.True( leaf.decl!.IsExternal,
+					"children of inline extern namespace should inherit external flag" ) );
+		}
+
+		[Fact]
 		public void UnresolvedName_ProducesDiagnostic()
 		{
 			var (module, context) = CompileModule( @"

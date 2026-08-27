@@ -12,6 +12,8 @@ namespace Myll
 	{
 		public Stack<Scope> ScopeStack { get; } = new();
 
+		public bool IsPrototypeFile { get; init; }
+
 		public ExprVisitor ExprVisitor { get; }
 
 		public StmtVisitor StmtVisitor { get; }

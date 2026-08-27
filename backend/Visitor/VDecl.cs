@@ -80,13 +80,20 @@ namespace Myll
 				return null!;
 			}
 
-			// Namespace attributes must be applied before children are visited,
+			// Namespace and class/struct attributes must be applied before children are visited,
 			// so that the [extern] flag is visible while adding child declarations.
 			DefDeclContext? defDecl = c.defDecl();
 			if( defDecl?.declNamespace() is DeclNamespaceContext nsCtx && attribs != null ) {
 				DefNamespaceContext? defNs = nsCtx.defNamespace();
 				if( defNs != null )
 					return VisitDefNamespace( defNs, attribs );
+			}
+
+			if( defDecl?.declStruct() is DeclStructContext structCtx && attribs != null ) {
+				DefStructContext? defStruct = structCtx.defStruct();
+				Structural.Kind   kind      = structCtx.kindOfStruct().Visit();
+				if( defStruct != null )
+					return VisitDefStruct( defStruct, kind, attribs );
 			}
 
 			Decl ret = (defDecl != null)
@@ -351,6 +358,9 @@ namespace Myll
 		}
 
 		public Structural VisitDefStruct( DefStructContext c, Structural.Kind kind )
+			=> VisitDefStruct( c, kind, null );
+
+		private Structural VisitDefStruct( DefStructContext c, Structural.Kind kind, Attribs? earlyAttribs )
 		{
 			// CnP: recheck this
 			Structural ret = new() {
@@ -362,6 +372,9 @@ namespace Myll
 				basetypes = VisitTypespecsNested( c.bases?.typespecNested() ),
 				reqs      = VisitTypespecsNested( c.reqs?.typespecNested() ),
 			};
+
+			if( earlyAttribs != null )
+				ret.AssignAttribs( earlyAttribs );
 
 			PushScope( ret );
 			{

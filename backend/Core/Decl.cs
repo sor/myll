@@ -460,9 +460,6 @@ namespace Myll.Core
 		// TODO: what is needed here?
 		public override void AddToGen( HierarchicalGen gen )
 		{
-			if( IsExternal )
-				return;
-
 			// can not be in a non-public context
 			gen.AddHierarchical( this );
 		}
@@ -496,6 +493,11 @@ namespace Myll.Core
 
 		public override void AddToGen( HierarchicalGen gen )
 		{
+			if( IsExternal ) {
+				gen.AddForwardDecl( this );
+				return;
+			}
+
 			gen.AddHierarchical( this );
 		}
 	}
