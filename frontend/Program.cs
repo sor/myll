@@ -14,6 +14,7 @@ using Antlr4.Runtime;
 using Antlr4.Runtime.Atn;
 using Myll.Core;
 using Myll.Generator;
+using Myll.Resolver;
 
 namespace Myll
 {
@@ -145,11 +146,35 @@ namespace Myll
 			return ret;
 		}
 
-		private static GlobalNamespace CompileModule( ModuleGroup progContext )
+		private static (GlobalNamespace Module, CompilationContext Context) CompileModule( ModuleGroup progContext )
 		{
 			CompilationContext context = new();
 			//Console.WriteLine( "Time elapsed after CompileModule  {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
-			return context.DeclVisitor.VisitProgs( progContext );
+			GlobalNamespace module = context.DeclVisitor.VisitProgs( progContext );
+			return (module, context);
+		}
+
+		private static IEnumerable<string> CollectExternFiles( Options opt )
+		{
+			IEnumerable<string> candidates;
+			if( opt.ExternDirs.Any() ) {
+				candidates = opt.ExternDirs;
+			}
+			else {
+				candidates = opt.InFiles
+					.Select( Path.GetDirectoryName )
+					.Where( d => !String.IsNullOrEmpty( d ) )
+					.Cast<string>()
+					.Distinct();
+			}
+
+			foreach( string dir in candidates ) {
+				string externDir = opt.ExternDirs.Any() ? dir : Path.Combine( dir, "extern" );
+				if( Directory.Exists( externDir ) ) {
+					foreach( string file in Directory.EnumerateFiles( externDir, "*.extern.myll" ) )
+						yield return file;
+				}
+			}
 		}
 
 		private static List<(string, IStrings)> GenerateFiles( GlobalNamespace global_ns )
@@ -192,20 +217,36 @@ namespace Myll
 
 			//  ParallelQuery<(string, IStrings)>
 			// OR IEnumerable<(string, IStrings)>
+			List<string> inputFiles = opt.InFiles.ToList();
+			inputFiles.AddRange( CollectExternFiles( opt ) );
+
+			List<(GlobalNamespace Module, CompilationContext Context)> modules
+				= inputFiles
+					.Select( CreateParser )
+					.AsParallel()
+					.Select( ParseCST )
+					.AsSequential()
+					.GroupBy( ClassifyModule )
+					.ToImmutableArray()
+					// TODO .AsParallel() causes errors, as CompileModule changes globals
+					.Select( CompileModule )
+					.ToList();
+
+			if( opt.IsResolve ) {
+				var (_, diagnostics) = NameResolver.Resolve( modules );
+				foreach( Diagnostic d in diagnostics )
+					Console.Error.WriteLine( "{0}: {1}: {2}", d.Location, d.Kind, d.Message );
+
+				if( diagnostics.Count > 0 && !opt.IsKeepGoing )
+					Environment.Exit( -99 );
+			}
+
 			IEnumerable<(string, IStrings)> output
-					= opt.InFiles.ToList()
-						.Select( CreateParser )
-						.AsParallel()
-						.Select( ParseCST )
-						.AsSequential()
-						.GroupBy( ClassifyModule )
-						.ToImmutableArray()
-						// TODO .AsParallel() causes errors, as CompileModule changes globals
-						.Select( CompileModule )
-						.AsParallel()
-						.SelectMany( GenerateFiles )
-						//.ToImmutableArray()
-						;
+				= modules
+					.AsParallel()
+					.SelectMany( m => GenerateFiles( m.Module ) )
+					//.ToImmutableArray()
+					;
 
 			Console.WriteLine( "Time elapsed after last ToArray call {0:0}ms\n", (DateTime.Now - start).TotalMilliseconds );
 

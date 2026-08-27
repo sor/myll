@@ -156,6 +156,29 @@ func main() -> int { return secret(); }
 		}
 
 		[Fact]
+		public void ExternNamespace_ChildrenAreExternal()
+		{
+			var (module, context) = CompileModule( @"
+module test;
+[extern] namespace std {
+    func helper() -> int;
+    class vector<T>;
+}
+func main() -> int { return helper(); }
+" );
+
+			var std = module.scope.children["std"]
+				.Select( l => l.decl as Namespace )
+				.OfType<Namespace>()
+				.Single();
+
+			Assert.True( std.IsExternal, "extern namespace should be external" );
+			Assert.All( std.scope.children.Values.SelectMany( l => l ),
+				leaf => Assert.True( leaf.decl!.IsExternal,
+					"children of extern namespace should inherit external flag" ) );
+		}
+
+		[Fact]
 		public void UnresolvedName_ProducesDiagnostic()
 		{
 			var (module, context) = CompileModule( @"

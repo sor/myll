@@ -45,8 +45,9 @@ namespace Myll.Core
 			}
 		}
 
-		public bool IsExternal => HasAttrib( "extern" );
-		public bool IsInline   => HasAttrib( "inline" ) || IsTemplateUp;
+		public bool IsExternNamespace { get; set; }
+		public bool IsExternal        => IsExternNamespace || HasAttrib( "extern" );
+		public bool IsInline          => HasAttrib( "inline" ) || IsTemplateUp;
 		public bool IsInStruct => scope.parent?.decl is Structural;
 
 		// TODO Symbol?
@@ -459,6 +460,9 @@ namespace Myll.Core
 		// TODO: what is needed here?
 		public override void AddToGen( HierarchicalGen gen )
 		{
+			if( IsExternal )
+				return;
+
 			// can not be in a non-public context
 			gen.AddHierarchical( this );
 		}

@@ -71,7 +71,33 @@ namespace Myll
 			return global;
 		}
 
-		public override Decl VisitDecl(		DeclContext			c ) => VisitAttrAnyDecl( c.attribBlk(), c.defDecl(), c.decl(), c.COLON() != null )!;
+		public override Decl VisitDecl( DeclContext c )
+		{
+			Attribs? attribs = c.attribBlk()?.Visit();
+
+			if( c.COLON() != null ) {
+				VisitAttrColon( attribs );
+				return null!;
+			}
+
+			// Namespace attributes must be applied before children are visited,
+			// so that the [extern] flag is visible while adding child declarations.
+			DefDeclContext? defDecl = c.defDecl();
+			if( defDecl?.declNamespace() is DeclNamespaceContext nsCtx && attribs != null ) {
+				DefNamespaceContext? defNs = nsCtx.defNamespace();
+				if( defNs != null )
+					return VisitDefNamespace( defNs, attribs );
+			}
+
+			Decl ret = (defDecl != null)
+				? Visit( defDecl )
+				: VisitMulti( c.decl() );
+
+			if( attribs != null )
+				ret.AssignAttribs( attribs );
+
+			return ret;
+		}
 		public override Decl VisitAttrUsing(	AttrUsingContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defUsing(), c.attrUsing(), c.COLON() != null )!;
 		public override Decl VisitAttrAlias(	AttrAliasContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defAlias(), c.attrAlias(), c.COLON() != null )!;
 		public override Decl VisitAttrConvert(	AttrConvertContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defConvert(), c.attrConvert(), c.COLON() != null )!;
@@ -210,6 +236,9 @@ namespace Myll
 		}
 
 		public override Namespace VisitDefNamespace( DefNamespaceContext c )
+			=> VisitDefNamespace( c, null );
+
+		private Namespace VisitDefNamespace( DefNamespaceContext c, Attribs? earlyAttribs )
 		{
 			// CnP: recheck this
 			Namespace? ret = null;
@@ -226,6 +255,8 @@ namespace Myll
 					name     = id.Visit(),
 					withBody = withBody,
 				};
+				if( earlyAttribs != null )
+					ns.AssignAttribs( earlyAttribs );
 				PushScope( ns );
 				ret ??= ns;
 			}
@@ -238,6 +269,24 @@ namespace Myll
 				foreach( IdContext unused in c.id() )
 					PopScope();
 			}
+
+			return ret!;
+		}
+
+		public override Decl VisitAttrNamespace( AttrNamespaceContext c )
+		{
+			Attribs? attribs = c.attribBlk()?.Visit();
+			if( c.COLON() != null ) {
+				VisitAttrColon( attribs );
+				return null!;
+			}
+
+			Decl ret = (c.defNamespace() != null)
+				? VisitDefNamespace( c.defNamespace(), attribs )
+				: VisitMulti( c.attrNamespace() );
+
+			if( attribs != null && ret != null )
+				ret.AssignAttribs( attribs );
 
 			return ret!;
 		}

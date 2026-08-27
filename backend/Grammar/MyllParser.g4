@@ -55,7 +55,11 @@ defDecl		:	declNamespace
 			|	declVar
 			;
 
-declNamespace:	NAMESPACE	( defNamespace									);
+attrNamespace:	attribBlk ( defNamespace
+							| LCURLY	attrNamespace*	RCURLY
+							| COLON );
+declNamespace:	NAMESPACE	( defNamespace
+							| LCURLY	attrNamespace*	RCURLY );
 declUsing	:	USING		( defUsing		| LCURLY attrUsing*		RCURLY	);
 declAlias	:	ALIAS		( defAlias		| LCURLY attrAlias*		RCURLY	);
 declAspect	:	ASPECT		( defAspect										);

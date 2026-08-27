@@ -63,6 +63,9 @@ namespace Myll
 		public void AddChild( Decl leaf )
 		{
 			Scope parent = scopeStack.Peek();
+			if( parent.decl is Namespace ns && ns.IsExternal )
+				leaf.IsExternNamespace = true;
+
 			ScopeLeaf scopeLeaf = new() {
 				parent = parent,
 				decl   = leaf,
@@ -73,7 +76,11 @@ namespace Myll
 		public void AddChildren( IEnumerable<Decl> leafs )
 		{
 			Scope parent = scopeStack.Peek();
+			bool inheritExternal = parent.decl is Namespace ns && ns.IsExternal;
 			foreach( Decl leaf in leafs ) {
+				if( inheritExternal )
+					leaf.IsExternNamespace = true;
+
 				ScopeLeaf scopeLeaf = new() {
 					parent = parent,
 					decl   = leaf,
@@ -85,6 +92,9 @@ namespace Myll
 		public void PushScope( Hierarchical hierarchical )
 		{
 			Scope parent = scopeStack.Peek();
+			if( parent.decl is Namespace ns && ns.IsExternal )
+				hierarchical.IsExternNamespace = true;
+
 			Scope scope = new() {
 				parent = parent,
 				decl   = hierarchical,
