@@ -409,9 +409,10 @@ namespace Myll
 				access = curAccess,
 				kind   = Structor.Kind.Constructor,
 				paras  = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
-				body   = c.funcBody().Visit( Context ),
 				// TODO: cc.initList(); // opt
 			};
+			AddParamsToScope( ret.paras );
+			ret.body = c.funcBody().Visit( Context );
 			PopScope();
 			AddChild( ret );
 			return ret;

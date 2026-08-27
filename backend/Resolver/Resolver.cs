@@ -7,6 +7,19 @@ namespace Myll.Resolver
 {
 	public sealed class NameResolver
 	{
+		private static readonly HashSet<string> BuiltInIdentifiers = new( StringComparer.Ordinal ) {
+			"static_assert",
+			"null",
+			"true",
+			"false",
+		};
+
+		private static readonly Decl BuiltInDecl = new VarDecl {
+			name   = "<builtin>",
+			access = Access.Public,
+			kind   = VarDecl.Kind.Const,
+		};
+
 		private readonly IReadOnlyDictionary<string, ModuleExports> moduleExports;
 		private readonly ResolutionResult result;
 		private readonly List<Diagnostic> diagnostics;
@@ -141,6 +154,9 @@ namespace Myll.Resolver
 			Decl?   current = LookupNameInScope( first, startScope )
 			               ?? LookupInImports( first, module );
 			if( current == null ) {
+				if( segments.Count == 1 && BuiltInIdentifiers.Contains( first ) )
+					return BuiltInDecl;
+
 				unresolvedSegmentIndex = 0;
 				return null;
 			}
@@ -215,7 +231,7 @@ namespace Myll.Resolver
 		{
 			List<Decl> visible = leaves
 				.Select( l => l.decl )
-				.Where( d => d != null && !d.IsHidden )
+				.Where( d => d != null )
 				.Cast<Decl>()
 				.ToList();
 
