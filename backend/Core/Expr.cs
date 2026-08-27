@@ -168,6 +168,7 @@ namespace Myll.Core
 
 	public abstract class Expr
 	{
+		public SrcPos  srcPos          = null!;
 		public Operand op              { get; set; }
 		public int     PrecedenceLevel => Precedence.PrecedenceLevel[op];
 		/// Is precedence divergent from the based upon language?

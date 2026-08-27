@@ -40,6 +40,7 @@ namespace Myll
 			Scope scope = new() {
 				decl = global,
 			};
+			global.scope = scope;
 			scopeStack.Push( scope );
 			return global;
 		}

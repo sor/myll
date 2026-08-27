@@ -210,7 +210,7 @@ namespace Myll
 		public override ReturnStmt VisitStmtReturn( StmtReturnContext c )
 		{
 			ReturnStmt ret = new() {
-				expr = c.expr().Visit( Context ),
+				expr = c.expr()?.Visit( Context ),
 			};
 			return ret;
 		}

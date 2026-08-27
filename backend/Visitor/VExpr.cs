@@ -32,9 +32,10 @@ namespace Myll
 		public override ScopedExpr VisitScopedExpr( ScopedExprContext c )
 		{
 			ScopedExpr ret = new() {
+				srcPos = c.ToSrcPos(),
 				op     = Operand.Scoped,
 				idTpls = c.idTplArgs().Select( VisitIdTplArgs ).ToList(),
-			//	expr   = c.expr().Visit( Context ),
+			//	expr   = c.expr().Visit(),
 			};
 			return ret;
 		}
@@ -439,9 +440,11 @@ namespace Myll
 		public override IdExpr VisitIdTplExpr( IdTplExprContext c )
 		{
 			IdExpr ret = new() {
+				srcPos    = c.ToSrcPos(),
 				op        = Operand.Id,
 				idTplArgs = VisitIdTplArgs( c.idTplArgs() ),
 			};
+			Context.UnresolvedIds.Add( new( ret, Context.ScopeStack.Peek() ) );
 			return ret;
 		}
 

@@ -240,6 +240,7 @@ namespace Myll
 				idTpls = idTplArgs.ToList(),
 			};
 
+			Context.UnresolvedTypes.Add( new( ret, Context.ScopeStack.Peek() ) );
 			return ret;
 		}
 

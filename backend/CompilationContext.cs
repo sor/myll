@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Myll.Core;
+using Myll.Resolver;
 
 namespace Myll
 {
@@ -16,6 +17,9 @@ namespace Myll
 		public StmtVisitor StmtVisitor { get; }
 
 		public DeclVisitor DeclVisitor { get; }
+
+		public List<UnresolvedId>   UnresolvedIds   { get; } = new();
+		public List<UnresolvedType> UnresolvedTypes { get; } = new();
 
 		public CompilationContext()
 		{
