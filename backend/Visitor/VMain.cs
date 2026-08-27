@@ -89,6 +89,42 @@ namespace Myll
 			}
 		}
 
+		/// <summary>
+		/// Adds a declaration to the current scope for resolution purposes without
+		/// also adding it to the enclosing hierarchical declaration's child list.
+		/// Used for parameters, local variables, and other symbols that should not
+		/// be emitted as top-level or field declarations.
+		/// </summary>
+		public void AddScopeOnly( Decl leaf )
+		{
+			Scope parent = scopeStack.Peek();
+			if( parent.decl is Namespace ns && ns.IsExternal )
+				leaf.IsExternNamespace = true;
+
+			ScopeLeaf scopeLeaf = new() {
+				parent = parent,
+				decl   = leaf,
+			};
+			leaf.scope = parent;
+			if( !parent.children.TryGetValue( leaf.name, out List<ScopeLeaf>? list ) ) {
+				list = new List<ScopeLeaf>( 1 );
+				parent.children.Add( leaf.name, list );
+			}
+			list.Add( scopeLeaf );
+		}
+
+		protected void AddParamsToScope( List<Param> paras )
+		{
+			foreach( Param p in paras ) {
+				AddScopeOnly( new VarDecl {
+					name   = p.name ?? "",
+					type   = p.type,
+					access = Access.Public,
+					kind   = VarDecl.Kind.Var,
+				} );
+			}
+		}
+
 		public void PushScope( Hierarchical hierarchical )
 		{
 			Scope parent = scopeStack.Peek();

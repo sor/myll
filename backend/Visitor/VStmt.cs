@@ -54,11 +54,17 @@ namespace Myll
 
 		public override Stmt VisitStmt( StmtContext c )
 		{
-			Stmt ret = (c.defStmt() != null)
-				? Visit( c.defStmt() )
-				: c.stmt()
+			Stmt ret;
+			if( c.defStmt() != null ) {
+				ret = Visit( c.defStmt() );
+			}
+			else {
+				PushScope();
+				ret = c.stmt()
 					.Select( Visit )
 					.ToBlock();
+				PopScope();
+			}
 
 			Attribs? attribs = c.attribBlk()?.Visit();
 			if( attribs != null )
@@ -180,8 +186,16 @@ namespace Myll
 						init     = q.expr()?.Visit( Context ),
 					} as Stmt )
 				.ToList();
-			// TODO local scope
-			//AddChildren( stmts );
+
+			foreach( VarStmt stmt in stmts.OfType<VarStmt>() ) {
+				AddScopeOnly( new VarDecl {
+					name   = stmt.name,
+					type   = stmt.type,
+					kind   = stmt.kind,
+					access = Access.Public,
+				} );
+			}
+
 			MultiStmt ret = stmts.ToMulti();
 			return ret;
 		}
@@ -256,10 +270,9 @@ namespace Myll
 			};
 
 			foreach( CatchClauseContext cc in c.catchClause() ) {
-				CatchClause clause = new() {
-					body = Visit( cc.stmt() ),
-				};
+				PushScope();
 
+				CatchClause clause = new();
 				if( cc.funcTypeDef() != null ) {
 					List<Param> paras = VisitFuncTypeDef( cc.funcTypeDef() ).ToList();
 					clause.param = paras.Count switch {
@@ -268,8 +281,19 @@ namespace Myll
 						_ => throw new NotImplementedException(
 							"catch clause must have exactly one parameter or none" ),
 					};
+
+					if( clause.param != null ) {
+						AddScopeOnly( new VarDecl {
+							name   = clause.param.name ?? "",
+							type   = clause.param.type,
+							access = Access.Public,
+							kind   = VarDecl.Kind.Var,
+						} );
+					}
 				}
 
+				clause.body = Visit( cc.stmt() );
+				PopScope();
 				ret.catches.Add( clause );
 			}
 
@@ -387,12 +411,26 @@ namespace Myll
 
 		public override TimesStmt VisitStmtTimes( StmtTimesContext c )
 		{
+			PushScope();
+
 			TimesStmt ret = new() {
 				count = c.count.Visit( Context ),
 				name  = c.name?.Visit(),
-				body  = VisitBlockify( c.body ),
 			};
-			// TODO: add "name" to current scope
+
+			if( !String.IsNullOrEmpty( ret.name ) ) {
+				AddScopeOnly( new VarDecl {
+					name   = ret.name!,
+					type   = new TypespecBasic {
+						kind = TypespecBasic.Kind.Integer,
+						size = TypespecBasic.SizeUndetermined,
+					},
+					access = Access.Public,
+					kind   = VarDecl.Kind.Var,
+				} );
+			}
+
+			ret.body = VisitBlockify( c.body );
 
 			// fill ret.offset
 			ITerminalNode intLit = c.INTEGER_LIT();
@@ -401,6 +439,8 @@ namespace Myll
 				if( c.MINUS() != null )
 					ret.offset *= -1;
 			}
+
+			PopScope();
 			return ret;
 		}
 

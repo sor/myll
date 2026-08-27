@@ -493,8 +493,9 @@ namespace Myll
 						c.defCoreFunc(),
 						cleanedOp,
 						Func.Kind.Operator,
-						VisitTypespecsNested( c.typespecsNested() ),
-						c.funcBody().Visit( Context ) );
+						VisitTypespecsNested( c.typespecsNested() ) );
+					AddParamsToScope( ret.paras );
+					ret.body = c.funcBody().Visit( Context );
 				}
 			}
 			PopScope();
@@ -512,16 +513,13 @@ namespace Myll
 				c.defCoreFunc(),
 				c.id().Visit(),
 				kind,
-				VisitTypespecsNested( c.typespecsNested() ),
-				c.funcBody().Visit( Context ) );
+				VisitTypespecsNested( c.typespecsNested() ) );
+
+			AddParamsToScope( ret.paras );
+			ret.body = c.funcBody().Visit( Context );
 
 			PopScope();
 			AddChild( ret );
-
-			// what was that for?
-			//bool wasOK = NotifyObservers( ret );
-			// validator
-			//ret.HasAttrib( "blah" );
 
 			return ret;
 		}
@@ -531,8 +529,7 @@ namespace Myll
 			DefCoreFuncContext   c,
 			string               name,
 			Func.Kind            kind,
-			List<TypespecNested> requires,
-			MultiStmt?           body )
+			List<TypespecNested> requires )
 		{
 			Func ret = new() {
 				srcPos    = c.ToSrcPos(),
@@ -542,7 +539,6 @@ namespace Myll
 				TplParams = VisitTplParams( c.tplParams() ),
 				Requires  = requires,
 				paras     = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
-				body      = body,
 			};
 			ret.retType = c.typespec() != null ? VisitTypespec( c.typespec() ) :
 				ret.IsReturningSomething ?

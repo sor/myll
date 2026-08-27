@@ -371,7 +371,6 @@ namespace Myll
 				srcPos    = c.ToSrcPos(),
 				TplParams = VisitTplParams( c.tplParams() ),
 				paras     = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
-				body      = c.funcBody().Visit( Context ),
 			};
 			func.retType = c.typespec() != null ? VisitTypespec( c.typespec() ) :
 				func.IsReturningSomething ?
@@ -383,6 +382,8 @@ namespace Myll
 						kind = TypespecBasic.Kind.Void,
 						size = TypespecBasic.SizeInvalid,
 					};
+			AddParamsToScope( func.paras );
+			func.body = c.funcBody().Visit( Context );
 			ret.func = func;
 			PopScope();
 

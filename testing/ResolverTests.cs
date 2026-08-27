@@ -253,6 +253,119 @@ func use() -> void { var Ns::Missing::B f; }
 		}
 
 		[Fact]
+		public void FunctionParameter_ResolvesInBody()
+		{
+			var (module, context) = CompileModule( @"
+module test;
+func square(int x) -> int { return x * x; }
+" );
+
+			var (result, diagnostics) = Resolve( (module, context) );
+
+			Assert.Empty( diagnostics );
+			Assert.Equal( 2, context.UnresolvedIds.Count );
+			Assert.All( context.UnresolvedIds, uid => {
+				Assert.True( result.Ids.TryGetValue( uid.Node, out Decl? decl ) );
+				Assert.IsType<VarDecl>( decl );
+				Assert.Equal( "x", decl!.name );
+			} );
+		}
+
+		[Fact]
+		public void LocalVar_ResolvesAfterDeclaration()
+		{
+			var (module, context) = CompileModule( @"
+module test;
+func f() -> int { var int x = 5; return x; }
+" );
+
+			var (result, diagnostics) = Resolve( (module, context) );
+
+			Assert.Empty( diagnostics );
+			Assert.Single( context.UnresolvedIds );
+			Assert.True( result.Ids.TryGetValue( context.UnresolvedIds[0].Node, out Decl? decl ) );
+			Assert.IsType<VarDecl>( decl );
+			Assert.Equal( "x", decl!.name );
+		}
+
+		[Fact]
+		public void LocalVar_BlockScoped_DoesNotLeak()
+		{
+			var (module, context) = CompileModule( @"
+module test;
+func f() -> int { { var int y = 1; } return y; }
+" );
+
+			var (result, diagnostics) = Resolve( (module, context) );
+
+			Assert.Single( diagnostics );
+			Assert.Contains( "y", diagnostics[0].Message );
+		}
+
+		[Fact]
+		public void LambdaParameter_ResolvesInBody()
+		{
+			var (module, context) = CompileModule( @"
+module test;
+func f() -> int {
+    var auto lambda = func(int a) { return a + 1; };
+    return lambda(5);
+}
+" );
+
+			var (result, diagnostics) = Resolve( (module, context) );
+
+			Assert.Empty( diagnostics );
+			Assert.Contains( context.UnresolvedIds, uid => uid.Node.idTplArgs.id == "a" );
+			var a = context.UnresolvedIds.Single( uid => uid.Node.idTplArgs.id == "a" );
+			Assert.True( result.Ids.TryGetValue( a.Node, out Decl? decl ) );
+			Assert.IsType<VarDecl>( decl );
+			Assert.Equal( "a", decl!.name );
+		}
+
+		[Fact]
+		public void TimesLoopIndex_ResolvesInBody()
+		{
+			var (module, context) = CompileModule( @"
+module test;
+func f() -> int {
+    3 times i { return i; }
+    return 0;
+}
+" );
+
+			var (result, diagnostics) = Resolve( (module, context) );
+
+			Assert.Empty( diagnostics );
+			Assert.Contains( context.UnresolvedIds, uid => uid.Node.idTplArgs.id == "i" );
+			var i = context.UnresolvedIds.Single( uid => uid.Node.idTplArgs.id == "i" );
+			Assert.True( result.Ids.TryGetValue( i.Node, out Decl? decl ) );
+			Assert.IsType<VarDecl>( decl );
+			Assert.Equal( "i", decl!.name );
+		}
+
+		[Fact]
+		public void CatchParameter_ResolvesInBody()
+		{
+			var (module, context) = CompileModule( @"
+module test;
+func f() -> int {
+    try { return 0; }
+    catch( int e ) { return e; }
+}
+" );
+
+			var (result, diagnostics) = Resolve( (module, context) );
+
+			Assert.Empty( diagnostics );
+			Assert.Contains( context.UnresolvedIds, uid => uid.Node.idTplArgs.id == "e" );
+			var e = context.UnresolvedIds.Single( uid => uid.Node.idTplArgs.id == "e" );
+			Assert.True( result.Ids.TryGetValue( e.Node, out Decl? decl ) );
+			Assert.IsType<VarDecl>( decl );
+			Assert.Equal( "e", decl!.name );
+		}
+
+		[Fact]
 		public void UnresolvedName_ProducesDiagnostic()
 		{
 			var (module, context) = CompileModule( @"
