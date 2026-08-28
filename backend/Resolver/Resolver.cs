@@ -18,9 +18,7 @@ namespace Myll.Resolver
 			"void",
 			"bool",
 			"char",
-			"short",
 			"int",
-			"long",
 			"float",
 			"double",
 			"auto",
@@ -29,6 +27,9 @@ namespace Myll.Resolver
 			"int", "uint",
 			"i8", "i16", "i32", "i64",
 			"u8", "u16", "u32", "u64",
+			"isize", "usize",
+			"iptr", "uptr",
+			"f16", "f32", "f64", "f128",
 		};
 
 		private static readonly Decl BuiltInDecl = new VarDecl {
