@@ -1,6 +1,5 @@
 import std_iostream, c_stdlib, std_chrono, std_vector, MyContainers;
 
-[pub]:
 //#line 68 "../main.myll"
 
 // Beispiele für globals und so

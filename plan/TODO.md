@@ -27,7 +27,7 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    - Implemented `[pub]`, `[priv]`, `[prot]` on individual class/struct/union members; the attribute overrides the current section default from `[pub]:` / `[priv]:` / `[prot]:`.
    - Field order is preserved; access labels change inline.
    - End-to-end test: `testing/cases/access_mods/`.
-   - Remaining: enforce that access attributes outside class/struct/union are an error.
+   - Enforced: access attributes are only valid inside class/struct/union declarations.
 
 2. **Repair the `try/catch` grammar**
    - Change `catchClause` from `CATCH funcTypeDef? stmt` to `CATCH LPAREN param? RPAREN stmt`.

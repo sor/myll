@@ -51,6 +51,29 @@ namespace Myll
 				_ => c.Select( Visit ).ToMulti()
 			};
 
+		private static bool IsAccessAttribute( Attribs? attribs )
+		{
+			if( attribs == null )
+				return false;
+			if( attribs.ContainsKey( "access" ) )
+				return true;
+			return attribs.ContainsKey( "pub" )
+			    || attribs.ContainsKey( "priv" )
+			    || attribs.ContainsKey( "prot" );
+		}
+
+		private void ValidateAccessAttribute( Attribs? attribs )
+		{
+			if( !IsAccessAttribute( attribs ) )
+				return;
+
+			if( scopeStack.Peek().decl is Structural )
+				return;
+
+			throw new InvalidOperationException(
+				"Access attributes are only valid inside class/struct/union declarations." );
+		}
+
 		public GlobalNamespace VisitProgs( IGrouping<string, ProgContext> cs )
 		{
 			GlobalNamespace global = GenerateGlobalScope( cs.Key );
@@ -80,6 +103,8 @@ namespace Myll
 				VisitAttrColon( attribs );
 				return null!;
 			}
+
+			ValidateAccessAttribute( attribs );
 
 			// Namespace and class/struct attributes must be applied before children are visited,
 			// so that the [extern] flag is visible while adding child declarations.
@@ -149,6 +174,8 @@ namespace Myll
 				? Visit( cDef )
 				: VisitMulti( cAttr );
 
+			ValidateAccessAttribute( attribs );
+
 			if( attribs != null )
 				ret.AssignAttribs( attribs );
 
@@ -170,6 +197,8 @@ namespace Myll
 					.Select( ac => VisitAttrFunc( ac, kind ) )
 					.OfType<MultiDecl>()
 					.ToMulti();
+
+			ValidateAccessAttribute( attribs );
 
 			if( attribs != null )
 				ret.AssignAttribs( attribs );
@@ -193,6 +222,8 @@ namespace Myll
 					.OfType<MultiDecl>()
 					.ToMulti();
 
+			ValidateAccessAttribute( attribs );
+
 			if( attribs != null )
 				ret.AssignAttribs( attribs );
 
@@ -204,6 +235,8 @@ namespace Myll
 		{
 			if( attribs == null )
 				throw new InvalidOperationException( "VisitAttrColon without attributes" );
+
+			ValidateAccessAttribute( attribs );
 
 			// HACK: will be buggy like VisitAccessMod needs to move to ScopeStack, when ScopeStack works.
 			// HACK: only works for pub, prot & priv now, with optional "access=" prefix
@@ -320,6 +353,8 @@ namespace Myll
 			Decl ret = (c.defNamespace() != null)
 				? VisitDefNamespace( c.defNamespace(), attribs )
 				: VisitMulti( c.attrNamespace() );
+
+			ValidateAccessAttribute( attribs );
 
 			if( attribs != null && ret != null )
 				ret.AssignAttribs( attribs );

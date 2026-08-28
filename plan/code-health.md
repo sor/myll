@@ -195,9 +195,9 @@ class A
 
 **Current behavior:**
 
-Only the section form (`[]:`) works. Per-declaration access modifiers like `[priv] field int x;` are currently ignored, so the declaration keeps the previous section's access (or the class default).
+Both section form (`[pub]:`) and per-declaration access modifiers (`[priv] field int x;`) work inside class/struct/union declarations. The per-declaration attribute overrides the current section default. Access attributes outside class/struct/union declarations are rejected with an error.
 
-**Open work:** decide whether to implement per-declaration access modifiers, or to make the compiler reject them with a clear error so users do not assume they work.
+**Open work:** none.
 
 ### `field { ... }` block syntax
 
