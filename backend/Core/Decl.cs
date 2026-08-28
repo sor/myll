@@ -191,6 +191,9 @@ namespace Myll.Core
 		// TODO: add distinction to alias and using ns decls
 		public Typespec type = null!;
 
+		// Set by the resolver when this using declaration targets a namespace.
+		public bool IsNamespaceUsing { get; set; }
+
 		public override void AddToGen( HierarchicalGen gen )
 		{
 			gen.AddUsing( this );

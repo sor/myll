@@ -334,6 +334,7 @@ namespace Myll
 				.Select(
 					t => new UsingDecl() {
 						srcPos = srcPos,
+						name   = (t is TypespecNested n) ? n.idTpls.Last().id : null!,
 						type   = t
 					} )
 				.ToMulti();
@@ -348,6 +349,7 @@ namespace Myll
 					Context.UnresolvedTypes.RemoveAll( u => u.Node == nested );
 			}
 
+			AddChildren( ret.decls );
 			return ret;
 		}
 

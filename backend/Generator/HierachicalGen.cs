@@ -243,8 +243,9 @@ namespace Myll.Generator
 		public void AddUsing( UsingDecl obj )
 		{
 			string indent = IndentDecl;
+			int formatIndex = obj.IsNamespaceUsing ? 1 : 0;
 			string ret = Format(
-				UsingFormat[obj.name == null ? 1 : 0],
+				UsingFormat[formatIndex],
 				indent,
 				obj.name,
 				obj.type.Gen() );

@@ -172,6 +172,7 @@ namespace Myll.Resolver
 
 				Scope scope = unresolved.Scope;
 				if( resolved is Namespace ns ) {
+					unresolved.Node.IsNamespaceUsing = true;
 					if( !scope.importedScopes.Contains( ns.scope ) ) {
 						scope.importedScopes.Add( ns.scope );
 						progress = true;
@@ -294,6 +295,10 @@ namespace Myll.Resolver
 
 			foreach( ScopeLeaf leaf in leaves ) {
 				if( leaf.decl == null )
+					continue;
+				// Using declarations are transparent for name lookup; they bring
+				// names in via importedScopes / importedNames instead.
+				if( leaf.decl is UsingDecl )
 					continue;
 				if( filterHidden && leaf.decl.IsHidden )
 					continue;
