@@ -1,0 +1,9 @@
+module std_thread;
+
+namespace std {
+	class thread;
+
+	namespace this_thread {
+		func yield() -> void;
+	}
+}

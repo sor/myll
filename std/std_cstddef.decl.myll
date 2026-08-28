@@ -1,0 +1,7 @@
+module std_cstddef;
+
+namespace std {
+	class size_t;
+	class ptrdiff_t;
+	class nullptr_t;
+}

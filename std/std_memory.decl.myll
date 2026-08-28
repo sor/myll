@@ -1,0 +1,8 @@
+module std_memory;
+
+namespace std {
+	// Template smart pointers: forward declarations only for now.
+	class unique_ptr<T>;
+	class shared_ptr<T>;
+	class weak_ptr<T>;
+}

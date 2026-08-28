@@ -1,0 +1,7 @@
+module std_fstream;
+
+namespace std {
+	class ifstream;
+	class ofstream;
+	class fstream;
+}

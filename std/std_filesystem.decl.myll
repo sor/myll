@@ -1,0 +1,9 @@
+module std_filesystem;
+
+namespace std {
+	namespace filesystem {
+		class path;
+		class directory_entry;
+		class directory_iterator;
+	}
+}

@@ -1,0 +1,8 @@
+module c_stdlib;
+
+namespace std {
+	func getenv(char * name) -> char*;
+	func rand() -> int;
+	func srand(uint seed) -> void;
+	func exit(int code) -> void;
+}

@@ -1,0 +1,6 @@
+module std_vector;
+
+namespace std {
+	// Template container: forward declaration only for now.
+	class vector<T>;
+}

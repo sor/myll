@@ -1,0 +1,6 @@
+module std_type_traits;
+
+namespace std {
+	class true_type;
+	class false_type;
+}

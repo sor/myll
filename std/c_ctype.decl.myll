@@ -1,0 +1,8 @@
+module c_ctype;
+
+namespace std {
+	func isspace(char c) -> int;
+	func isdigit(char c) -> int;
+	func isalpha(char c) -> int;
+	func isalnum(char c) -> int;
+}

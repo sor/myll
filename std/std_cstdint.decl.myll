@@ -1,0 +1,12 @@
+module std_cstdint;
+
+namespace std {
+	class int8_t;
+	class uint8_t;
+	class int16_t;
+	class uint16_t;
+	class int32_t;
+	class uint32_t;
+	class int64_t;
+	class uint64_t;
+}

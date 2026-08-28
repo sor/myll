@@ -1,0 +1,11 @@
+module std_iostream;
+
+namespace std {
+	class ostream;
+	class istream;
+	class ostringstream;
+
+	var ostream cout;
+	var ostream cerr;
+	var istream cin;
+}

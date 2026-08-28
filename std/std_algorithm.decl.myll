@@ -1,0 +1,6 @@
+module std_algorithm;
+
+namespace std {
+	// Most algorithms are templates and deferred.
+	// Non-template helpers can be added here later.
+}

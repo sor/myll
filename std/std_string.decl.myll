@@ -1,0 +1,6 @@
+module std_string;
+
+namespace std {
+	// std::string is a typedef for a template specialisation and deferred.
+	// Non-template helpers that Myll code uses can be added here.
+}
