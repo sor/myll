@@ -41,6 +41,7 @@ namespace Myll.Resolver
 		private readonly IReadOnlyDictionary<string, ModuleExports> moduleExports;
 		private readonly ResolutionResult result;
 		private readonly List<Diagnostic> diagnostics;
+		private readonly TypeResolver typeResolver;
 
 		private NameResolver(
 			IReadOnlyDictionary<string, ModuleExports> moduleExports,
@@ -50,6 +51,7 @@ namespace Myll.Resolver
 			this.moduleExports = moduleExports;
 			this.result        = result;
 			this.diagnostics   = diagnostics;
+			this.typeResolver  = new TypeResolver( result );
 		}
 
 		public static (ResolutionResult Result, IReadOnlyList<Diagnostic> Diagnostics) Resolve(
@@ -274,6 +276,14 @@ namespace Myll.Resolver
 			return TryResolveOverload( single, call, scope, module );
 		}
 
+		private static bool IsMemberAccessOperation( Operand op )
+			=> op is Operand.MemberAccess
+			|| op is Operand.NCMemberAccess
+			|| op is Operand.MemberPtrAccess
+			|| op is Operand.MemberAccessPtr
+			|| op is Operand.NCMemberAccessPtr
+			|| op is Operand.MemberPtrAccessPtr;
+
 		private Decl? TryResolveOverload(
 			List<Decl>      candidates,
 			FuncCall        call,
@@ -298,9 +308,10 @@ namespace Myll.Resolver
 			if( sameArity.Count == 1 )
 				return sameArity[0];
 
-			// Multiple candidates with the same arity: try an exact argument-type match.
+			// Multiple candidates with the same arity: resolve argument types and
+			// look for a single exact match.
 			List<Typespec?> argTypes = call.args
-				.Select( a => InferExprType( a.expr, scope, module ) )
+				.Select( a => typeResolver.Resolve( a.expr ) )
 				.ToList();
 
 			List<Decl> exactMatches = sameArity
@@ -337,127 +348,12 @@ namespace Myll.Resolver
 				if( argType == null )
 					return false;
 
-				if( paras[i].type.GenType() != argType.GenType() )
+				if( !ConversionRules.IsExactMatch( paras[i].type, argType ) )
 					return false;
 			}
 
 			return true;
 		}
-
-		private Typespec? InferExprType( Expr expr, Scope scope, GlobalNamespace module )
-		{
-			switch( expr ) {
-				case Literal lit:
-					return InferLiteralType( lit );
-
-				case IdExpr id: {
-					if( id.idTplArgs.id == "self" ) {
-						Hierarchical? selfType = FindEnclosingStructural( scope );
-						if( selfType == null )
-							return null;
-
-						return new TypespecNested {
-							resolvedDecl = selfType,
-							idTpls       = new() { new() { id = selfType.name } },
-						};
-					}
-
-					if( !result.TryGetResolved( id, out Decl? decl ) )
-						return null;
-
-					if( decl is VarDecl vd )
-						return vd.type;
-					if( decl is Func f )
-						return f.retType;
-					return null;
-				}
-
-				case ScopedExpr scoped: {
-					if( !result.TryGetResolved( scoped, out Decl? decl ) )
-						return null;
-
-					if( decl is VarDecl vd )
-						return vd.type;
-					if( decl is Func f )
-						return f.retType;
-					return null;
-				}
-
-				case BinOp binOp when IsMemberAccessOperation( binOp.op ): {
-					if( binOp.right is not IdExpr member )
-						return null;
-
-					if( !result.TryGetResolvedMember( member, out Decl? decl ) )
-						return null;
-
-					if( decl is VarDecl vd )
-						return vd.type;
-					if( decl is Func f )
-						return f.retType;
-					return null;
-				}
-
-				case FuncCallExpr callExpr:
-					return InferCallReturnType( callExpr.expr );
-
-				case NewExpr newExpr:
-					return newExpr.type;
-
-				default:
-					return null;
-			}
-		}
-
-		private Typespec? InferCallReturnType( Expr callee )
-		{
-			if( callee is IdExpr id && result.TryGetResolved( id, out Decl? d1 ) && d1 is Func f1 )
-				return f1.retType;
-
-			if( callee is ScopedExpr scoped && result.TryGetResolved( scoped, out Decl? d2 ) && d2 is Func f2 )
-				return f2.retType;
-
-			if( callee is BinOp binOp
-			 && binOp.right is IdExpr member
-			 && result.TryGetResolvedMember( member, out Decl? d3 )
-			 && d3 is Func f3 )
-				return f3.retType;
-
-			return null;
-		}
-
-		private static Typespec? InferLiteralType( Literal lit )
-		{
-			string t = lit.text;
-
-			if( t.Length >= 2 && t[0] == '"' && t[t.Length - 1] == '"' )
-				return new TypespecBasic { kind = TypespecBasic.Kind.String, size = TypespecBasic.SizeUndetermined };
-
-			if( t.Length >= 3 && t[0] == '\'' && t[t.Length - 1] == '\'' )
-				return new TypespecBasic { kind = TypespecBasic.Kind.Char, size = 1 };
-
-			if( t == "true" || t == "false" )
-				return new TypespecBasic { kind = TypespecBasic.Kind.Bool, size = 1 };
-
-			if( t.EndsWith( "f", StringComparison.OrdinalIgnoreCase )
-			 || t.Contains( "." )
-			 || t.Contains( "e", StringComparison.OrdinalIgnoreCase ) )
-				return new TypespecBasic { kind = TypespecBasic.Kind.Float, size = 4 };
-
-			if( t.EndsWith( "u", StringComparison.OrdinalIgnoreCase )
-			 || t.EndsWith( "ul", StringComparison.OrdinalIgnoreCase )
-			 || t.EndsWith( "lu", StringComparison.OrdinalIgnoreCase ) )
-				return new TypespecBasic { kind = TypespecBasic.Kind.Unsigned, size = 4 };
-
-			return new TypespecBasic { kind = TypespecBasic.Kind.Integer, size = 4 };
-		}
-
-		private static bool IsMemberAccessOperation( Operand op )
-			=> op is Operand.MemberAccess
-			|| op is Operand.NCMemberAccess
-			|| op is Operand.MemberPtrAccess
-			|| op is Operand.MemberAccessPtr
-			|| op is Operand.NCMemberAccessPtr
-			|| op is Operand.MemberPtrAccessPtr;
 
 		private bool ResolveUsings( GlobalNamespace module, CompilationContext context )
 		{

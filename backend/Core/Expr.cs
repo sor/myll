@@ -178,6 +178,12 @@ namespace Myll.Core
 				? value
 				: PrecedenceLevel;
 
+		/// <summary>
+		/// The static type of this expression, computed by the type-resolution pass after
+		/// name resolution has converged. Null if the type could not be determined.
+		/// </summary>
+		public Typespec? Type { get; set; }
+
 		[Pure]
 		public override string ToString()
 		{
