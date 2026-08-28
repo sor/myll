@@ -48,6 +48,8 @@ namespace Myll.Resolver
 					continue; // arity mismatch is already reported by overload resolution
 
 				for( int i = 0; i < paras.Count; i++ ) {
+					ValidateExpression( call.Call.args[i].expr );
+
 					Typespec? argType = typeResolver.Resolve( call.Call.args[i].expr );
 					if( argType == null )
 						continue; // cannot determine argument type yet
@@ -130,8 +132,11 @@ namespace Myll.Resolver
 					break;
 
 				case ExprStmt exprStmt: {
+					ValidateExpression( exprStmt.expr );
+
 					if( exprStmt.expr is BinOp { op: Operand.Equal } assign )
 						CheckAssignment( assign.left, assign.right, assign.right.srcPos );
+
 					break;
 				}
 
@@ -221,6 +226,8 @@ namespace Myll.Resolver
 				return;
 			}
 
+			ValidateExpression( ret.expr );
+
 			Typespec? actual = typeResolver.Resolve( ret.expr );
 			if( actual == null )
 				return;
@@ -252,6 +259,8 @@ namespace Myll.Resolver
 			Typespec? leftType  = typeResolver.Resolve( left );
 			Typespec? rightType = typeResolver.Resolve( right );
 
+			ValidateExpression( right );
+
 			if( leftType == null || rightType == null )
 				return;
 
@@ -268,6 +277,8 @@ namespace Myll.Resolver
 
 		private void CheckAssignment( Typespec leftType, Expr right, SrcPos srcPos )
 		{
+			ValidateExpression( right );
+
 			Typespec? rightType = typeResolver.Resolve( right );
 			if( rightType == null )
 				return;
@@ -325,6 +336,29 @@ namespace Myll.Resolver
 				return false;
 
 			return basic.kind == TypespecBasic.Kind.Bool && ( type.ptrs == null || type.ptrs.Count == 0 );
+		}
+
+		private void ValidateExpression( Expr expr )
+		{
+			switch( expr ) {
+				case TernOp tern: {
+					ValidateCondition( tern.left, tern.left.srcPos, "?:" );
+					ValidateExpression( tern.mid );
+					ValidateExpression( tern.right );
+					break;
+				}
+
+				case BinOp binOp when binOp.op is Operand.And or Operand.Or: {
+					CheckBooleanOperand( binOp.left, binOp.op.ToString().ToLowerInvariant() );
+					CheckBooleanOperand( binOp.right, binOp.op.ToString().ToLowerInvariant() );
+					break;
+				}
+
+				case UnOp unOp when unOp.op == Operand.Negation: {
+					CheckBooleanOperand( unOp.expr, "!" );
+					break;
+				}
+			}
 		}
 
 		private static Typespec? InferAutoType( Typespec? initType )
