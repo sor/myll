@@ -105,6 +105,24 @@ namespace Myll
 
 			return ret;
 		}
+		private void ValidateForwardDeclaration( Decl decl )
+		{
+			if( !decl.IsForwardDeclaration )
+				return;
+
+			if( Context.IsPrototypeFile )
+				return;
+
+			if( decl.IsExternal )
+				return;
+
+			if( scopeStack.Peek().decl is Hierarchical h && h.IsExternal )
+				return;
+
+			throw new InvalidOperationException(
+				"Forward declarations are only allowed in .decl.myll/.d.myll files, [extern] contexts, or OOP special members." );
+		}
+
 		public override Decl VisitAttrUsing(	AttrUsingContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defUsing(), c.attrUsing(), c.COLON() != null )!;
 		public override Decl VisitAttrAlias(	AttrAliasContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defAlias(), c.attrAlias(), c.COLON() != null )!;
 		public override Decl VisitAttrConvert(	AttrConvertContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defConvert(), c.attrConvert(), c.COLON() != null )!;
@@ -256,6 +274,7 @@ namespace Myll
 			// add new namespaces to hierarchy
 			bool withBody = (c.SEMI()  == null
 			              && c.COLON() == null);
+			bool isForwardSemi = c.SEMI() != null;
 			foreach( IdContext id in c.id() ) {
 				Namespace ns = new() {
 					srcPos   = id.ToSrcPos(),
@@ -264,19 +283,28 @@ namespace Myll
 				};
 				if( earlyAttribs != null )
 					ns.AssignAttribs( earlyAttribs );
+				ns.IsForwardDeclaration = isForwardSemi;
 				PushScope( ns );
 				ret ??= ns;
 			}
 
-			// only visit children and remove hierarchy with then
 			if( withBody ) {
+				// visit children and remove hierarchy afterwards
 				c.decl().Select( Visit ).Exec();
 
 				// wrong order but irrelevant now
 				foreach( IdContext unused in c.id() )
 					PopScope();
 			}
+			else if( isForwardSemi ) {
+				// `namespace N;` is a forward declaration only: it does not
+				// scope the rest of the file. Use `namespace N:` for that.
+				foreach( IdContext unused in c.id() )
+					PopScope();
+			}
+			// else COLON: leave the namespace scope open for following decls
 
+			ValidateForwardDeclaration( ret! );
 			return ret!;
 		}
 
@@ -346,14 +374,23 @@ namespace Myll
 				access   = curAccess,
 				baseType = (c.bases != null) ? VisitTypespecBasic( c.bases ) : null,
 			};
-			// do not reset curAccess because there is no change inside enums
-			PushScope( ret );
-			{
-				if( c.idExprs() != null )
-					AddChildren( VisitEnumEntrys( c.idExprs() ) );
-			}
-			PopScope();
 
+			if( c.LCURLY() != null ) {
+				// do not reset curAccess because there is no change inside enums
+				PushScope( ret );
+				{
+					if( c.idExprs() != null )
+						AddChildren( VisitEnumEntrys( c.idExprs() ) );
+				}
+				PopScope();
+			}
+			else {
+				ret.IsForwardDeclaration = true;
+				PushScope( ret );
+				PopScope();
+			}
+
+			ValidateForwardDeclaration( ret );
 			return ret;
 		}
 
@@ -376,19 +413,27 @@ namespace Myll
 			if( earlyAttribs != null )
 				ret.AssignAttribs( earlyAttribs );
 
-			PushScope( ret );
-			{
-				// HACK: will be buggy. needs to move to ScopeStack, when ScopeStack works.
-				// turns out to be not so buggy after all...
-				Access savedAccess = curAccess;
-				curAccess = ret.defaultAccess;
+			if( c.LCURLY() != null ) {
+				PushScope( ret );
+				{
+					// HACK: will be buggy. needs to move to ScopeStack, when ScopeStack works.
+					// turns out to be not so buggy after all...
+					Access savedAccess = curAccess;
+					curAccess = ret.defaultAccess;
 
-				c.decl().Select( Visit ).Exec();
+					c.decl().Select( Visit ).Exec();
 
-				curAccess = savedAccess;
+					curAccess = savedAccess;
+				}
+				PopScope();
 			}
-			PopScope();
+			else {
+				ret.IsForwardDeclaration = true;
+				PushScope( ret );
+				PopScope();
+			}
 
+			ValidateForwardDeclaration( ret );
 			return ret;
 		}
 
@@ -530,12 +575,28 @@ namespace Myll
 				VisitTypespecsNested( c.typespecsNested() ) );
 
 			AddParamsToScope( ret.paras );
-			ret.body = c.funcBody().Visit( Context );
+			MultiStmt body = c.funcBody().Visit( Context );
+			if( IsEmptyFunctionBody( body ) ) {
+				ret.IsForwardDeclaration = true;
+				ret.body = null;
+			}
+			else {
+				ret.body = body;
+			}
 
 			PopScope();
 			AddChild( ret );
+			ValidateForwardDeclaration( ret );
 
 			return ret;
+		}
+
+		private static bool IsEmptyFunctionBody( MultiStmt body )
+		{
+			// An empty body is only a forward declaration if the function was
+			// written with a bare semicolon body (func f();), not with empty
+			// braces (func f() {}).
+			return body.stmts.Count == 1 && body.stmts[0] is EmptyStmt;
 		}
 
 		// no override

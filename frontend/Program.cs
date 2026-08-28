@@ -160,6 +160,13 @@ namespace Myll
 
 		private static IEnumerable<string> CollectExternFiles( Options opt )
 		{
+			string? repoRoot = TryGetRepoRoot();
+			if( repoRoot != null ) {
+				string stdDir = Path.Combine( repoRoot, "std" );
+				foreach( string file in EnumeratePrototypeFiles( stdDir ) )
+					yield return file;
+			}
+
 			IEnumerable<string> candidates;
 			if( opt.ExternDirs.Any() ) {
 				candidates = opt.ExternDirs;
@@ -174,16 +181,28 @@ namespace Myll
 
 			foreach( string dir in candidates ) {
 				string externDir = opt.ExternDirs.Any() ? dir : Path.Combine( dir, "extern" );
-				if( !Directory.Exists( externDir ) )
-					continue;
-
-				foreach( string file in Directory.EnumerateFiles( externDir, "*.d.myll" ) )
-					yield return file;
-				foreach( string file in Directory.EnumerateFiles( externDir, "*.decl.myll" ) )
-					yield return file;
-				foreach( string file in Directory.EnumerateFiles( externDir, "*.extern.myll" ) )
+				foreach( string file in EnumeratePrototypeFiles( externDir ) )
 					yield return file;
 			}
+		}
+
+		private static string? TryGetRepoRoot()
+		{
+			DirectoryInfo? di = new DirectoryInfo( AppContext.BaseDirectory ).Parent?.Parent?.Parent?.Parent;
+			return di?.FullName;
+		}
+
+		private static IEnumerable<string> EnumeratePrototypeFiles( string dir )
+		{
+			if( !Directory.Exists( dir ) )
+				yield break;
+
+			foreach( string file in Directory.EnumerateFiles( dir, "*.d.myll" ) )
+				yield return file;
+			foreach( string file in Directory.EnumerateFiles( dir, "*.decl.myll" ) )
+				yield return file;
+			foreach( string file in Directory.EnumerateFiles( dir, "*.extern.myll" ) )
+				yield return file;
 		}
 
 		private static bool IsPrototypeFile( string path )

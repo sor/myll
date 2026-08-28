@@ -65,7 +65,7 @@ declAlias	:	ALIAS		( defAlias		| LCURLY attrAlias*		RCURLY	);
 declAspect	:	ASPECT		( defAspect										);
 declConcept	:	CONCEPT		( defConcept									);
 declEnum	:	ENUM		( defEnum										);
-declStruct	:	kindOfStruct( defStruct										);
+declStruct	:	kindOfStruct( defStruct											);
 declConvert	:	CONVERT		( defConvert	| LCURLY attrConvert*	RCURLY	);
 declCtor	:	CTOR		( defCtor		| LCURLY attrCtor*		RCURLY	);
 declDtor	:	DTOR		( defDtor										);
@@ -93,11 +93,17 @@ defConcept	:	id	tplParams?		// TODO
 					LCURLY	decl*		RCURLY;
 defEnum		:	id
 				(COLON		bases=typespecBasic)?	// TODO: enum inheritance
-					LCURLY	idExprs?	RCURLY;
+				(
+					LCURLY	idExprs?	RCURLY
+				|	SEMI
+				);
 defStruct	:	id	tplParams?
 				(COLON		bases=typespecsNested)?
 				(REQUIRES 	reqs=typespecsNested)?	// TODO: should this rather be "expr" instead of typespecsNested?
-					LCURLY	decl*		RCURLY	SEMI?;
+				(
+					LCURLY	decl*		RCURLY	SEMI?
+				|	SEMI
+				);
 
 // convert is implicit by default?
 // ctor    is explicit by default?

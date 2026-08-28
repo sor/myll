@@ -5,7 +5,7 @@
 import std_thread;
 //import std_iostream;
 
-namespace JanSordid;
+namespace JanSordid:
 
 class GameOfLife
 {

@@ -14,6 +14,23 @@ namespace Myll.Resolver
 			"false",
 		};
 
+		private static readonly HashSet<string> BuiltInTypes = new( StringComparer.Ordinal ) {
+			"void",
+			"bool",
+			"char",
+			"short",
+			"int",
+			"long",
+			"float",
+			"double",
+			"auto",
+			"string",
+			"byte",
+			"int", "uint",
+			"i8", "i16", "i32", "i64",
+			"u8", "u16", "u32", "u64",
+		};
+
 		private static readonly Decl BuiltInDecl = new VarDecl {
 			name   = "<builtin>",
 			access = Access.Public,
@@ -154,7 +171,8 @@ namespace Myll.Resolver
 			Decl?   current = LookupNameInScope( first, startScope )
 			               ?? LookupInImports( first, module );
 			if( current == null ) {
-				if( segments.Count == 1 && BuiltInIdentifiers.Contains( first ) )
+				if( segments.Count == 1
+				 && (BuiltInIdentifiers.Contains( first ) || BuiltInTypes.Contains( first )) )
 					return BuiltInDecl;
 
 				unresolvedSegmentIndex = 0;
