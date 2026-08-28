@@ -90,8 +90,8 @@ namespace Myll
 
 		private static MyllParser CreateParser( string filename )
 		{
-			StreamReader      reader      = new( filename );
-			AntlrInputStream  inputStream = new( reader ) { name = filename };
+			string            text        = File.ReadAllText( filename );
+			AntlrInputStream  inputStream = new( text ) { name = filename };
 			MyllLexer         lexer       = new( inputStream );
 			lexer.RemoveErrorListeners();
 			lexer.AddErrorListener( LexerConsoleErrorListener.Instance );

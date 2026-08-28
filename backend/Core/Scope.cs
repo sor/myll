@@ -17,7 +17,14 @@ namespace Myll.Core
 	public class Scope : ScopeLeaf
 	{
 		public Scope UpToGlobal    => parent?.UpToGlobal ?? this;
-		public Scope UpToNamespace => decl is Namespace ? this : parent?.UpToNamespace ?? this;
+
+		/// <summary>
+		/// Returns the nearest enclosing namespace scope, or the global scope if no
+		/// namespace ancestor exists. Never returns a non-namespace intermediate scope.
+		/// </summary>
+		public Scope UpToNamespace
+			=> decl is Namespace     ?  this
+			 : parent?.UpToNamespace ?? UpToGlobal;
 
 		// opt
 		public new Hierarchical? decl {

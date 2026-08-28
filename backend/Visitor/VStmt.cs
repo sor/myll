@@ -261,7 +261,26 @@ namespace Myll
 			=> throw new NotImplementedException( "defer is not implemented yet" );
 
 		public override Stmt VisitStmtReturnIf( StmtReturnIfContext c )
-			=> throw new NotImplementedException( "do return if is not implemented yet" );
+		{
+			ExprContext[] exprs = c.expr();
+
+			// `do return <expr>? if( <cond> );` — the first expr is optional, the second is
+			// the condition. If only one expr is present, it is the condition.
+			Expr? returnExpr = exprs.Length > 1 ? exprs[0].Visit( Context ) : null;
+			Expr  condition  = exprs.Length > 1 ? exprs[1].Visit( Context ) : exprs[0].Visit( Context );
+
+			return new IfStmt {
+				srcPos   = c.ToSrcPos(),
+				ifThens  = new() {
+					new IfStmt.CondThen(
+						condition,
+						new ReturnStmt {
+							srcPos = returnExpr?.srcPos ?? c.ToSrcPos(),
+							expr   = returnExpr,
+						} ),
+				},
+			};
+		}
 
 		public override TryCatchStmt VisitStmtTryCatch( StmtTryCatchContext c )
 		{

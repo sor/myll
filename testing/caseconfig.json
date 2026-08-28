@@ -8,7 +8,7 @@
       "gol": 30
     }
   },
-  "myllCompileRun": [ "enum", "func", "ct", "globals", "class_ctor" ],
+  "myllCompileRun": [ "enum", "func", "ct", "globals", "class_ctor", "return_if" ],
   "noResolve": [],
   "depth": {
     "generateFailing": [ "overload_fail", "typecheck_fail", "bool_context_fail" ],
