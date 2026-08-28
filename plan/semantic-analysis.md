@@ -12,12 +12,13 @@ This plan describes the long-term goal of turning Myll from a syntax-to-C++ tran
 - Cross-module namespace merging is supported: the same namespace declared in multiple imported modules resolves to one logical namespace.
 - Ambiguous names are reported as diagnostics.
 - Declarations remember their scope leaf via `Decl.scope`.
-- The C++ generator consumes `ResolutionResult` for `TypespecNested` and `ScopedExpr`; `IdExpr.resolvedDecl` is recorded but not yet used for member access.
+- The C++ generator consumes `ResolutionResult` for `TypespecNested` and `ScopedExpr`; `IdExpr.resolvedDecl` is recorded and used by overload resolution and member-access disambiguation.
 - `backend/Core/Symbol.cs` and `backend/Core/Attribute.cs` remain disconnected stubs for a future stable design.
 
 ## What is missing
 
-- Type checking and overload resolution.
+- Full type checking beyond overload argument matching (assignments, returns, implicit conversions, narrowing diagnostics).
+- Overload resolution still needs implicit promotion/conversion ranks and clear ambiguity/no-match diagnostics.
 - Using resolved targets for unqualified `IdExpr` generation.
 - Moving semantic validation out of the generator and into resolver/validation passes.
 

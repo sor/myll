@@ -61,16 +61,17 @@ namespace Myll.Resolver
 			var resolver    = new NameResolver( exports, result, diagnostics );
 
 		bool progress;
-		do {
-			progress = false;
-			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
-				progress |= resolver.ResolveUsings( module, context );
-				progress |= resolver.ResolveIds( module, context );
-				progress |= resolver.ResolveScopeds( module, context );
-				progress |= resolver.ResolveTypes( module, context );
-				progress |= resolver.ResolveMemberAccesses( module, context );
-			}
-		} while( progress );
+			do {
+				progress = false;
+				foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+					progress |= resolver.ResolveUsings( module, context );
+					progress |= resolver.ResolveIds( module, context );
+					progress |= resolver.ResolveScopeds( module, context );
+					progress |= resolver.ResolveTypes( module, context );
+					progress |= resolver.ResolveMemberAccesses( module, context );
+					progress |= resolver.ResolveCalls( module, context );
+				}
+			} while( progress );
 
 		resolver.ReportUnresolved( modules );
 
@@ -185,6 +186,278 @@ namespace Myll.Resolver
 
 			return progress;
 		}
+
+		private bool ResolveCalls( GlobalNamespace module, CompilationContext context )
+		{
+			bool progress = false;
+			foreach( UnresolvedCall call in context.UnresolvedCalls ) {
+				progress |= ResolveSingleCall( call, module );
+			}
+
+			return progress;
+		}
+
+		private bool ResolveSingleCall( UnresolvedCall call, GlobalNamespace module )
+		{
+			switch( call.Callee ) {
+				case IdExpr id: {
+					if( result.Ids.ContainsKey( id ) )
+						return false;
+
+					List<Decl> candidates = LookupNameCandidates( id.idTplArgs.id, call.Scope, module );
+					Decl? chosen = TryResolveOverload( candidates, call.Call, call.Scope, module );
+					if( chosen == null )
+						return false;
+
+					result.Resolve( id, chosen );
+					return true;
+				}
+				case ScopedExpr scoped: {
+					if( result.Scopeds.ContainsKey( scoped ) )
+						return false;
+
+					Decl? chosen = ResolveScopedCallOverload( scoped, call.Call, call.Scope, module );
+					if( chosen == null )
+						return false;
+
+					result.Resolve( scoped, chosen );
+					return true;
+				}
+				case BinOp binOp when IsMemberAccessOperation( binOp.op ): {
+					if( binOp.right is not IdExpr member )
+						return false;
+
+					if( result.Members.ContainsKey( member ) )
+						return false;
+
+					if( !TryGetMemberAccessBaseType( binOp.left, call.Scope, out Hierarchical? baseType ) )
+						return false;
+
+					List<Decl> candidates = LookupInHierarchicalCandidates(
+						member.idTplArgs.id, baseType, module );
+					Decl? chosen = TryResolveOverload( candidates, call.Call, call.Scope, module );
+					if( chosen == null )
+						return false;
+
+					result.ResolveMember( member, chosen );
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		private Decl? ResolveScopedCallOverload(
+			ScopedExpr      scoped,
+			FuncCall        call,
+			Scope           scope,
+			GlobalNamespace module )
+		{
+			IReadOnlyList<IdTplArgs> segments = scoped.idTpls;
+			if( segments.Count == 0 )
+				return null;
+
+			List<IdTplArgs> prefix = segments.Take( segments.Count - 1 ).ToList();
+			Decl? prefixDecl = null;
+			if( prefix.Count > 0 ) {
+				prefixDecl = ResolvePath( prefix, scope, module, out _, callSite: false );
+				if( prefixDecl == null || prefixDecl is not Hierarchical h )
+					return null;
+
+				List<Decl> candidates = LookupInHierarchicalCandidates(
+					segments.Last().id, h, module );
+				return TryResolveOverload( candidates, call, scope, module );
+			}
+
+			// Single-segment scoped call: treat like an unqualified name.
+			List<Decl> single = LookupNameCandidates( segments[0].id, scope, module );
+			return TryResolveOverload( single, call, scope, module );
+		}
+
+		private Decl? TryResolveOverload(
+			List<Decl>      candidates,
+			FuncCall        call,
+			Scope           scope,
+			GlobalNamespace module )
+		{
+			List<Decl> callable = candidates
+				.Where( d => d is Func or Structor )
+				.ToList();
+
+			if( callable.Count == 0 )
+				return null;
+
+			// Prefer an arity match first; if only one candidate has the right arity, pick it.
+			List<Decl> sameArity = callable
+				.Where( d => GetParamCount( d ) == call.args.Count )
+				.ToList();
+
+			if( sameArity.Count == 0 )
+				return null;
+
+			if( sameArity.Count == 1 )
+				return sameArity[0];
+
+			// Multiple candidates with the same arity: try an exact argument-type match.
+			List<Typespec?> argTypes = call.args
+				.Select( a => InferExprType( a.expr, scope, module ) )
+				.ToList();
+
+			List<Decl> exactMatches = sameArity
+				.Where( d => MatchesExactly( d, argTypes ) )
+				.ToList();
+
+			if( exactMatches.Count == 1 )
+				return exactMatches[0];
+
+			// TODO: report ambiguous / no viable overload diagnostics here.
+			return null;
+		}
+
+		private static int GetParamCount( Decl decl )
+			=> decl switch {
+				Func func      => func.paras.Count,
+				Structor stc   => stc.paras.Count,
+				_              => -1,
+			};
+
+		private static bool MatchesExactly( Decl decl, IReadOnlyList<Typespec?> argTypes )
+		{
+			List<Param> paras = decl switch {
+				Func func      => func.paras,
+				Structor stc   => stc.paras,
+				_              => new List<Param>(),
+			};
+
+			if( paras.Count != argTypes.Count )
+				return false;
+
+			for( int i = 0; i < paras.Count; i++ ) {
+				Typespec? argType = argTypes[i];
+				if( argType == null )
+					return false;
+
+				if( paras[i].type.GenType() != argType.GenType() )
+					return false;
+			}
+
+			return true;
+		}
+
+		private Typespec? InferExprType( Expr expr, Scope scope, GlobalNamespace module )
+		{
+			switch( expr ) {
+				case Literal lit:
+					return InferLiteralType( lit );
+
+				case IdExpr id: {
+					if( id.idTplArgs.id == "self" ) {
+						Hierarchical? selfType = FindEnclosingStructural( scope );
+						if( selfType == null )
+							return null;
+
+						return new TypespecNested {
+							resolvedDecl = selfType,
+							idTpls       = new() { new() { id = selfType.name } },
+						};
+					}
+
+					if( !result.TryGetResolved( id, out Decl? decl ) )
+						return null;
+
+					if( decl is VarDecl vd )
+						return vd.type;
+					if( decl is Func f )
+						return f.retType;
+					return null;
+				}
+
+				case ScopedExpr scoped: {
+					if( !result.TryGetResolved( scoped, out Decl? decl ) )
+						return null;
+
+					if( decl is VarDecl vd )
+						return vd.type;
+					if( decl is Func f )
+						return f.retType;
+					return null;
+				}
+
+				case BinOp binOp when IsMemberAccessOperation( binOp.op ): {
+					if( binOp.right is not IdExpr member )
+						return null;
+
+					if( !result.TryGetResolvedMember( member, out Decl? decl ) )
+						return null;
+
+					if( decl is VarDecl vd )
+						return vd.type;
+					if( decl is Func f )
+						return f.retType;
+					return null;
+				}
+
+				case FuncCallExpr callExpr:
+					return InferCallReturnType( callExpr.expr );
+
+				case NewExpr newExpr:
+					return newExpr.type;
+
+				default:
+					return null;
+			}
+		}
+
+		private Typespec? InferCallReturnType( Expr callee )
+		{
+			if( callee is IdExpr id && result.TryGetResolved( id, out Decl? d1 ) && d1 is Func f1 )
+				return f1.retType;
+
+			if( callee is ScopedExpr scoped && result.TryGetResolved( scoped, out Decl? d2 ) && d2 is Func f2 )
+				return f2.retType;
+
+			if( callee is BinOp binOp
+			 && binOp.right is IdExpr member
+			 && result.TryGetResolvedMember( member, out Decl? d3 )
+			 && d3 is Func f3 )
+				return f3.retType;
+
+			return null;
+		}
+
+		private static Typespec? InferLiteralType( Literal lit )
+		{
+			string t = lit.text;
+
+			if( t.Length >= 2 && t[0] == '"' && t[t.Length - 1] == '"' )
+				return new TypespecBasic { kind = TypespecBasic.Kind.String, size = TypespecBasic.SizeUndetermined };
+
+			if( t.Length >= 3 && t[0] == '\'' && t[t.Length - 1] == '\'' )
+				return new TypespecBasic { kind = TypespecBasic.Kind.Char, size = 1 };
+
+			if( t == "true" || t == "false" )
+				return new TypespecBasic { kind = TypespecBasic.Kind.Bool, size = 1 };
+
+			if( t.EndsWith( "f", StringComparison.OrdinalIgnoreCase )
+			 || t.Contains( "." )
+			 || t.Contains( "e", StringComparison.OrdinalIgnoreCase ) )
+				return new TypespecBasic { kind = TypespecBasic.Kind.Float, size = 4 };
+
+			if( t.EndsWith( "u", StringComparison.OrdinalIgnoreCase )
+			 || t.EndsWith( "ul", StringComparison.OrdinalIgnoreCase )
+			 || t.EndsWith( "lu", StringComparison.OrdinalIgnoreCase ) )
+				return new TypespecBasic { kind = TypespecBasic.Kind.Unsigned, size = 4 };
+
+			return new TypespecBasic { kind = TypespecBasic.Kind.Integer, size = 4 };
+		}
+
+		private static bool IsMemberAccessOperation( Operand op )
+			=> op is Operand.MemberAccess
+			|| op is Operand.NCMemberAccess
+			|| op is Operand.MemberPtrAccess
+			|| op is Operand.MemberAccessPtr
+			|| op is Operand.NCMemberAccessPtr
+			|| op is Operand.MemberPtrAccessPtr;
 
 		private bool ResolveUsings( GlobalNamespace module, CompilationContext context )
 		{

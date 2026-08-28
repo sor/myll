@@ -11,4 +11,6 @@ namespace Myll.Resolver
 	public sealed record UnresolvedUsing( UsingDecl Node, Scope Scope );
 
 	public sealed record UnresolvedMemberAccess( BinOp Node, Scope Scope );
+
+	public sealed record UnresolvedCall( Expr Callee, FuncCall Call, Scope Scope );
 }

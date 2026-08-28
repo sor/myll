@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Antlr4.Runtime.Tree;
 using Myll.Core;
+using Myll.Resolver;
 
 using static Myll.MyllParser;
 
@@ -53,10 +54,12 @@ namespace Myll
 			}
 			else if( c.funcCall() != null ) {
 				Context.FuncCallCallees.Add( left );
+				FuncCall funcCall = VisitFuncCall( c.funcCall() );
+				Context.UnresolvedCalls.Add( new UnresolvedCall( left, funcCall, Context.ScopeStack.Peek() ) );
 				ret = new FuncCallExpr {
 					op       = c.funcCall().ary.ToOp(),
 					expr     = left,
-					funcCall = VisitFuncCall( c.funcCall() ),
+					funcCall = funcCall,
 				};
 			}
 			else if( c.indexCall() != null ) {

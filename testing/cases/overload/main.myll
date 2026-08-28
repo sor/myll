@@ -1,0 +1,42 @@
+module main;
+
+class Gadget
+{
+	field int _id;
+
+[pub]:
+	ctor( int value ) { _id = value; }
+	ctor( f32 f )     { _id = 100; }
+
+	method id() -> int => _id;
+
+	method tag() -> int => _id * 10;
+	method tag( int bump ) -> int => tag() + bump;
+}
+
+func dispatch( int x ) -> int => 10;
+func dispatch( f32 x ) -> int => 20;
+
+func main() -> int
+{
+	var Gadget gi = Gadget( 1 );      // ctor(int)
+	var Gadget gf = Gadget( 1.0f );   // ctor(f32)
+
+	if( gi.id() != 1 ) return 1;
+	if( gf.id() != 100 ) return 2;
+
+	// member access overloads (value)
+	if( gi.tag( 7 ) != 17 ) return 3;   // tag(int): 1*10 + 7
+	if( gf.tag() != 1000 ) return 4;    // tag():    100*10
+
+	// free-function overloads
+	if( dispatch( 3 ) != 10 ) return 5;      // dispatch(int)
+	if( dispatch( 3.0f ) != 20 ) return 6;   // dispatch(f32)
+
+	// member access overloads through pointer
+	var Gadget * gp = new Gadget( 2 );
+	if( gp->tag() != 20 ) return 7;     // tag()
+	if( gp->tag( 3 ) != 23 ) return 8;  // tag(int): 2*10 + 3
+
+	return 0;
+}

@@ -14,10 +14,13 @@ This is the overarching long-term goal that blocks many smaller features. Finish
 - `backend/Core/Symbol.cs` and `backend/Core/Attribute.cs` remain disconnected stubs for a future stable design.
 
 What finishing this would unlock:
-- Type checking and overload resolution.
+- Type checking (partially started) and overload resolution (exact-match overloads implemented).
 - Clean semantic errors with source locations.
 - Type-driven disambiguation in the generator (e.g. `enum` inheritance, operator synthesis, `convert`).
 - Remove the provisional duplicate-name check in `backend/Generator/HierachicalGen.cs`.
+
+Completed endboss pieces:
+- Overload resolution for unqualified, member-access (including through pointers), and scoped call sites; arity + exact argument-type match. End-to-end test: `testing/cases/overload/`.
 
 See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` inheritance) and `docs/analysis/07-future-stubs.md` for related context.
 

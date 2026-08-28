@@ -32,6 +32,12 @@ namespace Myll
 		/// </summary>
 		public HashSet<Expr> FuncCallCallees { get; } = new();
 
+		/// <summary>
+		/// Function/constructor call sites together with their callee expression and argument list.
+		/// Used by overload resolution to pick the right overload once argument types are known.
+		/// </summary>
+		public List<UnresolvedCall> UnresolvedCalls { get; } = new();
+
 		public CompilationContext()
 		{
 			ExprVisitor = new ExprVisitor( this );
