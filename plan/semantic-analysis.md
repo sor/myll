@@ -8,17 +8,19 @@ This plan describes the long-term goal of turning Myll from a syntax-to-C++ tran
 - `backend/Visitor/VMain.cs` has push/pop helpers and builds a scope tree per module.
 - `backend/CompilationContext.cs` owns visitor instances and the scope stack for one module. The static `ScopeStack` in `VisitorExtensions` has been removed.
 - `backend/Resolver/` contains `Diagnostic`, `ResolutionResult`, `UnresolvedId`, `UnresolvedType`, and `NameResolver`.
-- The resolver can resolve single-segment identifiers and type names within a module and across direct imports, including cyclic imports.
+- The resolver can resolve single-segment identifiers and type names within a module and across direct imports, including cyclic imports, qualified paths (`A::B::C`), and `using namespace` / `using Name` directives.
+- Cross-module namespace merging is supported: the same namespace declared in multiple imported modules resolves to one logical namespace.
+- Ambiguous names are reported as diagnostics.
 - Declarations remember their scope leaf via `Decl.scope`.
-- `backend/Core/Symbol.cs` and `backend/Core/Attribute.cs` are disconnected stubs kept for future reference.
+- The C++ generator consumes `ResolutionResult` for `TypespecNested` and `ScopedExpr`; `IdExpr.resolvedDecl` is recorded but not yet used for member access.
+- `backend/Core/Symbol.cs` and `backend/Core/Attribute.cs` remain disconnected stubs for a future stable design.
 
 ## What is missing
 
-- Qualified-name resolution (`std::vector`, `A::B`) for identifiers; types already parse as a path but are not resolved segment by segment.
-- Resolution of built-in namespaces such as `std`.
-- Scope tracking for parameters and local variables so function bodies can reference them.
+- Member access resolution (`my.method()`).
 - Type checking and overload resolution.
-- Wiring the resolver into the frontend pipeline; it is currently exercised only by unit tests.
+- Using resolved targets for unqualified `IdExpr` generation.
+- Moving semantic validation out of the generator and into resolver/validation passes.
 
 ## Module model
 
@@ -108,22 +110,28 @@ A sequential fixed-point resolver is the first target. The same input/output sha
    Each module builds its own AST + scope tree. Unresolved `IdExpr` and `TypespecNested` references are recorded in the context as they are created.
 
 3. **Sequential fixed-point resolver** ✅  
-   `NameResolver.Resolve` builds per-module export tables and resolves references in rounds until no module makes progress. It handles cyclic imports, qualified paths (`std::vector`, `A::B::C`), and produces `Diagnostic` records for unresolved names.
+   `NameResolver.Resolve` builds per-module export tables and resolves references in rounds until no module makes progress. It handles cyclic imports, qualified paths (`std::vector`, `A::B::C`), `using namespace` / `using Name`, cross-module namespace merging, and produces `Diagnostic` records for unresolved and ambiguous names.
 
 4. **Scope completeness** ✅  
    Function parameters, local `var` declarations, lambda parameters, catch-clause variables, and `times` loop index variables are added to the scope tree. Braced blocks introduce real scopes so locals do not leak.
 
 5. **Prototype / extern declaration files**  
-   Not done. See `plan/prototype-files.md`.
+   Partially done. Inline `[extern]` for classes/namespaces and `.decl.myll` discovery are implemented. Forward declarations in normal `.myll` are supported via optional bodies in `[extern]` contexts. See `plan/prototype-files.md`.
 
 6. **Member access resolution**  
    Not done. For `var MyClass my; my.hello();`, resolve `hello` in `MyClass`'s scope once the variable's type is known.
 
-7. **`using namespace` / `using Name`**  
-   Not done. `Scope.importedScopes` is already checked during lookup, but `using` declarations are not resolved and added yet.
+7. **`using namespace` / `using Name`** ✅  
+   Implemented. `using NS;` and `using NS::name;` are resolved, and namespace usings are emitted in generated C++.
 
-8. **C++ generation uses resolved AST**  
-   Not done. The resolver is currently exercised by unit tests only. Once the above items are reliable, wire it into the frontend and update code generation to consume the resolution map.
+8. **Cross-module namespace merging** ✅  
+   Implemented. Namespaces with the same fully qualified name declared in different imported modules are merged into one logical namespace.
+
+9. **Ambiguity diagnostics** ✅  
+   Implemented. `PickSingle` now reports ambiguous names instead of silently dropping them.
+
+10. **C++ generation uses resolved AST**  
+   Partially done. The generator consumes resolved declarations for `TypespecNested` and `ScopedExpr`; unqualified `IdExpr` still emits raw text. Resolver results are now passed through the default frontend pipeline.
 
 ## Relationship to existing stubs
 
@@ -160,10 +168,11 @@ A risk called **Resolvation-Misrouting** exists when resolution starts locally w
 ## Open questions
 
 1. **Linkage model**: work in progress on a different machine, not yet pushed. When it lands, revisit whether Myll should track ODR violations itself or continue delegating to the C++ compiler.
-2. **Import scope per module or per file**: is `import std_vector;` in one file of module `M` visible in other files of `M`?
+2. **Import scope per file**: imports are file-wide by default; module-wide imports may be supported as an interim step.
 3. **Export control beyond `[hide]`/`[hidden]`**: will there be explicit `export` keywords or attributes?
-4. **Built-ins**: which types/includes are implicit in every module and which require explicit import? For now, primitives are implicit; `<string>` and `<memory>` are default but dialect-mappable.
+4. **Built-ins**: primitives are implicit. `std` entities require an explicit `import std_*;` of the matching `.decl.myll` shim. `<string>` and `<memory>` are default but dialect-mappable.
 5. **Parallel resolution strategy**: keep the first resolver sequential but design it as a single-worker version of the future parallel batch resolver.
+6. **Overload and conversion rules**: C++-style overload resolution with safe promotions only; no narrowing conversions and no implicit float/integer cross-conversions.
 
 ## Related documents
 

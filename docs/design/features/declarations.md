@@ -131,16 +131,33 @@ union Value {
 
 ### Access Control
 
-```
-[pub]
-struct Point {
-    [priv]
-    internal_state: int;
+Access attributes work in two forms.
 
-    [pub]
-    method get_x() -> f64 { return x; }
+**Section form** applies a default access to all following members until another section changes it. This mirrors C++ `public:`, `private:`, `protected:` sections.
+
+```
+class Box {
+    // private by default
+    field i32 _x;
+
+[pub]:
+    method get_x() -> i32 { return _x; }
+
+[priv]:
+    method helper() -> void {}
 }
 ```
+
+**Per-declaration form** overrides the current section default for a single member.
+
+```
+class Box {
+    [priv] field i32 _x;
+    [pub]  method get_x() -> i32 { return _x; }
+}
+```
+
+Only `class`, `struct`, and `union` may contain access attributes. They are an error at module or namespace scope.
 
 ### Enum
 

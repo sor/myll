@@ -70,7 +70,9 @@ Status: Essential for understanding language scope. Reads as development scratch
 | **Syntax showcase** | `tests/mixed/testcase.myll` | Many features, much commented out |
 | **SDL presentation** | `tests/mixed/sheet*.myll` | Inheritance, override, arrays |
 | **Math functions** | `tests/mixed/plasma.myll` | `f32`, `sin`, `cos`, `sqrt` |
-| **Game of Life** | `tests/gol/game_of_life.myll`, `main.myll` | 2D arrays, nested loops, generics |
+| **Game of Life** | `tests/gol/game_of_life.myll`, `main.myll` | 2D arrays, nested loops, generics; blocked on member access in resolver |
+| **Using namespaces** | `testing/cases/using_ns/` | Cross-module namespace merging and `using NS;` end-to-end |
+| **Access modifiers** | `testing/cases/access_mods/` (planned) | 20+ member class mixing section and per-decl access |
 | **Thesis showcase** | `tests/thesis/main.myll` | 350-line comprehensive feature catalog |
 | **Parser stress test** | `tests/thesis/parsertest.myll` | Enums, structs, classes, templates, ctors, operators |
 | **Generic container** | `tests/thesis/container.myll` | `MyStack<T>` with `unique_ptr` |
@@ -82,6 +84,7 @@ Many test files contain **alternative syntax explorations** not documented elsew
 | Gap | Severity |
 |-----|----------|
 | **No automated test runner** | Critical |
+| **xUnit harness exists but only covers ported cases** | High |
 | **No validation for 80% of tests** | High |
 | **No negative/error tests** | High |
 | **No behavioral tests** (run generated code) | High |
@@ -132,7 +135,7 @@ Create a test runner that:
 
 Priority order:
 1. `enum/*.myll` — validate generated enum C++.
-2. `gol/*.myll` — compile and run, verify it produces a game of life grid.
+2. `gol/*.myll` — compile and run, verify it produces a game of life grid. Blocked on member access resolution.
 3. `mixed/enum.myll` — validate flags enum generation.
 4. `int/*.myll` — validate integer type mapping.
 5. `mixed/plasma.myll` — validate simple function generation.

@@ -37,9 +37,9 @@ This is a living document. Features marked [planned] exist in the grammar or des
 
 ### Types & Modifiers
 
-**Integer types:** `i8`, `i16`, `i32`, `i64`, `int`, `iptr` [planned], `isize`, `u8`, `u16`, `u32`, `u64`, `uint`, `uptr` [planned], `usize`
+**Integer types:** `i8`, `i16`, `i32`, `i64`, `int`, `iptr`, `isize`, `u8`, `u16`, `u32`, `u64`, `uint`, `uptr`, `usize`
 
-**Other types:** `auto`, `bool`, `char`, `codepoint` [planned], `f16`, `f32`, `f64`, `string`, `void`, `unit` [internal]
+**Other types:** `auto`, `bool`, `char`, `codepoint` [planned], `f16`, `f32`, `f64`, `f128` [planned], `string`, `void`, `unit` [internal]
 
 **Modifiers:** `const`, `mutable`, `stable`, `volatile`
 
@@ -64,10 +64,10 @@ namespace my_ns {
     // declarations
 }
 
-// Bodyless namespace declarations also supported
+// Bodyless namespace: scopes the rest of the file
 namespace my_ns:
 
-// Forward declarations (only in .decl.myll / [extern] / external contexts)
+// Forward namespace declaration (only in .decl.myll / [extern] / external contexts)
 namespace my_ns;
 ```
 
@@ -124,7 +124,7 @@ union Name {
 }
 ```
 
-Access control via attribute blocks: `[pub]`, `[priv]`, `[prot]`
+Access control via attributes: `[pub]`, `[priv]`, `[prot]`. They can be applied per-section (`[pub]:`) or per-declaration (`[pub] method f();`). Access attributes are valid only inside class/struct/union declarations.
 
 ### Enum Declarations
 
@@ -203,11 +203,12 @@ ctor Name(other: OtherType)          // converting
 | usize | varies | size_t |
 | f32 | 4 | float |
 | f64 | 8 | double |
+| f128 | 16 | __float128 / long double |
 | char | 1 | char |
 | string | varies | std::string |
 | auto | inferred | auto |
 
-`isize`, `usize`, and planned `iptr`/`uptr` vary with the target. On most systems their size equals the CPU bit-size in bytes.
+`isize`, `usize`, `iptr`, and `uptr` vary with the target. On most systems `iptr`/`uptr` are pointer-sized, while `isize`/`usize` are the corresponding signed/unsigned `size_t` family. `f128` is available only on targets that support an IEEE 128-bit float type.
 
 ### Pointer & Reference Types
 

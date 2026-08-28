@@ -42,22 +42,31 @@ declaration;
 - Visually distinct from other syntax.
 - Consistent with C# attributes (familiar to many developers).
 - Doesn't conflict with `<>` (templates) or `()` (arguments).
-
 ## Access Control via Attributes
 
-Instead of C++'s `public:`, `private:`, `protected:` sections:
+Myll replaces C++'s `public:`, `private:`, `protected:` sections with the same attribute syntax used everywhere else.
+
+**Section form** changes the default access for the following declarations:
 
 ```
-[pub]
-struct Point {
-    [priv]
-    x: int;
-    [pub]
-    method get_x() -> int;
+class Point {
+    x: f64;       // private by default in class
+
+[pub]:
+    method get_x() -> f64;
 }
 ```
 
-Attribute blocks can apply to multiple subsequent declarations until changed.
+**Per-declaration form** overrides the current section default for one declaration:
+
+```
+class Point {
+    [priv] x: f64;
+    [pub]  method get_x() -> f64;
+}
+```
+
+Access attributes are valid only inside `class`, `struct`, and `union` declarations.
 
 ## Complex Attributes
 

@@ -4,11 +4,11 @@ This document consolidates fixes across all layers, ranked by impact on future d
 
 ## 🔴 Critical — Blocks Progress
 
-### 1. Fix `EnumerateDF` for Loop Statements
+### 1. Fix `EnumerateDF` for Loop Statements — done
 
 **Files:** `backend/Core/Stmt.cs`
 **Impact:** Any analysis pass (symbol resolution, optimization, linting) silently skips loop bodies.
-**Estimated Effort:** 15 minutes
+**Status:** Fixed. Overrides added for `ForStmt`, `WhileStmt`, `DoWhileStmt`, and `TimesStmt`; unit tests added in `testing/LoopEnumerationTests.cs`.
 
 **Fix for `ForStmt`:**
 ```csharp
@@ -31,9 +31,7 @@ public override IEnumerable<Stmt> EnumerateDF {
 
 **File:** `backend/Core/Expr.cs`
 **Impact:** `type.ptrs.RemoveAt(0)` destroyed the AST for subsequent passes.
-**Status:** Fixed.
-
-**Fix:** `NewExpr.Gen()` now temporarily replaces `type.ptrs` with a copy that excludes the smart pointer and restores the original list after generation. Constructor arguments are passed to `std::make_unique` / `std::make_shared` for scalar smart pointers.
+**Status:** Fixed. `NewExpr.Gen()` now temporarily replaces `type.ptrs` with a copy that excludes the smart pointer and restores the original list after generation. Constructor arguments are passed to `std::make_unique` / `std::make_shared` for scalar smart pointers.
 
 ### 3. Fix `Scope.UpToNamespace()` NullReference
 
@@ -63,13 +61,16 @@ public override IEnumerable<Stmt> EnumerateDF {
 - **Remove `VisitLit` / `VisitLiteralExpr` duplication** in `VExpr.cs` — 15 minutes
 - **Consolidate `VisitDefVar`** — have `VStmt.VisitDefVar` delegate to a shared `BuildVarDecl()` method or to `VDecl` — 30 minutes
 
-### 6. Replace Mutable `curAccess` with Scope-Stack Tracking
+### 6. Replace Mutable `curAccess` with Decl-Level Access
 
-**File:** `backend/Visitor/VDecl.cs`
-**Impact:** Access modifiers are currently tracked as mutable field state. This is buggy for nested declarations.
+**File:** `backend/Visitor/VDecl.cs`, `backend/Core/Decl.cs`
+**Impact:** Access modifiers are currently tracked as mutable visitor field state. This is buggy for nested declarations and does not set per-declaration access.
 **Estimated Effort:** 30 minutes
 
-**Fix:** Track access in the scope stack or as an attribute on scope entries.
+**Fix:**
+- Parse per-declaration `[pub]`, `[priv]`, `[prot]` attributes directly onto the declaration.
+- Restrict access attributes to class/struct/union scope and report an error elsewhere.
+- Keep the section-form `[pub]:` / `[priv]:` / `[prot]:` as the current default that per-declaration attributes override.
 
 ### 7. Implement Missing Generator Methods
 
@@ -87,21 +88,11 @@ public override IEnumerable<Stmt> EnumerateDF {
 
 ## 🟢 Medium — Quality of Life Improvements
 
-### 9. Make Visitors Instance-Based
+### 9. Make Visitors Instance-Based — done
 
 **File:** `backend/Visitor/VExt.cs`
 **Impact:** Enables parallel parsing and testing isolation.
-**Estimated Effort:** 2–3 hours
-
-**Fix:**
-```csharp
-// Before (static):
-public static ExprVisitor ExprVis = new ExprVisitor();
-
-// After (instance):
-public ExprVisitor ExprVis { get; } = new ExprVisitor();
-// ScopeStack passed in constructor
-```
+**Status:** Fixed. `CompilationContext` per module owns visitor instances and the scope stack; all parser-context extension methods take an explicit `CompilationContext`.
 
 ### 10. Extract C++ Standard Library Names
 
@@ -166,14 +157,14 @@ public ExprVisitor ExprVis { get; } = new ExprVisitor();
 
 If implementing sequentially, the recommended order is:
 
-1. **Fix `EnumerateDF`** (critical bug) — 15 min
-2. **Fix `NewExpr.Gen()` mutation** (critical bug) — 15 min
+1. **Fix `EnumerateDF`** (critical bug) — 15 min — done
+2. **Fix `NewExpr.Gen()` mutation** (critical bug) — 15 min — done
 3. **Fix `Scope.UpToNamespace()` NRE** (crash prevention) — 10 min
 4. **Wire high-priority visitors** (`try/catch`, `defer`, `continue`) — 2–4 hours
-5. **Implement missing generator methods** (operators, accessors) — 3–8 hours
-6. **Reduce duplication** (`VisitLit`, `VisitDefVar`) — 45 min
-7. **Fix resource leaks** — 10 min
-8. **Make visitors instance-based** — 2–3 hours
+5. **Per-declaration access modifiers** — 30 min
+6. **Implement missing generator methods** (operators, accessors) — 3–8 hours
+7. **Reduce duplication** (`VisitLit`, `VisitDefVar`) — 45 min
+8. **Fix resource leaks** — 10 min
 9. **Build test harness** — 4–8 hours
 10. **Add CLI toolchain options** — 30 min
 11. **Extract stdlib names** — 1 hour

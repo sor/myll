@@ -59,10 +59,12 @@ namespace Graphics;
 
 ```
 using std::vector;       // bring specific name into scope
-using namespace std;     // bring all names [scope-limited]
+using std;               // bring all names from the namespace into the current scope
 ```
 
-Myll restricts `using namespace` to non-global scopes to prevent namespace pollution.
+Myll writes `using std::vector;` and `using namespace std;` in C++. When the target resolves to a namespace, `using NS;` becomes `using namespace NS;`; when it resolves to a specific declaration, it becomes `using NS::name;`.
+
+Using directives are currently supported inside function, namespace, and class/struct/union bodies. Global module-level `using namespace` is restricted to prevent namespace pollution.
 
 ## Future Directions
 

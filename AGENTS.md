@@ -190,7 +190,7 @@ Commented out code does not always mean that it is old or obsolete. Maybe it jus
 Before making changes, read these in `docs/analysis/`:
 
 1. **`Decl` inherits from `Stmt`** — widely considered the worst design decision. Future refactors should make them siblings under a common `Node` base. See `01-architecture.md`.
-2. **Static visitor state** — `VExt.cs` holds static `ScopeStack` and visitor instances. This makes the compiler non-thread-safe despite PLINQ parallel parsing. See `01-architecture.md`.
+2. **Static visitor state** — historically `VExt.cs` held a static `ScopeStack`; this was replaced by per-module `CompilationContext`. Make sure no new shared mutable state is introduced. See `01-architecture.md`.
 3. **Broken AST traversal** — `ForStmt`, `WhileStmt`, `DoWhileStmt`, and `TimesStmt` have broken `EnumerateDF` that silently skips loop bodies. See `03-ast-core.md`.
 4. **Mutating code generation** — `NewExpr.Gen()` used to mutate the AST (`type.ptrs.RemoveAt(0)`). Fixed in `backend/Core/Expr.cs`; the method now temporarily replaces the pointer list and restores it. See `03-ast-core.md` and `plan/suspicious-warnings.md`.
 5. **Dead/future code** — `Symbol.cs` and `Attribute.cs` enums exist but are disconnected. They are stubs intended for semantic analysis. See `07-future-stubs.md`.
@@ -217,7 +217,7 @@ Before making changes, read these in `docs/analysis/`:
 
 ## Planned Work
 
-1. **Finish ScopeStack / semantic analysis (endboss)** — resolve names to declarations, type-check expressions, and disambiguate constructs that currently rely on string matching or syntactic guesswork. Blocks namespace aliases, per-declaration access modifiers, overload resolution, and many generator hacks. See `plan/semantic-analysis.md`, `backend/Core/Scope.cs`, `backend/Visitor/VExt.cs`, `backend/Core/Symbol.cs`.
+1. **Finish ScopeStack / semantic analysis (endboss)** — substantial progress made. Per-module scope trees, the fixed-point resolver, qualified (`A::B::C`) static names, `using namespace` / `using Name`, cross-module namespace merging, and ambiguity diagnostics are implemented. The C++ generator now consumes resolved names for types and scoped expressions. Remaining: per-declaration access modifiers, member access resolution, type checking, overload resolution, and moving semantic validation out of the generator. See `plan/semantic-analysis.md`, `backend/Core/Scope.cs`, `backend/Resolver/Resolver.cs`, `backend/Core/Symbol.cs`.
 2. Testing + CI/CD — xUnit harness is in place under `testing/`; remaining work is CI/CD.
 3. Implement reachable NotImplementedException features:
    - named args, null coalescing call, copy-cast, else-on-loop, discard (empty stmt done)
