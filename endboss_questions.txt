@@ -105,49 +105,71 @@ shown in parentheses so the agent can proceed if a question is left blank.
 
 Q1. Import scope: file-wide or module-wide?
     A. Module-wide  B. File-wide
-    Your answer: ?  (recommended: A)
+    Your answer:
+    B - because i want per file reasoning
+    Example:
+    	file1 `module A; import io; func some() /* does use io */`
+		file2 `module A; import math; func other() /* do use math but also use io*/`
+		file1 and file2 should be able to see some and other, but only their local imports.
+		file2 uses an import it did not do, so it should not be able to call io. if it really wants it should be added to it.
+		in the c++ output those will be merged, so technically file2 "could" have used it.
+	If its like super hard to do this, then we can go with A first, but B should be the end goal.
 
 Q2. How should std:: resolve?
     A. Implicit built-in module (all std shims auto-imported)
     B. Explicit shim imports only
     C. Default dialect set (essentials implicit, heavy ones explicit)
-    Your answer: ?  (recommended: C)
+    Your answer:
+    We already have "std/*.decl.myll" and we already read that unconditionally. Why should we think of other ways?
 
 Q3. Cross-module namespace merging:
     A. Merge same-name namespaces across imported modules
     B. Keep namespaces module-private
-    Your answer: ?  (recommended: A)
+    Your answer: A
 
 Q4. Per-declaration access modifiers ([pub] field int x;):
     A. Support them  B. Reject them
-    Your answer: ?  (recommended: A)
+    Your answer: A
 
 Q5. using namespace scoping:
     A. Only inside bodies (module-level using namespace illegal)
     B. Allowed at module level too
-    Your answer: ?  (recommended: A)
-
+    Your answer:
+    First a clarification: "using namespace NS;" is written in myll as "using NS;" as we should know that NS is a namespace and then do the right thing.
+    We could go for bodies first (does that include namespaces as well? like `namespace JanNamespace { using KimiNamespace; }`)
+    Remember we want this to also work in classes like this: `class A { using NS; func aa()->{somethingFromNS();} }` even though it is not possible in c++,
+    we would then either need to inject `using namespace NS;` into each function or resolve the symbols/identiefiers from NS and prefix them with NS in codegen.
+    But the class-wide-ns could be added later.
+        
 Q6. Should using namespace import [hide] declarations?
     A. Yes (module-internal view)  B. No (importer view)
-    Your answer: ?  (recommended: B)
+    Your answer: B - thats what hiding is for
 
 Q7. Member access operators:
     A. Only .  B. Both . and ->  C. . only with auto-deref for pointers
-    Your answer: ?  (recommended: B)
+    Your answer:
+    B for now, depending on how well we get the types deduced, we could infer the right thing later.
+    I was also thinking that if you want to modify the pointer you should always need to `&ptr` maybe or an even better syntax, so everything is about the value inside first...
 
 Q8. Overload resolution model:
-    A. C++-style with implicit conversions  B. Exact match only
+    A. C++-style with implicit conversions
+    B. Exact match only
     C. No overloading
-    Your answer: ?  (recommended: B)
+    Your answer:
+    A mix of A and B, i would go A but disallowing narrowing conversions. Does this make sense?
 
 Q9. Built-in implicit numeric conversions:
-    A. Safe numeric promotion allowed  B. Only exact match
+    A. Safe numeric promotion allowed
+    B. Only exact match
     C. Full C++ conversion ranks
-    Your answer: ?  (recommended: A)
+    Your answer: A, but i would like to not have any f <-> i/u, float to int and int to float should be explicit.
 
 Q10. Forward member declarations inside normal classes:
      A. Allow class A { func m(); } as a declaration  B. Require [extern]/abstract
-     Your answer: ?  (recommended: A)
+     Your answer:
+     Whats the purpose of this? If its just about "i dont want to import a big one" then we dont want it, we have the lightweight .decl.myll files and even if they are big they are still lighter than .hpp files.
+     Only for things where we have no .decl.myll file things like this should be used, and why shouldn't they be annotated with extern?
+     The abstract case is a complete different one, we also need to explicitly say that as its much more visible than just a SEMI or a `= 0;` from c++. there is no possiblity to overlook `[abstract] func m();`.
 
 Q11. Forward namespace Ns;:
      A. Allowed only in .decl.myll / [extern] contexts  B. Allowed anywhere
@@ -206,6 +228,9 @@ Notes:
     does not consume it yet because member access is still unresolved.
   - The generator now emits fully-qualified nested type names (e.g. A::B*),
     so testing/golden/class/test.{hpp,cpp} were updated.
+  - Removed `short` and `long` from the built-in type fallback list; kept
+    references to C++ `long double`, `unsigned int`, etc. in the code generator
+    and docs.
 
 This fixes cross-module type names and qualified expressions without touching
 member access or unqualified IdExpr.
