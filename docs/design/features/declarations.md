@@ -175,6 +175,9 @@ namespace Graphics {
 }
 
 // Bodyless namespace (declarations follow)
+namespace Graphics:
+
+// Forward namespace declaration
 namespace Graphics;
 ```
 

@@ -45,6 +45,9 @@ namespace Graphics {
 }
 
 // Bodyless namespace
+namespace Graphics:
+
+// Forward namespace declaration
 namespace Graphics;
 ```
 

@@ -55,13 +55,13 @@ In normal `.myll` files unqualified bodyless functions are not allowed, except f
 
 ### Implementation plan
 
-1. Add grammar alternatives for forward declarations:
-   - `forwardStruct: id tplParams? SEMI` in `declStruct`
-   - `forwardEnum: id SEMI` in `declEnum`
-   - `forwardFunc: id defCoreFunc SEMI` in `declFunc`
-   - `namespace N;` already parses via `defNamespace` with `SEMI`
+1. Reuse existing body rules for forward declarations:
+   - `defStruct`: make the body optional (`class A;`)
+   - `defEnum`: make the body optional (`enum E;`)
+   - `defFunc`: a function body that is a single empty statement (`func foo();`)
+   - `defNamespace`: `namespace N;` is a forward declaration; `namespace N:` remains the bodyless scoped form
 2. Build regenerates ANTLR output automatically.
-3. Mark forward declarations in the AST (`Structural.IsForwardDeclaration`, `Func.IsForwardDeclaration`, empty `Namespace` with `withBody = false`).
+3. Mark forward declarations in the AST (`Decl.IsForwardDeclaration`; `Namespace` also uses `withBody = false` and `IsForwardDeclaration`).
 4. Allow them only when:
    - the file is a prototype (`.d.myll` / `.decl.myll` / `.extern.myll`), **or**
    - the declaration or an enclosing hierarchical is `[extern]`.

@@ -65,6 +65,9 @@ namespace my_ns {
 }
 
 // Bodyless namespace declarations also supported
+namespace my_ns:
+
+// Forward declarations (only in .decl.myll / [extern] / external contexts)
 namespace my_ns;
 ```
 
