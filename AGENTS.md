@@ -103,7 +103,7 @@ myll/
 - Grammar files: `backend/Grammar/MyllLexer.g4`, `backend/Grammar/MyllParser.g4`
 - Generated output: `backend/Grammar/Generated/Myll/`
 - Rider ANTLR config: `.idea/.idea.myll/.idea/misc.xml` (committed to git)
-- Grammar changes: If you modify `.g4` files in `backend/Grammar/`, you must regenerate the C# parser/lexer using ANTLR4 and update `backend/Grammar/Generated/`.
+- Grammar changes: The `Antlr4BuildTasks` NuGet package regenerates the C# parser/lexer automatically during `dotnet build`. Commit the updated `backend/Grammar/Generated/` files together with the `.g4` change.
 
 ## Code Conventions
 

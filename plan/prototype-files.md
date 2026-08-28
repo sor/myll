@@ -36,6 +36,49 @@ For an inline `[extern]` class, the generator emits only the forward declaration
 
 Children of an `[extern]` class or namespace inherit the external flag, so they are not emitted as definitions.
 
+## Forward declarations in `.decl.myll` and `[extern]` contexts
+
+A forward declaration (no body, just a trailing `;`) should be valid **only** in prototype files or when marked `[extern]`:
+
+```myll
+// .decl.myll or [extern]
+namespace ns;
+class A;
+struct S;
+union U;
+enum E;       // C++ only allows this with explicit underlying type; relax for Myll shims
+func foo();
+method bar(); // when methods are supported
+```
+
+In normal `.myll` files unqualified bodyless functions are not allowed, except for future OOP special member functions (`= 0`, `= default`, `= delete`, abstract/virtual methods).
+
+### Implementation plan
+
+1. Add grammar alternatives for forward declarations:
+   - `forwardStruct: id tplParams? SEMI` in `declStruct`
+   - `forwardEnum: id SEMI` in `declEnum`
+   - `forwardFunc: id defCoreFunc SEMI` in `declFunc`
+   - `namespace N;` already parses via `defNamespace` with `SEMI`
+2. Build regenerates ANTLR output automatically.
+3. Mark forward declarations in the AST (`Structural.IsForwardDeclaration`, `Func.IsForwardDeclaration`, empty `Namespace` with `withBody = false`).
+4. Allow them only when:
+   - the file is a prototype (`.d.myll` / `.decl.myll` / `.extern.myll`), **or**
+   - the declaration or an enclosing hierarchical is `[extern]`.
+5. Emit matching C++ forward declarations in the generator.
+6. Update the `std/` shims to use the new syntax.
+
+## OOP special member functions (deferred)
+
+Future support is needed for methods without a body for C++ OOP features:
+
+- pure virtual: `func draw() -> void = 0;`
+- defaulted:   `ctor() = default;`
+- deleted:     `func copy() = delete;`
+- abstract methods in interfaces/aspects
+
+These are intentionally out of scope for the first prototype-file pass.
+
 ## Implementation checklist
 
 - [x] Update `Program.CollectExternFiles` to discover `.d.myll` and `.decl.myll` (keep `.extern.myll` as legacy).
@@ -45,4 +88,6 @@ Children of an `[extern]` class or namespace inherit the external flag, so they 
 - [x] Remove `Namespace.AddToGen` early return on `IsExternal` so inline extern namespaces emit member forward declarations.
 - [x] Make `Structural.AddToGen` emit a forward declaration when `IsExternal`.
 - [x] Add a `GenerateOnly` integration-harness flag and an end-to-end golden test for inline `[extern]` class/namespace.
+- [ ] Add grammar/visitor/generator support for forward declarations in prototype and `[extern]` contexts.
+- [ ] Convert the `std/` shims to use forward-declaration syntax.
 - [ ] Rename test extern files to `.decl.myll` and add tests for `.decl.myll` prototype files.
