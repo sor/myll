@@ -1,0 +1,211 @@
+# Myll Endboss Plan and Open Questions
+# Last updated: 2026-08-28
+#
+# This file is both a decision worksheet and a reconnect point. If the
+# conversation is restarted, feed this file back to the agent and ask it to
+# continue from where we left off.
+
+## Current state
+
+Done:
+  - Per-module scope trees, instance-based visitors, fixed-point resolver.
+  - Cross-module imports including cyclic imports.
+  - Qualified static paths (Ns::Inner::Foo, std::helper()).
+  - Locals, parameters, lambdas, catch variables, loop index scoping.
+  - [hide] / [hidden] export control.
+  - Prototype/extern declaration files (.decl.myll), forward declarations,
+    and the std/ shim.
+
+Not done:
+  - std:: is not a built-in logical module; it only resolves via explicit
+    import of std_*.decl.myll shims.
+  - using namespace / using Name are parsed but ignored by the resolver.
+  - Member access (my.method()) is not resolved.
+  - Type checking, overload resolution, and conversions are absent.
+  - The C++ generator never consumes ResolutionResult; raw AST names are
+    emitted.
+  - Access modifiers still use a mutable curAccess hack and string attributes.
+  - PickSingle silently drops ambiguous names instead of reporting them.
+  - backend/ has ~86 TODO/FIXME/HACK markers and 36 NotImplemented/NotSupported
+    throws.
+
+## Definition of done
+
+  1. -R becomes the default (and eventually only) compiler mode.
+  2. All names -- including std:: and using-imported names -- resolve or
+     produce a clean diagnostic.
+  3. Member access resolves via the target's type.
+  4. The C++ generator emits resolved, fully-qualified C++ names from the
+     resolver rather than raw AST text.
+  5. A type checker rejects bad assignments/arguments and enables type-driven
+     codegen.
+  6. Semantic validation moves out of the generator and into resolver/
+     validation passes.
+  7. plan/semantic-analysis.md and stale analysis docs are updated.
+
+## Phased plan
+
+### Phase 1 -- Foundation: make the resolver correct for real code
+
+  [ ] 1.1 Decide and implement std / built-in namespace integration.
+  [ ] 1.2 Implement using namespace and using Name.
+  [ ] 1.3 Replace mutable curAccess with scope-based access tracking.
+  [ ] 1.4 Decide cross-module namespace merging and implement it.
+  [ ] 1.5 Turn PickSingle into overload-set handling + ambiguity diagnostics.
+  [ ] 1.6 Resolve namespace aliases (alias fs = std::filesystem;).
+
+  Exit criteria:
+    - Resolver tests can resolve std::cout after using namespace std or
+      import std_iostream.
+    - Ambiguous/unresolved names produce clear diagnostics.
+    - [pub] field int x; works if Q4 answer is A.
+
+### Phase 2 -- Wire the generator to the resolver
+
+  [ ] 2.1 Keep ResolutionResult and apply resolved Decls onto AST nodes.
+  [ ] 2.2 Update TypespecNested.GenType() and ScopedExpr.Gen() to use resolved
+          FullyQualifiedName.
+  [ ] 2.3 Introduce a real MemberAccessExpr node (currently a plain BinOp).
+  [ ] 2.4 Resolve MemberAccessExpr using the left-hand expression's type.
+  [ ] 2.5 Move duplicate-name / attribute validation out of HierachicalGen.
+  [ ] 2.6 Wire NameResolver.Resolve into the default pipeline and stop
+          discarding the result.
+
+  Exit criteria:
+    - Integration tests with -R generate correct C++ for cross-module and
+      std:: references.
+    - gol can be removed from noResolve.
+
+### Phase 3 -- Type checking and overload resolution
+
+  [ ] 3.1 Compute and store expression types (AST field or separate type map).
+  [ ] 3.2 Validate assignments, return types, call argument counts/types.
+  [ ] 3.3 Implement overload resolution from Phase 1 sets + argument types.
+  [ ] 3.4 Type-driven codegen: numeric division, typename, copy-cast lowering,
+          enum base validation.
+  [ ] 3.5 Validate new T, casts, null, and implicit conversions.
+
+  Exit criteria:
+    - Type errors produce diagnostics; valid code generates correct C++.
+    - Overloaded calls resolve to a single target.
+
+### Phase 4 -- Cleanup and model hardening
+
+  [ ] 4.1 Replace string attribute checks with Attribute.cs.
+  [ ] 4.2 Decide whether to revive Symbol.cs as the resolved target.
+  [ ] 4.3 Move all semantic validation out of the generator.
+  [ ] 4.4 Address Decl inherits Stmt if desired.
+  [ ] 4.5 Update plan/semantic-analysis.md and stale analysis docs.
+  [ ] 4.6 Re-enable parallel module compilation once shared state is gone.
+
+## Decision worksheet
+
+Answer by replacing the "?" after each question. Default recommendations are
+shown in parentheses so the agent can proceed if a question is left blank.
+
+Q1. Import scope: file-wide or module-wide?
+    A. Module-wide  B. File-wide
+    Your answer: ?  (recommended: A)
+
+Q2. How should std:: resolve?
+    A. Implicit built-in module (all std shims auto-imported)
+    B. Explicit shim imports only
+    C. Default dialect set (essentials implicit, heavy ones explicit)
+    Your answer: ?  (recommended: C)
+
+Q3. Cross-module namespace merging:
+    A. Merge same-name namespaces across imported modules
+    B. Keep namespaces module-private
+    Your answer: ?  (recommended: A)
+
+Q4. Per-declaration access modifiers ([pub] field int x;):
+    A. Support them  B. Reject them
+    Your answer: ?  (recommended: A)
+
+Q5. using namespace scoping:
+    A. Only inside bodies (module-level using namespace illegal)
+    B. Allowed at module level too
+    Your answer: ?  (recommended: A)
+
+Q6. Should using namespace import [hide] declarations?
+    A. Yes (module-internal view)  B. No (importer view)
+    Your answer: ?  (recommended: B)
+
+Q7. Member access operators:
+    A. Only .  B. Both . and ->  C. . only with auto-deref for pointers
+    Your answer: ?  (recommended: B)
+
+Q8. Overload resolution model:
+    A. C++-style with implicit conversions  B. Exact match only
+    C. No overloading
+    Your answer: ?  (recommended: B)
+
+Q9. Built-in implicit numeric conversions:
+    A. Safe numeric promotion allowed  B. Only exact match
+    C. Full C++ conversion ranks
+    Your answer: ?  (recommended: A)
+
+Q10. Forward member declarations inside normal classes:
+     A. Allow class A { func m(); } as a declaration  B. Require [extern]/abstract
+     Your answer: ?  (recommended: A)
+
+Q11. Forward namespace Ns;:
+     A. Allowed only in .decl.myll / [extern] contexts  B. Allowed anywhere
+     Your answer: ?  (recommended: A)
+
+Q12. Generator output style for resolved names:
+     A. Always fully qualify  B. Shorten when unambiguous
+     Your answer: ?  (recommended: A)
+
+Q13. Should unresolved names be hard errors by default?
+     A. Yes  B. Warnings only
+     Your answer: ?  (recommended: A)
+
+Q14. convert / user-defined conversions:
+     A. Keep deferred  B. Design now
+     Your answer: ?  (recommended: A)
+
+Q15. Built-in string type:
+     A. Alias to std::string  B. Dialect-mappable
+     Your answer: ?  (recommended: A now, B later)
+
+Q16. Parallel module compilation:
+     A. Fix and re-enable  B. Leave sequential
+     Your answer: ?  (recommended: B until after generator wiring)
+
+Q17. Diagnostics format:
+     A. Simple stderr lines with file:line:message
+     B. Structured JSON/LSP-style
+     C. Existing style plus source snippets
+     Your answer: ?  (recommended: A)
+
+Q18. Should Decl stop inheriting from Stmt?
+     A. Refactor now  B. Leave it
+     Your answer: ?  (recommended: B until after endboss)
+
+Q19. Attribute model refactor (string -> Attribute.cs enum):
+     A. Refactor now  B. Keep strings until resolver is stable
+     Your answer: ?  (recommended: B)
+
+Q20. Default C++ includes:
+     A. Keep current broad defaults  B. Include only what is used
+     Your answer: ?  (recommended: B)
+
+## Independent concrete step (done)
+
+This was completed without needing any of the above decisions:
+
+  [x] I1 Keep the ResolutionResult in frontend/Program.cs instead of discarding it.
+  [x] I2 Add public Decl? resolvedDecl; to TypespecNested and ScopedExpr.
+  [x] I3 After NameResolver.Resolve, copy resolved targets onto the nodes.
+  [x] I4 Update TypespecNested.GenType() and ScopedExpr.Gen() to emit
+          resolvedDecl?.FullyQualifiedName when available.
+
+Notes:
+  - IdExpr also received a resolvedDecl field for future use, but IdExpr.Gen()
+    does not consume it yet because member access is still unresolved.
+  - The generator now emits fully-qualified nested type names (e.g. A::B*),
+    so testing/golden/class/test.{hpp,cpp} were updated.
+
+This fixes cross-module type names and qualified expressions without touching
+member access or unqualified IdExpr.
