@@ -424,5 +424,134 @@ func main() -> int { return doesNotExist(); }
 			Assert.Contains( "doesNotExist", diagnostics[0].Message );
 			Assert.Empty( result.Ids );
 		}
+
+		[Fact]
+		public void UsingNamespace_Resolves()
+		{
+			var (moduleB, contextB) = CompileModule( @"
+module B;
+namespace Ns {
+    func hiddenInNs() -> int { return 42; }
+}
+", "B" );
+
+			var (moduleA, contextA) = CompileModule( @"
+module A;
+import B;
+using Ns;
+func main() -> int { return hiddenInNs(); }
+", "A" );
+
+			var (result, diagnostics) = Resolve(
+				(moduleA, contextA),
+				(moduleB, contextB) );
+
+			Assert.Empty( diagnostics );
+			Assert.Single( contextA.UnresolvedIds );
+			Assert.True(
+				result.Ids.TryGetValue( contextA.UnresolvedIds[0].Node, out Decl? decl ),
+				"hiddenInNs should resolve via using namespace" );
+			Assert.IsType<Func>( decl );
+			Assert.Equal( "hiddenInNs", decl!.name );
+		}
+
+		[Fact]
+		public void UsingSingleName_Resolves()
+		{
+			var (moduleB, contextB) = CompileModule( @"
+module B;
+namespace Ns {
+    func specific() -> int { return 7; }
+}
+", "B" );
+
+			var (moduleA, contextA) = CompileModule( @"
+module A;
+import B;
+using Ns::specific;
+func main() -> int { return specific(); }
+", "A" );
+
+			var (result, diagnostics) = Resolve(
+				(moduleA, contextA),
+				(moduleB, contextB) );
+
+			Assert.Empty( diagnostics );
+			Assert.Single( contextA.UnresolvedIds );
+			Assert.True(
+				result.Ids.TryGetValue( contextA.UnresolvedIds[0].Node, out Decl? decl ),
+				"specific should resolve via using declaration" );
+			Assert.IsType<Func>( decl );
+			Assert.Equal( "specific", decl!.name );
+		}
+
+		[Fact]
+		public void CrossModuleNamespaceMerging_Resolves()
+		{
+			var (moduleB, contextB) = CompileModule( @"
+module B;
+namespace Ns {
+    func fromB() -> int { return 1; }
+}
+", "B" );
+
+			var (moduleC, contextC) = CompileModule( @"
+module C;
+namespace Ns {
+    func fromC() -> int { return 2; }
+}
+", "C" );
+
+			var (moduleA, contextA) = CompileModule( @"
+module A;
+import B;
+import C;
+using Ns;
+func main() -> int { return fromB() + fromC(); }
+", "A" );
+
+			var (result, diagnostics) = Resolve(
+				(moduleA, contextA),
+				(moduleB, contextB),
+				(moduleC, contextC) );
+
+			Assert.Empty( diagnostics );
+			Assert.Equal( 2, contextA.UnresolvedIds.Count );
+			Assert.All( contextA.UnresolvedIds, u =>
+				Assert.True(
+					result.Ids.TryGetValue( u.Node, out Decl? decl ),
+					u.Node.idTplArgs.id + " should resolve via merged namespace" ) );
+		}
+
+		[Fact]
+		public void AmbiguousImport_ProducesDiagnostic()
+		{
+			var (moduleB, contextB) = CompileModule( @"
+module B;
+func clash() -> int { return 1; }
+", "B" );
+
+			var (moduleC, contextC) = CompileModule( @"
+module C;
+func clash() -> int { return 2; }
+", "C" );
+
+			var (moduleA, contextA) = CompileModule( @"
+module A;
+import B;
+import C;
+func main() -> int { return clash(); }
+", "A" );
+
+			var (result, diagnostics) = Resolve(
+				(moduleA, contextA),
+				(moduleB, contextB),
+				(moduleC, contextC) );
+
+			Assert.Single( diagnostics );
+			Assert.Equal( DiagnosticKind.Error, diagnostics[0].Kind );
+			Assert.Contains( "Ambiguous", diagnostics[0].Message );
+			Assert.Contains( "clash", diagnostics[0].Message );
+		}
 	}
 }

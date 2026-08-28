@@ -4,6 +4,7 @@ using System.Linq;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Tree;
 using Myll.Core;
+using Myll.Resolver;
 
 namespace Myll
 {
@@ -336,8 +337,17 @@ namespace Myll
 						type   = t
 					} )
 				.ToMulti();
-			// TODO: add usings differently
-			//AddChildren( ret.decls );
+
+			Scope scope = scopeStack.Peek();
+			foreach( UsingDecl usingDecl in ret.decls.OfType<UsingDecl>() ) {
+				Context.UnresolvedUsings.Add( new UnresolvedUsing( usingDecl, scope ) );
+
+				// defUsing parses a nested name, not an actual type use; don't let
+				// the resolver report it as an unresolved type.
+				if( usingDecl.type is TypespecNested nested )
+					Context.UnresolvedTypes.RemoveAll( u => u.Node == nested );
+			}
+
 			return ret;
 		}
 

@@ -23,6 +23,7 @@ namespace Myll
 		public List<UnresolvedId>      UnresolvedIds      { get; } = new();
 		public List<UnresolvedType>    UnresolvedTypes    { get; } = new();
 		public List<UnresolvedScoped>  UnresolvedScopeds  { get; } = new();
+		public List<UnresolvedUsing>   UnresolvedUsings   { get; } = new();
 
 		public CompilationContext()
 		{

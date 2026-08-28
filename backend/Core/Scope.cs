@@ -31,6 +31,9 @@ namespace Myll.Core
 		// unresolved???
 		public List<Scope> importedScopes = new(); // (base) Class(es) and (using) Namespaces
 
+		// Single-name using declarations, e.g. using std::cout;
+		public Dictionary<string, List<Decl>> importedNames = new();
+
 		public void AddChild( ScopeLeaf scope )
 		{
 			Decl child = scope.decl!;

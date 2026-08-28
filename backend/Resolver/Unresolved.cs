@@ -7,4 +7,6 @@ namespace Myll.Resolver
 	public sealed record UnresolvedType( TypespecNested Node, Scope Scope );
 
 	public sealed record UnresolvedScoped( ScopedExpr Node, Scope Scope );
+
+	public sealed record UnresolvedUsing( UsingDecl Node, Scope Scope );
 }
