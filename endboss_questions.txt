@@ -121,6 +121,8 @@ Q2. How should std:: resolve?
     C. Default dialect set (essentials implicit, heavy ones explicit)
     Your answer:
     We already have "std/*.decl.myll" and we already read that unconditionally. Why should we think of other ways?
+    I do not want std::cout to be avail without an std_iostream import. In the future we could think of a hint system, that could propose the import.
+    We have a lot of implicit ones, that eases the early life and should be enough automagic for the moment 
 
 Q3. Cross-module namespace merging:
     A. Merge same-name namespaces across imported modules
@@ -157,12 +159,16 @@ Q8. Overload resolution model:
     C. No overloading
     Your answer:
     A mix of A and B, i would go A but disallowing narrowing conversions. Does this make sense?
+    -> Confirmed: safe promotions allowed, no narrowing conversions.
+    -> Cast syntax shortcuts: `(i)` = reinterpret current bit-count as signed integer;
+       `(auto)` = cast to the explicitly-stated target type.
 
 Q9. Built-in implicit numeric conversions:
     A. Safe numeric promotion allowed
     B. Only exact match
     C. Full C++ conversion ranks
     Your answer: A, but i would like to not have any f <-> i/u, float to int and int to float should be explicit.
+    -> Confirmed: no implicit float <-> integer conversions.
 
 Q10. Forward member declarations inside normal classes:
      A. Allow class A { func m(); } as a declaration  B. Require [extern]/abstract
@@ -172,46 +178,62 @@ Q10. Forward member declarations inside normal classes:
      The abstract case is a complete different one, we also need to explicitly say that as its much more visible than just a SEMI or a `= 0;` from c++. there is no possiblity to overlook `[abstract] func m();`.
 
 Q11. Forward namespace Ns;:
-     A. Allowed only in .decl.myll / [extern] contexts  B. Allowed anywhere
-     Your answer: ?  (recommended: A)
+     A. Allowed only in .decl.myll / [extern] contexts
+     B. Allowed anywhere
+     Your answer: A
 
 Q12. Generator output style for resolved names:
      A. Always fully qualify  B. Shorten when unambiguous
-     Your answer: ?  (recommended: A)
+     Your answer:
+     Depends on what is easier, maybe dont overdo A, as we still want to emit `using namespace NS;` in c++ we should let it still have some effect right?
+     -> Prefer B (shorten when unambiguous) if it is not significantly harder;
+        fall back to A otherwise.
 
 Q13. Should unresolved names be hard errors by default?
      A. Yes  B. Warnings only
-     Your answer: ?  (recommended: A)
-
+     Your answer:
+     The [extern] decls are what we can use to silence them right?
+     In the end we will need the types for codegen, so we can not work with less than A?!
+     But only make it an Error once we are finished,right?
+     -> Confirmed: [extern] / .decl.myll silence unknown-name diagnostics.
+        Keep warnings during development; flip to hard errors at the end.
+     
 Q14. convert / user-defined conversions:
      A. Keep deferred  B. Design now
-     Your answer: ?  (recommended: A)
+     Your answer: A
 
 Q15. Built-in string type:
      A. Alias to std::string  B. Dialect-mappable
-     Your answer: ?  (recommended: A now, B later)
+     Your answer: B - should not be too hard to do right away right? I mean prefilling it in Dialect, not supporting a dialect already. That would be a bigger thing
 
 Q16. Parallel module compilation:
      A. Fix and re-enable  B. Leave sequential
-     Your answer: ?  (recommended: B until after generator wiring)
+     Your answer:
+     Is it broken more than 2 days ago?
+     -> Yes. Queue after endboss.
 
 Q17. Diagnostics format:
      A. Simple stderr lines with file:line:message
      B. Structured JSON/LSP-style
      C. Existing style plus source snippets
-     Your answer: ?  (recommended: A)
+     Your answer: A - so its click compatible
 
 Q18. Should Decl stop inheriting from Stmt?
      A. Refactor now  B. Leave it
-     Your answer: ?  (recommended: B until after endboss)
+     Your answer: B - until after endboss
 
 Q19. Attribute model refactor (string -> Attribute.cs enum):
      A. Refactor now  B. Keep strings until resolver is stable
-     Your answer: ?  (recommended: B)
+     Your answer:
+     Please elaborate, i dont even get the question.
+     -> Elaboration: today HasAttrib("extern")/HasAttrib("hide") are string
+        checks. Attribute.cs is a typed enum stub. Refactor would replace
+        string checks with the enum. Queue after endboss, but before Q16.
 
 Q20. Default C++ includes:
      A. Keep current broad defaults  B. Include only what is used
-     Your answer: ?  (recommended: B)
+     Your answer: A - ppl should use modules in wa way like, they have ~50 files belonging to 3-6 modules.
+     and only those 3-6 files will be compiled with the max of includes from all files that gone in, so we will always have the broad defaults either way, saving 1-2 includes to track all this gives no benefit.
 
 ## Independent concrete step (done)
 
@@ -234,3 +256,29 @@ Notes:
 
 This fixes cross-module type names and qualified expressions without touching
 member access or unqualified IdExpr.
+
+## Agent summary of decisions and notes
+
+Q1  File-wide imports (B) as end goal; module-wide (A) as first step.
+Q2  std:: resolves only after explicit `import std_...;`; no implicit auto-import.
+Q3  Merge same-name namespaces across imported modules (A).
+Q4  Support `[pub] field int x;` per-declaration access modifiers (A).
+Q5  `using NS;` syntax applied in namespace / function / block bodies first;
+    class-wide later.
+Q6  `using namespace` does not import `[hide]` declarations (B).
+Q7  Both `.` and `->` for now (B); type-driven inference later.
+Q8  C++-style overload resolution without narrowing conversions.
+    Cast shortcuts: `(i)` = reinterpret same bit-count as signed integer;
+    `(auto)` = explicit cast to stated target type.
+Q9  Safe numeric promotions allowed, no implicit float <-> integer (A + no f/i).
+Q10 Bodyless methods in normal classes require `[extern]` or `[abstract]` (B).
+Q11 Forward `namespace Ns;` only in `.decl.myll` / `[extern]` contexts (A).
+Q12 Prefer shortening resolved names when unambiguous (B) if not harder.
+Q13 Hard errors eventually, warnings/diagnostics while endboss is in progress.
+Q14 Defer `convert` / user-defined conversions (A).
+Q15 Make `string` dialect-mappable, default mapping stays `std::string` (B).
+Q16 Leave module compilation sequential; queue after endboss.
+Q17 Simple stderr diagnostics with file:line:message (A).
+Q18 Leave Decl : Stmt inheritance until after endboss (B).
+Q19 Keep string attributes until resolver stable; queue after endboss, before Q16.
+Q20 Keep broad default C++ includes (A).
