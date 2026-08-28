@@ -89,6 +89,43 @@ namespace Myll.Core
 
 		public abstract void AddToGen( HierarchicalGen gen );
 
+		public override void AssignAttribs( Attribs inAttribs )
+		{
+			ExtractAccessAttribs( inAttribs );
+			base.AssignAttribs( inAttribs );
+		}
+
+		private void ExtractAccessAttribs( Attribs inAttribs )
+		{
+			if( inAttribs == null )
+				return;
+
+			if( inAttribs.TryGetValue( "access", out Strings? values ) && values.Count > 0 ) {
+				access = values[0] switch {
+					"pub"  => Access.Public,
+					"priv" => Access.Private,
+					"prot" => Access.Protected,
+					_      => throw new NotSupportedException(
+						"unknown access value: " + values[0] ),
+				};
+				inAttribs.Remove( "access" );
+				return;
+			}
+
+			if( inAttribs.ContainsKey( "pub" ) ) {
+				access = Access.Public;
+				inAttribs.Remove( "pub" );
+			}
+			else if( inAttribs.ContainsKey( "priv" ) ) {
+				access = Access.Private;
+				inAttribs.Remove( "priv" );
+			}
+			else if( inAttribs.ContainsKey( "prot" ) ) {
+				access = Access.Protected;
+				inAttribs.Remove( "prot" );
+			}
+		}
+
 		// Shouldn't this be abstract?
 		public override Strings Gen( int level )
 		{

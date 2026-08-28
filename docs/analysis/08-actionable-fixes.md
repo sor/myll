@@ -61,16 +61,15 @@ public override IEnumerable<Stmt> EnumerateDF {
 - **Remove `VisitLit` / `VisitLiteralExpr` duplication** in `VExpr.cs` — 15 minutes
 - **Consolidate `VisitDefVar`** — have `VStmt.VisitDefVar` delegate to a shared `BuildVarDecl()` method or to `VDecl` — 30 minutes
 
-### 6. Replace Mutable `curAccess` with Decl-Level Access
+### 6. Replace Mutable `curAccess` with Decl-Level Access — done
 
 **File:** `backend/Visitor/VDecl.cs`, `backend/Core/Decl.cs`
-**Impact:** Access modifiers are currently tracked as mutable visitor field state. This is buggy for nested declarations and does not set per-declaration access.
-**Estimated Effort:** 30 minutes
+**Impact:** Access modifiers are now extracted from per-declaration attributes in `Decl.AssignAttribs`. Section-form `[pub]:` / `[priv]:` / `[prot]:` still sets the visitor-level default.
+**Status:** Implemented.
 
-**Fix:**
-- Parse per-declaration `[pub]`, `[priv]`, `[prot]` attributes directly onto the declaration.
-- Restrict access attributes to class/struct/union scope and report an error elsewhere.
-- Keep the section-form `[pub]:` / `[priv]:` / `[prot]:` as the current default that per-declaration attributes override.
+**Remaining:**
+- Enforce that access specifiers outside class/struct/union are an error.
+- Decide how access attributes on nested class declarations are handled.
 
 ### 7. Implement Missing Generator Methods
 

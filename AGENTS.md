@@ -217,7 +217,7 @@ Before making changes, read these in `docs/analysis/`:
 
 ## Planned Work
 
-1. **Finish ScopeStack / semantic analysis (endboss)** — substantial progress made. Per-module scope trees, the fixed-point resolver, qualified (`A::B::C`) static names, `using namespace` / `using Name`, cross-module namespace merging, and ambiguity diagnostics are implemented. The C++ generator now consumes resolved names for types and scoped expressions. Remaining: per-declaration access modifiers, member access resolution, type checking, overload resolution, and moving semantic validation out of the generator. See `plan/semantic-analysis.md`, `backend/Core/Scope.cs`, `backend/Resolver/Resolver.cs`, `backend/Core/Symbol.cs`.
+1. **Finish ScopeStack / semantic analysis (endboss)** — substantial progress made. Per-module scope trees, the fixed-point resolver, qualified (`A::B::C`) static names, `using namespace` / `using Name`, cross-module namespace merging, ambiguity diagnostics, and per-declaration access modifiers are implemented. The C++ generator now consumes resolved names for types and scoped expressions. Remaining: member access resolution, type checking, overload resolution, and moving semantic validation out of the generator. See `plan/semantic-analysis.md`, `backend/Core/Scope.cs`, `backend/Resolver/Resolver.cs`, `backend/Core/Symbol.cs`.
 2. Testing + CI/CD — xUnit harness is in place under `testing/`; remaining work is CI/CD.
 3. Implement reachable NotImplementedException features:
    - named args, null coalescing call, copy-cast, else-on-loop, discard (empty stmt done)

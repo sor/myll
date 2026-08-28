@@ -24,11 +24,11 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 
 ## High priority
 
-1. **Per-declaration access modifiers**
-   - Implement `[pub]`, `[priv]`, `[prot]` on individual class/struct/union members; the attribute overrides the current section default from `[pub]:` / `[priv]:` / `[prot]:`.
-   - Keep access specifiers class-only; report an error when they appear outside a class/struct/union.
-   - Preserve field order while changing access labels inline (no generator refactor needed).
-   - See `backend/Visitor/VDecl.cs`, `backend/Generator/HierachicalGen.cs`.
+1. **Per-declaration access modifiers** — done
+   - Implemented `[pub]`, `[priv]`, `[prot]` on individual class/struct/union members; the attribute overrides the current section default from `[pub]:` / `[priv]:` / `[prot]:`.
+   - Field order is preserved; access labels change inline.
+   - End-to-end test: `testing/cases/access_mods/`.
+   - Remaining: enforce that access attributes outside class/struct/union are an error.
 
 2. **Repair the `try/catch` grammar**
    - Change `catchClause` from `CATCH funcTypeDef? stmt` to `CATCH LPAREN param? RPAREN stmt`.
