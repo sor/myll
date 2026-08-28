@@ -232,7 +232,7 @@ CLASS_LIT	: 'this'|'self'|'base'|'super';
 BOOL_LIT	: 'true'|'false';
 FLOAT_LIT	:	(	DIGIT* '.' DIGIT+ ( [eE] [+-]? DIGIT+ )?
 				|	DIGIT+ [eE] [+-]? DIGIT+
-				) [lfLF]?;
+				);
 HEX_LIT		: '0x' HEXDIGIT HEXDIGIT_*;
 OCT_LIT		: '0o' OCTDIGIT OCTDIGIT_*;
 BIN_LIT		: '0b' BINDIGIT BINDIGIT_*;

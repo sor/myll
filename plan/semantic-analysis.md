@@ -17,8 +17,8 @@ This plan describes the long-term goal of turning Myll from a syntax-to-C++ tran
 
 ## What is missing
 
-- Full type checking beyond overload argument matching (assignments, returns, implicit conversions, narrowing diagnostics).
-- Overload resolution still needs implicit promotion/conversion ranks and clear ambiguity/no-match diagnostics.
+- Broader conversion ranks beyond exact + promotion (e.g., safe typed conversions, derived-to-base pointers).
+- Operator-specific type checks and boolean-context validation.
 - Using resolved targets for unqualified `IdExpr` generation.
 - Moving semantic validation out of the generator and into resolver/validation passes.
 

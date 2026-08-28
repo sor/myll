@@ -126,6 +126,14 @@ namespace Myll.Generator
 						{ 4, "unsigned int" },
 						{ 8, "std::uint64_t" },
 					}
+				}, {
+					TypespecBasic.Kind.UntypedInteger, new IntToString {
+						{ TypespecBasic.SizeUndetermined, "auto" }
+					}
+				}, {
+					TypespecBasic.Kind.UntypedFloat, new IntToString {
+						{ TypespecBasic.SizeUndetermined, "auto" }
+					}
 				},
 				/* TODO {
 					TypespecBasic.Kind.Size, new IntToString {

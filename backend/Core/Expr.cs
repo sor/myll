@@ -413,6 +413,25 @@ namespace Myll.Core
 
 		public override string Gen( bool doBrace = false )
 		{
+			// Casting a float literal to another float size can be emitted as the
+			// appropriately suffixed literal instead of `static_cast<f64>( 9.15f )`.
+			if( type is TypespecBasic basic
+			 && basic.kind == TypespecBasic.Kind.Float
+			 && ( type.ptrs == null || type.ptrs.Count == 0 )
+			 && expr is Literal lit
+			 && Literal.IsFloatLiteral( lit.text ) ) {
+				string suffix = basic.size switch {
+					4  => "f",
+					8  => "",
+					16 => "L",
+					_  => "f",
+				};
+
+				// f16 has no standard C++ literal suffix, so keep the cast for that case.
+				if( basic.size != 2 )
+					return ( lit.text + suffix ).Brace( doBrace );
+			}
+
 			string format = op switch {
 				Operand.CopyCast        => "{1}( {0} )",
 				Operand.MoveCast        => "{1}( {0} )",
@@ -497,7 +516,33 @@ namespace Myll.Core
 
 		public override string Gen( bool doBrace = false )
 		{
+			// Myll float literals are untyped and default to f32. Append 'f' in the
+			// generated C++ so that `1.0` becomes a float literal, not a double.
+			if( IsFloatLiteral( text ) && !text.EndsWith( "f" ) && !text.EndsWith( "F" ) )
+				return text + "f";
+
 			return text; //.Brace( doBrace )
+		}
+
+		internal static bool IsFloatLiteral( string t )
+		{
+			if( string.IsNullOrEmpty( t ) )
+				return false;
+
+			if( t == "null" || t == "true" || t == "false" )
+				return false;
+
+			if( t[0] == '"' || t[0] == '\'' )
+				return false;
+
+			if( !char.IsDigit( t[0] ) && t[0] != '.' )
+				return false;
+
+			if( t.Contains( '.' ) )
+				return true;
+
+			bool isHex = t.StartsWith( "0x", StringComparison.OrdinalIgnoreCase );
+			return !isHex && ( t.Contains( 'e' ) || t.Contains( 'E' ) );
 		}
 	}
 }

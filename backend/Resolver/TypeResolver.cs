@@ -66,17 +66,21 @@ namespace Myll.Resolver
 			if( t == "true" || t == "false" )
 				return new TypespecBasic { kind = TypespecBasic.Kind.Bool, size = 1 };
 
-			if( t.EndsWith( "f", StringComparison.OrdinalIgnoreCase )
-			 || t.Contains( "." )
-			 || t.Contains( "e", StringComparison.OrdinalIgnoreCase ) )
-				return new TypespecBasic { kind = TypespecBasic.Kind.Float, size = 4 };
+			if( t.Contains( "." )
+			 || t.Contains( "e", StringComparison.OrdinalIgnoreCase )
+			 || t.Contains( "E", StringComparison.OrdinalIgnoreCase ) )
+				return new TypespecBasic {
+					kind        = TypespecBasic.Kind.UntypedFloat,
+					size        = TypespecBasic.SizeUndetermined,
+					literalText = t,
+				};
 
-			if( t.EndsWith( "u", StringComparison.OrdinalIgnoreCase )
-			 || t.EndsWith( "ul", StringComparison.OrdinalIgnoreCase )
-			 || t.EndsWith( "lu", StringComparison.OrdinalIgnoreCase ) )
-				return new TypespecBasic { kind = TypespecBasic.Kind.Unsigned, size = 4 };
-
-			return new TypespecBasic { kind = TypespecBasic.Kind.Integer, size = 4 };
+			// Integer literals without a concrete-size suffix are untyped until bound to a target.
+			return new TypespecBasic {
+				kind        = TypespecBasic.Kind.UntypedInteger,
+				size        = TypespecBasic.SizeUndetermined,
+				literalText = t,
+			};
 		}
 
 		private Typespec? ResolveId( IdExpr id )

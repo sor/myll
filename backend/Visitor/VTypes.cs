@@ -137,8 +137,9 @@ namespace Myll
 		public new TypespecBasic VisitTypespecBasic( TypespecBasicContext c )
 		{
 			TypespecBasic ret = new() {
-				align  = -1,
-				size   = TypespecBasic.SizeUndetermined,
+				align   = -1,
+				size    = TypespecBasic.SizeUndetermined,
+				srcPos  = c.ToSrcPos(),
 			};
 			var cc = c.GetChild<ParserRuleContext>( 0 );
 			switch( cc.RuleIndex ) {
@@ -186,7 +187,16 @@ namespace Myll
 				case RULE_floatingType: {
 					int t = c.floatingType().v.Type;
 					ret.kind = TypespecBasic.Kind.Float;
-					ret.size = ToSize[t];
+
+					if( t == MyllParser.FLOAT ) {
+						ret.size             = Dialect.DefaultFloatSize();
+						ret.usesFloatKeyword = true;
+						Context.FloatKeywordUsages.Add( ret.srcPos );
+					}
+					else {
+						ret.size = ToSize[t];
+					}
+
 					break;
 				}
 

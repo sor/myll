@@ -100,6 +100,8 @@ namespace Myll.Core
 			Binary,
 			Integer,
 			Unsigned,
+			UntypedInteger, // type-system only: an integer literal that has not been bound to a concrete size
+			UntypedFloat,   // type-system only: a float literal that has not been bound to a concrete size
 		}
 
 		[Flags, Obsolete( "never used, maybe for dynamically sized integer in the future" )]
@@ -117,6 +119,17 @@ namespace Myll.Core
 		public       int  size;  // in bytes, -1 not yet determined, -2 invalid
 		public       int  align; // in bytes
 		public       Kind kind;
+
+		/// <summary>
+		/// For UntypedInteger/UntypedFloat types, the original literal text so the compiler can
+		/// check whether the value fits in the target type before committing to a concrete size.
+		/// </summary>
+		public string? literalText;
+
+		/// <summary>
+		/// True when this type was written with the `float` keyword (as opposed to `f16/f32/f64/f128`).
+		/// </summary>
+		public bool usesFloatKeyword;
 
 		public override string GenType()
 			=> BasicFormat[kind][size];

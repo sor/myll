@@ -21,6 +21,19 @@ namespace Myll.Core
 		Any   = Zero | Three | Five,
 	}
 
+	public enum FloatKeywordMode
+	{
+		/// <summary>
+		/// The `float` keyword is not bound to any concrete size. Untyped float literals
+		/// still default to f32.
+		/// </summary>
+		Unspecified,
+		F16,
+		F32,
+		F64,
+		F128,
+	}
+
 	public static class Dialect
 	{
 		// When true, `new T` is illegal; you must write `new T*` (or another explicit pointer type).
@@ -32,5 +45,32 @@ namespace Myll.Core
 
 		// Default rule-of-N enforcement for classes. Can be overridden per class with e.g. `[rule_of=5]`.
 		public static RuleOf DefaultRuleOf = RuleOf.None;
+
+		/// <summary>
+		/// Controls which concrete size the `float` keyword refers to. `Unspecified` means the
+		/// keyword has no binding; `AllowFloatKeyword` decides whether it may still be used.
+		/// </summary>
+		public static FloatKeywordMode FloatKeyword = FloatKeywordMode.Unspecified;
+
+		/// <summary>
+		/// When false, the `float` keyword produces a compile-time error regardless of
+		/// <see cref="FloatKeyword"/>. Untyped float literals and `var auto` are unaffected.
+		/// </summary>
+		public static bool AllowFloatKeyword = true;
+
+		/// <summary>
+		/// Returns the concrete float size (in bytes) used for untyped float literals and for
+		/// the `float` keyword when <see cref="FloatKeyword"/> is <see cref="FloatKeywordMode.Unspecified"/>.
+		/// </summary>
+		public static int DefaultFloatSize()
+		{
+			return FloatKeyword switch {
+				FloatKeywordMode.F16 => 2,
+				FloatKeywordMode.F32 => 4,
+				FloatKeywordMode.F64 => 8,
+				FloatKeywordMode.F128 => 16,
+				_                   => 4, // Unspecified fallback: f32
+			};
+		}
 	}
 }

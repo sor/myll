@@ -20,7 +20,6 @@ namespace Myll.Resolver
 			"char",
 			"int",
 			"float",
-			"double",
 			"auto",
 			"string",
 			"byte",
@@ -42,6 +41,8 @@ namespace Myll.Resolver
 		private readonly ResolutionResult result;
 		private readonly List<Diagnostic> diagnostics;
 		private readonly TypeResolver typeResolver;
+		private readonly HashSet<Expr> ambiguousCalls = new();
+		private readonly HashSet<Expr> noMatchingCalls = new();
 
 		private NameResolver(
 			IReadOnlyDictionary<string, ModuleExports> moduleExports,
@@ -63,18 +64,23 @@ namespace Myll.Resolver
 			var resolver    = new NameResolver( exports, result, diagnostics );
 
 		bool progress;
-			do {
-				progress = false;
-				foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
-					progress |= resolver.ResolveUsings( module, context );
-					progress |= resolver.ResolveIds( module, context );
-					progress |= resolver.ResolveScopeds( module, context );
-					progress |= resolver.ResolveTypes( module, context );
-					progress |= resolver.ResolveMemberAccesses( module, context );
-					progress |= resolver.ResolveCalls( module, context );
-				}
-			} while( progress );
+		do {
+			progress = false;
+			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+				progress |= resolver.ResolveUsings( module, context );
+				progress |= resolver.ResolveIds( module, context );
+				progress |= resolver.ResolveScopeds( module, context );
+				progress |= resolver.ResolveTypes( module, context );
+				progress |= resolver.ResolveMemberAccesses( module, context );
+				progress |= resolver.ResolveCalls( module, context );
+			}
+		} while( progress );
 
+		// Commit resolved declarations to the AST so that type checking can use
+		// resolvedDecl directly on identifiers, member accesses, and type specs.
+		result.Apply();
+
+		resolver.ValidateTypes( modules );
 		resolver.ReportUnresolved( modules );
 
 		return (result, diagnostics);
@@ -207,23 +213,15 @@ namespace Myll.Resolver
 						return false;
 
 					List<Decl> candidates = LookupNameCandidates( id.idTplArgs.id, call.Scope, module );
-					Decl? chosen = TryResolveOverload( candidates, call.Call, call.Scope, module );
-					if( chosen == null )
-						return false;
-
-					result.Resolve( id, chosen );
-					return true;
+					var outcome = TryResolveOverload( candidates, call.Call, call.Scope, module, call.Callee );
+					return ApplyOverloadOutcome( outcome, id, call.Callee );
 				}
 				case ScopedExpr scoped: {
 					if( result.Scopeds.ContainsKey( scoped ) )
 						return false;
 
-					Decl? chosen = ResolveScopedCallOverload( scoped, call.Call, call.Scope, module );
-					if( chosen == null )
-						return false;
-
-					result.Resolve( scoped, chosen );
-					return true;
+					var outcome = ResolveScopedCallOverload( scoped, call.Call, call.Scope, module, call.Callee );
+					return ApplyScopedOverloadOutcome( outcome, scoped, call.Callee );
 				}
 				case BinOp binOp when IsMemberAccessOperation( binOp.op ): {
 					if( binOp.right is not IdExpr member )
@@ -237,43 +235,95 @@ namespace Myll.Resolver
 
 					List<Decl> candidates = LookupInHierarchicalCandidates(
 						member.idTplArgs.id, baseType, module );
-					Decl? chosen = TryResolveOverload( candidates, call.Call, call.Scope, module );
-					if( chosen == null )
-						return false;
+					var outcome = TryResolveOverload( candidates, call.Call, call.Scope, module, call.Callee );
 
-					result.ResolveMember( member, chosen );
-					return true;
+					if( outcome.chosen != null ) {
+						result.ResolveMember( member, outcome.chosen );
+						return true;
+					}
+
+					RecordOverloadFailure( outcome, call.Callee, member.idTplArgs.id );
+					return false;
 				}
 			}
 
 			return false;
 		}
 
-		private Decl? ResolveScopedCallOverload(
+		private bool ApplyOverloadOutcome( (Decl? chosen, bool ambiguous, bool noMatch) outcome, IdExpr id, Expr callee )
+		{
+			if( outcome.chosen != null ) {
+				result.Resolve( id, outcome.chosen );
+				return true;
+			}
+
+			RecordOverloadFailure( outcome, callee, id.idTplArgs.id );
+			return false;
+		}
+
+		private bool ApplyScopedOverloadOutcome( (Decl? chosen, bool ambiguous, bool noMatch) outcome, ScopedExpr scoped, Expr callee )
+		{
+			if( outcome.chosen != null ) {
+				result.Resolve( scoped, outcome.chosen );
+				return true;
+			}
+
+			RecordOverloadFailure( outcome, callee, scoped.idTpls.Last().id );
+			return false;
+		}
+
+		private void RecordOverloadFailure( (Decl? chosen, bool ambiguous, bool noMatch) outcome, Expr callee, string name )
+		{
+			if( outcome.ambiguous && ambiguousCalls.Add( callee ) ) {
+				diagnostics.Add( new Diagnostic(
+					GetCalleeSrcPos( callee ),
+					DiagnosticKind.Error,
+					String.Format( "Ambiguous call to '{0}'", name ) ) );
+			}
+			else if( outcome.noMatch && noMatchingCalls.Add( callee ) ) {
+				diagnostics.Add( new Diagnostic(
+					GetCalleeSrcPos( callee ),
+					DiagnosticKind.Error,
+					String.Format( "No matching overload for '{0}'", name ) ) );
+			}
+		}
+
+		private static SrcPos GetCalleeSrcPos( Expr callee )
+		{
+			return callee switch {
+				IdExpr id                => id.srcPos,
+				ScopedExpr scoped        => scoped.srcPos,
+				BinOp binOp              => binOp.right is IdExpr m ? m.srcPos : binOp.srcPos,
+				_
+					                       => callee.srcPos,
+			};
+		}
+
+		private (Decl? chosen, bool ambiguous, bool noMatch) ResolveScopedCallOverload(
 			ScopedExpr      scoped,
 			FuncCall        call,
 			Scope           scope,
-			GlobalNamespace module )
+			GlobalNamespace module,
+			Expr            callee )
 		{
 			IReadOnlyList<IdTplArgs> segments = scoped.idTpls;
 			if( segments.Count == 0 )
-				return null;
+				return (null, false, true);
 
 			List<IdTplArgs> prefix = segments.Take( segments.Count - 1 ).ToList();
-			Decl? prefixDecl = null;
 			if( prefix.Count > 0 ) {
-				prefixDecl = ResolvePath( prefix, scope, module, out _, callSite: false );
+				Decl? prefixDecl = ResolvePath( prefix, scope, module, out _, callSite: false );
 				if( prefixDecl == null || prefixDecl is not Hierarchical h )
-					return null;
+					return (null, false, true);
 
 				List<Decl> candidates = LookupInHierarchicalCandidates(
 					segments.Last().id, h, module );
-				return TryResolveOverload( candidates, call, scope, module );
+				return TryResolveOverload( candidates, call, scope, module, callee );
 			}
 
 			// Single-segment scoped call: treat like an unqualified name.
 			List<Decl> single = LookupNameCandidates( segments[0].id, scope, module );
-			return TryResolveOverload( single, call, scope, module );
+			return TryResolveOverload( single, call, scope, module, callee );
 		}
 
 		private static bool IsMemberAccessOperation( Operand op )
@@ -284,18 +334,19 @@ namespace Myll.Resolver
 			|| op is Operand.NCMemberAccessPtr
 			|| op is Operand.MemberPtrAccessPtr;
 
-		private Decl? TryResolveOverload(
+		private (Decl? chosen, bool ambiguous, bool noMatch) TryResolveOverload(
 			List<Decl>      candidates,
 			FuncCall        call,
 			Scope           scope,
-			GlobalNamespace module )
+			GlobalNamespace module,
+			Expr            callee )
 		{
 			List<Decl> callable = candidates
 				.Where( d => d is Func or Structor )
 				.ToList();
 
 			if( callable.Count == 0 )
-				return null;
+				return (null, false, true);
 
 			// Prefer an arity match first; if only one candidate has the right arity, pick it.
 			List<Decl> sameArity = callable
@@ -303,26 +354,66 @@ namespace Myll.Resolver
 				.ToList();
 
 			if( sameArity.Count == 0 )
-				return null;
+				return (null, false, true);
 
 			if( sameArity.Count == 1 )
-				return sameArity[0];
+				return (sameArity[0], false, false);
 
 			// Multiple candidates with the same arity: resolve argument types and
-			// look for a single exact match.
+			// rank candidates by the worst conversion required for any argument.
 			List<Typespec?> argTypes = call.args
 				.Select( a => typeResolver.Resolve( a.expr ) )
 				.ToList();
 
-			List<Decl> exactMatches = sameArity
-				.Where( d => MatchesExactly( d, argTypes ) )
-				.ToList();
+			// If any argument type is still unknown, we cannot decide yet. Do not emit
+			// a diagnostic; a later resolver pass may provide the missing type.
+			if( argTypes.Any( t => t == null ) )
+				return (null, false, false);
 
-			if( exactMatches.Count == 1 )
-				return exactMatches[0];
+			List<(Decl Candidate, ConversionRank WorstRank)> viable = new();
+			ConversionRank bestWorst = ConversionRank.None;
 
-			// TODO: report ambiguous / no viable overload diagnostics here.
-			return null;
+			foreach( Decl candidate in sameArity ) {
+				ConversionRank worst = ConversionRank.Exact;
+				bool ok = true;
+
+				List<Param> paras = candidate switch {
+					Func func    => func.paras,
+					Structor stc => stc.paras,
+					_            => new List<Param>(),
+				};
+
+				for( int i = 0; i < paras.Count; i++ ) {
+					ConversionRank rank = ConversionRules.GetRank( argTypes[i]!, paras[i].type );
+					if( rank > ConversionRank.Promotion ) {
+						ok = false;
+						break;
+					}
+
+					if( rank > worst )
+						worst = rank;
+				}
+
+				if( !ok )
+					continue;
+
+				if( worst < bestWorst ) {
+					viable.Clear();
+					viable.Add( (candidate, worst) );
+					bestWorst = worst;
+				}
+				else if( worst == bestWorst ) {
+					viable.Add( (candidate, worst) );
+				}
+			}
+
+			if( viable.Count == 1 )
+				return (viable[0].Candidate, false, false);
+
+			if( viable.Count > 1 )
+				return (null, true, false);
+
+			return (null, false, true);
 		}
 
 		private static int GetParamCount( Decl decl )
@@ -331,29 +422,6 @@ namespace Myll.Resolver
 				Structor stc   => stc.paras.Count,
 				_              => -1,
 			};
-
-		private static bool MatchesExactly( Decl decl, IReadOnlyList<Typespec?> argTypes )
-		{
-			List<Param> paras = decl switch {
-				Func func      => func.paras,
-				Structor stc   => stc.paras,
-				_              => new List<Param>(),
-			};
-
-			if( paras.Count != argTypes.Count )
-				return false;
-
-			for( int i = 0; i < paras.Count; i++ ) {
-				Typespec? argType = argTypes[i];
-				if( argType == null )
-					return false;
-
-				if( !ConversionRules.IsExactMatch( paras[i].type, argType ) )
-					return false;
-			}
-
-			return true;
-		}
 
 		private bool ResolveUsings( GlobalNamespace module, CompilationContext context )
 		{
@@ -716,6 +784,24 @@ namespace Myll.Resolver
 			return null;
 		}
 
+		private void ValidateTypes(
+			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules )
+		{
+			if( !Dialect.AllowFloatKeyword ) {
+				foreach( (_, CompilationContext context) in modules ) {
+					foreach( SrcPos srcPos in context.FloatKeywordUsages ) {
+						diagnostics.Add( new Diagnostic(
+							srcPos,
+							DiagnosticKind.Error,
+							"The 'float' keyword is disabled by the active dialect" ) );
+					}
+				}
+			}
+
+			var checker = new TypeChecker( result, diagnostics );
+			checker.Validate( modules );
+		}
+
 		private void ReportUnresolved(
 			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules )
 		{
@@ -724,12 +810,18 @@ namespace Myll.Resolver
 					if( result.Ids.ContainsKey( unresolved.Node ) )
 						continue;
 
+					if( ambiguousCalls.Contains( unresolved.Node ) || noMatchingCalls.Contains( unresolved.Node ) )
+						continue;
+
 					IdTplArgs[] segments = new[] { unresolved.Node.idTplArgs };
 					ReportUnresolvedPath( "identifier", unresolved.Node.srcPos, segments, module, unresolved.Scope );
 				}
 
 				foreach( UnresolvedScoped unresolved in context.UnresolvedScopeds ) {
 					if( result.Scopeds.ContainsKey( unresolved.Node ) )
+						continue;
+
+					if( ambiguousCalls.Contains( unresolved.Node ) || noMatchingCalls.Contains( unresolved.Node ) )
 						continue;
 
 					ReportUnresolvedPath( "identifier", unresolved.Node.srcPos, unresolved.Node.idTpls, module, unresolved.Scope );
@@ -747,6 +839,9 @@ namespace Myll.Resolver
 						continue;
 
 					if( result.Members.ContainsKey( member ) )
+						continue;
+
+					if( ambiguousCalls.Contains( unresolved.Node ) || noMatchingCalls.Contains( unresolved.Node ) )
 						continue;
 
 					string? typeName = null;

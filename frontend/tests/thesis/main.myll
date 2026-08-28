@@ -107,10 +107,10 @@ namespace problem_3331 {
 		method test() {
 			var C c1 = C(1); // OK
 			var C c2 = 2; // OK, man wollte explizit die implizierte Konvertierung von int erlauben
-			var C c3 = C(3.0f); // OK
-			var C c4 = 4.0f; // Error, man bekommt standardmäßig nur den float Konstruktor
+			var C c3 = C(3.0); // OK
+			var C c4 = 4.0; // Error, man bekommt standardmäßig nur den float Konstruktor
 			// NO Error? WTF C++
-			// 4.0f is converted to int and uses the implicit ctor(int) :facepalm:
+			// 4.0 is converted to int and uses the implicit ctor(int) :facepalm:
 		}
 	}
 }
@@ -344,7 +344,7 @@ namespace ctor_fun {
 		operator move=						{ f = other.f;	} // same as above
 		operator move= o					{ f = o.f;		} // same as above
 
-	//	explicit operator bool() const		{ return f <= 0.0f; }
+	//	explicit operator bool() const		{ return f <= 0.0; }
 		operator convert -> bool			{ return f <= 0.0;	} // same as above
 		operator convert bool				{ return f <= 0.0;	} // same as above
 		convert -> bool						{ return f <= 0.0;	} // same as above

@@ -1,6 +1,6 @@
 module std_cmath;
 
 namespace std {
-	func sqrt(double x) -> double;
-	func fabs(double x) -> double;
+	func sqrt(f64 x) -> f64;
+	func fabs(f64 x) -> f64;
 }

@@ -1,0 +1,27 @@
+module main;
+
+// Two overloads reachable from i16 only via integer promotion.
+// With the planned rank (promotion to any equal-or-wider integer type),
+// i16 -> i32 and i16 -> i64 are equally good, so this call is ambiguous.
+func pick( i32 x ) -> int => 1;
+func pick( i64 x ) -> int => 2;
+
+// Explicit overloads for int and f32; a string literal cannot match either.
+func dispatch( int x ) -> int => 10;
+func dispatch( f32 x ) -> int => 20;
+
+func test_ambiguous_overload() -> void
+{
+	var i16 small = 1;
+	pick( small );  // EXPECTED: ambiguous overload; both pick(i32) and pick(i64) apply.
+}
+
+func test_no_matching_overload() -> void
+{
+	dispatch( "hello" );  // EXPECTED: no matching overload; candidates take int and f32.
+}
+
+func main() -> int
+{
+	return 0;
+}

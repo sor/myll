@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Myll.Core;
 
 namespace Myll.Resolver
@@ -20,9 +21,13 @@ namespace Myll.Resolver
 		/// <summary>
 		/// Returns the conversion rank from <paramref name="source"/> to <paramref name="target"/>.
 		/// Only exact matches and safe promotions are allowed by default:
+		///   - exact types,
 		///   - integer to wider integer of the same signedness,
 		///   - float to wider float,
-		/// no narrowing, and no implicit integer/float or signed/unsigned conversions.
+		///   - untyped integer literals to any fitting integer or float type,
+		///   - untyped float literals to any float type,
+		/// No narrowing, and no implicit typed integer/float or signed/unsigned conversions.
+		/// Some of these defaults (e.g., int/float cross-conversion) may later become dialect flags.
 		/// </summary>
 		public static ConversionRank GetRank( Typespec? source, Typespec? target )
 		{
@@ -32,7 +37,21 @@ namespace Myll.Resolver
 			if( IsExactMatch( source, target ) )
 				return ConversionRank.Exact;
 
+			ConversionRank untypedRank = GetUntypedLiteralRank( source, target );
+			if( untypedRank != ConversionRank.None )
+				return untypedRank;
+
 			if( IsPromotion( source, target ) )
+				return ConversionRank.Promotion;
+
+			// Value -> reference parameter binding (e.g., passing std::ostream to std::ostream&).
+			if( TryStripReference( target, out Typespec? refBase )
+			 && GetRank( source, refBase ) <= ConversionRank.Promotion )
+				return ConversionRank.Promotion;
+
+			// String literal to C-style string pointer.
+			if( source is TypespecBasic { kind: TypespecBasic.Kind.String }
+			 && IsCharPointer( target ) )
 				return ConversionRank.Promotion;
 
 			if( IsAllowedConversion( source, target ) )
@@ -57,10 +76,9 @@ namespace Myll.Resolver
 			if( source.GetType() != target.GetType() )
 				return false;
 
-			if( source.qual != target.qual )
-				return false;
-
-			// Both have the same pointer structure.
+			// Qualifiers are intentionally not required to match here. A value can be
+			// bound to a more-qualified target (e.g., assigned to a const variable).
+			// Pointer/reference structure must still match exactly.
 			if( !HaveSamePointers( source.ptrs, target.ptrs ) )
 				return false;
 
@@ -69,19 +87,64 @@ namespace Myll.Resolver
 				                       && srcBasic.kind == tgtBasic.kind
 				                       && srcBasic.size == tgtBasic.size,
 				TypespecNested srcNest => target is TypespecNested tgtNest
-				                       && NestedNamesEqual( srcNest, tgtNest ),
+				                       && NestedTypesEqual( srcNest, tgtNest ),
 				TypespecFunc   srcFunc => false, // function pointer identity not yet supported
 				_                      => false,
 			};
 		}
 
+		private static ConversionRank GetUntypedLiteralRank( Typespec source, Typespec target )
+		{
+			if( source is not TypespecBasic srcBasic || target is not TypespecBasic tgtBasic )
+				return ConversionRank.None;
+
+			if( !HaveSamePointers( source.ptrs, target.ptrs ) )
+				return ConversionRank.None;
+
+			if( srcBasic.kind == TypespecBasic.Kind.UntypedInteger ) {
+				if( !TryParseInteger( srcBasic.literalText, out long value ) )
+					return ConversionRank.None;
+
+				// Integer literal defaults to the platform int size when the target is int.
+				if( tgtBasic.kind == TypespecBasic.Kind.Integer && tgtBasic.size == 4 )
+					return ConversionRank.Exact;
+
+				// Fits into another integer type? (value range check)
+				if( ( tgtBasic.kind == TypespecBasic.Kind.Integer || tgtBasic.kind == TypespecBasic.Kind.Unsigned )
+				 && IntegerFits( value, tgtBasic.kind, tgtBasic.size ) )
+					return ConversionRank.Promotion;
+
+				// Integer literal can be used to initialize a float.
+				if( tgtBasic.kind == TypespecBasic.Kind.Float )
+					return ConversionRank.Promotion;
+
+				return ConversionRank.None;
+			}
+
+			if( srcBasic.kind == TypespecBasic.Kind.UntypedFloat ) {
+				if( !TryParseFloat( srcBasic.literalText, out _ ) )
+					return ConversionRank.None;
+
+				// The default float type for an unannotated literal is configured by the
+				// dialect (falls back to f32). Any other concrete float size is accepted
+				// via promotion.
+				int defaultSize = Dialect.DefaultFloatSize();
+				if( tgtBasic.kind == TypespecBasic.Kind.Float && tgtBasic.size == defaultSize )
+					return ConversionRank.Exact;
+
+				if( tgtBasic.kind == TypespecBasic.Kind.Float )
+					return ConversionRank.Promotion;
+
+				return ConversionRank.None;
+			}
+
+			return ConversionRank.None;
+		}
+
 		private static bool IsPromotion( Typespec source, Typespec target )
 		{
-			// Promotion preserves qualifiers and pointer structure exactly; only the
-			// underlying scalar width changes.
-			if( source.qual != target.qual )
-				return false;
-
+			// Promotion preserves pointer structure exactly; only the underlying scalar
+			// width changes. Qualifier differences (e.g., binding to const) are allowed.
 			if( !HaveSamePointers( source.ptrs, target.ptrs ) )
 				return false;
 
@@ -105,10 +168,122 @@ namespace Myll.Resolver
 
 		private static bool IsAllowedConversion( Typespec source, Typespec target )
 		{
-			// Currently all non-exact/non-promotion conversions are rejected.
+			// String literal to C-style string pointer.
+			if( source is TypespecBasic { kind: TypespecBasic.Kind.String }
+			 && IsCharPointer( target ) )
+				return true;
+
+			// Currently all other non-exact/non-promotion conversions are rejected.
 			// This is where future safe conversions (e.g., derived-to-base pointers,
 			// char32_t ↔ int32_t if desired) would go.
 			return false;
+		}
+
+		private static bool IsCharPointer( Typespec type )
+		{
+			if( type.ptrs == null || type.ptrs.Count != 1 )
+				return false;
+
+			if( type.ptrs[0].kind != Pointer.Kind.RawPtr )
+				return false;
+
+			return type is TypespecBasic { kind: TypespecBasic.Kind.Char, size: 1 };
+		}
+
+		private static bool IntegerFits( long value, TypespecBasic.Kind kind, int size )
+		{
+			return kind switch {
+				TypespecBasic.Kind.Integer => size switch {
+					1 => value >= sbyte.MinValue && value <= sbyte.MaxValue,
+					2 => value >= short.MinValue && value <= short.MaxValue,
+					4 => value >= int.MinValue && value <= int.MaxValue,
+					8 => true,
+					_ => false,
+				},
+				TypespecBasic.Kind.Unsigned => value >= 0 && size switch {
+					1 => value <= byte.MaxValue,
+					2 => value <= ushort.MaxValue,
+					4 => value <= uint.MaxValue,
+					8 => true,
+					_ => false,
+				},
+				_ => false,
+			};
+		}
+
+		private static bool TryParseInteger( string? text, out long value )
+		{
+			value = 0;
+			if( string.IsNullOrEmpty( text ) )
+				return false;
+
+			ReadOnlySpan<char> span = text.AsSpan();
+
+			try {
+				if( span.Length >= 2 && span[0] == '0' ) {
+					if( span[1] == 'x' || span[1] == 'X' )
+						value = Convert.ToInt64( span[2..].ToString(), 16 );
+					else if( span[1] == 'o' || span[1] == 'O' )
+						value = Convert.ToInt64( span[2..].ToString(), 8 );
+					else if( span[1] == 'b' || span[1] == 'B' )
+						value = Convert.ToInt64( span[2..].ToString(), 2 );
+					else
+						value = long.Parse( span.ToString(), System.Globalization.NumberStyles.None );
+				}
+				else {
+					value = long.Parse( span.ToString(), System.Globalization.NumberStyles.None );
+				}
+
+				return true;
+			}
+			catch {
+				return false;
+			}
+		}
+
+		private static bool TryParseFloat( string? text, out double value )
+		{
+			value = 0;
+			if( string.IsNullOrEmpty( text ) )
+				return false;
+
+			return double.TryParse( text, System.Globalization.NumberStyles.Float,
+				System.Globalization.CultureInfo.InvariantCulture, out value );
+		}
+
+		private static bool TryStripReference( Typespec target, out Typespec? stripped )
+		{
+			stripped = null;
+			if( target.ptrs == null || target.ptrs.Count == 0 )
+				return false;
+
+			Pointer last = target.ptrs[target.ptrs.Count - 1];
+			if( last.kind != Pointer.Kind.LVRef && last.kind != Pointer.Kind.RVRef )
+				return false;
+
+			stripped = CloneTypespecBase( target );
+			stripped.ptrs = target.ptrs.Take( target.ptrs.Count - 1 ).ToList();
+			return true;
+		}
+
+		private static Typespec CloneTypespecBase( Typespec source )
+		{
+			Typespec ret = source switch {
+				TypespecBasic b   => new TypespecBasic { kind = b.kind, size = b.size },
+				TypespecNested n  => new TypespecNested {
+					resolvedDecl = n.resolvedDecl,
+					idTpls       = n.idTpls.Select( it => new IdTplArgs { id = it.id, tplArgs = it.tplArgs } ).ToList(),
+				},
+				TypespecFunc f    => new TypespecFunc {
+					paras   = f.paras,
+					retType = f.retType,
+				},
+				_                 => throw new InvalidOperationException( "unknown Typespec variant" ),
+			};
+
+			ret.srcPos = source.srcPos;
+			ret.qual   = source.qual;
+			return ret;
 		}
 
 		private static bool HaveSamePointers( List<Pointer>? a, List<Pointer>? b )
@@ -128,8 +303,13 @@ namespace Myll.Resolver
 			return true;
 		}
 
-		private static bool NestedNamesEqual( TypespecNested a, TypespecNested b )
+		private static bool NestedTypesEqual( TypespecNested a, TypespecNested b )
 		{
+			// If both types were resolved, compare the underlying declaration.
+			if( a.resolvedDecl != null && b.resolvedDecl != null )
+				return a.resolvedDecl == b.resolvedDecl;
+
+			// Fall back to textual comparison of the name path.
 			if( a.idTpls.Count != b.idTpls.Count )
 				return false;
 

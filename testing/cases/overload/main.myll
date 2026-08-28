@@ -20,7 +20,7 @@ func dispatch( f32 x ) -> int => 20;
 func main() -> int
 {
 	var Gadget gi = Gadget( 1 );      // ctor(int)
-	var Gadget gf = Gadget( 1.0f );   // ctor(f32)
+	var Gadget gf = Gadget( 1.0 );    // ctor(f32)
 
 	if( gi.id() != 1 ) return 1;
 	if( gf.id() != 100 ) return 2;
@@ -30,8 +30,8 @@ func main() -> int
 	if( gf.tag() != 1000 ) return 4;    // tag():    100*10
 
 	// free-function overloads
-	if( dispatch( 3 ) != 10 ) return 5;      // dispatch(int)
-	if( dispatch( 3.0f ) != 20 ) return 6;   // dispatch(f32)
+	if( dispatch( 3 ) != 10 ) return 5;     // dispatch(int)
+	if( dispatch( 3.0 ) != 20 ) return 6;   // dispatch(f32)
 
 	// member access overloads through pointer
 	var Gadget * gp = new Gadget( 2 );

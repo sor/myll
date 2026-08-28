@@ -13,7 +13,7 @@ class Sheet1 : Sheet
 			blendedHead,
 			blendedBody;
 	}
-	field f32 bgColor = 160.0f;
+	field f32 bgColor = 160.0;
 
 	// ctor
 	// C++:  using Sheet::Sheet;
@@ -37,19 +37,19 @@ class Sheet1 : Sheet
 		{
 			if( state == 0 )
 			{
-				if( bgColor > 161.0f)
+				if( bgColor > 161.0)
 					bgColor -= deltaT * 40;
-				else if ( bgColor < 159.0f)
+				else if ( bgColor < 159.0)
 					bgColor *= 1 + (deltaT*2);
 			}
 			else if (state == 1)
 			{
-				if (bgColor < 250.0f)
+				if (bgColor < 250.0)
 					bgColor += deltaT * 20;
 			}
 			else if (state == 2)
 			{
-				if (bgColor > 5.0f)
+				if (bgColor > 5.0)
 					bgColor *= 1 - (deltaT);
 			}
 		}

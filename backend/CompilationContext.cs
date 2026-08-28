@@ -38,6 +38,12 @@ namespace Myll
 		/// </summary>
 		public List<UnresolvedCall> UnresolvedCalls { get; } = new();
 
+		/// <summary>
+		/// Source positions of every use of the `float` keyword in this module. The resolver uses
+		/// this together with <see cref="Dialect.AllowFloatKeyword"/> to emit diagnostics.
+		/// </summary>
+		public List<SrcPos> FloatKeywordUsages { get; } = new();
+
 		public CompilationContext()
 		{
 			ExprVisitor = new ExprVisitor( this );

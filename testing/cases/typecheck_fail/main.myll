@@ -1,0 +1,38 @@
+module main;
+
+func test_narrowing_initializer() -> void
+{
+	// 1000 does not fit in i8; narrowing initialisation should be rejected.
+	var i8 x = 1000;  // EXPECTED: narrowing initializer (untyped integer does not fit in i8)
+}
+
+func test_float_to_int_init() -> void
+{
+	// No implicit float literal -> int conversion.
+	var int y = 3.0;  // EXPECTED: cannot implicitly convert untyped float to int
+}
+
+func test_typed_int_to_float_init() -> void
+{
+	// No implicit typed int -> f32 conversion (only untyped integer literals can become float).
+	var int a = 3;
+	var f32 z = a;     // EXPECTED: cannot implicitly convert int to f32
+}
+
+func test_return_type_mismatch() -> int
+{
+	// Function promises int, but returns an f32 literal.
+	return 1.0;        // EXPECTED: return type mismatch (f32 to int)
+}
+
+func test_assignment_mismatch() -> void
+{
+	// Re-assigning an int variable from an f32 expression is not allowed.
+	var int a = 0;
+	a = 1.0;           // EXPECTED: assignment type mismatch (f32 to int)
+}
+
+func main() -> int
+{
+	return 0;
+}

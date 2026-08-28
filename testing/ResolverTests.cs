@@ -59,7 +59,7 @@ func square(int x) -> int { return 81; }
 		{
 			var (module, context) = CompileModule( @"
 module test;
-func use( B b ) -> B { var B x; return; }
+func use( B b ) -> B { var B x; return x; }
 class B { }
 " );
 
