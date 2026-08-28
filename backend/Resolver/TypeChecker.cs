@@ -115,11 +115,20 @@ namespace Myll.Resolver
 						ValidateStmt( s, currentFunction );
 					break;
 
-				case VarDecl vd:
-					ValidateDecl( vd );
-					break;
+			case VarDecl vd:
+				ValidateDecl( vd );
+				break;
 
-				case ReturnStmt ret:
+			case VarStmt vs:
+				if( vs.init != null ) {
+					if( vs.type is TypespecBasic { kind: TypespecBasic.Kind.Auto } )
+						vs.type = InferAutoType( typeResolver.Resolve( vs.init ) ) ?? vs.type;
+
+					CheckAssignment( vs.type, vs.init, vs.init.srcPos );
+				}
+				break;
+
+			case ReturnStmt ret:
 					ValidateReturn( ret, currentFunction );
 					break;
 
@@ -340,11 +349,13 @@ namespace Myll.Resolver
 
 		private void ValidateExpression( Expr expr )
 		{
+			// For now only logical/conditional operands need strict type checking.
+			// Arithmetic/bitwise/comparison operators are deliberately left permissive
+			// because Myll mirrors C++'s promotion rules and also uses `+` / `<<`
+			// in ways that are not purely numeric (e.g. bool counting, stream insertion).
 			switch( expr ) {
 				case TernOp tern: {
 					ValidateCondition( tern.left, tern.left.srcPos, "?:" );
-					ValidateExpression( tern.mid );
-					ValidateExpression( tern.right );
 					break;
 				}
 

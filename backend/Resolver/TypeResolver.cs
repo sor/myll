@@ -194,8 +194,12 @@ namespace Myll.Resolver
 
 		private Typespec? ResolveNew( NewExpr newExpr )
 		{
-			// `new` yields the type written by the user (which already includes pointers).
-			return newExpr.type;
+			// `new T` yields a raw pointer to T. If the user already wrote an explicit
+			// pointer type (e.g. `new T*`), return it unchanged.
+			if( newExpr.type.ptrs != null && newExpr.type.ptrs.Count > 0 )
+				return newExpr.type;
+
+			return AddRawPointer( newExpr.type );
 		}
 
 		private Typespec? ResolveCast( CastExpr cast )
@@ -265,6 +269,10 @@ namespace Myll.Resolver
 			if( left == null || right == null )
 				return null;
 
+			// Bool is arithmetic-compatible and promotes like a 1-bit integer.
+			if( TryBoolArithmeticPromotion( left, right, out Typespec? promoted ) )
+				return promoted;
+
 			// For exact or promotion-compatible operands, prefer the wider type.
 			if( ConversionRules.IsImplicitlyConvertible( left, right ) )
 				return right;
@@ -272,6 +280,25 @@ namespace Myll.Resolver
 				return left;
 
 			return null;
+		}
+
+		private static bool TryBoolArithmeticPromotion( Typespec a, Typespec b, out Typespec? promoted )
+		{
+			promoted = null;
+
+			bool aIsBool = a is TypespecBasic ba && ba.kind == TypespecBasic.Kind.Bool && a.ptrs is null or { Count: 0 };
+			bool bIsBool = b is TypespecBasic bb && bb.kind == TypespecBasic.Kind.Bool && b.ptrs is null or { Count: 0 };
+
+			if( !aIsBool && !bIsBool )
+				return false;
+
+			if( aIsBool && bIsBool ) {
+				promoted = new TypespecBasic { kind = TypespecBasic.Kind.Integer, size = 4 };
+				return true;
+			}
+
+			promoted = aIsBool ? b : a;
+			return true;
 		}
 
 		private static Typespec? CommonType( Typespec? a, Typespec? b )
