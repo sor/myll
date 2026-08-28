@@ -1,0 +1,35 @@
+module main;
+
+func test_integer_condition() -> void
+{
+	var int i = 1;
+	if( i ) { }  // EXPECTED: condition must be bool
+}
+
+func test_logical_operand() -> void
+{
+	var bool b = true;
+	var int i = 0;
+	if( b && i ) { }  // EXPECTED: right operand of logical and must be bool
+}
+
+func test_while_condition() -> void
+{
+	var int count = 3;
+	while( count ) { }  // EXPECTED: while condition must be bool
+}
+
+func test_do_while_condition() -> void
+{
+	do { } while( 1 );  // EXPECTED: do-while condition must be bool
+}
+
+func test_for_condition() -> void
+{
+	for( var int i = 0; i; ++i ) { }  // EXPECTED: for condition must be bool
+}
+
+func main() -> int
+{
+	return 0;
+}

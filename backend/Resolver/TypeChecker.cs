@@ -136,8 +136,10 @@ namespace Myll.Resolver
 				}
 
 				case IfStmt ifStmt:
-					foreach( IfStmt.CondThen ifThen in ifStmt.ifThens )
+					foreach( IfStmt.CondThen ifThen in ifStmt.ifThens ) {
+						ValidateCondition( ifThen.cond, ifThen.cond.srcPos, "if" );
 						ValidateStmt( ifThen.then, currentFunction );
+					}
 					if( ifStmt.els != null )
 						ValidateStmt( ifStmt.els, currentFunction );
 					break;
@@ -145,6 +147,8 @@ namespace Myll.Resolver
 				case ForStmt forStmt:
 					if( forStmt.init != null )
 						ValidateStmt( forStmt.init, currentFunction );
+					if( forStmt.cond != null )
+						ValidateCondition( forStmt.cond, forStmt.cond.srcPos, "for" );
 					if( forStmt.body != null )
 						ValidateStmt( forStmt.body, currentFunction );
 					if( forStmt.els != null )
@@ -152,6 +156,7 @@ namespace Myll.Resolver
 					break;
 
 				case WhileStmt whileStmt:
+					ValidateCondition( whileStmt.cond, whileStmt.cond.srcPos, "while" );
 					ValidateStmt( whileStmt.body, currentFunction );
 					if( whileStmt.els != null )
 						ValidateStmt( whileStmt.els, currentFunction );
@@ -159,6 +164,7 @@ namespace Myll.Resolver
 
 				case DoWhileStmt doWhile:
 					ValidateStmt( doWhile.body, currentFunction );
+					ValidateCondition( doWhile.cond, doWhile.cond.srcPos, "do-while" );
 					break;
 
 				case TimesStmt times:
@@ -275,6 +281,50 @@ namespace Myll.Resolver
 						FormatType( rightType ),
 						FormatType( leftType ) ) ) );
 			}
+		}
+
+		private void ValidateCondition( Expr cond, SrcPos srcPos, string context )
+		{
+			CheckBooleanOperand( cond, context );
+		}
+
+		private void CheckBooleanOperand( Expr expr, string context )
+		{
+			switch( expr ) {
+				case BinOp binOp when binOp.op is Operand.And or Operand.Or: {
+					CheckBooleanOperand( binOp.left, context );
+					CheckBooleanOperand( binOp.right, context );
+					break;
+				}
+
+				case UnOp unOp when unOp.op == Operand.Negation: {
+					CheckBooleanOperand( unOp.expr, context );
+					break;
+				}
+
+				default: {
+					Typespec? type = typeResolver.Resolve( expr );
+					if( type != null && !IsBoolType( type ) ) {
+						diagnostics.Add( new Diagnostic(
+							expr.srcPos,
+							DiagnosticKind.Error,
+							String.Format(
+								"Condition of '{0}' must be bool, found '{1}'",
+								context,
+								FormatType( type ) ) ) );
+					}
+
+					break;
+				}
+			}
+		}
+
+		private static bool IsBoolType( Typespec type )
+		{
+			if( type is not TypespecBasic basic )
+				return false;
+
+			return basic.kind == TypespecBasic.Kind.Bool && ( type.ptrs == null || type.ptrs.Count == 0 );
 		}
 
 		private static Typespec? InferAutoType( Typespec? initType )
