@@ -1,7 +1,9 @@
 module std_iostream;
 
 namespace std {
-	class ostream;
+	class ostream {
+		func flush() -> void;
+	};
 	class istream;
 	class ostringstream;
 

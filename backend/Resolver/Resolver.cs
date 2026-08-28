@@ -60,20 +60,21 @@ namespace Myll.Resolver
 			var diagnostics = new List<Diagnostic>();
 			var resolver    = new NameResolver( exports, result, diagnostics );
 
-			bool progress;
-			do {
-				progress = false;
-				foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
-					progress |= resolver.ResolveUsings( module, context );
-					progress |= resolver.ResolveIds( module, context );
-					progress |= resolver.ResolveScopeds( module, context );
-					progress |= resolver.ResolveTypes( module, context );
-				}
-			} while( progress );
+		bool progress;
+		do {
+			progress = false;
+			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+				progress |= resolver.ResolveUsings( module, context );
+				progress |= resolver.ResolveIds( module, context );
+				progress |= resolver.ResolveScopeds( module, context );
+				progress |= resolver.ResolveTypes( module, context );
+				progress |= resolver.ResolveMemberAccesses( module, context );
+			}
+		} while( progress );
 
-			resolver.ReportUnresolved( modules );
+		resolver.ReportUnresolved( modules );
 
-			return (result, diagnostics);
+		return (result, diagnostics);
 		}
 
 		private static IReadOnlyDictionary<string, ModuleExports> BuildModuleExports(
@@ -115,7 +116,8 @@ namespace Myll.Resolver
 					continue;
 
 				IdTplArgs[] segments = new[] { unresolved.Node.idTplArgs };
-				Decl? resolved = ResolvePath( segments, unresolved.Scope, module, out _ );
+				bool callSite = context.FuncCallCallees.Contains( unresolved.Node );
+				Decl? resolved = ResolvePath( segments, unresolved.Scope, module, out _, callSite );
 				if( resolved != null ) {
 					result.Resolve( unresolved.Node, resolved );
 					progress = true;
@@ -132,7 +134,8 @@ namespace Myll.Resolver
 				if( result.Scopeds.ContainsKey( unresolved.Node ) )
 					continue;
 
-				Decl? resolved = ResolvePath( unresolved.Node.idTpls, unresolved.Scope, module, out _ );
+				bool callSite = context.FuncCallCallees.Contains( unresolved.Node );
+				Decl? resolved = ResolvePath( unresolved.Node.idTpls, unresolved.Scope, module, out _, callSite );
 				if( resolved != null ) {
 					result.Resolve( unresolved.Node, resolved );
 					progress = true;
@@ -149,9 +152,33 @@ namespace Myll.Resolver
 				if( result.Types.ContainsKey( unresolved.Node ) )
 					continue;
 
-				Decl? resolved = ResolvePath( unresolved.Node.idTpls, unresolved.Scope, module, out _ );
+				// Types are never call sites: prefer the type over a constructor.
+				Decl? resolved = ResolvePath( unresolved.Node.idTpls, unresolved.Scope, module, out _, callSite: false );
 				if( resolved != null ) {
 					result.Resolve( unresolved.Node, resolved );
+					progress = true;
+				}
+			}
+
+			return progress;
+		}
+
+		private bool ResolveMemberAccesses( GlobalNamespace module, CompilationContext context )
+		{
+			bool progress = false;
+			foreach( UnresolvedMemberAccess unresolved in context.UnresolvedMemberAccesses ) {
+				if( unresolved.Node.right is not IdExpr member )
+					continue;
+
+				if( result.Members.ContainsKey( member ) )
+					continue;
+
+				if( !TryGetMemberAccessBaseType( unresolved.Node.left, unresolved.Scope, out Hierarchical? baseType ) )
+					continue;
+
+				Decl? resolved = LookupMember( member.idTplArgs.id, baseType, module );
+				if( resolved != null ) {
+					result.ResolveMember( member, resolved );
 					progress = true;
 				}
 			}
@@ -166,7 +193,7 @@ namespace Myll.Resolver
 				if( unresolved.Node.type is not TypespecNested path )
 					continue;
 
-				Decl? resolved = ResolvePath( path.idTpls, unresolved.Scope, module, out _ );
+				Decl? resolved = ResolvePath( path.idTpls, unresolved.Scope, module, out _, callSite: false );
 				if( resolved == null )
 					continue;
 
@@ -199,7 +226,8 @@ namespace Myll.Resolver
 			IReadOnlyList<IdTplArgs> segments,
 			Scope                    startScope,
 			GlobalNamespace          module,
-			out int                  unresolvedSegmentIndex )
+			out int                  unresolvedSegmentIndex,
+			bool                     callSite = false )
 		{
 			unresolvedSegmentIndex = -1;
 			if( segments.Count == 0 )
@@ -207,7 +235,7 @@ namespace Myll.Resolver
 
 			string first = segments[0].id;
 			List<Decl> candidates = LookupNameCandidates( first, startScope, module );
-			Decl? current = PickSingleCandidate( candidates );
+			Decl? current = PickSingleCandidate( candidates, callSite );
 			if( current == null ) {
 				if( candidates.Count == 0
 				 && segments.Count == 1
@@ -226,7 +254,7 @@ namespace Myll.Resolver
 
 				string name = segments[i].id;
 				candidates = LookupInHierarchicalCandidates( name, h, module );
-				Decl? next = PickSingleCandidate( candidates );
+				Decl? next = PickSingleCandidate( candidates, callSite );
 				if( next == null ) {
 					unresolvedSegmentIndex = i;
 					return null;
@@ -236,6 +264,149 @@ namespace Myll.Resolver
 			}
 
 			return current;
+		}
+
+		private bool TryGetMemberAccessBaseType( Expr expr, Scope scope, out Hierarchical baseType )
+		{
+			baseType = null!;
+			Typespec? type = null;
+
+			if( expr is IdExpr id ) {
+				if( id.idTplArgs.id == "self" ) {
+					baseType = FindEnclosingStructural( scope )!;
+					return baseType != null;
+				}
+
+				if( result.Ids.TryGetValue( id, out Decl? decl ) || result.Members.TryGetValue( id, out decl ) ) {
+					switch( decl ) {
+						case VarDecl vd:
+							type = vd.type;
+							break;
+						case Func f:
+							type = f.retType;
+							break;
+					}
+				}
+			}
+			else if( expr is ScopedExpr scoped ) {
+				if( result.Scopeds.TryGetValue( scoped, out Decl? decl ) ) {
+					switch( decl ) {
+						case VarDecl vd:
+							type = vd.type;
+							break;
+						case Func f:
+							type = f.retType;
+							break;
+					}
+				}
+			}
+			else if( expr is UnOp parenUnop && parenUnop.op == Operand.Parens ) {
+				return TryGetMemberAccessBaseType( parenUnop.expr, scope, out baseType );
+			}
+			else if( expr is UnOp derefUnop && derefUnop.op == Operand.Dereference ) {
+				if( TryGetMemberAccessBaseType( derefUnop.expr, scope, out Hierarchical inner ) ) {
+					baseType = inner;
+					return true;
+				}
+			}
+			else if( expr is FuncCallExpr call ) {
+				// `ctor()` or other calls: derive the returned type from the callee.
+				if( call.expr is IdExpr calleeId && result.Ids.TryGetValue( calleeId, out Decl? calleeIdDecl ) ) {
+					if( calleeIdDecl is Func f )
+						type = f.retType;
+				else if( calleeIdDecl is Structor s && s.kind == Structor.Kind.Constructor )
+						baseType = FindEnclosingStructural( s.scope )!;
+			}
+			else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( calleeScoped, out Decl? calleeScopedDecl ) ) {
+				if( calleeScopedDecl is Func f )
+					type = f.retType;
+				else if( calleeScopedDecl is Structor s && s.kind == Structor.Kind.Constructor )
+					baseType = FindEnclosingStructural( s.scope )!;
+			}
+			}
+			else if( expr is BinOp binop && binop.op.In( Operand.MemberAccess, Operand.MemberPtrAccess ) ) {
+				if( binop.right is IdExpr prevMember && result.Members.TryGetValue( prevMember, out Decl? member ) ) {
+					switch( member ) {
+						case VarDecl vd:
+							type = vd.type;
+							break;
+						case Func f:
+							type = f.retType;
+							break;
+					}
+				}
+			}
+
+			if( baseType != null )
+				return true;
+
+			return type != null && TryGetBaseHierarchical( type, out baseType );
+		}
+
+		private static Hierarchical? FindEnclosingStructural( Scope scope )
+		{
+			for( Scope? cur = scope; cur != null; cur = cur.parent ) {
+				if( cur.decl is Hierarchical h && h is not GlobalNamespace )
+					return h;
+			}
+
+			return null;
+		}
+
+		private static Hierarchical? FindEnclosingStructural( ScopeLeaf? leaf )
+		{
+			for( ScopeLeaf? cur = leaf; cur != null; cur = cur.parent ) {
+				if( cur.decl is Hierarchical h && h is not GlobalNamespace )
+					return h;
+			}
+
+			return null;
+		}
+
+		private bool TryGetBaseHierarchical( Typespec type, out Hierarchical baseType )
+		{
+			baseType = null!;
+			if( type is TypespecNested nested ) {
+				Decl? decl = nested.resolvedDecl;
+				if( decl == null )
+					result.TryGetResolved( nested, out decl );
+				if( decl is Hierarchical h ) {
+					baseType = h;
+					return true;
+				}
+			}
+
+			// strip one layer of pointer/reference/smart-pointer for `.`/`->`
+			List<Pointer>? ptrs = type.ptrs;
+			if( ptrs is { Count: > 0 } ) {
+				Pointer outer = ptrs.Last();
+				if( outer.kind == Pointer.Kind.RawPtr
+				 || outer.kind == Pointer.Kind.LVRef
+				 || outer.kind == Pointer.Kind.RVRef
+				 || outer.kind.Between( Pointer.Kind.SmartPtr_Begin, Pointer.Kind.SmartPtr_End ) ) {
+					Typespec inner = type switch {
+						TypespecNested n => new TypespecNested { idTpls = n.idTpls, qual = n.qual,
+							resolvedDecl = n.resolvedDecl, ptrs = new( ptrs ) },
+						TypespecBasic b  => new TypespecBasic { kind = b.kind, size = b.size, align = b.align,
+							qual = b.qual, ptrs = new( ptrs ) },
+						_                => throw new NotSupportedException( "unsupported typespec in member access" ),
+					};
+					if( inner.ptrs == null )
+						return false;
+					inner.ptrs.RemoveAt( inner.ptrs.Count - 1 );
+					return TryGetBaseHierarchical( inner, out baseType );
+				}
+			}
+
+			return false;
+		}
+
+		private Decl? LookupMember( string name, Hierarchical baseType, GlobalNamespace module )
+		{
+			List<Decl> candidates = new();
+			AddVisibleChildren( candidates, baseType.scope, name, filterHidden: false );
+
+			return PickSingleCandidate( candidates );
 		}
 
 		private List<Decl> LookupNameCandidates( string name, Scope scope, GlobalNamespace module )
@@ -321,6 +492,11 @@ namespace Myll.Resolver
 
 		private static Decl? PickSingleCandidate( List<Decl> candidates )
 		{
+			return PickSingleCandidate( candidates, callSite: false );
+		}
+
+		private static Decl? PickSingleCandidate( List<Decl> candidates, bool callSite )
+		{
 			if( candidates.Count == 0 )
 				return null;
 
@@ -341,6 +517,31 @@ namespace Myll.Resolver
 
 				if( fqn != null )
 					return candidates[0];
+			}
+
+			if( callSite ) {
+				List<Decl> callable = candidates
+					.Where( d => d is Func or Structor or Hierarchical )
+					.ToList();
+
+				// prefer a constructor over its class at a call site
+				Decl? ctor = callable.OfType<Structor>().FirstOrDefault();
+				if( ctor != null )
+					return ctor;
+
+				// a class used as a call site is a constructor invocation
+				if( callable.Count == 1 )
+					return callable[0];
+				if( callable.Count > 1 && callable.All( d => d is Func ) )
+					return null; // overload resolution is not implemented yet
+			}
+			else {
+				// At a type/non-call site a type name wins over its constructor.
+				List<Decl> typeCandidates = candidates
+					.Where( d => d is Hierarchical )
+					.ToList();
+				if( typeCandidates.Count == 1 )
+					return typeCandidates[0];
 			}
 
 			return null;
@@ -371,6 +572,28 @@ namespace Myll.Resolver
 
 					ReportUnresolvedPath( "type", unresolved.Node.srcPos, unresolved.Node.idTpls, module, unresolved.Scope );
 				}
+
+				foreach( UnresolvedMemberAccess unresolved in context.UnresolvedMemberAccesses ) {
+					if( unresolved.Node.right is not IdExpr member )
+						continue;
+
+					if( result.Members.ContainsKey( member ) )
+						continue;
+
+					string? typeName = null;
+					if( TryGetMemberAccessBaseType( unresolved.Node.left, unresolved.Scope, out Hierarchical? baseType ) )
+						typeName = baseType!.FullyQualifiedName;
+
+					diagnostics.Add( new Diagnostic(
+						member.srcPos,
+						DiagnosticKind.Error,
+						String.Format(
+							typeName != null
+								? "Unresolved member '{0}' in '{1}'"
+								: "Unresolved member '{0}'",
+							member.idTplArgs.id,
+							typeName ) ) );
+				}
 			}
 		}
 
@@ -381,7 +604,7 @@ namespace Myll.Resolver
 			GlobalNamespace       module,
 			Scope                 scope )
 		{
-			ResolvePath( segments, scope, module, out int unresolvedSegmentIndex );
+			ResolvePath( segments, scope, module, out int unresolvedSegmentIndex, callSite: false );
 			if( unresolvedSegmentIndex < 0 )
 				unresolvedSegmentIndex = 0;
 
@@ -390,10 +613,10 @@ namespace Myll.Resolver
 				? LookupNameCandidates( unresolvedName, scope, module )
 				: LookupInHierarchicalCandidates(
 					unresolvedName,
-					(PickSingleCandidate( LookupNameCandidates( segments[0].id, scope, module ) ) as Hierarchical)!,
+					(PickSingleCandidate( LookupNameCandidates( segments[0].id, scope, module ), callSite: false ) as Hierarchical)!,
 					module );
 
-			if( candidates.Count > 1 && PickSingleCandidate( candidates ) == null ) {
+			if( candidates.Count > 1 && PickSingleCandidate( candidates, callSite: false ) == null ) {
 				ReportAmbiguous( kind, srcPos, unresolvedName, candidates );
 				return;
 			}

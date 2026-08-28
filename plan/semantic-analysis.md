@@ -17,7 +17,6 @@ This plan describes the long-term goal of turning Myll from a syntax-to-C++ tran
 
 ## What is missing
 
-- Member access resolution (`my.method()`).
 - Type checking and overload resolution.
 - Using resolved targets for unqualified `IdExpr` generation.
 - Moving semantic validation out of the generator and into resolver/validation passes.
@@ -118,8 +117,8 @@ A sequential fixed-point resolver is the first target. The same input/output sha
 5. **Prototype / extern declaration files**  
    Partially done. Inline `[extern]` for classes/namespaces and `.decl.myll` discovery are implemented. Forward declarations in normal `.myll` are supported via optional bodies in `[extern]` contexts. See `plan/prototype-files.md`.
 
-6. **Member access resolution**  
-   Not done. For `var MyClass my; my.hello();`, resolve `hello` in `MyClass`'s scope once the variable's type is known.
+6. **Member access resolution** ✅  
+   Implemented. For `var MyClass my; my.hello();`, `hello` is resolved in `MyClass`'s scope using the left-hand expression's type. It handles value, pointer, reference, smart-pointer, and parenthesized/dereferenced bases.
 
 7. **`using namespace` / `using Name`** ✅  
    Implemented. `using NS;` and `using NS::name;` are resolved, and namespace usings are emitted in generated C++.

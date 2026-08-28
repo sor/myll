@@ -204,6 +204,10 @@ Before making changes, read these in `docs/analysis/`:
 - Many features partially implemented; some features in grammar but not in generator.
 - Last commit: net6.0→net10.0 target upgrade.
 
+## Temporary files
+
+Use `tmp/` inside the project root for any temporary files or scratch tests. Do not use `/tmp` because it is often mounted `noexec` and is not guaranteed to persist.
+
 ## OpenCode Workflow
 
 - **Refresh**: Read `AGENTS.md` first, then check `git status` and `git log -3` to orient.
@@ -217,7 +221,7 @@ Before making changes, read these in `docs/analysis/`:
 
 ## Planned Work
 
-1. **Finish ScopeStack / semantic analysis (endboss)** — substantial progress made. Per-module scope trees, the fixed-point resolver, qualified (`A::B::C`) static names, `using namespace` / `using Name`, cross-module namespace merging, ambiguity diagnostics, and per-declaration access modifiers are implemented. The C++ generator now consumes resolved names for types and scoped expressions. Remaining: member access resolution, type checking, overload resolution, and moving semantic validation out of the generator. See `plan/semantic-analysis.md`, `backend/Core/Scope.cs`, `backend/Resolver/Resolver.cs`, `backend/Core/Symbol.cs`.
+1. **Finish ScopeStack / semantic analysis (endboss)** — substantial progress made. Per-module scope trees, the fixed-point resolver, qualified (`A::B::C`) static names, `using namespace` / `using Name`, cross-module namespace merging, ambiguity diagnostics, per-declaration access modifiers, and member access resolution are implemented. The C++ generator now consumes resolved names for types, scoped expressions, and member access. Remaining: type checking, overload resolution, and moving semantic validation out of the generator. See `plan/semantic-analysis.md`, `backend/Core/Scope.cs`, `backend/Resolver/Resolver.cs`, `backend/Core/Symbol.cs`.
 2. Testing + CI/CD — xUnit harness is in place under `testing/`; remaining work is CI/CD.
 3. Implement reachable NotImplementedException features:
    - named args, null coalescing call, copy-cast, else-on-loop, discard (empty stmt done)

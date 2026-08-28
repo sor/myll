@@ -1,0 +1,7 @@
+module std_chrono;
+
+namespace std {
+	namespace chrono {
+		class milliseconds;
+	}
+}

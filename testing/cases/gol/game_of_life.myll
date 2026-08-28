@@ -2,7 +2,7 @@
 
 //module game_of_life; // this is game_of_life by default
 
-import std_thread;
+	import c_stdlib, std_iostream, std_thread;
 //import std_iostream;
 
 namespace JanSordid:
@@ -78,7 +78,7 @@ class GameOfLife
 	}
 
 	//func output( std::ostream& stream )
-	func output<T>( T & stream )
+	func output( std::ostream & stream )
 	{
 		const Map2D & srcMap = doubleBufferedMap[currentIndex];
 

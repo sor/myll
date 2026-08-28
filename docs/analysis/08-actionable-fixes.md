@@ -160,8 +160,9 @@ If implementing sequentially, the recommended order is:
 2. **Fix `NewExpr.Gen()` mutation** (critical bug) — 15 min — done
 3. **Fix `Scope.UpToNamespace()` NRE** (crash prevention) — 10 min
 4. **Wire high-priority visitors** (`try/catch`, `defer`, `continue`) — 2–4 hours
-5. **Per-declaration access modifiers** — 30 min
-6. **Implement missing generator methods** (operators, accessors) — 3–8 hours
+5. **Per-declaration access modifiers** — done
+6. **Member access resolution** — done
+7. **Implement missing generator methods** (operators, accessors) — 3–8 hours
 7. **Reduce duplication** (`VisitLit`, `VisitDefVar`) — 45 min
 8. **Fix resource leaks** — 10 min
 9. **Build test harness** — 4–8 hours

@@ -1,8 +1,6 @@
 module game_of_life;
 
-import game_of_life, std_iostream, c_stdlib;
-
-alias milliseconds = std::chrono::milliseconds;
+import game_of_life, std_iostream, std_thread, std_chrono, c_stdlib;
 
 func main() -> int
 {
@@ -11,10 +9,10 @@ func main() -> int
 	// the literals themselves do not work e.g. 200ms
 	//using std::chrono_literals;
 
-	let auto sleepTime = std::getenv( "MYLL_TEST" ) != null
-		? milliseconds( 0 )
-		: milliseconds( 166 );
-	var GameOfLife gol = GameOfLife();
+	var std::chrono::milliseconds sleepTime = std::getenv( "MYLL_TEST" ) != null
+		? std::chrono::milliseconds( 0 )
+		: std::chrono::milliseconds( 166 );
+	var GameOfLife gol;
 
 	loop
 	{

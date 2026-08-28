@@ -20,10 +20,17 @@ namespace Myll
 
 		public DeclVisitor DeclVisitor { get; }
 
-		public List<UnresolvedId>      UnresolvedIds      { get; } = new();
-		public List<UnresolvedType>    UnresolvedTypes    { get; } = new();
-		public List<UnresolvedScoped>  UnresolvedScopeds  { get; } = new();
-		public List<UnresolvedUsing>   UnresolvedUsings   { get; } = new();
+		public List<UnresolvedId>             UnresolvedIds             { get; } = new();
+		public List<UnresolvedType>           UnresolvedTypes           { get; } = new();
+		public List<UnresolvedScoped>         UnresolvedScopeds         { get; } = new();
+		public List<UnresolvedUsing>          UnresolvedUsings          { get; } = new();
+		public List<UnresolvedMemberAccess>   UnresolvedMemberAccesses  { get; } = new();
+
+		/// <summary>
+		/// Callee expressions used in function/constructor calls. The resolver uses this to prefer
+		/// constructors or classes over non-callable declarations at call sites.
+		/// </summary>
+		public HashSet<Expr> FuncCallCallees { get; } = new();
 
 		public CompilationContext()
 		{

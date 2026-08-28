@@ -9,13 +9,15 @@ namespace Myll.Resolver
 	/// </summary>
 	public sealed class ResolutionResult
 	{
-		private readonly Dictionary<IdExpr, Decl>          ids     = new();
-		private readonly Dictionary<TypespecNested, Decl>  types   = new();
-		private readonly Dictionary<ScopedExpr, Decl>      scopeds = new();
+		private readonly Dictionary<IdExpr, Decl>          ids        = new();
+		private readonly Dictionary<TypespecNested, Decl>  types      = new();
+		private readonly Dictionary<ScopedExpr, Decl>      scopeds    = new();
+		private readonly Dictionary<IdExpr, Decl>          members    = new();
 
 		public IReadOnlyDictionary<IdExpr, Decl>          Ids      => ids;
 		public IReadOnlyDictionary<TypespecNested, Decl>  Types    => types;
 		public IReadOnlyDictionary<ScopedExpr, Decl>      Scopeds  => scopeds;
+		public IReadOnlyDictionary<IdExpr, Decl>          Members  => members;
 
 		public void Resolve( IdExpr id, Decl decl )
 			=> ids[id] = decl;
@@ -26,6 +28,9 @@ namespace Myll.Resolver
 		public void Resolve( ScopedExpr scoped, Decl decl )
 			=> scopeds[scoped] = decl;
 
+		public void ResolveMember( IdExpr member, Decl decl )
+			=> members[member] = decl;
+
 		public bool TryGetResolved( IdExpr id, out Decl? decl )
 			=> ids.TryGetValue( id, out decl );
 
@@ -34,6 +39,9 @@ namespace Myll.Resolver
 
 		public bool TryGetResolved( ScopedExpr scoped, out Decl? decl )
 			=> scopeds.TryGetValue( scoped, out decl );
+
+		public bool TryGetResolvedMember( IdExpr member, out Decl? decl )
+			=> members.TryGetValue( member, out decl );
 
 		/// <summary>
 		/// Copies the resolved declarations onto the AST nodes so that the
@@ -45,6 +53,7 @@ namespace Myll.Resolver
 			foreach( var kvp in ids )      kvp.Key.resolvedDecl      = kvp.Value;
 			foreach( var kvp in types )    kvp.Key.resolvedDecl      = kvp.Value;
 			foreach( var kvp in scopeds )  kvp.Key.resolvedDecl      = kvp.Value;
+			foreach( var kvp in members )  kvp.Key.resolvedDecl      = kvp.Value;
 		}
 	}
 }

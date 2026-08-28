@@ -7,9 +7,9 @@
 #include <type_traits>
 #include <utility>
 #include <iostream>
-#include <cstdlib>
 #include <thread>
-using milliseconds = std::chrono::milliseconds;
+#include <chrono>
+#include <cstdlib>
 namespace JanSordid
 {
     class GameOfLife;
@@ -21,21 +21,11 @@ namespace JanSordid
         const int sizeX = 40;
         const int sizeY = 16;
         std::uint8_t currentIndex = 0;
-        Map2D doubleBufferedMap[2];
+        JanSordid::GameOfLife::Map2D doubleBufferedMap[2];
     public:
         GameOfLife();
         void iterate();
-        template <typename T>
-        inline void output(T& stream)
-        {
-            const Map2D& srcMap = doubleBufferedMap[currentIndex];
-            for( int y = 0; y < sizeY+0; ++y ) {
-                for( int x = 0; x < sizeX+0; ++x ) {
-                    stream << srcMap[y][x];
-                }
-                stream << '\n';
-            }
-        }
+        void output(std::ostream& stream);
         bool hasConverged() const;
     };
 }

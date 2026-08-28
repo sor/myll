@@ -292,6 +292,8 @@ __pycache__/
 #**/*.tokens
 #**/*.interp
 
+tmp/
+
 # Test harness transient output
 testing/generated/
 

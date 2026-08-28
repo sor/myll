@@ -1,9 +1,12 @@
 module std_thread;
 
+import std_chrono;
+
 namespace std {
 	class thread;
 
 	namespace this_thread {
 		func yield() -> void;
+		func sleep_for( milliseconds duration ) -> void;
 	}
 }

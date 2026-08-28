@@ -8,15 +8,14 @@ The endboss architecture is described in `plan/semantic-analysis.md`.
 This is the overarching long-term goal that blocks many smaller features. Finish the scope-stack based semantic-analysis pass so the compiler can resolve names to declarations, type-check expressions, and disambiguate language constructs that currently rely on string matching or syntactic guesswork.
 
 - `backend/Core/Scope.cs` holds the tree (`Scope`, `ScopeLeaf`, `children`, `importedScopes`).
-- `backend/Visitor/VMain.cs` pushes/pops scopes during visiting and records unresolved identifiers and types.
+- `backend/Visitor/VMain.cs` pushes/pops scopes during visiting and records unresolved identifiers, types, and member accesses.
 - `backend/Resolver/Resolver.cs` runs a fixed-point resolver across imported modules and produces diagnostics for unresolved or ambiguous names.
-- The C++ generator consumes `ResolutionResult` for `TypespecNested` and `ScopedExpr`; `IdExpr` resolution is recorded but not yet used for member access.
+- The C++ generator consumes `ResolutionResult` for `TypespecNested`, `ScopedExpr`, and member access; `IdExpr` resolution is recorded but not yet used for unqualified identifiers.
 - `backend/Core/Symbol.cs` and `backend/Core/Attribute.cs` remain disconnected stubs for a future stable design.
 
 What finishing this would unlock:
-- Per-declaration access modifiers (`[pub] field int x;`) inside classes.
-- Member access resolution (`my.method()`).
-- Overload resolution and clean semantic errors with source locations.
+- Type checking and overload resolution.
+- Clean semantic errors with source locations.
 - Type-driven disambiguation in the generator (e.g. `enum` inheritance, operator synthesis, `convert`).
 - Remove the provisional duplicate-name check in `backend/Generator/HierachicalGen.cs`.
 

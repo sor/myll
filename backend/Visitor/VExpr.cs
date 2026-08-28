@@ -52,6 +52,7 @@ namespace Myll
 				};
 			}
 			else if( c.funcCall() != null ) {
+				Context.FuncCallCallees.Add( left );
 				ret = new FuncCallExpr {
 					op       = c.funcCall().ary.ToOp(),
 					expr     = left,
@@ -75,6 +76,7 @@ namespace Myll
 					left  = left,
 					right = right,
 				};
+				Context.UnresolvedMemberAccesses.Add( new( (BinOp) ret, Context.ScopeStack.Peek() ) );
 			}
 			else {
 				throw new Exception( "unknown post op" );
