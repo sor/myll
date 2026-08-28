@@ -268,12 +268,14 @@ namespace Myll
 					.ToList();
 
 			if( opt.IsResolve ) {
-				var (_, diagnostics) = NameResolver.Resolve( modules );
+				var (result, diagnostics) = NameResolver.Resolve( modules );
 				foreach( Diagnostic d in diagnostics )
 					Console.Error.WriteLine( "{0}: {1}: {2}", d.Location, d.Kind, d.Message );
 
 				if( diagnostics.Count > 0 && !opt.IsKeepGoing )
 					Environment.Exit( -99 );
+
+				result.Apply();
 			}
 
 			IEnumerable<(string, IStrings)> output

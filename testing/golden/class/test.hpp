@@ -15,7 +15,7 @@ public:
     class C
     {
     public:
-        void do_b(B* b);
+        void do_b(A::B* b);
     };
     class B
     {

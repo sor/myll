@@ -34,5 +34,17 @@ namespace Myll.Resolver
 
 		public bool TryGetResolved( ScopedExpr scoped, out Decl? decl )
 			=> scopeds.TryGetValue( scoped, out decl );
+
+		/// <summary>
+		/// Copies the resolved declarations onto the AST nodes so that the
+		/// C++ generator can emit fully-qualified names without threading the
+		/// resolution map through every Gen() call.
+		/// </summary>
+		public void Apply()
+		{
+			foreach( var kvp in ids )      kvp.Key.resolvedDecl      = kvp.Value;
+			foreach( var kvp in types )    kvp.Key.resolvedDecl      = kvp.Value;
+			foreach( var kvp in scopeds )  kvp.Key.resolvedDecl      = kvp.Value;
+		}
 	}
 }

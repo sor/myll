@@ -157,10 +157,20 @@ namespace Myll.Core
 		// TODO remember if a Ctor/Dtor was in the last spot, eg *::ctor
 		public List<IdTplArgs> idTpls = new();
 
+		// Set by NameResolver.Apply() once names have been resolved.
+		public Decl? resolvedDecl;
+
 		public override string GenType()
-			=> idTpls
+		{
+			if( resolvedDecl != null
+			 && resolvedDecl.name != "<builtin>"
+			 && idTpls.TrueForAll( it => it.tplArgs.Count == 0 ) )
+				return resolvedDecl.FullyQualifiedName;
+
+			return idTpls
 				.Select( s => s.Gen() )
 				.Join( "::" );
+		}
 	}
 
 	public class Pointer

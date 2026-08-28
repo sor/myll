@@ -324,8 +324,16 @@ namespace Myll.Core
 	{
 		public List<IdTplArgs> idTpls = null!;
 
+		// Set by NameResolver.Apply() once names have been resolved.
+		public Decl? resolvedDecl;
+
 		public override string Gen( bool doBrace = false )
 		{
+			if( resolvedDecl != null
+			 && resolvedDecl.name != "<builtin>"
+			 && idTpls.TrueForAll( it => it.tplArgs.Count == 0 ) )
+				return resolvedDecl.FullyQualifiedName.Brace( doBrace );
+
 			string ret = idTpls
 				.Select( s => s.Gen() )
 				.Join( "::" );
@@ -360,6 +368,9 @@ namespace Myll.Core
 	public class IdExpr : Expr
 	{
 		public IdTplArgs idTplArgs = null!;
+
+		// Set by NameResolver.Apply() once names have been resolved.
+		public Decl? resolvedDecl;
 
 		public override string Gen( bool doBrace = false )
 		{
