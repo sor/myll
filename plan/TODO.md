@@ -17,12 +17,12 @@ What finishing this would unlock:
 - Type checking and overload resolution (implemented for core cases).
 - Clean semantic errors with source locations.
 - Type-driven disambiguation in the generator (e.g. `enum` inheritance, operator synthesis, `convert`).
-- Remove the provisional duplicate-name check in `backend/Generator/HierachicalGen.cs`.
 
 Completed endboss pieces:
 - **Expression type model**: `Expr.Type`, `TypeResolver`, and `ConversionRules`.
 - **Overload resolution**: ranked selection (exact + promotion), arity filtering, and diagnostics for ambiguous and no-matching calls. End-to-end test: `testing/cases/overload/`.
 - **Core type checking**: assignments, variable/field initializers, return statements, and single-candidate argument compatibility. Negative tests: `testing/cases/typecheck_fail/`.
+- **Declaration validation**: attribute combination and duplicate-name checks moved from `backend/Generator/HierachicalGen.cs` into `backend/Resolver/TypeChecker.cs`, producing source-location diagnostics. Negative test: `testing/cases/decl_fail/`.
 - **Literal typing**: integer literals are untyped until bound to a target; valid targets are fitting integer types and floats. Float literals are untyped and only bind to floats.
 
 See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` inheritance) and `docs/analysis/07-future-stubs.md` for related context.

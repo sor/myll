@@ -18,9 +18,10 @@ This plan describes the long-term goal of turning Myll from a syntax-to-C++ tran
 ## What is missing
 
 - Broader conversion ranks beyond exact + promotion (e.g., safe typed conversions, derived-to-base pointers).
-- Operator-specific type checks and boolean-context validation.
+- Operator-specific type checks.
+- Boolean-context validation for `if`/`while`/`for`/`do-while` and logical operators.
 - Using resolved targets for unqualified `IdExpr` generation.
-- Moving semantic validation out of the generator and into resolver/validation passes.
+- Moving semantic validation out of the generator and into resolver/validation passes (variable/field attribute combinations, duplicate declarations, and `Dialect.StrictNew` done).
 
 ## Module model
 

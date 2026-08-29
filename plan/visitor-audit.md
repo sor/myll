@@ -87,7 +87,7 @@ The following paths throw at compile/codegen time. They are honest errors, but s
 | `backend/Visitor/VStmt.cs:259` | `VisitStmtTryCatch` catch with wrong arity | "catch clause must have exactly one parameter or none" |
 | `backend/Visitor/VDecl.cs:163` | `VisitAttrColon` unknown access attribute | "Got unsupported attribute in AttribState: ..." |
 | `backend/Visitor/VDecl.cs:385` | `VisitDefOp` non-copy/move op= | "only copy and move special assignment ops are supported" |
-| `backend/Generator/HierarchicalGen.cs:270-287` | attribute validation | several `NotSupportedException` for invalid attribute combinations |
+| `backend/Generator/HierarchicalGen.cs:270-287` | attribute validation | moved to `backend/Resolver/TypeChecker.cs` as source-location diagnostics |
 
 ### 4. Partial / broken generation
 
