@@ -34,6 +34,23 @@ namespace Myll.Core
 		F128,
 	}
 
+	/// <summary>
+	/// Controls the result type of mixed signed/unsigned arithmetic.
+	/// </summary>
+	public enum MixedSignednessMode
+	{
+		/// <summary>
+		/// C/C++ behavior: unsigned wins when it has greater or equal rank.
+		/// </summary>
+		CStyle,
+
+		/// <summary>
+		/// Signed wins when its size is greater than or equal to the unsigned size;
+		/// otherwise unsigned wins. This keeps the result signed whenever safe.
+		/// </summary>
+		SignedPreferred,
+	}
+
 	public static class Dialect
 	{
 		// When true, `new T` is illegal; you must write `new T*` (or another explicit pointer type).
@@ -57,6 +74,12 @@ namespace Myll.Core
 		/// <see cref="FloatKeyword"/>. Untyped float literals and `var auto` are unaffected.
 		/// </summary>
 		public static bool AllowFloatKeyword = true;
+
+		/// <summary>
+		/// Controls the result type of mixed signed/unsigned arithmetic.
+		/// Defaults to C-style "unsigned wins at equal rank".
+		/// </summary>
+		public static MixedSignednessMode MixedSignedness = MixedSignednessMode.CStyle;
 
 		/// <summary>
 		/// Returns the concrete float size (in bytes) used for untyped float literals and for

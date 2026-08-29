@@ -505,7 +505,7 @@ namespace Myll.Resolver
 			if( leftType is not TypespecBasic || rightType is not TypespecBasic )
 				return;
 
-			if( !OperatorRules.IsScalarNumber( leftType ) || !OperatorRules.IsScalarNumber( rightType ) ) {
+			if( !OperatorRules.IsScalarComparable( leftType ) || !OperatorRules.IsScalarComparable( rightType ) ) {
 				AddError( binOp, String.Format( "Operator '{0}' cannot compare types '{1}' and '{2}'", OperatorName( binOp.op ), FormatType( leftType ), FormatType( rightType ) ) );
 				return;
 			}

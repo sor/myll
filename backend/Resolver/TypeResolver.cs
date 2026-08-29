@@ -338,12 +338,31 @@ namespace Myll.Resolver
 
 		private static Typespec? MixedIntegerResult( TypespecBasic signedType, TypespecBasic unsignedType )
 		{
+			return Dialect.MixedSignedness switch {
+				MixedSignednessMode.SignedPreferred
+					=> SignedPreferredIntegerResult( signedType, unsignedType ),
+				_ => CStyleIntegerResult( signedType, unsignedType ),
+			};
+		}
+
+		private static Typespec? CStyleIntegerResult( TypespecBasic signedType, TypespecBasic unsignedType )
+		{
 			// If the unsigned type has greater or equal rank, the result is unsigned.
 			if( unsignedType.size >= signedType.size )
 				return new TypespecBasic { kind = TypespecBasic.Kind.Unsigned, size = unsignedType.size };
 
 			// Otherwise the signed type can represent every value of the unsigned type.
 			return new TypespecBasic { kind = TypespecBasic.Kind.Integer, size = signedType.size };
+		}
+
+		private static Typespec? SignedPreferredIntegerResult( TypespecBasic signedType, TypespecBasic unsignedType )
+		{
+			// Signed wins when it is at least as wide as the unsigned type.
+			if( signedType.size >= unsignedType.size )
+				return new TypespecBasic { kind = TypespecBasic.Kind.Integer, size = signedType.size };
+
+			// Otherwise the unsigned type is strictly wider and must win to avoid overflow.
+			return new TypespecBasic { kind = TypespecBasic.Kind.Unsigned, size = unsignedType.size };
 		}
 
 		private static Typespec? PromoteBool( Typespec? type )

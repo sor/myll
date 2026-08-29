@@ -54,6 +54,9 @@ namespace Myll.Resolver
 			 && IsCharPointer( target ) )
 				return ConversionRank.Promotion;
 
+			if( IsSafeIntegerConversion( source, target ) )
+				return ConversionRank.Conversion;
+
 			if( IsAllowedConversion( source, target ) )
 				return ConversionRank.Conversion;
 
@@ -61,7 +64,7 @@ namespace Myll.Resolver
 		}
 
 		public static bool IsImplicitlyConvertible( Typespec? source, Typespec? target )
-			=> GetRank( source, target ) <= ConversionRank.Promotion;
+			=> GetRank( source, target ) <= ConversionRank.Conversion;
 
 		public static bool IsExactMatch( Typespec? a, Typespec? b )
 		{
@@ -178,6 +181,42 @@ namespace Myll.Resolver
 			// char32_t ↔ int32_t if desired) would go.
 			return false;
 		}
+
+		private static bool IsSafeIntegerConversion( Typespec source, Typespec target )
+		{
+			if( !HaveSamePointers( source.ptrs, target.ptrs ) )
+				return false;
+
+			if( source is not TypespecBasic srcBasic || target is not TypespecBasic tgtBasic )
+				return false;
+
+			// Char is not a number in Myll and does not implicitly convert to/from integers.
+			if( srcBasic.kind == TypespecBasic.Kind.Char || tgtBasic.kind == TypespecBasic.Kind.Char )
+				return false;
+
+			if( !IsIntegralKind( srcBasic.kind ) || !IsIntegralKind( tgtBasic.kind ) )
+				return false;
+
+			// bool -> any integer/unsigned is allowed.
+			if( srcBasic.kind == TypespecBasic.Kind.Bool )
+				return true;
+
+			if( srcBasic.kind == tgtBasic.kind )
+				return tgtBasic.size > srcBasic.size;
+
+			if( srcBasic.kind == TypespecBasic.Kind.Integer && tgtBasic.kind == TypespecBasic.Kind.Unsigned )
+				return tgtBasic.size > srcBasic.size;
+
+			if( srcBasic.kind == TypespecBasic.Kind.Unsigned && tgtBasic.kind == TypespecBasic.Kind.Integer )
+				return tgtBasic.size > srcBasic.size;
+
+			return false;
+		}
+
+		private static bool IsIntegralKind( TypespecBasic.Kind kind )
+			=> kind is TypespecBasic.Kind.Integer
+			     or TypespecBasic.Kind.Unsigned
+			     or TypespecBasic.Kind.Bool;
 
 		private static bool IsCharPointer( Typespec type )
 		{

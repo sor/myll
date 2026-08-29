@@ -18,7 +18,6 @@ namespace Myll.Resolver
 			 && b.kind is TypespecBasic.Kind.Integer
 			         or TypespecBasic.Kind.Unsigned
 			         or TypespecBasic.Kind.Bool
-			         or TypespecBasic.Kind.Char
 			         or TypespecBasic.Kind.UntypedInteger;
 
 		public static bool IsScalarFloat( Typespec? t )
@@ -29,11 +28,19 @@ namespace Myll.Resolver
 		public static bool IsScalarNumber( Typespec? t )
 			=> IsScalarInteger( t ) || IsScalarFloat( t );
 
+		// May participate in comparisons and equality. Char is comparable but not arithmetic.
+		public static bool IsScalarComparable( Typespec? t )
+			=> t is TypespecBasic b && HasNoPointer( t )
+			 && b.kind is TypespecBasic.Kind.Integer
+			         or TypespecBasic.Kind.Unsigned
+			         or TypespecBasic.Kind.Float
+			         or TypespecBasic.Kind.Bool
+			         or TypespecBasic.Kind.Char
+			         or TypespecBasic.Kind.UntypedInteger
+			         or TypespecBasic.Kind.UntypedFloat;
+
 		public static bool IsScalar( Typespec? t )
 			=> IsScalarNumber( t );
-
-		public static bool IsBuiltinScalar( Typespec? t )
-			=> t is TypespecBasic && HasNoPointer( t );
 
 		public static bool HasPointer( Typespec? t )
 			=> t?.ptrs is { Count: > 0 };

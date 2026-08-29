@@ -385,7 +385,7 @@ namespace Myll.Resolver
 
 				for( int i = 0; i < paras.Count; i++ ) {
 					ConversionRank rank = ConversionRules.GetRank( argTypes[i]!, paras[i].type );
-					if( rank > ConversionRank.Promotion ) {
+					if( rank > ConversionRank.Conversion ) {
 						ok = false;
 						break;
 					}
