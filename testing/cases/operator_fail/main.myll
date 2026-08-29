@@ -1,0 +1,37 @@
+module main;
+
+func bad_float_bitwise() -> void
+{
+	var f32 a = 1.0;
+	var f32 b = 2.0;
+	var f32 c = a & b;
+}
+
+func bad_float_modulo() -> void
+{
+	var f32 a = 1.0;
+	var f32 b = a % 2.0;
+}
+
+func bad_pointer_arithmetic() -> void
+{
+	var int * p = null;
+	var int * q = p + 1;
+}
+
+func bad_shift_by_float() -> void
+{
+	var int i = 1;
+	var int j = i << 1.5;
+}
+
+func bad_complement_float() -> void
+{
+	var f32 f = 1.0;
+	var f32 g = ~f;
+}
+
+func main() -> int
+{
+	return 0;
+}
