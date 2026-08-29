@@ -23,6 +23,8 @@ Completed endboss pieces:
 - **Overload resolution**: ranked selection (exact + promotion), arity filtering, and diagnostics for ambiguous and no-matching calls. End-to-end test: `testing/cases/overload/`.
 - **Core type checking**: assignments, variable/field initializers, return statements, and single-candidate argument compatibility. Negative tests: `testing/cases/typecheck_fail/`.
 - **Declaration validation**: attribute combination and duplicate-name checks moved from `backend/Generator/HierachicalGen.cs` into `backend/Resolver/TypeChecker.cs`, producing source-location diagnostics. Negative test: `testing/cases/decl_fail/`.
+- **Built-in operator checks**: hard-coded rule-based validation and result-type computation for arithmetic, bitwise, shift, comparison, and unary operators on scalar built-in types. Pointer arithmetic is rejected by default. Negative test: `testing/cases/operator_fail/`.
+- **Spaceship operator**: the generator now emits C++ `<=>` instead of the old `cmp(...)` placeholder.
 - **Literal typing**: integer literals are untyped until bound to a target; valid targets are fitting integer types and floats. Float literals are untyped and only bind to floats.
 
 See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` inheritance) and `docs/analysis/07-future-stubs.md` for related context.
