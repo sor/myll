@@ -461,9 +461,6 @@ namespace Myll.Core
 
 		public override string Gen( bool doBrace = false )
 		{
-			if( Dialect.StrictNew && ( type.ptrs == null || type.ptrs.Count == 0 ) )
-				throw new Exception( "StrictNew is enabled: bare `new T` is not allowed; use an explicit pointer type such as `new T*` or `new T*!`." );
-
 			string      ret;
 			Pointer?    ptr = type.ptrs?.LastOrDefault(); // needs to be a variable to keep it accessible
 			List<Pointer> savedPtrs = type.ptrs ?? new();

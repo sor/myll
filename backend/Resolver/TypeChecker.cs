@@ -70,11 +70,11 @@ namespace Myll.Resolver
 		private Decl? ResolveCalleeDecl( Expr callee )
 		{
 			return callee switch {
-				IdExpr id when result.TryGetResolved( id, out Decl? d )        => d,
+				IdExpr     id     when result.TryGetResolved( id, out Decl? d )     => d,
 				ScopedExpr scoped when result.TryGetResolved( scoped, out Decl? d ) => d,
-				BinOp binOp when binOp.right is IdExpr m
-				             && result.TryGetResolvedMember( m, out Decl? d )   => d,
-				_                                                            => null,
+				BinOp      binOp  when binOp.right is IdExpr m
+				             && result.TryGetResolvedMember( m, out Decl? d )       => d,
+				_                                                                   => null,
 			};
 		}
 
@@ -92,6 +92,7 @@ namespace Myll.Resolver
 					break;
 
 				case VarDecl vd:
+					ValidateVarAttributes( vd );
 					if( vd.init != null ) {
 						if( vd.type is TypespecBasic { kind: TypespecBasic.Kind.Auto } )
 							vd.type = InferAutoType( typeResolver.Resolve( vd.init ) ) ?? vd.type;
@@ -101,6 +102,7 @@ namespace Myll.Resolver
 					break;
 
 				case Hierarchical h:
+					ValidateUniqueVarNames( h );
 					foreach( Decl child in h.children )
 						ValidateDecl( child );
 					break;
@@ -115,20 +117,20 @@ namespace Myll.Resolver
 						ValidateStmt( s, currentFunction );
 					break;
 
-			case VarDecl vd:
-				ValidateDecl( vd );
-				break;
+				case VarDecl vd:
+					ValidateDecl( vd );
+					break;
 
-			case VarStmt vs:
-				if( vs.init != null ) {
-					if( vs.type is TypespecBasic { kind: TypespecBasic.Kind.Auto } )
-						vs.type = InferAutoType( typeResolver.Resolve( vs.init ) ) ?? vs.type;
+				case VarStmt vs:
+					if( vs.init != null ) {
+						if( vs.type is TypespecBasic { kind: TypespecBasic.Kind.Auto } )
+							vs.type = InferAutoType( typeResolver.Resolve( vs.init ) ) ?? vs.type;
 
-					CheckAssignment( vs.type, vs.init, vs.init.srcPos );
-				}
-				break;
+						CheckAssignment( vs.type, vs.init, vs.init.srcPos );
+					}
+					break;
 
-			case ReturnStmt ret:
+				case ReturnStmt ret:
 					ValidateReturn( ret, currentFunction );
 					break;
 
@@ -369,6 +371,14 @@ namespace Myll.Resolver
 					CheckBooleanOperand( unOp.expr, "!" );
 					break;
 				}
+
+				case NewExpr newExpr: {
+					if( Dialect.StrictNew
+					 && ( newExpr.type.ptrs == null || newExpr.type.ptrs.Count == 0 ) )
+						AddError( newExpr, "StrictNew is enabled: bare `new T` is not allowed; use an explicit pointer type such as `new T*` or `new T*!`." );
+
+					break;
+				}
 			}
 		}
 
@@ -384,6 +394,56 @@ namespace Myll.Resolver
 					=> new TypespecBasic { kind = TypespecBasic.Kind.Float, size = Dialect.DefaultFloatSize() },
 				_ => initType,
 			};
+		}
+
+		private void ValidateVarAttributes( VarDecl vd )
+		{
+			bool isInsideStruct = vd.IsInStruct;
+			bool isStatic       = vd.IsStatic;
+			bool isHidden       = vd.IsHidden;
+			bool isCompileTime  = vd.IsCompileTime;
+			bool isInline       = vd.IsInline;
+			bool isExtern       = vd.IsExternal;
+			bool isConstType    = (vd.type.qual & Qualifier.Const) != 0;
+
+			if( isInsideStruct ) {
+				if( isHidden )                                               AddError( vd, "[hide]/[hidden] is only valid at module/namespace scope." );
+				if( isExtern )                                               AddError( vd, "[extern] is only valid at module/namespace scope." );
+				if( isInline && !isStatic )                                  AddError( vd, "[inline] on a class field requires [static]." );
+				if( isCompileTime && !isStatic )                             AddError( vd, "[ct] on a class field requires [static]." );
+			} else {
+				if( isStatic )                                               AddError( vd, "[static] is valid only on class fields; use [hide] for module variables." );
+				if( isInline && isHidden )                                   AddError( vd, "[inline] and [hide] are mutually exclusive." );
+				if( isExtern && isInline )                                   AddError( vd, "[extern] and [inline] are mutually exclusive." );
+				if( isExtern && isHidden )                                   AddError( vd, "[extern] and [hide]/[hidden] are mutually exclusive." );
+				if( isExtern && isCompileTime )                              AddError( vd, "[extern] cannot be used with [ct]." );
+				if( isExtern && isConstType )                                AddError( vd, "[extern] cannot be used with const." );
+				if( isExtern && vd.init != null )                            AddError( vd, "[extern] variables cannot have an initializer." );
+			}
+		}
+
+		private void ValidateUniqueVarNames( Hierarchical h )
+		{
+			HashSet<string> seen = new();
+
+			foreach( Decl child in h.children ) {
+				if( child is not VarDecl vd )
+					continue;
+
+				if( !seen.Add( vd.name ) )
+					AddError( vd, String.Format( "Duplicate variable/field declaration: {0}", vd.name ) );
+			}
+		}
+
+		private void AddError( Decl decl, string message )
+			=> AddError( decl.srcPos, message );
+
+		private void AddError( Expr expr, string message )
+			=> AddError( expr.srcPos, message );
+
+		private void AddError( SrcPos srcPos, string message )
+		{
+			diagnostics.Add( new Diagnostic( srcPos, DiagnosticKind.Error, message ) );
 		}
 
 		private static string FormatType( Typespec type )

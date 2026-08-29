@@ -78,10 +78,6 @@ namespace Myll.Generator
 			fieldDecl       = new(),
 			fieldImpl       = new();
 
-		// TODO/HACK: provisional duplicate-name check. Replace with ScopeStack-based name
-		//            resolution once that is wired up, so namespaces and nested scopes are respected.
-		private readonly HashSet<string> declaredVars = new();
-
 		// Super memory inefficient but I don't care for the moment
 		private readonly PPPStrings
 			protoEarly         = new(),
@@ -265,27 +261,6 @@ namespace Myll.Generator
 			bool isInline       = obj.IsInline;
 			bool isExtern       = obj.IsExternal;
 			bool isConstType    = (obj.type.qual & Qualifier.Const) != 0;
-
-			// TODO: report source location (file, line, column) for all of these attribute/duplicate errors.
-			if( isInsideStruct ) {
-				if( isHidden )                   throw new NotSupportedException( "[hide]/[hidden] is only valid at module/namespace scope." );
-				if( isExtern )                   throw new NotSupportedException( "[extern] is only valid at module/namespace scope." );
-				if( isInline      && !isStatic ) throw new NotSupportedException( "[inline] on a class field requires [static]." );
-				if( isCompileTime && !isStatic ) throw new NotSupportedException( "[ct] on a class field requires [static]." );
-			} else {
-				if( isStatic )              throw new NotSupportedException( "[static] is only valid on class fields; use [hide]/[hidden] for module-level variables." );
-				if( isInline && isHidden )  throw new NotSupportedException( "[inline] and [hide] are mutually exclusive." );
-				if( isExtern ) {
-					if( isInline )          throw new NotSupportedException( "[extern] and [inline] are mutually exclusive." );
-					if( isHidden )          throw new NotSupportedException( "[extern] and [hide]/[hidden] are mutually exclusive." );
-					if( isCompileTime )     throw new NotSupportedException( "[extern] cannot be used with [ct]." );
-					if( isConstType )       throw new NotSupportedException( "[extern] cannot be used with const." );
-					if( obj.init != null )  throw new NotSupportedException( "[extern] variables cannot have an initializer." );
-				}
-			}
-
-			if( !declaredVars.Add( obj.name ) )
-				throw new NotSupportedException( String.Format( "Duplicate variable/field declaration: {0}", obj.name ) );
 
 			AccessStrings targetDecl = isStatic ? staticFieldDecl : fieldDecl;
 			AccessStrings targetImpl = isStatic ? staticFieldImpl : fieldImpl;
