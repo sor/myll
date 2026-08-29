@@ -138,11 +138,11 @@ namespace Myll.Resolver
 				case Operand.Negation:
 					return new TypespecBasic { kind = TypespecBasic.Kind.Bool, size = 1 };
 
-				case Operand.Complement:
-					return operandType;
+			case Operand.Complement:
+				return PromoteInteger( operandType );
 
-				default:
-					return null;
+			default:
+				return null;
 			}
 		}
 
@@ -154,8 +154,14 @@ namespace Myll.Resolver
 			Typespec? leftType  = Resolve( binOp.left );
 			Typespec? rightType = Resolve( binOp.right );
 
-			if( IsArithmeticOperation( binOp.op ) )
+			if( IsArithmeticOperation( binOp.op ) ) {
+				if( binOp.op == Operand.Modulo )
+					return CommonIntegerType( leftType, rightType );
+				if( binOp.op == Operand.Divide )
+					return new TypespecBasic { kind = TypespecBasic.Kind.Float, size = 8 };
+
 				return CommonArithmeticType( leftType, rightType );
+			}
 
 			if( IsComparisonOperation( binOp.op ) || IsLogicalOperation( binOp.op ) )
 				return new TypespecBasic { kind = TypespecBasic.Kind.Bool, size = 1 };
@@ -163,8 +169,11 @@ namespace Myll.Resolver
 			if( IsAssignmentOperation( binOp.op ) )
 				return leftType;
 
-			if( IsBitwiseOperation( binOp.op ) || IsShiftOperation( binOp.op ) )
-				return leftType;
+			if( IsBitwiseOperation( binOp.op ) )
+				return CommonIntegerType( leftType, rightType );
+
+			if( IsShiftOperation( binOp.op ) )
+				return PromoteInteger( leftType );
 
 			return null;
 		}
@@ -269,36 +278,106 @@ namespace Myll.Resolver
 			if( left == null || right == null )
 				return null;
 
-			// Bool is arithmetic-compatible and promotes like a 1-bit integer.
-			if( TryBoolArithmeticPromotion( left, right, out Typespec? promoted ) )
-				return promoted;
+			if( !OperatorRules.IsScalarNumber( left ) || !OperatorRules.IsScalarNumber( right ) )
+				return null;
 
-			// For exact or promotion-compatible operands, prefer the wider type.
-			if( ConversionRules.IsImplicitlyConvertible( left, right ) )
+			bool leftUntyped  = IsUntyped( left );
+			bool rightUntyped = IsUntyped( right );
+
+			if( leftUntyped && !rightUntyped )
 				return right;
-			if( ConversionRules.IsImplicitlyConvertible( right, left ) )
+			if( rightUntyped && !leftUntyped )
 				return left;
+
+			if( leftUntyped && rightUntyped ) {
+				TypespecBasic.Kind kind = OperatorRules.IsScalarFloat( left ) || OperatorRules.IsScalarFloat( right )
+					? TypespecBasic.Kind.UntypedFloat
+					: TypespecBasic.Kind.UntypedInteger;
+				return new TypespecBasic { kind = kind, size = TypespecBasic.SizeUndetermined };
+			}
+
+			bool leftIsFloat  = OperatorRules.IsScalarFloat( left );
+			bool rightIsFloat = OperatorRules.IsScalarFloat( right );
+
+			if( leftIsFloat || rightIsFloat ) {
+				int size = System.Math.Max( FloatSize( left ), FloatSize( right ) );
+				return new TypespecBasic { kind = TypespecBasic.Kind.Float, size = size };
+			}
+
+			return CommonIntegerType( left, right );
+		}
+
+		private static Typespec? CommonIntegerType( Typespec? left, Typespec? right )
+		{
+			if( left == null || right == null )
+				return null;
+
+			// bool promotes to int so counting comparisons like `bool + bool` works.
+			Typespec? l = PromoteBool( left );
+			Typespec? r = PromoteBool( right );
+			if( l == null || r == null )
+				return null;
+
+			if( l is not TypespecBasic lb || r is not TypespecBasic rb )
+				return null;
+
+			return UsualArithmeticConversions( lb, rb );
+		}
+
+		private static Typespec? UsualArithmeticConversions( TypespecBasic left, TypespecBasic right )
+		{
+			if( left.kind == right.kind )
+				return new TypespecBasic { kind = left.kind, size = System.Math.Max( left.size, right.size ) };
+
+			if( left.kind == TypespecBasic.Kind.Unsigned )
+				return MixedIntegerResult( right, left );
+
+			// left is signed, right is unsigned
+			return MixedIntegerResult( left, right );
+		}
+
+		private static Typespec? MixedIntegerResult( TypespecBasic signedType, TypespecBasic unsignedType )
+		{
+			// If the unsigned type has greater or equal rank, the result is unsigned.
+			if( unsignedType.size >= signedType.size )
+				return new TypespecBasic { kind = TypespecBasic.Kind.Unsigned, size = unsignedType.size };
+
+			// Otherwise the signed type can represent every value of the unsigned type.
+			return new TypespecBasic { kind = TypespecBasic.Kind.Integer, size = signedType.size };
+		}
+
+		private static Typespec? PromoteBool( Typespec? type )
+		{
+			if( type is TypespecBasic { kind: TypespecBasic.Kind.Bool } )
+				return new TypespecBasic { kind = TypespecBasic.Kind.Integer, size = 4 };
+
+			if( OperatorRules.IsScalarInteger( type ) )
+				return type;
 
 			return null;
 		}
 
-		private static bool TryBoolArithmeticPromotion( Typespec a, Typespec b, out Typespec? promoted )
+		private static Typespec? PromoteInteger( Typespec? type )
 		{
-			promoted = null;
+			if( type is TypespecBasic { kind: TypespecBasic.Kind.Bool } )
+				return new TypespecBasic { kind = TypespecBasic.Kind.Integer, size = 4 };
 
-			bool aIsBool = a is TypespecBasic ba && ba.kind == TypespecBasic.Kind.Bool && a.ptrs is null or { Count: 0 };
-			bool bIsBool = b is TypespecBasic bb && bb.kind == TypespecBasic.Kind.Bool && b.ptrs is null or { Count: 0 };
+			if( OperatorRules.IsScalarInteger( type ) )
+				return type;
 
-			if( !aIsBool && !bIsBool )
-				return false;
+			return null;
+		}
 
-			if( aIsBool && bIsBool ) {
-				promoted = new TypespecBasic { kind = TypespecBasic.Kind.Integer, size = 4 };
-				return true;
-			}
+		private static bool IsUntyped( Typespec? type )
+			=> type is TypespecBasic basic
+			 && ( basic.kind == TypespecBasic.Kind.UntypedInteger
+			   || basic.kind == TypespecBasic.Kind.UntypedFloat );
 
-			promoted = aIsBool ? b : a;
-			return true;
+		private static int FloatSize( Typespec? type )
+		{
+			if( type is TypespecBasic basic && basic.kind == TypespecBasic.Kind.Float )
+				return basic.size;
+			return 0;
 		}
 
 		private static Typespec? CommonType( Typespec? a, Typespec? b )
@@ -365,7 +444,8 @@ namespace Myll.Resolver
 
 		private static bool IsComparisonOperation( Operand op )
 			=> op is Operand.Equal or Operand.NotEqual or Operand.LessThan
-			|| op is Operand.LessEqual or Operand.GreaterThan or Operand.GreaterEqual;
+			|| op is Operand.LessEqual or Operand.GreaterThan or Operand.GreaterEqual
+			|| op is Operand.Comparison;
 
 		private static bool IsLogicalOperation( Operand op )
 			=> op is Operand.And or Operand.Or;

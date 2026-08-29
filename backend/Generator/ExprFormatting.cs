@@ -37,7 +37,7 @@ namespace Myll.Generator
 				{ Operand.BitOr, "{0} | {1}" },
 				{ Operand.LeftShift, "{0} << {1}"},
 				{ Operand.RightShift,"{0} >> {1}"},
-				{ Operand.Comparison, "cmp( {0}, {1} )" },
+				{ Operand.Comparison, "{0} <=> {1}" },
 				{ Operand.LessThan, "{0} < {1}" },
 				{ Operand.LessEqual, "{0} <= {1}" },
 				{ Operand.GreaterThan, "{0} > {1}" },

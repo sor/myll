@@ -351,10 +351,9 @@ namespace Myll.Resolver
 
 		private void ValidateExpression( Expr expr )
 		{
-			// For now only logical/conditional operands need strict type checking.
-			// Arithmetic/bitwise/comparison operators are deliberately left permissive
-			// because Myll mirrors C++'s promotion rules and also uses `+` / `<<`
-			// in ways that are not purely numeric (e.g. bool counting, stream insertion).
+			// Logical/conditional operands and a subset of built-in scalar operators are
+			// checked here. Anything involving classes, references, or user-defined
+			// operator overloads is left for C++ to resolve.
 			switch( expr ) {
 				case TernOp tern: {
 					ValidateCondition( tern.left, tern.left.srcPos, "?:" );
@@ -372,6 +371,36 @@ namespace Myll.Resolver
 					break;
 				}
 
+				case BinOp binOp when IsArithmeticOperator( binOp.op ): {
+					ValidateArithmeticOperator( binOp );
+					break;
+				}
+
+				case BinOp binOp when IsBitwiseOperator( binOp.op ): {
+					ValidateBitwiseOperator( binOp );
+					break;
+				}
+
+				case BinOp binOp when IsShiftOperator( binOp.op ): {
+					ValidateShiftOperator( binOp );
+					break;
+				}
+
+				case BinOp binOp when IsComparisonOperator( binOp.op ): {
+					ValidateComparisonOperator( binOp );
+					break;
+				}
+
+				case UnOp unOp when IsArithmeticUnaryOperator( unOp.op ): {
+					ValidateArithmeticUnaryOperator( unOp );
+					break;
+				}
+
+				case UnOp unOp when unOp.op == Operand.Complement: {
+					ValidateComplementOperator( unOp );
+					break;
+				}
+
 				case NewExpr newExpr: {
 					if( Dialect.StrictNew
 					 && ( newExpr.type.ptrs == null || newExpr.type.ptrs.Count == 0 ) )
@@ -380,6 +409,166 @@ namespace Myll.Resolver
 					break;
 				}
 			}
+		}
+
+		private static bool IsArithmeticOperator( Operand op )
+			=> op is Operand.Add or Operand.Subtract or Operand.Multiply
+			 || op is Operand.Divide or Operand.EuclideanDivide or Operand.Modulo;
+
+		private static bool IsBitwiseOperator( Operand op )
+			=> op is Operand.BitAnd or Operand.BitOr or Operand.BitXor;
+
+		private static bool IsShiftOperator( Operand op )
+			=> op is Operand.LeftShift or Operand.RightShift;
+
+		private static bool IsComparisonOperator( Operand op )
+			=> op is Operand.Equal or Operand.NotEqual or Operand.LessThan
+			 || op is Operand.LessEqual or Operand.GreaterThan or Operand.GreaterEqual
+			 || op is Operand.Comparison;
+
+		private static bool IsArithmeticUnaryOperator( Operand op )
+			=> op is Operand.PrePlus or Operand.PreMinus
+			 || op is Operand.PreIncr or Operand.PreDecr
+			 || op is Operand.PostIncr or Operand.PostDecr;
+
+		private void ValidateArithmeticOperator( BinOp binOp )
+		{
+			Typespec? leftType  = typeResolver.Resolve( binOp.left );
+			Typespec? rightType = typeResolver.Resolve( binOp.right );
+
+			if( leftType == null || rightType == null )
+				return;
+
+			// Leave class-typed operands and their operator overloads to C++.
+			if( leftType is not TypespecBasic || rightType is not TypespecBasic )
+				return;
+
+			if( binOp.op is Operand.Add or Operand.Subtract
+			 && ( OperatorRules.HasPointer( leftType ) || OperatorRules.HasPointer( rightType ) ) ) {
+				AddError( binOp, "Pointer arithmetic is disabled; use indexing instead." );
+				return;
+			}
+
+			if( binOp.op == Operand.Modulo ) {
+				if( !OperatorRules.IsScalarInteger( leftType ) || !OperatorRules.IsScalarInteger( rightType ) )
+					AddError( binOp, String.Format( "Operator '{0}' requires integer operands, found '{1}' and '{2}'", OperatorName( binOp.op ), FormatType( leftType ), FormatType( rightType ) ) );
+
+				return;
+			}
+
+			if( !OperatorRules.IsScalarNumber( leftType ) || !OperatorRules.IsScalarNumber( rightType ) )
+				AddError( binOp, String.Format( "Operator '{0}' cannot be applied to types '{1}' and '{2}'", OperatorName( binOp.op ), FormatType( leftType ), FormatType( rightType ) ) );
+		}
+
+		private void ValidateBitwiseOperator( BinOp binOp )
+		{
+			Typespec? leftType  = typeResolver.Resolve( binOp.left );
+			Typespec? rightType = typeResolver.Resolve( binOp.right );
+
+			if( leftType == null || rightType == null )
+				return;
+
+			if( leftType is not TypespecBasic || rightType is not TypespecBasic )
+				return;
+
+			if( !OperatorRules.IsScalarInteger( leftType ) || !OperatorRules.IsScalarInteger( rightType ) )
+				AddError( binOp, String.Format( "Operator '{0}' requires integer operands, found '{1}' and '{2}'", OperatorName( binOp.op ), FormatType( leftType ), FormatType( rightType ) ) );
+		}
+
+		private void ValidateShiftOperator( BinOp binOp )
+		{
+			Typespec? leftType  = typeResolver.Resolve( binOp.left );
+			Typespec? rightType = typeResolver.Resolve( binOp.right );
+
+			if( leftType == null || rightType == null )
+				return;
+
+			// Class-typed left operands are using << for stream insertion or a user-defined overload.
+			if( leftType is not TypespecBasic )
+				return;
+
+			if( !OperatorRules.IsScalarInteger( leftType ) )
+				AddError( binOp.left, String.Format( "Left operand of '{0}' must be an integer type, found '{1}'", OperatorName( binOp.op ), FormatType( leftType ) ) );
+
+			if( rightType is TypespecBasic && !OperatorRules.IsScalarInteger( rightType ) )
+				AddError( binOp.right, String.Format( "Right operand of '{0}' must be an integer type, found '{1}'", OperatorName( binOp.op ), FormatType( rightType ) ) );
+		}
+
+		private void ValidateComparisonOperator( BinOp binOp )
+		{
+			Typespec? leftType  = typeResolver.Resolve( binOp.left );
+			Typespec? rightType = typeResolver.Resolve( binOp.right );
+
+			if( leftType == null || rightType == null )
+				return;
+
+			if( leftType is not TypespecBasic || rightType is not TypespecBasic )
+				return;
+
+			if( !OperatorRules.IsScalarNumber( leftType ) || !OperatorRules.IsScalarNumber( rightType ) ) {
+				AddError( binOp, String.Format( "Operator '{0}' cannot compare types '{1}' and '{2}'", OperatorName( binOp.op ), FormatType( leftType ), FormatType( rightType ) ) );
+				return;
+			}
+
+			// Mixed signed/unsigned comparisons are allowed by C++ but produce warnings
+			// in some configurations; for now we leave them alone.
+		}
+
+		private void ValidateArithmeticUnaryOperator( UnOp unOp )
+		{
+			Typespec? operandType = typeResolver.Resolve( unOp.expr );
+			if( operandType == null )
+				return;
+
+			if( operandType is not TypespecBasic )
+				return;
+
+			if( !OperatorRules.IsScalarNumber( operandType ) )
+				AddError( unOp, String.Format( "Operator '{0}' cannot be applied to type '{1}'", OperatorName( unOp.op ), FormatType( operandType ) ) );
+		}
+
+		private void ValidateComplementOperator( UnOp unOp )
+		{
+			Typespec? operandType = typeResolver.Resolve( unOp.expr );
+			if( operandType == null )
+				return;
+
+			if( operandType is not TypespecBasic )
+				return;
+
+			if( !OperatorRules.IsScalarInteger( operandType ) )
+				AddError( unOp, String.Format( "Operator '~' cannot be applied to type '{0}'", FormatType( operandType ) ) );
+		}
+
+		private static string OperatorName( Operand op )
+		{
+			return op switch {
+				Operand.Add             => "+",
+				Operand.Subtract        => "-",
+				Operand.Multiply        => "*",
+				Operand.Divide          => "\u00f7",
+				Operand.EuclideanDivide => "/",
+				Operand.Modulo          => "%",
+				Operand.BitAnd          => "&",
+				Operand.BitOr           => "|",
+				Operand.BitXor          => "^",
+				Operand.LeftShift       => "<<",
+				Operand.RightShift      => ">>",
+				Operand.Equal           => "==",
+				Operand.NotEqual        => "!=",
+				Operand.LessThan        => "<",
+				Operand.LessEqual       => "<=",
+				Operand.GreaterThan     => ">",
+				Operand.GreaterEqual    => ">=",
+				Operand.Comparison      => "<=>",
+				Operand.PrePlus         => "+",
+				Operand.PreMinus        => "-",
+				Operand.PreIncr         => "++",
+				Operand.PreDecr         => "--",
+				Operand.PostIncr        => "++",
+				Operand.PostDecr        => "--",
+				_                       => op.ToString(),
+			};
 		}
 
 		private static Typespec? InferAutoType( Typespec? initType )
