@@ -40,7 +40,7 @@ namespace Myll
 
 		/// <summary>
 		/// Source positions of every use of the `float` keyword in this module. The resolver uses
-		/// this together with <see cref="Dialect.AllowFloatKeyword"/> to emit diagnostics.
+		/// this together with <see cref="Dialect.DefaultFloat"/> to emit diagnostics.
 		/// </summary>
 		public List<SrcPos> FloatKeywordUsages { get; } = new();
 

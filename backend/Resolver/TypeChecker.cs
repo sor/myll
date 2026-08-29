@@ -63,6 +63,8 @@ namespace Myll.Resolver
 								FormatType( argType ),
 								FormatType( paras[i].type ) ) ) );
 					}
+
+					call.Call.args[i].expr = BindToBitType( call.Call.args[i].expr, paras[i].type );
 				}
 			}
 		}
@@ -91,13 +93,15 @@ namespace Myll.Resolver
 						ValidateStmt( stc.body, null );
 					break;
 
-				case VarDecl vd:
-					ValidateVarAttributes( vd );
-					if( vd.init != null ) {
+			case VarDecl vd:
+				ValidateVarAttributes( vd );
+				ValidateDefaultSizedField( vd );
+				if( vd.init != null ) {
 						if( vd.type is TypespecBasic { kind: TypespecBasic.Kind.Auto } )
 							vd.type = InferAutoType( typeResolver.Resolve( vd.init ) ) ?? vd.type;
 
 						CheckAssignment( vd.type, vd.init, vd.init.srcPos );
+						vd.init = BindToBitType( vd.init, vd.type );
 					}
 					break;
 
@@ -127,6 +131,7 @@ namespace Myll.Resolver
 							vs.type = InferAutoType( typeResolver.Resolve( vs.init ) ) ?? vs.type;
 
 						CheckAssignment( vs.type, vs.init, vs.init.srcPos );
+						vs.init = BindToBitType( vs.init, vs.type );
 					}
 					break;
 
@@ -140,13 +145,16 @@ namespace Myll.Resolver
 
 				case AggrAssign aggrAssign:
 					CheckAssignment( aggrAssign.leftExpr, aggrAssign.rightExpr, aggrAssign.rightExpr.srcPos );
+					aggrAssign.rightExpr = BindToBitType( aggrAssign.rightExpr, typeResolver.Resolve( aggrAssign.leftExpr ) );
 					break;
 
 				case ExprStmt exprStmt: {
 					ValidateExpression( exprStmt.expr );
 
-					if( exprStmt.expr is BinOp { op: Operand.Equal } assign )
+					if( exprStmt.expr is BinOp { op: Operand.Equal } assign ) {
 						CheckAssignment( assign.left, assign.right, assign.right.srcPos );
+						assign.right = BindToBitType( assign.right, typeResolver.Resolve( assign.left ) );
+					}
 
 					break;
 				}
@@ -253,6 +261,8 @@ namespace Myll.Resolver
 						currentFunction.name,
 						FormatType( expected ) ) ) );
 			}
+
+			ret.expr = BindToBitType( ret.expr, expected );
 		}
 
 		private void ValidateMultiAssign( MultiAssign multiAssign )
@@ -262,6 +272,7 @@ namespace Myll.Resolver
 				Expr left  = multiAssign.exprs[i];
 				Expr right = multiAssign.exprs[i + 1];
 				CheckAssignment( left, right, right.srcPos );
+				multiAssign.exprs[i + 1] = BindToBitType( right, typeResolver.Resolve( left ) );
 			}
 		}
 
@@ -428,7 +439,7 @@ namespace Myll.Resolver
 			 || op is Operand.LeftShift or Operand.RightShift;
 
 		private static bool IsBitOperand( Expr expr )
-			=> OperatorRules.IsScalarBit( expr.Type );
+			=> OperatorRules.IsScalarBitFamily( expr.Type );
 
 		private static bool IsBitwiseOperator( Operand op )
 			=> op is Operand.BitAnd or Operand.BitOr or Operand.BitXor;
@@ -498,14 +509,21 @@ namespace Myll.Resolver
 			if( leftType == null || rightType == null )
 				return;
 
-			// Bit operations are defined only for the built-in bit types and untyped
-			// integer literals used together with a bit operand.
-			bool leftIsBit  = IsBitType( leftType ) || IsUntypedBitOperand( leftType, rightType );
-			bool rightIsBit = IsBitType( rightType ) || IsUntypedBitOperand( rightType, leftType );
+			// Bit-family operations are defined only for a single family (Bit or Byte)
+			// and untyped integer literals used together with a bit operand.
+			bool leftIsFamily  = IsBitFamilyType( leftType ) || IsUntypedBitOperand( leftType, rightType );
+			bool rightIsFamily = IsBitFamilyType( rightType ) || IsUntypedBitOperand( rightType, leftType );
 
-			if( !leftIsBit || !rightIsBit ) {
+			if( !leftIsFamily || !rightIsFamily ) {
 				AddError( binOp, String.Format(
 					"Bit operator '{0}' requires bit operands, found '{1}' and '{2}'",
+					OperatorName( binOp.op ), FormatType( leftType ), FormatType( rightType ) ) );
+				return;
+			}
+
+			if( !SameBitFamily( leftType, rightType ) ) {
+				AddError( binOp, String.Format(
+					"Bit operator '{0}' cannot mix bit and byte operands, found '{1}' and '{2}'",
 					OperatorName( binOp.op ), FormatType( leftType ), FormatType( rightType ) ) );
 				return;
 			}
@@ -513,25 +531,39 @@ namespace Myll.Resolver
 			if( IsShiftOperator( binOp.op ) )
 				return;
 
-			TypespecBasic? leftBit  = AsConcreteBitType( leftType ) ?? AsConcreteBitType( rightType );
-			TypespecBasic? rightBit = AsConcreteBitType( rightType ) ?? AsConcreteBitType( leftType );
+			TypespecBasic? leftConcrete  = AsConcreteBitFamilyType( leftType ) ?? AsConcreteBitFamilyType( rightType );
+			TypespecBasic? rightConcrete = AsConcreteBitFamilyType( rightType ) ?? AsConcreteBitFamilyType( leftType );
 
-			if( leftBit != null && rightBit != null && leftBit.size != rightBit.size )
+			if( leftConcrete != null && rightConcrete != null && leftConcrete.size != rightConcrete.size )
 				AddError( binOp, String.Format(
 					"Bit operator '{0}' requires operands of the same bit width, found '{1}' and '{2}'",
 					OperatorName( binOp.op ), FormatType( leftType ), FormatType( rightType ) ) );
 		}
 
-		private static bool IsBitType( Typespec? type )
-			=> type is TypespecBasic { kind: TypespecBasic.Kind.Bit }
+		private static bool IsBitFamilyType( Typespec? type )
+			=> type is TypespecBasic { kind: TypespecBasic.Kind.Bitwise or TypespecBasic.Kind.Byte }
 			 && ( type.ptrs == null || type.ptrs.Count == 0 );
+
+		private static bool SameBitFamily( Typespec? left, Typespec? right )
+		{
+			bool leftBit  = left  is TypespecBasic { kind: TypespecBasic.Kind.Bitwise };
+			bool rightBit = right is TypespecBasic { kind: TypespecBasic.Kind.Bitwise };
+			bool leftByte = left  is TypespecBasic { kind: TypespecBasic.Kind.Byte };
+			bool rightByte = right is TypespecBasic { kind: TypespecBasic.Kind.Byte };
+
+			if( ( leftBit && rightByte ) || ( leftByte && rightBit ) )
+				return false;
+
+			return leftBit || rightBit || leftByte || rightByte;
+		}
 
 		private static bool IsUntypedBitOperand( Typespec? candidate, Typespec? other )
 			=> candidate is TypespecBasic { kind: TypespecBasic.Kind.UntypedInteger }
-			 && other is TypespecBasic { kind: TypespecBasic.Kind.Bit };
+			 && other is TypespecBasic { kind: TypespecBasic.Kind.Bitwise or TypespecBasic.Kind.Byte };
 
-		private static TypespecBasic? AsConcreteBitType( Typespec? type )
-			=> type is TypespecBasic { kind: TypespecBasic.Kind.Bit } basic
+		private static TypespecBasic? AsConcreteBitFamilyType( Typespec? type )
+			=> type is TypespecBasic basic
+			 && ( basic.kind == TypespecBasic.Kind.Bitwise || basic.kind == TypespecBasic.Kind.Byte )
 			 && ( type.ptrs == null || type.ptrs.Count == 0 )
 			 ? basic
 			 : null;
@@ -566,6 +598,24 @@ namespace Myll.Resolver
 			if( leftType is not TypespecBasic || rightType is not TypespecBasic )
 				return;
 
+			// Bit-family types only support equality; no ordering.
+			if( OperatorRules.IsScalarBitFamily( leftType ) || OperatorRules.IsScalarBitFamily( rightType ) ) {
+				if( binOp.op is not (Operand.Equal or Operand.NotEqual) ) {
+					AddError( binOp, String.Format(
+						"Bit types only support equality comparisons; operator '{0}' is not allowed",
+						OperatorName( binOp.op ) ) );
+				}
+				else {
+					Typespec? target = OperatorRules.IsScalarBitFamily( leftType )
+						? leftType
+						: rightType;
+					binOp.left  = BindToBitType( binOp.left, target );
+					binOp.right = BindToBitType( binOp.right, target );
+				}
+
+				return;
+			}
+
 			if( !OperatorRules.IsScalarComparable( leftType ) || !OperatorRules.IsScalarComparable( rightType ) ) {
 				AddError( binOp, String.Format( "Operator '{0}' cannot compare types '{1}' and '{2}'", OperatorName( binOp.op ), FormatType( leftType ), FormatType( rightType ) ) );
 				return;
@@ -597,7 +647,8 @@ namespace Myll.Resolver
 			if( operandType is not TypespecBasic )
 				return;
 
-			if( !OperatorRules.IsScalarInteger( operandType ) )
+			if( !OperatorRules.IsScalarInteger( operandType )
+			 && !OperatorRules.IsScalarBitFamily( operandType ) )
 				AddError( unOp, String.Format( "Operator '~' cannot be applied to type '{0}'", FormatType( operandType ) ) );
 		}
 
@@ -672,6 +723,29 @@ namespace Myll.Resolver
 			}
 		}
 
+		private void ValidateDefaultSizedField( VarDecl vd )
+		{
+			if( !vd.IsInStruct )
+				return;
+
+			if( vd.type is not TypespecBasic basic )
+				return;
+
+			DefaultTypeMode mode = basic.kind switch {
+				TypespecBasic.Kind.Integer => Dialect.DefaultInt,
+				TypespecBasic.Kind.Unsigned => Dialect.DefaultUInt,
+				TypespecBasic.Kind.Float   => Dialect.DefaultFloat,
+				TypespecBasic.Kind.Bitwise     => Dialect.DefaultBint,
+				_                          => DefaultTypeMode.SizeIndeterminate,
+			};
+
+			if( (mode & DefaultTypeMode.ForbiddenInStruct) != 0 ) {
+				AddError( vd, String.Format(
+					"Default-sized type '{0}' is not allowed as a struct/class field in the active dialect",
+					FormatType( basic ) ) );
+			}
+		}
+
 		private void ValidateUniqueVarNames( Hierarchical h )
 		{
 			HashSet<string> seen = new();
@@ -683,6 +757,50 @@ namespace Myll.Resolver
 				if( !seen.Add( vd.name ) )
 					AddError( vd, String.Format( "Duplicate variable/field declaration: {0}", vd.name ) );
 			}
+		}
+
+		/// <summary>
+		/// Wraps untyped integer literals in a static_cast when they are used where a
+		/// bit-family type (<c>bint</c>, <c>b8</c> ... or <c>byte</c>) is expected.
+		/// This is required because C++ <c>std::byte</c> and small fixed-width integers
+		/// do not accept integer literals directly.
+		/// </summary>
+		private Expr BindToBitType( Expr expr, Typespec? targetType )
+		{
+			if( targetType == null )
+				return expr;
+
+			if( targetType is not TypespecBasic targetBasic )
+				return expr;
+
+			if( targetBasic.kind is not (TypespecBasic.Kind.Bitwise or TypespecBasic.Kind.Byte) )
+				return expr;
+
+			if( targetType.ptrs is { Count: > 0 } )
+				return expr;
+
+			Typespec? sourceType = typeResolver.Resolve( expr );
+
+			if( sourceType is TypespecBasic { kind: TypespecBasic.Kind.Bitwise or TypespecBasic.Kind.Byte } )
+				return expr;
+
+			if( sourceType is not TypespecBasic { kind: TypespecBasic.Kind.UntypedInteger } )
+				return expr;
+
+			Typespec castType = new TypespecBasic {
+				kind           = targetBasic.kind,
+				size           = targetBasic.size,
+				isDefaultSized = targetBasic.isDefaultSized,
+				qual           = targetBasic.qual,
+			};
+
+			return new CastExpr {
+				op     = Operand.StaticCast,
+				type   = castType,
+				expr   = expr,
+				Type   = castType,
+				srcPos = expr.srcPos,
+			};
 		}
 
 		private void AddError( Decl decl, string message )

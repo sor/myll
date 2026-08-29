@@ -66,9 +66,16 @@ namespace Myll.Resolver
 			if( t == "true" || t == "false" )
 				return new TypespecBasic { kind = TypespecBasic.Kind.Bool, size = 1 };
 
-			if( t.Contains( "." )
-			 || t.Contains( "e", StringComparison.OrdinalIgnoreCase )
-			 || t.Contains( "E", StringComparison.OrdinalIgnoreCase ) )
+			// Hexadecimal integer literals such as 0x1E contain an 'E' but are still
+			// integers, so check for a radix prefix before treating the token as a float.
+			bool isHex = t.Length >= 2
+			          && t[0] == '0'
+			          && ( t[1] == 'x' || t[1] == 'X' );
+
+			if( !isHex
+			 && ( t.Contains( "." )
+			   || t.Contains( "e", StringComparison.OrdinalIgnoreCase )
+			   || t.Contains( "E", StringComparison.OrdinalIgnoreCase ) ) )
 				return new TypespecBasic {
 					kind        = TypespecBasic.Kind.UntypedFloat,
 					size        = TypespecBasic.SizeUndetermined,
@@ -139,6 +146,9 @@ namespace Myll.Resolver
 					return new TypespecBasic { kind = TypespecBasic.Kind.Bool, size = 1 };
 
 			case Operand.Complement:
+				if( OperatorRules.IsScalarBitFamily( operandType ) )
+					return operandType;
+
 				return PromoteInteger( operandType );
 
 			default:
@@ -463,49 +473,70 @@ namespace Myll.Resolver
 			if( !IsBitOperator( op ) )
 				return false;
 
-			bool hasTypedBit = OperatorRules.IsScalarBit( leftType )
-			                || OperatorRules.IsScalarBit( rightType );
+			bool leftTyped  = IsTypedBitFamily( leftType );
+			bool rightTyped = IsTypedBitFamily( rightType );
 
-			if( !hasTypedBit )
+			if( !leftTyped && !rightTyped )
+				return false;
+
+			if( !SameBitFamily( leftType, rightType ) )
 				return false;
 
 			if( IsShiftOperation( op ) ) {
-				if( !OperatorRules.IsScalarBit( leftType ) )
+				if( !leftTyped )
 					return false;
 
 				result = leftType;
 				return true;
 			}
 
-			result = CommonBitType( leftType, rightType );
+			result = CommonBitFamilyType( leftType, rightType );
 			return result != null;
 		}
 
-		private static Typespec? CommonBitType( Typespec? left, Typespec? right )
+		private static Typespec? CommonBitFamilyType( Typespec? left, Typespec? right )
 		{
-			TypespecBasic? leftBit  = AsBitType( left );
-			TypespecBasic? rightBit = AsBitType( right );
+			TypespecBasic? leftTyped  = AsBitFamilyType( left );
+			TypespecBasic? rightTyped = AsBitFamilyType( right );
 
-			if( leftBit != null && rightBit != null ) {
-				if( leftBit.size != rightBit.size )
+			if( leftTyped != null && rightTyped != null ) {
+				if( leftTyped.size != rightTyped.size )
 					return null;
 
-				return new TypespecBasic { kind = TypespecBasic.Kind.Bit, size = leftBit.size };
+				return new TypespecBasic { kind = leftTyped.kind, size = leftTyped.size };
 			}
 
-			if( leftBit != null )
-				return new TypespecBasic { kind = TypespecBasic.Kind.Bit, size = leftBit.size };
+			if( leftTyped != null )
+				return new TypespecBasic { kind = leftTyped.kind, size = leftTyped.size };
 
-			if( rightBit != null )
-				return new TypespecBasic { kind = TypespecBasic.Kind.Bit, size = rightBit.size };
+			if( rightTyped != null )
+				return new TypespecBasic { kind = rightTyped.kind, size = rightTyped.size };
 
 			return null;
 		}
 
-		private static TypespecBasic? AsBitType( Typespec? type )
+		private static bool IsTypedBitFamily( Typespec? type )
+			=> OperatorRules.IsScalarBitFamily( type );
+
+		private static bool SameBitFamily( Typespec? left, Typespec? right )
+		{
+			bool leftBit  = OperatorRules.IsScalarBit( left );
+			bool rightBit = OperatorRules.IsScalarBit( right );
+			bool leftByte = OperatorRules.IsScalarByte( left );
+			bool rightByte = OperatorRules.IsScalarByte( right );
+
+			// A typed bit/byte operand may not mix with the other family.
+			if( ( leftBit && rightByte ) || ( leftByte && rightBit ) )
+				return false;
+
+			// If one side is untyped, it can bind to either family.
+			return leftBit || rightBit || leftByte || rightByte;
+		}
+
+		private static TypespecBasic? AsBitFamilyType( Typespec? type )
 		{
 			if( type is TypespecBasic basic
-			 && basic.kind == TypespecBasic.Kind.Bit
+			 && ( basic.kind == TypespecBasic.Kind.Bitwise || basic.kind == TypespecBasic.Kind.Byte )
 			 && ( type.ptrs == null || type.ptrs.Count == 0 ) )
 				return basic;
 

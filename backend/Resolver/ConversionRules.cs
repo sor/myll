@@ -40,6 +40,9 @@ namespace Myll.Resolver
 			if( IsBitUnsignedInterchange( source, target ) )
 				return ConversionRank.Exact;
 
+			if( IsDefaultSizedFamilyConversion( source, target ) )
+				return ConversionRank.Conversion;
+
 			ConversionRank untypedRank = GetUntypedLiteralRank( source, target );
 			if( untypedRank != ConversionRank.None )
 				return untypedRank;
@@ -91,7 +94,8 @@ namespace Myll.Resolver
 			return source switch {
 				TypespecBasic srcBasic => target is TypespecBasic tgtBasic
 				                       && srcBasic.kind == tgtBasic.kind
-				                       && srcBasic.size == tgtBasic.size,
+				                       && srcBasic.size == tgtBasic.size
+				                       && srcBasic.isDefaultSized == tgtBasic.isDefaultSized,
 				TypespecNested srcNest => target is TypespecNested tgtNest
 				                       && NestedTypesEqual( srcNest, tgtNest ),
 				TypespecFunc   srcFunc => false, // function pointer identity not yet supported
@@ -118,8 +122,10 @@ namespace Myll.Resolver
 				// Fits into another integer type? (value range check)
 				if( ( tgtBasic.kind == TypespecBasic.Kind.Integer
 				   || tgtBasic.kind == TypespecBasic.Kind.Unsigned
-				   || tgtBasic.kind == TypespecBasic.Kind.Bit )
-				 && IntegerFits( value, tgtBasic.kind == TypespecBasic.Kind.Bit
+				   || tgtBasic.kind == TypespecBasic.Kind.Bitwise
+				   || tgtBasic.kind == TypespecBasic.Kind.Byte )
+				 && IntegerFits( value, tgtBasic.kind == TypespecBasic.Kind.Bitwise
+					|| tgtBasic.kind == TypespecBasic.Kind.Byte
 					? TypespecBasic.Kind.Unsigned
 					: tgtBasic.kind, tgtBasic.size ) )
 					return ConversionRank.Promotion;
@@ -225,6 +231,23 @@ namespace Myll.Resolver
 			     or TypespecBasic.Kind.Unsigned
 			     or TypespecBasic.Kind.Bool;
 
+		private static bool IsDefaultSizedFamilyConversion( Typespec source, Typespec target )
+		{
+			if( !HaveSamePointers( source.ptrs, target.ptrs ) )
+				return false;
+
+			if( source is not TypespecBasic srcBasic || target is not TypespecBasic tgtBasic )
+				return false;
+
+			if( srcBasic.kind != tgtBasic.kind )
+				return false;
+
+			if( srcBasic.size != tgtBasic.size )
+				return false;
+
+			return srcBasic.isDefaultSized != tgtBasic.isDefaultSized;
+		}
+
 		private static bool IsBitUnsignedInterchange( Typespec source, Typespec target )
 		{
 			if( !HaveSamePointers( source.ptrs, target.ptrs ) )
@@ -236,10 +259,10 @@ namespace Myll.Resolver
 			if( srcBasic.size != tgtBasic.size )
 				return false;
 
-			return ( srcBasic.kind == TypespecBasic.Kind.Bit
+			return ( srcBasic.kind == TypespecBasic.Kind.Bitwise
 			      && tgtBasic.kind == TypespecBasic.Kind.Unsigned )
 			    || ( srcBasic.kind == TypespecBasic.Kind.Unsigned
-			      && tgtBasic.kind == TypespecBasic.Kind.Bit );
+			      && tgtBasic.kind == TypespecBasic.Kind.Bitwise );
 		}
 
 		private static bool IsCharPointer( Typespec type )

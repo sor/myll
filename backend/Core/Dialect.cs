@@ -51,6 +51,24 @@ namespace Myll.Core
 		SignedPreferred,
 	}
 
+	/// <summary>
+	/// Controls how default-sized types (<c>int</c>, <c>uint</c>, <c>float</c>,
+	/// <c>bint</c>) are treated by the type system. Only <see cref="SizeIndeterminate"/>
+	/// is currently honored; the other values are reserved for future dialect support.
+	/// </summary>
+	[Flags]
+	public enum DefaultTypeMode
+	{
+		SizeIndeterminate = 0,
+		Forbidden         = 1 << 0,
+		ForbiddenInStruct = 1 << 1,
+		Size8             = 1 << 2,
+		Size16            = 1 << 3,
+		Size32            = 1 << 4,
+		Size64            = 1 << 5,
+		SizeFast          = 1 << 6,
+	}
+
 	public static class Dialect
 	{
 		// When true, `new T` is illegal; you must write `new T*` (or another explicit pointer type).
@@ -65,21 +83,39 @@ namespace Myll.Core
 
 		/// <summary>
 		/// Controls which concrete size the `float` keyword refers to. `Unspecified` means the
-		/// keyword has no binding; `AllowFloatKeyword` decides whether it may still be used.
+		/// keyword has no binding; the active dialect decides whether it may still be used.
 		/// </summary>
 		public static FloatKeywordMode FloatKeyword = FloatKeywordMode.Unspecified;
-
-		/// <summary>
-		/// When false, the `float` keyword produces a compile-time error regardless of
-		/// <see cref="FloatKeyword"/>. Untyped float literals and `var auto` are unaffected.
-		/// </summary>
-		public static bool AllowFloatKeyword = true;
 
 		/// <summary>
 		/// Controls the result type of mixed signed/unsigned arithmetic.
 		/// Defaults to C-style "unsigned wins at equal rank".
 		/// </summary>
 		public static MixedSignednessMode MixedSignedness = MixedSignednessMode.CStyle;
+
+		/// <summary>
+		/// Controls how <c>int</c> is treated by the type system. Defaults to
+		/// <see cref="DefaultTypeMode.SizeIndeterminate"/>.
+		/// </summary>
+		public static DefaultTypeMode DefaultInt = DefaultTypeMode.SizeIndeterminate;
+
+		/// <summary>
+		/// Controls how <c>uint</c> is treated by the type system. Defaults to
+		/// <see cref="DefaultTypeMode.SizeIndeterminate"/>.
+		/// </summary>
+		public static DefaultTypeMode DefaultUInt = DefaultTypeMode.SizeIndeterminate;
+
+		/// <summary>
+		/// Controls how <c>float</c> is treated by the type system. Defaults to
+		/// <see cref="DefaultTypeMode.SizeIndeterminate"/>.
+		/// </summary>
+		public static DefaultTypeMode DefaultFloat = DefaultTypeMode.SizeIndeterminate;
+
+		/// <summary>
+		/// Controls how <c>bint</c> is treated by the type system. Defaults to
+		/// <see cref="DefaultTypeMode.SizeIndeterminate"/>.
+		/// </summary>
+		public static DefaultTypeMode DefaultBint = DefaultTypeMode.SizeIndeterminate;
 
 		/// <summary>
 		/// Returns the concrete float size (in bytes) used for untyped float literals and for

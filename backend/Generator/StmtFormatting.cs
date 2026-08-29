@@ -109,22 +109,26 @@ namespace Myll.Generator
 					TypespecBasic.Kind.Integer, new IntToString {
 						{ 1, "std::int8_t" },
 						{ 2, "std::int16_t" },
-						{ 4, "int" },
+						{ 4, "std::int32_t" },
 						{ 8, "std::int64_t" },
 					}
 				}, {
 					TypespecBasic.Kind.Unsigned, new IntToString {
 						{ 1, "std::uint8_t" },
 						{ 2, "std::uint16_t" },
-						{ 4, "unsigned int" },
+						{ 4, "std::uint32_t" },
 						{ 8, "std::uint64_t" },
 					}
 				}, {
-					TypespecBasic.Kind.Bit, new IntToString {
+					TypespecBasic.Kind.Bitwise, new IntToString {
 						{ 1, "std::uint8_t" },
 						{ 2, "std::uint16_t" },
-						{ 4, "unsigned int" },
+						{ 4, "std::uint32_t" },
 						{ 8, "std::uint64_t" },
+					}
+				}, {
+					TypespecBasic.Kind.Byte, new IntToString {
+						{ 1, "std::byte" },
 					}
 				}, {
 					TypespecBasic.Kind.UntypedInteger, new IntToString {

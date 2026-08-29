@@ -787,7 +787,7 @@ namespace Myll.Resolver
 		private void ValidateTypes(
 			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules )
 		{
-			if( !Dialect.AllowFloatKeyword ) {
+			if( (Dialect.DefaultFloat & DefaultTypeMode.Forbidden) != 0 ) {
 				foreach( (_, CompilationContext context) in modules ) {
 					foreach( SrcPos srcPos in context.FloatKeywordUsages ) {
 						diagnostics.Add( new Diagnostic(

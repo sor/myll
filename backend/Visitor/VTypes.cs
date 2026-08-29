@@ -191,6 +191,7 @@ namespace Myll
 
 					if( t == MyllParser.FLOAT ) {
 						ret.size             = Dialect.DefaultFloatSize();
+						ret.isDefaultSized   = true;
 						ret.usesFloatKeyword = true;
 						Context.FloatKeywordUsages.Add( ret.srcPos );
 					}
@@ -203,22 +204,51 @@ namespace Myll
 
 				case RULE_binaryType: {
 					int t = c.binaryType().v.Type;
-					ret.kind = TypespecBasic.Kind.Bit;
-					ret.size = ToSize[t];
+
+					if( t == MyllParser.BYTE ) {
+						ret.kind = TypespecBasic.Kind.Byte;
+						ret.size = 1;
+					}
+					else if( t == MyllParser.BINT ) {
+						ret.kind           = TypespecBasic.Kind.Bitwise;
+						ret.size           = 4;
+						ret.isDefaultSized = true;
+					}
+					else {
+						ret.kind = TypespecBasic.Kind.Bitwise;
+						ret.size = ToSize[t];
+					}
+
 					break;
 				}
 
 				case RULE_signedIntType: {
 					int t = c.signedIntType().v.Type;
 					ret.kind = TypespecBasic.Kind.Integer;
-					ret.size = ToSize[t]; // HACK: its too early to do sizes here
+
+					if( t == MyllParser.INT ) {
+						ret.size           = 4;
+						ret.isDefaultSized = true;
+					}
+					else {
+						ret.size = ToSize[t];
+					}
+
 					break;
 				}
 
 				case RULE_unsignIntType: {
 					int t = c.unsignIntType().v.Type;
 					ret.kind = TypespecBasic.Kind.Unsigned;
-					ret.size = ToSize[t];
+
+					if( t == MyllParser.UINT ) {
+						ret.size           = 4;
+						ret.isDefaultSized = true;
+					}
+					else {
+						ret.size = ToSize[t];
+					}
+
 					break;
 				}
 

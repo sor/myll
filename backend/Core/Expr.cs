@@ -233,7 +233,7 @@ namespace Myll.Core
 			                && OriginalPrecedenceLevel < expr.OriginalPrecedenceLevel;
 
 			if( op == Operand.Complement
-			 && expr.Type is TypespecBasic { kind: TypespecBasic.Kind.Bit } ) {
+			 && expr.Type is TypespecBasic { kind: TypespecBasic.Kind.Bitwise } ) {
 				return Format(
 					"static_cast<{0}>( ~{1} )",
 					expr.Type.GenType(),
@@ -269,24 +269,35 @@ namespace Myll.Core
 			bool doBraceRight = (divPrecedence || right.IsDivergentPrecedence)
 			                 && OriginalPrecedenceLevel < right.OriginalPrecedenceLevel;
 
-			string opFormat = GetBitOperatorFormat() ?? op.GetFormat();
+			bool isBitOp = TryGetBitFamilyType( out string? bitType );
+			string opFormat = ( isBitOp ? GetBitOperatorFormat( op ) : null ) ?? op.GetFormat();
 			opFormat = opFormat.Brace( doBrace );
 
 			string leftStr  = left.Gen( doBraceLeft );
 			string rightStr = right.Gen( doBraceRight );
 
-			// Bit-type subtraction and implication use a negated operand. In C++ the
-			// built-in unary ~ promotes small unsigned types to int, so we cast back
-			// to the bit type to preserve the intended width.
-			if( BothOperandsAreBit() ) {
-				string bitType = left.Type!.GenType();
+			// Bit-family operators generate bitwise C++. Untyped integer literals must
+			// be cast to the bit type; std::byte in particular does not accept naked ints.
+			if( isBitOp ) {
+				bool isShift = op is Operand.LeftShift or Operand.RightShift;
+
+				// The shift amount stays a normal integer; std::byte shifts accept an
+				// integer count.
+				if( !isShift && left.Type is TypespecBasic { kind: TypespecBasic.Kind.UntypedInteger } )
+					leftStr = BitFamilyCast( bitType!, leftStr );
+				if( !isShift && right.Type is TypespecBasic { kind: TypespecBasic.Kind.UntypedInteger } )
+					rightStr = BitFamilyCast( bitType!, rightStr );
+
+				// Subtraction and implication use a negated operand. In C++ the built-in
+				// unary ~ promotes small unsigned types to int, so we cast back to the bit
+				// type to preserve the intended width.
 				switch( op ) {
 					case Operand.Subtract:
-						rightStr = Format( "static_cast<{0}>( ~{1} )", bitType, rightStr );
+						rightStr = BitFamilyCast( bitType!, Format( "~{0}", rightStr ) );
 						break;
 
 					case Operand.Divide:
-						leftStr = Format( "static_cast<{0}>( ~{1} )", bitType, leftStr );
+						leftStr = BitFamilyCast( bitType!, Format( "~{0}", leftStr ) );
 						break;
 				}
 			}
@@ -297,16 +308,13 @@ namespace Myll.Core
 				rightStr );
 		}
 
-		private string? GetBitOperatorFormat()
+		private static string? GetBitOperatorFormat( Operand op )
 		{
-			if( !BothOperandsAreBit() )
-				return null;
-
 			return op switch {
 				Operand.Add              => "{0} | {1}",
 				Operand.Multiply         => "{0} & {1}",
 				Operand.Subtract         => "{0} & {1}",
-				Operand.Divide  => "{0} | {1}",
+				Operand.Divide           => "{0} | {1}",
 				Operand.BitAnd           => "{0} & {1}",
 				Operand.BitOr            => "{0} | {1}",
 				Operand.BitXor           => "{0} ^ {1}",
@@ -314,14 +322,39 @@ namespace Myll.Core
 			};
 		}
 
-		private bool BothOperandsAreBit()
+		/// <summary>
+		/// Casts a value to the bit-family type. For <c>std::byte</c> this uses C++17
+		/// brace-init (<c>std::byte{ n }</c>); otherwise it falls back to
+		/// <c>static_cast&lt;T&gt;( n )</c>.
+		/// </summary>
+		private static string BitFamilyCast( string bitType, string expr )
 		{
-			 bool IsBit( Expr e )
-				=> e.Type is TypespecBasic { kind: TypespecBasic.Kind.Bit }
-				 && ( e.Type.ptrs == null || e.Type.ptrs.Count == 0 );
+			if( bitType == "std::byte" )
+				return Format( "std::byte{{{0}}}", expr );
 
-			return IsBit( left ) && IsBit( right );
+			return Format( "static_cast<{0}>( {1} )", bitType, expr );
 		}
+
+		private bool TryGetBitFamilyType( out string? bitType )
+		{
+			bitType = null;
+
+			if( IsBitFamilyOperand( left ) ) {
+				bitType = left.Type!.GenType();
+				return true;
+			}
+
+			if( IsBitFamilyOperand( right ) ) {
+				bitType = right.Type!.GenType();
+				return true;
+			}
+
+			return false;
+		}
+
+		private static bool IsBitFamilyOperand( Expr e )
+			=> e.Type is TypespecBasic { kind: TypespecBasic.Kind.Bitwise or TypespecBasic.Kind.Byte }
+			 && ( e.Type.ptrs == null || e.Type.ptrs.Count == 0 );
 	}
 
 	/// Ternary Operation - three operands, currently only: if ? then : else
@@ -484,6 +517,13 @@ namespace Myll.Core
 				// f16 has no standard C++ literal suffix, so keep the cast for that case.
 				if( basic.size != 2 )
 					return ( lit.text + suffix ).Brace( doBrace );
+			}
+
+			// C++17 relaxed enum-class initialization: std::byte{ n } is the idiomatic
+			// way to convert a numeric value to std::byte.
+			if( type is TypespecBasic { kind: TypespecBasic.Kind.Byte }
+			 && ( type.ptrs == null || type.ptrs.Count == 0 ) ) {
+				return Format( "std::byte{{{0}}}", expr.Gen() ).Brace( doBrace );
 			}
 
 			string format = op switch {

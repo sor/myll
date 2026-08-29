@@ -99,7 +99,8 @@ namespace Myll.Core
 			Float,
 			Integer,
 			Unsigned,
-			Bit,
+			Bitwise,
+			Byte,
 			UntypedInteger, // type-system only: an integer literal that has not been bound to a concrete size
 			UntypedFloat,   // type-system only: a float literal that has not been bound to a concrete size
 		}
@@ -131,8 +132,26 @@ namespace Myll.Core
 		/// </summary>
 		public bool usesFloatKeyword;
 
+		/// <summary>
+		/// True when this type is a default-sized type (<c>int</c>, <c>uint</c>, <c>float</c>,
+		/// <c>bint</c>). Its backing C++ name is emitted without a fixed-width prefix.
+		/// </summary>
+		public bool isDefaultSized;
+
 		public override string GenType()
-			=> BasicFormat[kind][size];
+		{
+			if( isDefaultSized ) {
+				return kind switch {
+					Kind.Integer => "int",
+					Kind.Unsigned => "unsigned int",
+					Kind.Float    => "float",
+					Kind.Bitwise  => "unsigned int",
+					_             => BasicFormat[kind][size],
+				};
+			}
+
+			return BasicFormat[kind][size];
+		}
 	}
 
 	// myll:
