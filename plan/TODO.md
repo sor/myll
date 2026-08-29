@@ -118,3 +118,4 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 - Cross-module namespace merging and ambiguity diagnostics.
 - Resolver-to-generator wiring for `TypespecNested` and `ScopedExpr` (resolved `FullyQualifiedName`).
 - End-to-end integration test `testing/cases/using_ns/` for merged namespaces and `using`.
+- Bit-container types (`bint`, `b8`, `b16`, `b32`, `b64`) backed by unsigned integers; `byte` remains `std::byte`. Bit operators are aliased so `+` is OR, `*` is AND, `-` is AND-NOT, `/` is implication, and `^` is XOR. End-to-end test: `testing/cases/bint/`.

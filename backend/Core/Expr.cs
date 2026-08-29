@@ -111,12 +111,12 @@ namespace Myll.Core
 
 		MultOps_Begin,
 		Multiply,
-		EuclideanDivide, // for floating points it is not euclidean
+		Divide, // normal / division
 		Modulo,
 		BitAnd, // moved, special
 		Dot,    // new, special
 		Cross,  // new, special
-		Divide, // new, special
+		FractionalDivide, // new, special
 		MultOps_End,
 
 		AddOps_Begin,
@@ -232,6 +232,14 @@ namespace Myll.Core
 			bool doBraceExpr = (divPrecedence || expr.IsDivergentPrecedence)
 			                && OriginalPrecedenceLevel < expr.OriginalPrecedenceLevel;
 
+			if( op == Operand.Complement
+			 && expr.Type is TypespecBasic { kind: TypespecBasic.Kind.Bit } ) {
+				return Format(
+					"static_cast<{0}>( ~{1} )",
+					expr.Type.GenType(),
+					expr.Gen( doBraceExpr ) ).Brace( doBrace );
+			}
+
 			string opFormat = op.GetFormat().Brace( doBrace );
 
 			return Format(
@@ -261,12 +269,58 @@ namespace Myll.Core
 			bool doBraceRight = (divPrecedence || right.IsDivergentPrecedence)
 			                 && OriginalPrecedenceLevel < right.OriginalPrecedenceLevel;
 
-			string opFormat = op.GetFormat().Brace( doBrace );
+			string opFormat = GetBitOperatorFormat() ?? op.GetFormat();
+			opFormat = opFormat.Brace( doBrace );
+
+			string leftStr  = left.Gen( doBraceLeft );
+			string rightStr = right.Gen( doBraceRight );
+
+			// Bit-type subtraction and implication use a negated operand. In C++ the
+			// built-in unary ~ promotes small unsigned types to int, so we cast back
+			// to the bit type to preserve the intended width.
+			if( BothOperandsAreBit() ) {
+				string bitType = left.Type!.GenType();
+				switch( op ) {
+					case Operand.Subtract:
+						rightStr = Format( "static_cast<{0}>( ~{1} )", bitType, rightStr );
+						break;
+
+					case Operand.Divide:
+						leftStr = Format( "static_cast<{0}>( ~{1} )", bitType, leftStr );
+						break;
+				}
+			}
 
 			return Format(
 				opFormat,
-				left.Gen( doBraceLeft ),
-				right.Gen( doBraceRight ) );
+				leftStr,
+				rightStr );
+		}
+
+		private string? GetBitOperatorFormat()
+		{
+			if( !BothOperandsAreBit() )
+				return null;
+
+			return op switch {
+				Operand.Add              => "{0} | {1}",
+				Operand.Multiply         => "{0} & {1}",
+				Operand.Subtract         => "{0} & {1}",
+				Operand.Divide  => "{0} | {1}",
+				Operand.BitAnd           => "{0} & {1}",
+				Operand.BitOr            => "{0} | {1}",
+				Operand.BitXor           => "{0} ^ {1}",
+				_                        => null,
+			};
+		}
+
+		private bool BothOperandsAreBit()
+		{
+			 bool IsBit( Expr e )
+				=> e.Type is TypespecBasic { kind: TypespecBasic.Kind.Bit }
+				 && ( e.Type.ptrs == null || e.Type.ptrs.Count == 0 );
+
+			return IsBit( left ) && IsBit( right );
 		}
 	}
 

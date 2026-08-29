@@ -36,6 +36,7 @@ namespace Myll
 				{ MyllParser.F32, 4 },
 				{ MyllParser.F16, 2 },
 				{ MyllParser.BYTE, 1 },
+				{ MyllParser.BINT, 4 },
 				{ MyllParser.B64, 8 },
 				{ MyllParser.B32, 4 },
 				{ MyllParser.B16, 2 },
@@ -202,7 +203,7 @@ namespace Myll
 
 				case RULE_binaryType: {
 					int t = c.binaryType().v.Type;
-					ret.kind = TypespecBasic.Kind.Binary;
+					ret.kind = TypespecBasic.Kind.Bit;
 					ret.size = ToSize[t];
 					break;
 				}

@@ -106,13 +106,6 @@ namespace Myll.Generator
 						{ 16, "long double" },
 					}
 				}, {
-					TypespecBasic.Kind.Binary, new IntToString {
-						{ 1, "std::byte" },
-						{ 2, "std::uint16_t" },
-						{ 4, "std::uint32_t" },
-						{ 8, "std::uint64_t" },
-					}
-				}, {
 					TypespecBasic.Kind.Integer, new IntToString {
 						{ 1, "std::int8_t" },
 						{ 2, "std::int16_t" },
@@ -121,6 +114,13 @@ namespace Myll.Generator
 					}
 				}, {
 					TypespecBasic.Kind.Unsigned, new IntToString {
+						{ 1, "std::uint8_t" },
+						{ 2, "std::uint16_t" },
+						{ 4, "unsigned int" },
+						{ 8, "std::uint64_t" },
+					}
+				}, {
+					TypespecBasic.Kind.Bit, new IntToString {
 						{ 1, "std::uint8_t" },
 						{ 2, "std::uint16_t" },
 						{ 4, "unsigned int" },

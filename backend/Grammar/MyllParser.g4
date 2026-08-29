@@ -254,7 +254,7 @@ idOrLit		:	id | lit;
 specialType	:	v=( AUTO | VOID | BOOL );
 charType	:	v=( CHAR | CODEPOINT | STRING );
 floatingType:	v=( FLOAT | F128 | F64 | F32 | F16 ); // 80 and 96 bit?
-binaryType	:	v=( BYTE | B64 | B32 | B16 | B8 );
+binaryType	:	v=( BYTE | BINT | B64 | B32 | B16 | B8 );
 signedIntType:	v=( INT  | ISIZE | I64 | I32 | I16 | I8 );
 unsignIntType: 	v=( UINT | USIZE | U64 | U32 | U16 | U8 );
 

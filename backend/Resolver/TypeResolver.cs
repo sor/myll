@@ -154,10 +154,13 @@ namespace Myll.Resolver
 			Typespec? leftType  = Resolve( binOp.left );
 			Typespec? rightType = Resolve( binOp.right );
 
+			if( TryResolveBitOperation( binOp.op, leftType, rightType, out Typespec? bitResult ) )
+				return bitResult;
+
 			if( IsArithmeticOperation( binOp.op ) ) {
 				if( binOp.op == Operand.Modulo )
 					return CommonIntegerType( leftType, rightType );
-				if( binOp.op == Operand.Divide )
+				if( binOp.op == Operand.FractionalDivide )
 					return new TypespecBasic { kind = TypespecBasic.Kind.Float, size = 8 };
 
 				return CommonArithmeticType( leftType, rightType );
@@ -449,6 +452,72 @@ namespace Myll.Resolver
 			return ret;
 		}
 
+		private static bool TryResolveBitOperation(
+			Operand op,
+			Typespec? leftType,
+			Typespec? rightType,
+			out Typespec? result )
+		{
+			result = null;
+
+			if( !IsBitOperator( op ) )
+				return false;
+
+			bool hasTypedBit = OperatorRules.IsScalarBit( leftType )
+			                || OperatorRules.IsScalarBit( rightType );
+
+			if( !hasTypedBit )
+				return false;
+
+			if( IsShiftOperation( op ) ) {
+				if( !OperatorRules.IsScalarBit( leftType ) )
+					return false;
+
+				result = leftType;
+				return true;
+			}
+
+			result = CommonBitType( leftType, rightType );
+			return result != null;
+		}
+
+		private static Typespec? CommonBitType( Typespec? left, Typespec? right )
+		{
+			TypespecBasic? leftBit  = AsBitType( left );
+			TypespecBasic? rightBit = AsBitType( right );
+
+			if( leftBit != null && rightBit != null ) {
+				if( leftBit.size != rightBit.size )
+					return null;
+
+				return new TypespecBasic { kind = TypespecBasic.Kind.Bit, size = leftBit.size };
+			}
+
+			if( leftBit != null )
+				return new TypespecBasic { kind = TypespecBasic.Kind.Bit, size = leftBit.size };
+
+			if( rightBit != null )
+				return new TypespecBasic { kind = TypespecBasic.Kind.Bit, size = rightBit.size };
+
+			return null;
+		}
+
+		private static TypespecBasic? AsBitType( Typespec? type )
+		{
+			if( type is TypespecBasic basic
+			 && basic.kind == TypespecBasic.Kind.Bit
+			 && ( type.ptrs == null || type.ptrs.Count == 0 ) )
+				return basic;
+
+			return null;
+		}
+
+		private static bool IsBitOperator( Operand op )
+			=> op is Operand.Add or Operand.Subtract or Operand.Multiply
+			|| op is Operand.Divide
+			|| op is Operand.BitAnd or Operand.BitOr or Operand.BitXor
+			|| op is Operand.LeftShift or Operand.RightShift;
+
 		private static bool IsMemberAccessOperation( Operand op )
 			=> op is Operand.MemberAccess
 			|| op is Operand.NCMemberAccess
@@ -459,7 +528,7 @@ namespace Myll.Resolver
 
 		private static bool IsArithmeticOperation( Operand op )
 			=> op is Operand.Add or Operand.Subtract or Operand.Multiply
-			|| op is Operand.Divide or Operand.Modulo;
+			|| op is Operand.FractionalDivide or Operand.Modulo;
 
 		private static bool IsComparisonOperation( Operand op )
 			=> op is Operand.Equal or Operand.NotEqual or Operand.LessThan

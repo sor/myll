@@ -97,7 +97,7 @@ INT			: 'int';
 UINT		: 'uint';
 ISIZE		: 'isize';
 USIZE		: 'usize';
-BYTE		: 'byte'; // 8 bits, same as b8, not an integer, not a character
+BYTE		: 'byte'; // alias for b8
 CHAR		: 'char';
 CODEPOINT	: 'codept'|'codepoint'; // 'rune' like Odin?
 STRING		: 'string';
@@ -111,6 +111,7 @@ U64			: 'u64';
 U32			: 'u32';
 U16			: 'u16';
 U8			: 'u8';
+BINT		: 'bint';
 B64			: 'b64';
 B32			: 'b32';
 B16			: 'b16';

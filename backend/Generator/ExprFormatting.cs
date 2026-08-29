@@ -25,11 +25,11 @@ namespace Myll.Generator
 				{ Operand.AddressOf, "&{0}" },
 				{ Operand.Pow, "pow( {0}, {1} )" },
 				{ Operand.Multiply, "{0} * {1}" },
-				{ Operand.EuclideanDivide, "{0} / {1}" },
+				{ Operand.Divide, "{0} / {1}" },
 				{ Operand.Modulo, "{0} % {1}" },
 				{ Operand.Dot, "dot( {0}, {1} )" },
 				{ Operand.Cross, "cross( {0}, {1} )" },
-				{ Operand.Divide, "(double){0} / (double){1}" }, // TODO: this for integral, div() for others
+				{ Operand.FractionalDivide, "(double){0} / (double){1}" }, // TODO: this for integral, div() for others
 				{ Operand.Add, "{0} + {1}" },
 				{ Operand.Subtract, "{0} - {1}" },
 				{ Operand.BitAnd, "{0} & {1}" },
@@ -55,11 +55,11 @@ namespace Myll.Generator
 			ToAssignFormat = new Dictionary<Operand, string> {
 				{ Operand.Pow,				"{0} = pow( {0}, {1} );" },
 				{ Operand.Multiply,			"{0} *= {1};" },
-				{ Operand.EuclideanDivide,	"{0} /= {1};" },
+				{ Operand.Divide,	"{0} /= {1};" },
 				{ Operand.Modulo,			"{0} %= {1};" },
 				{ Operand.Dot,				"{0} = dot( {0}, {1} );" },
 				{ Operand.Cross,			"{0} = cross( {0}, {1} );" },
-				{ Operand.Divide,			"{0} = (double){0} / (double){1};" }, // TODO: this for integral, div() for others
+				{ Operand.FractionalDivide,			"{0} = (double){0} / (double){1};" }, // TODO: this for integral, div() for others
 				{ Operand.Add,				"{0} += {1};" },
 				{ Operand.Subtract,			"{0} -= {1};" },
 				{ Operand.BitAnd,			"{0} &= {1};" },

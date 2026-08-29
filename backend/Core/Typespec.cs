@@ -97,9 +97,9 @@ namespace Myll.Core
 			Char,
 			String,
 			Float,
-			Binary,
 			Integer,
 			Unsigned,
+			Bit,
 			UntypedInteger, // type-system only: an integer literal that has not been bound to a concrete size
 			UntypedFloat,   // type-system only: a float literal that has not been bound to a concrete size
 		}

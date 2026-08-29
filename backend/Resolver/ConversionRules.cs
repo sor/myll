@@ -37,6 +37,9 @@ namespace Myll.Resolver
 			if( IsExactMatch( source, target ) )
 				return ConversionRank.Exact;
 
+			if( IsBitUnsignedInterchange( source, target ) )
+				return ConversionRank.Exact;
+
 			ConversionRank untypedRank = GetUntypedLiteralRank( source, target );
 			if( untypedRank != ConversionRank.None )
 				return untypedRank;
@@ -113,8 +116,12 @@ namespace Myll.Resolver
 					return ConversionRank.Exact;
 
 				// Fits into another integer type? (value range check)
-				if( ( tgtBasic.kind == TypespecBasic.Kind.Integer || tgtBasic.kind == TypespecBasic.Kind.Unsigned )
-				 && IntegerFits( value, tgtBasic.kind, tgtBasic.size ) )
+				if( ( tgtBasic.kind == TypespecBasic.Kind.Integer
+				   || tgtBasic.kind == TypespecBasic.Kind.Unsigned
+				   || tgtBasic.kind == TypespecBasic.Kind.Bit )
+				 && IntegerFits( value, tgtBasic.kind == TypespecBasic.Kind.Bit
+					? TypespecBasic.Kind.Unsigned
+					: tgtBasic.kind, tgtBasic.size ) )
 					return ConversionRank.Promotion;
 
 				// Integer literal can be used to initialize a float.
@@ -217,6 +224,23 @@ namespace Myll.Resolver
 			=> kind is TypespecBasic.Kind.Integer
 			     or TypespecBasic.Kind.Unsigned
 			     or TypespecBasic.Kind.Bool;
+
+		private static bool IsBitUnsignedInterchange( Typespec source, Typespec target )
+		{
+			if( !HaveSamePointers( source.ptrs, target.ptrs ) )
+				return false;
+
+			if( source is not TypespecBasic srcBasic || target is not TypespecBasic tgtBasic )
+				return false;
+
+			if( srcBasic.size != tgtBasic.size )
+				return false;
+
+			return ( srcBasic.kind == TypespecBasic.Kind.Bit
+			      && tgtBasic.kind == TypespecBasic.Kind.Unsigned )
+			    || ( srcBasic.kind == TypespecBasic.Kind.Unsigned
+			      && tgtBasic.kind == TypespecBasic.Kind.Bit );
+		}
 
 		private static bool IsCharPointer( Typespec type )
 		{

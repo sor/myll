@@ -371,6 +371,12 @@ namespace Myll.Resolver
 					break;
 				}
 
+				case BinOp binOp when IsBitOperator( binOp.op )
+				               && ( IsBitOperand( binOp.left ) || IsBitOperand( binOp.right ) ): {
+					ValidateBitOperator( binOp );
+					break;
+				}
+
 				case BinOp binOp when IsArithmeticOperator( binOp.op ): {
 					ValidateArithmeticOperator( binOp );
 					break;
@@ -413,7 +419,16 @@ namespace Myll.Resolver
 
 		private static bool IsArithmeticOperator( Operand op )
 			=> op is Operand.Add or Operand.Subtract or Operand.Multiply
-			 || op is Operand.Divide or Operand.EuclideanDivide or Operand.Modulo;
+			 || op is Operand.FractionalDivide or Operand.Divide or Operand.Modulo;
+
+		private static bool IsBitOperator( Operand op )
+			=> op is Operand.Add or Operand.Subtract or Operand.Multiply
+			 || op is Operand.Divide
+			 || op is Operand.BitAnd or Operand.BitOr or Operand.BitXor
+			 || op is Operand.LeftShift or Operand.RightShift;
+
+		private static bool IsBitOperand( Expr expr )
+			=> OperatorRules.IsScalarBit( expr.Type );
 
 		private static bool IsBitwiseOperator( Operand op )
 			=> op is Operand.BitAnd or Operand.BitOr or Operand.BitXor;
@@ -474,6 +489,52 @@ namespace Myll.Resolver
 			if( !OperatorRules.IsScalarInteger( leftType ) || !OperatorRules.IsScalarInteger( rightType ) )
 				AddError( binOp, String.Format( "Operator '{0}' requires integer operands, found '{1}' and '{2}'", OperatorName( binOp.op ), FormatType( leftType ), FormatType( rightType ) ) );
 		}
+
+		private void ValidateBitOperator( BinOp binOp )
+		{
+			Typespec? leftType  = typeResolver.Resolve( binOp.left );
+			Typespec? rightType = typeResolver.Resolve( binOp.right );
+
+			if( leftType == null || rightType == null )
+				return;
+
+			// Bit operations are defined only for the built-in bit types and untyped
+			// integer literals used together with a bit operand.
+			bool leftIsBit  = IsBitType( leftType ) || IsUntypedBitOperand( leftType, rightType );
+			bool rightIsBit = IsBitType( rightType ) || IsUntypedBitOperand( rightType, leftType );
+
+			if( !leftIsBit || !rightIsBit ) {
+				AddError( binOp, String.Format(
+					"Bit operator '{0}' requires bit operands, found '{1}' and '{2}'",
+					OperatorName( binOp.op ), FormatType( leftType ), FormatType( rightType ) ) );
+				return;
+			}
+
+			if( IsShiftOperator( binOp.op ) )
+				return;
+
+			TypespecBasic? leftBit  = AsConcreteBitType( leftType ) ?? AsConcreteBitType( rightType );
+			TypespecBasic? rightBit = AsConcreteBitType( rightType ) ?? AsConcreteBitType( leftType );
+
+			if( leftBit != null && rightBit != null && leftBit.size != rightBit.size )
+				AddError( binOp, String.Format(
+					"Bit operator '{0}' requires operands of the same bit width, found '{1}' and '{2}'",
+					OperatorName( binOp.op ), FormatType( leftType ), FormatType( rightType ) ) );
+		}
+
+		private static bool IsBitType( Typespec? type )
+			=> type is TypespecBasic { kind: TypespecBasic.Kind.Bit }
+			 && ( type.ptrs == null || type.ptrs.Count == 0 );
+
+		private static bool IsUntypedBitOperand( Typespec? candidate, Typespec? other )
+			=> candidate is TypespecBasic { kind: TypespecBasic.Kind.UntypedInteger }
+			 && other is TypespecBasic { kind: TypespecBasic.Kind.Bit };
+
+		private static TypespecBasic? AsConcreteBitType( Typespec? type )
+			=> type is TypespecBasic { kind: TypespecBasic.Kind.Bit } basic
+			 && ( type.ptrs == null || type.ptrs.Count == 0 )
+			 ? basic
+			 : null;
 
 		private void ValidateShiftOperator( BinOp binOp )
 		{
@@ -546,8 +607,8 @@ namespace Myll.Resolver
 				Operand.Add             => "+",
 				Operand.Subtract        => "-",
 				Operand.Multiply        => "*",
-				Operand.Divide          => "\u00f7",
-				Operand.EuclideanDivide => "/",
+				Operand.FractionalDivide          => "\u00f7",
+				Operand.Divide => "/",
 				Operand.Modulo          => "%",
 				Operand.BitAnd          => "&",
 				Operand.BitOr           => "|",

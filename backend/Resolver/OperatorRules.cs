@@ -17,8 +17,13 @@ namespace Myll.Resolver
 			=> t is TypespecBasic b && HasNoPointer( t )
 			 && b.kind is TypespecBasic.Kind.Integer
 			         or TypespecBasic.Kind.Unsigned
+			         or TypespecBasic.Kind.Bit
 			         or TypespecBasic.Kind.Bool
 			         or TypespecBasic.Kind.UntypedInteger;
+
+		public static bool IsScalarBit( Typespec? t )
+			=> t is TypespecBasic b && HasNoPointer( t )
+			 && b.kind == TypespecBasic.Kind.Bit;
 
 		public static bool IsScalarFloat( Typespec? t )
 			=> t is TypespecBasic b && HasNoPointer( t )
@@ -33,6 +38,7 @@ namespace Myll.Resolver
 			=> t is TypespecBasic b && HasNoPointer( t )
 			 && b.kind is TypespecBasic.Kind.Integer
 			         or TypespecBasic.Kind.Unsigned
+			         or TypespecBasic.Kind.Bit
 			         or TypespecBasic.Kind.Float
 			         or TypespecBasic.Kind.Bool
 			         or TypespecBasic.Kind.Char
