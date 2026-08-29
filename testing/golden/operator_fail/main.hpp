@@ -1,0 +1,13 @@
+#pragma once
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <utility>
+void test_arithmetic_non_numeric();
+void test_bitwise_non_integer();
+void test_complement_non_integer();
+void test_incomparable_comparison();
+int main();

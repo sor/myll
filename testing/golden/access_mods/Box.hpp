@@ -9,31 +9,31 @@
 class Box;
 class Box
 {
-    int _x = 0;
-    int _y = 0;
-    int _z = 0;
-    int _tag;
+    std::int32_t _x = 0;
+    std::int32_t _y = 0;
+    std::int32_t _z = 0;
+    std::int32_t _tag;
 public:
-    const int maxSize = 100;
+    const std::int32_t maxSize = 100;
 private:
-    int _secret;
+    std::int32_t _secret;
 protected:
-    int _childVisible;
+    std::int32_t _childVisible;
 private:
-    void updatePriv(int a, int b, int c);
-    int helperA();
-    int helperB();
+    void updatePriv(std::int32_t a, std::int32_t b, std::int32_t c);
+    std::int32_t helperA();
+    std::int32_t helperB();
 protected:
-    int sum();
+    std::int32_t sum();
 public:
-    int getX();
-    void update(int a, int b, int c);
-    int volume();
-    int getY();
-    int getZ();
-    void setSecret(int v);
-    int getSecret();
-    void setChildVisible(int v);
-    int getChildVisible();
-    int getSum();
+    std::int32_t getX();
+    void update(std::int32_t a, std::int32_t b, std::int32_t c);
+    std::int32_t volume();
+    std::int32_t getY();
+    std::int32_t getZ();
+    void setSecret(std::int32_t v);
+    std::int32_t getSecret();
+    void setChildVisible(std::int32_t v);
+    std::int32_t getChildVisible();
+    std::int32_t getSum();
 };

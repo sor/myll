@@ -1,0 +1,31 @@
+module main;
+
+func main() -> int
+{
+	var int   i  = -5;
+	var i32   si = i;
+	var int   ri = si;
+
+	var uint  u  = 7;
+	var u32   su = u;
+	var uint  ru = su;
+
+	var float f  = 1.5;
+	var f32   sf = f;
+	var float rf = sf;
+
+	var bint  m  = 0xFFFFFFFF;
+	var b32   sm = m;
+	var bint  rm = sm;
+
+	if( si != -5 ) return 1;
+	if( ri != -5 ) return 2;
+	if( su != 7 ) return 3;
+	if( ru != 7 ) return 4;
+	if( sf != 1.5 ) return 5;
+	if( rf != 1.5 ) return 6;
+	if( sm != 0xFFFFFFFF ) return 7;
+	if( rm != 0xFFFFFFFF ) return 8;
+
+	return 0;
+}

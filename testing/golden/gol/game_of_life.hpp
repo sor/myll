@@ -18,8 +18,8 @@ namespace JanSordid
     public:
         using Map2D = char[16][40];
     private:
-        const int sizeX = 40;
-        const int sizeY = 16;
+        const std::int32_t sizeX = 40;
+        const std::int32_t sizeY = 16;
         std::uint8_t currentIndex = 0;
         JanSordid::GameOfLife::Map2D doubleBufferedMap[2];
     public:
