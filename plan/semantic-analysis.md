@@ -17,7 +17,7 @@ This plan describes the long-term goal of turning Myll from a syntax-to-C++ tran
 
 ## What is missing
 
-- Broader conversion ranks beyond exact + promotion (e.g., safe typed conversions, derived-to-base pointers).
+- Broader conversion ranks beyond exact + promotion (e.g., derived-to-base pointers).
 - Using resolved targets for unqualified `IdExpr` generation.
 
 ## Module model

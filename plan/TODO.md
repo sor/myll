@@ -25,6 +25,7 @@ Completed endboss pieces:
 - **Declaration validation**: attribute combination and duplicate-name checks moved from `backend/Generator/HierachicalGen.cs` into `backend/Resolver/TypeChecker.cs`, producing source-location diagnostics. Negative test: `testing/cases/decl_fail/`.
 - **Built-in operator checks**: hard-coded rule-based validation and result-type computation for arithmetic, bitwise, shift, comparison, and unary operators on scalar built-in types. Pointer arithmetic is rejected by default. Negative test: `testing/cases/operator_fail/`.
 - **Spaceship operator**: the generator now emits C++ `<=>` instead of the old `cmp(...)` placeholder.
+- **Broader conversion ranks**: safe integer widening, bool/integer conversion, and a configurable mixed-signedness dialect. Tests: `testing/cases/conversion/`, `testing/cases/conversion_fail/`.
 - **Literal typing**: integer literals are untyped until bound to a target; valid targets are fitting integer types and floats. Float literals are untyped and only bind to floats.
 
 See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` inheritance) and `docs/analysis/07-future-stubs.md` for related context.
