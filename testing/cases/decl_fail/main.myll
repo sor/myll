@@ -1,0 +1,20 @@
+module main;
+
+[static] var int staticGlobal = 1;
+
+[inline, hide] var int inlineHiddenGlobal = 2;
+
+[extern] var const int externConstGlobal = 3;
+
+struct S
+{
+	[hide] var int hiddenField;
+	[inline] var int inlineNonStaticField;
+	var int dupField;
+	var int dupField;
+}
+
+func main() -> int
+{
+	return 0;
+}

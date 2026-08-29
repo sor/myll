@@ -553,5 +553,70 @@ func main() -> int { return clash(); }
 			Assert.Contains( "Ambiguous", diagnostics[0].Message );
 			Assert.Contains( "clash", diagnostics[0].Message );
 		}
+
+		[Fact]
+		public void InvalidVarAttributes_ProduceDiagnostics()
+		{
+			var (module, context) = CompileModule( @"
+module test;
+[static] var int staticGlobal = 1;
+[inline, hide] var int inlineHiddenGlobal = 2;
+[extern] var const int externConstGlobal = 3;
+struct S {
+	[hide] var int hiddenField;
+	[inline] var int inlineNonStaticField;
+}
+func main() -> int { return 0; }
+" );
+
+			var (result, diagnostics) = Resolve( (module, context) );
+
+			Assert.Equal( 6, diagnostics.Count );
+			Assert.All( diagnostics, d => Assert.Equal( DiagnosticKind.Error, d.Kind ) );
+		}
+
+		[Fact]
+		public void DuplicateField_ProducesDiagnostic()
+		{
+			var (module, context) = CompileModule( @"
+module test;
+struct S {
+	var int dupField;
+	var int dupField;
+}
+func main() -> int { return 0; }
+" );
+
+			var (result, diagnostics) = Resolve( (module, context) );
+
+			Assert.Single( diagnostics );
+			Assert.Equal( DiagnosticKind.Error, diagnostics[0].Kind );
+			Assert.Contains( "dupField", diagnostics[0].Message );
+		}
+
+		[Fact]
+		public void StrictNew_BareNew_ProducesDiagnostic()
+		{
+			bool previous = Dialect.StrictNew;
+			Dialect.StrictNew = true;
+			try {
+				var (module, context) = CompileModule( @"
+module test;
+func main() -> int {
+	var int * p = new int;
+	return 0;
+}
+" );
+
+				var (result, diagnostics) = Resolve( (module, context) );
+
+				Assert.Single( diagnostics );
+				Assert.Equal( DiagnosticKind.Error, diagnostics[0].Kind );
+				Assert.Contains( "StrictNew", diagnostics[0].Message );
+			}
+			finally {
+				Dialect.StrictNew = previous;
+			}
+		}
 	}
 }
