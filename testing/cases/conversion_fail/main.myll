@@ -1,0 +1,29 @@
+module conversion_fail;
+
+func narrowing() -> void
+{
+	var i32 x = 100000;
+	var i16 y = x;
+}
+
+func signed_to_unsigned_same_size() -> void
+{
+	var i32 a = -1;
+	var u32 b = a;
+}
+
+func mixed_signed_narrowing() -> void
+{
+	var i64 c = -1;
+	var i32 d = c;
+}
+
+func char_as_number() -> void
+{
+	var i32 e = 'x';
+}
+
+func main() -> int
+{
+	return 0;
+}
