@@ -215,6 +215,7 @@ Use `tmp/` inside the project root for any temporary files or scratch tests. Do 
 - **Planned Work**: Keep the "Planned Work" section current — that is our shared priority list.
 - **Before big changes**: Propose a plan first, get approval, then execute.
 - **Commits**: Small, focused messages. Prefer many small commits over large batches.
+- **No pushes without explicit instruction**: Do not run `git push`. Do not ask whether to push. Only push if the user explicitly says "push".
 - **Preserve indentation**: Before constructing an `Edit`, re-check the exact leading tabs (and any spaces) from the `Read` output. Match them exactly in the replacement so the file's indentation stays intact.
 - **Testing**: Validate with `dotnet build` and `dotnet test testing/` after any backend change.
 - **ANTLR**: Grammar changes → regenerate → commit generated files with the grammar change.
@@ -222,7 +223,7 @@ Use `tmp/` inside the project root for any temporary files or scratch tests. Do 
 
 ## Planned Work
 
-1. **Finish ScopeStack / semantic analysis (endboss)** — substantial progress made. Per-module scope trees, the fixed-point resolver, qualified (`A::B::C`) static names, `using namespace` / `using Name`, cross-module namespace merging, ambiguity diagnostics, per-declaration access modifiers, member access resolution, ranked overload resolution, core type checking (assignments, initializers, returns, argument compatibility), boolean-context checks, declaration validation (attribute combinations, duplicate names, `Dialect.StrictNew`), operator-specific checks for built-in scalar types, and broader conversion ranks (safe integer widening, bool/integer conversion, mixed signedness dialect) are implemented. Pointer arithmetic is rejected by default and `<=>` now emits the C++ spaceship operator. The C++ generator consumes resolved names for types and scoped expressions. Remaining: using resolved targets for unqualified `IdExpr` generation (needs generator scope-context work). See `plan/semantic-analysis.md`, `plan/resolved-idexpr-generation.md`, `backend/Core/Scope.cs`, `backend/Resolver/Resolver.cs`, `backend/Core/Symbol.cs`.
+1. **Finish ScopeStack / semantic analysis (endboss)** — DONE. The C++ generator uses resolved declarations for unqualified `IdExpr` generation. Shadowing diagnostics are implemented with a flag-based `ShadowingMode`. Remaining semantic-analysis work is normal bug fixing and edge-case handling. See `plan/semantic-analysis.md`, `plan/resolved-idexpr-generation.md`, `backend/Resolver/Resolver.cs`, `backend/Resolver/TypeChecker.cs`.
 2. Testing + CI/CD — xUnit harness is in place under `testing/`; remaining work is CI/CD.
 3. Implement reachable NotImplementedException features:
    - named args, null coalescing call, copy-cast, else-on-loop, discard (empty stmt done)
