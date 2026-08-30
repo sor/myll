@@ -64,17 +64,18 @@ namespace Myll.Resolver
 			var resolver    = new NameResolver( exports, result, diagnostics );
 
 		bool progress;
-		do {
-			progress = false;
-			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
-				progress |= resolver.ResolveUsings( module, context );
-				progress |= resolver.ResolveIds( module, context );
-				progress |= resolver.ResolveScopeds( module, context );
-				progress |= resolver.ResolveTypes( module, context );
-				progress |= resolver.ResolveMemberAccesses( module, context );
-				progress |= resolver.ResolveCalls( module, context );
-			}
-		} while( progress );
+			do {
+				progress = false;
+				foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+					progress |= resolver.ResolveUsings( module, context );
+					progress |= resolver.ResolveAliases( module, context );
+					progress |= resolver.ResolveIds( module, context );
+					progress |= resolver.ResolveScopeds( module, context );
+					progress |= resolver.ResolveTypes( module, context );
+					progress |= resolver.ResolveMemberAccesses( module, context );
+					progress |= resolver.ResolveCalls( module, context );
+				}
+			} while( progress );
 
 		// Commit resolved declarations to the AST so that type checking can use
 		// resolvedDecl directly on identifiers, member accesses, and type specs.
@@ -439,7 +440,10 @@ namespace Myll.Resolver
 
 				Scope scope = unresolved.Scope;
 				if( resolved is Namespace ns ) {
-					unresolved.Node.IsNamespaceUsing = true;
+					if( !unresolved.Node.IsNamespaceUsing ) {
+						unresolved.Node.IsNamespaceUsing = true;
+						progress = true;
+					}
 					if( !scope.importedScopes.Contains( ns.scope ) ) {
 						scope.importedScopes.Add( ns.scope );
 						progress = true;
@@ -460,6 +464,47 @@ namespace Myll.Resolver
 			}
 
 			return progress;
+		}
+
+		private bool ResolveAliases( GlobalNamespace module, CompilationContext context )
+		{
+			bool progress = false;
+			foreach( UnresolvedAlias unresolved in context.UnresolvedAliases ) {
+				if( unresolved.Node.type is not TypespecNested path )
+					continue;
+
+				Decl? resolved = ResolvePath( path.idTpls, unresolved.Scope, module, out _, callSite: false );
+				if( resolved == null )
+					continue;
+
+				Scope scope = unresolved.Scope;
+				bool isNamespaceTarget = resolved is Namespace;
+				if( unresolved.Node.IsNamespaceAlias != isNamespaceTarget ) {
+					unresolved.Node.IsNamespaceAlias = isNamespaceTarget;
+					progress = true;
+				}
+
+				progress |= AddImportedName( scope, unresolved.Node.name, resolved );
+			}
+
+			return progress;
+		}
+
+		private static bool AddImportedName( Scope scope, string? name, Decl target )
+		{
+			if( name == null )
+				return false;
+
+			if( !scope.importedNames.TryGetValue( name, out List<Decl>? list ) ) {
+				list = new List<Decl>( 1 );
+				scope.importedNames.Add( name, list );
+			}
+
+			if( list.Contains( target ) )
+				return false;
+
+			list.Add( target );
+			return true;
 		}
 
 		private Decl? ResolvePath(

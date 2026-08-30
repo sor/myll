@@ -388,17 +388,22 @@ namespace Myll
 			return ret;
 		}
 
-		public override UsingDecl VisitDefAlias( DefAliasContext c )
+		public override AliasDecl VisitDefAlias( DefAliasContext c )
 		{
 			// TODO: tplParams, multi-decl
 			List<TplParam> useMe = VisitTplParams( c.tplParams() );
 
-			// TODO: This should not be a UsingDecl
-			UsingDecl ret = new() {
+			AliasDecl ret = new() {
 				srcPos = c.ToSrcPos(),
 				name   = c.id().GetText(),
 				type   = VisitTypespec( c.typespec() ),
 			};
+
+			Scope scope = scopeStack.Peek();
+			Context.UnresolvedAliases.Add( new UnresolvedAlias( ret, scope ) );
+			if( ret.type is TypespecNested nested )
+				Context.UnresolvedTypes.RemoveAll( u => u.Node == nested );
+
 			AddChild( ret );
 			return ret;
 		}
@@ -453,7 +458,7 @@ namespace Myll
 				access    = curAccess,
 				kind      = kind,
 				TplParams = VisitTplParams( c.tplParams() ),
-				basetypes = VisitTypespecsNested( c.bases?.typespecNested() ),
+				basetypes = BuildBaseSpecs( c.bases ),
 				reqs      = VisitTypespecsNested( c.reqs?.typespecNested() ),
 			};
 
@@ -481,6 +486,48 @@ namespace Myll
 			}
 
 			ValidateForwardDeclaration( ret );
+			return ret;
+		}
+
+		// no override
+		public List<BaseType> BuildBaseSpecs( BaseSpecsContext? c )
+			=> c?.baseSpec()
+				.Select( BuildBaseSpec )
+				.ToList()
+			?? new List<BaseType>();
+
+		// no override
+		public BaseType BuildBaseSpec( BaseSpecContext c )
+		{
+			BaseType ret = new() {
+				type = VisitTypespecNested( c.typespecNested() ),
+			};
+
+			Attribs? attribs = c.attribBlk()?.Visit();
+			if( attribs != null ) {
+				foreach( KeyValuePair<string, List<string>> kv in attribs ) {
+					string name = kv.Key;
+					switch( name ) {
+						case "pub":
+						case "priv":
+						case "prot":
+							if( ret.access != Access.Public )
+								throw new NotSupportedException( "Only one access specifier is allowed per base class." );
+							ret.access = name switch {
+								"priv" => Access.Private,
+								"prot" => Access.Protected,
+								_      => Access.Public,
+							};
+							break;
+						case "virtual":
+							ret.isVirtual = true;
+							break;
+						default:
+							throw new NotSupportedException( "Unsupported attribute on base class: " + name );
+					}
+				}
+			}
+
 			return ret;
 		}
 

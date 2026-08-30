@@ -34,8 +34,14 @@ namespace Myll.Generator
 			};
 
 		public static readonly string[] UsingFormat = {
+			"{0}using {1};",
+			"{0}using namespace {1};",
+		};
+
+		public static readonly string[] AliasFormat =
+		{
 			"{0}using {1} = {2};",
-			"{0}using namespace {2};",
+			"{0}namespace {1} = {2};",
 		};
 
 		public static readonly string[] TryCatchFormat = {

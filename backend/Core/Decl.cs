@@ -243,8 +243,6 @@ namespace Myll.Core
 	{
 		// in locations where C++ does not support "using (namespace)" this must not be printed
 		// but instead the unqualified types need to be changed to qualified ones
-		//public List<TypespecNested> types;
-		// TODO: add distinction to alias and using ns decls
 		public Typespec type = null!;
 
 		// Set by the resolver when this using declaration targets a namespace.
@@ -253,6 +251,19 @@ namespace Myll.Core
 		public override void AddToGen( HierarchicalGen gen )
 		{
 			gen.AddUsing( this );
+		}
+	}
+
+	public class AliasDecl : Decl
+	{
+		public Typespec type = null!;
+
+		// Set by the resolver when the aliased type is a namespace.
+		public bool IsNamespaceAlias { get; set; }
+
+		public override void AddToGen( HierarchicalGen gen )
+		{
+			gen.AddAlias( this );
 		}
 	}
 
@@ -531,6 +542,13 @@ namespace Myll.Core
 		public HashSet<string> imps = new();
 	}
 
+	public class BaseType
+	{
+		public Access         access    = Access.Public;
+		public bool           isVirtual = false;
+		public TypespecNested type      = null!;
+	}
+
 	public class Structural : Hierarchical, ITplParams
 	{
 		public enum Kind
@@ -542,7 +560,7 @@ namespace Myll.Core
 
 		public Kind                 kind;
 		public List<TplParam>       TplParams { get; set; } = new();
-		public List<TypespecNested> basetypes = new();
+		public List<BaseType>       basetypes = new();
 		public List<TypespecNested> reqs = new();
 
 		// default access for child elements

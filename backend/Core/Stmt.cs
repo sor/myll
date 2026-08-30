@@ -114,6 +114,21 @@ namespace Myll.Core
 			string ret = Format(
 				UsingFormat[name == null ? 1 : 0],
 				"",
+				type.Gen() );
+			return ret.IndentAll( level );
+		}
+	}
+
+	public class AliasStmt : Stmt
+	{
+		public Typespec type = null!;
+		public string   name = null!;
+
+		public override Strings Gen( int level )
+		{
+			string ret = Format(
+				AliasFormat[0],
+				"",
 				name,
 				type.Gen() );
 			return ret.IndentAll( level );

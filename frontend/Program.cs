@@ -333,8 +333,12 @@ namespace Myll
 				Directory.SetCurrentDirectory( opt.OutPath );
 
 				string[] cppFiles = Directory.GetFiles( ".", "*.cpp" );
+				string envFlags = Environment.GetEnvironmentVariable( "MYLL_CXXFLAGS" )
+				               ?? Environment.GetEnvironmentVariable( "CXXFLAGS" )
+				               ?? "";
 				string cxxFlags = (opt.IsDebug ? "-g " : "")
-				                + (opt.OptimizationLevel > 0 ? "-O " + opt.OptimizationLevel : "");
+				                + (opt.OptimizationLevel > 0 ? "-O " + opt.OptimizationLevel + " " : "")
+				                + envFlags;
 
 				CppCompilerInvocation invocation = CppCompiler.CreateInvocation( cppFiles, cxxFlags );
 

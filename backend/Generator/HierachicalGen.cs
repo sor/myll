@@ -239,9 +239,21 @@ namespace Myll.Generator
 		public void AddUsing( UsingDecl obj )
 		{
 			string indent = IndentDecl;
-			int formatIndex = obj.IsNamespaceUsing ? 1 : 0;
+
 			string ret = Format(
-				UsingFormat[formatIndex],
+				UsingFormat[obj.IsNamespaceUsing ? 1 : 0],
+				indent,
+				obj.type.Gen() );
+
+			protoEarly.Target( obj.access ).Add( ret );
+		}
+
+		public void AddAlias( AliasDecl obj )
+		{
+			string indent = IndentDecl;
+
+			string ret = Format(
+				AliasFormat[obj.IsNamespaceAlias ? 1 : 0],
 				indent,
 				obj.name,
 				obj.type.Gen() );
@@ -466,26 +478,36 @@ namespace Myll.Generator
 				keyword = StructFormat[7];
 				bases   = "";
 			}
-			else if( gen.hierarchical is Enumeration objEnum ) {
-				keyword = StructFormat[6];
-				bases = (objEnum.baseType != null)
-					? " : " + objEnum.baseType.GenType()
-					: "";
-			}
-			else if( gen.hierarchical is Structural objStruct ) {
-				keyword = objStruct.kind switch {
-					Structural.Kind.Struct => StructFormat[3],
-					Structural.Kind.Class  => StructFormat[4],
-					Structural.Kind.Union  => StructFormat[5],
-					_                      => throw new Exception( Format( "no correct keyword determined: {0}", objStruct ) ),
+		else if( gen.hierarchical is Enumeration objEnum ) {
+			keyword = StructFormat[6];
+			bases = (objEnum.baseType != null)
+				? Format( StructFormat[1], "", objEnum.baseType.GenType() )
+				: "";
+		}
+		else if( gen.hierarchical is Structural objStruct ) {
+			keyword = objStruct.kind switch {
+				Structural.Kind.Struct => StructFormat[3],
+				Structural.Kind.Class  => StructFormat[4],
+				Structural.Kind.Union  => StructFormat[5],
+				_                      => throw new Exception( Format( "no correct keyword determined: {0}", objStruct ) ),
+			};
+
+			string BasePrefix( BaseType b )
+				=> (b.isVirtual ? "virtual " : "")
+				+ b.access switch {
+					Access.Private   => "private ",
+					Access.Protected => "protected ",
+					_                => "public ",
 				};
 
-				bases = (objStruct.basetypes.Count < 1)
-					? ""
-					: " : public " + objStruct.basetypes
-						.Select( t => t.GenType() )
-						.Join( ", public " );
-			}
+			bases = (objStruct.basetypes.Count < 1)
+				? ""
+				: Format( StructFormat[1], BasePrefix( objStruct.basetypes[0] ), objStruct.basetypes[0].type.GenType() )
+				  + objStruct.basetypes
+					.Skip( 1 )
+					.Select( t => Format( StructFormat[2], BasePrefix( t ), t.type.GenType() ) )
+					.Join( "" );
+		}
 			else {
 				throw new InvalidOperationException( "not an enum and not a struct" );
 			}
@@ -515,15 +537,15 @@ namespace Myll.Generator
 						bases ) );
 				targetDecl.Add( Format( CurlyOpen, indent ) );
 
-				// TODO: wrong spot? move towards the inside or create an alias-decl beforehand
-				if( gen.hierarchical is Structural objStruct && objStruct.basetypes.Count >= 1 ) {
-					targetDecl.Add(
-						Format(
-							UsingFormat[0],
-							gen.IndentDecl,
-							"base",
-							objStruct.basetypes[0].GenType() ) );
-				}
+			// TODO: wrong spot? move towards the inside or create an alias-decl beforehand
+			if( gen.hierarchical is Structural objStruct && objStruct.basetypes.Count >= 1 ) {
+				targetDecl.Add(
+					Format(
+						AliasFormat[0],
+						gen.IndentDecl,
+						"base",
+						objStruct.basetypes[0].type.GenType() ) );
+			}
 			}
 
 			targetDecl.AddRange( gen.GenDecl() );

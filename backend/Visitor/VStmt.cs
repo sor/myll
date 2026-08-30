@@ -148,13 +148,14 @@ namespace Myll
 			return ret;
 		}
 
-		public override UsingStmt VisitDefAlias( DefAliasContext c )
+		public override AliasStmt VisitDefAlias( DefAliasContext c )
 		{
 			// TODO: tplParams, multi-decl
 			List<TplParam> useMe = VisitTplParams( c.tplParams() );
 
-			// TODO: This should not be a UsingStmt
-			UsingStmt ret = new() {
+			// Local aliases are emitted as C++ type aliases.
+			// Namespace aliases at function scope are not supported yet.
+			AliasStmt ret = new() {
 				srcPos = c.ToSrcPos(),
 				name   = c.id().GetText(),
 				type   = VisitTypespec( c.typespec() ),
