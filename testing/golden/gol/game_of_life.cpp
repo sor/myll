@@ -2,10 +2,10 @@
 JanSordid::GameOfLife::GameOfLife()
 {
     JanSordid::GameOfLife::Map2D& dstMap = doubleBufferedMap[currentIndex];
-    for( int y = 0; y < sizeY+0; ++y ) {
-        for( int x = 0; x < sizeX+0; ++x ) {
+    for( int y = 0; y < (sizeY)+0; ++y ) {
+        for( int x = 0; x < (sizeX)+0; ++x ) {
             if( 0 < y && y < sizeY - 1 && 0 < x && x < sizeX - 1 ) {
-                dstMap[y][x] = (rand() % 4 == 0) ? 'o' : ' ';
+                dstMap[y][x] = (std::rand() % 4 == 0) ? 'o' : ' ';
             } else {
                 dstMap[y][x] = 'X';
             }
@@ -17,8 +17,8 @@ void JanSordid::GameOfLife::iterate()
     const std::uint8_t nextIndex = 1 - currentIndex;
     const JanSordid::GameOfLife::Map2D& srcMap = doubleBufferedMap[currentIndex];
     JanSordid::GameOfLife::Map2D& dstMap = doubleBufferedMap[nextIndex];
-    for( int y = 0; y < sizeY+0; ++y ) {
-        for( int x = 0; x < sizeX+0; ++x ) {
+    for( int y = 0; y < (sizeY)+0; ++y ) {
+        for( int x = 0; x < (sizeX)+0; ++x ) {
             if( srcMap[y][x] == 'X' ) {
                 dstMap[y][x] = 'X';
             } else {
@@ -34,8 +34,8 @@ void JanSordid::GameOfLife::iterate()
 void JanSordid::GameOfLife::output(std::ostream& stream)
 {
     const JanSordid::GameOfLife::Map2D& srcMap = doubleBufferedMap[currentIndex];
-    for( int y = 0; y < sizeY+0; ++y ) {
-        for( int x = 0; x < sizeX+0; ++x ) {
+    for( int y = 0; y < (sizeY)+0; ++y ) {
+        for( int x = 0; x < (sizeX)+0; ++x ) {
             stream << srcMap[y][x];
         }
         stream << '\n';
@@ -45,8 +45,8 @@ bool JanSordid::GameOfLife::hasConverged() const
 {
     const JanSordid::GameOfLife::Map2D& zeroMap = doubleBufferedMap[0];
     const JanSordid::GameOfLife::Map2D& oneMap = doubleBufferedMap[1];
-    for( int y = 0; y < sizeY+0; ++y ) {
-        for( int x = 0; x < sizeX+0; ++x ) {
+    for( int y = 0; y < (sizeY)+0; ++y ) {
+        for( int x = 0; x < (sizeX)+0; ++x ) {
             if( zeroMap[y][x] != oneMap[y][x] ) {
                 return false;
             }

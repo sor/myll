@@ -48,8 +48,15 @@ namespace Myll.Core
 		public bool IsExternNamespace    { get; set; }
 		public bool IsExternal           => IsExternNamespace || HasAttrib( "extern" );
 		public bool IsInline             => HasAttrib( "inline" ) || IsTemplateUp;
-		public bool IsInStruct           => scope.parent?.decl is Structural;
+		public bool IsInStruct           => scope?.parent?.decl is Structural;
 		public bool IsForwardDeclaration { get; set; }
+
+		/// <summary>
+		/// True for symbols that live in a block/function scope and are not emitted as
+		/// top-level or field declarations: parameters, local variables, catch variables,
+		/// <c>times</c> indices, and lambda parameters.
+		/// </summary>
+		public bool IsLocal { get; set; }
 
 		// TODO Symbol?
 
@@ -69,22 +76,34 @@ namespace Myll.Core
 			     + sb             + "}";
 		}
 
-		public string FullyQualifiedName {
-			get {
-				Strings ret = new();
-				for( ScopeLeaf cur = scope; cur?.parent != null; cur = cur.parent ) {
-					Decl?  decl     = cur.decl;
-					string declName = decl?.name ?? "unknown_fix_me";
-					if( decl is ITplParams curStruct )
-						if( curStruct.TplParams.Count >= 1 )
-							declName += "<" + curStruct.TplParams
-								.Select( t => t.name )
-								.Join( ", " ) + ">";
-					ret.Add( declName );
-				}
-				// WTF dot net framework?
-				return ((IEnumerable<string>) ret).Reverse().Join( "::" );
+		public string FullyQualifiedName
+			=> BuildQualifiedName( includeOwnTemplateParams: true );
+
+		/// <summary>
+		/// Like <see cref="FullyQualifiedName"/> but omits the declaring entity's own
+		/// template parameter list. Used when the caller supplies explicit template
+		/// arguments (e.g. <c>Ns::foo&lt;int&gt;</c>).
+		/// </summary>
+		public string ReferenceName
+			=> BuildQualifiedName( includeOwnTemplateParams: false );
+
+		private string BuildQualifiedName( bool includeOwnTemplateParams )
+		{
+			Strings ret = new();
+			for( ScopeLeaf cur = scope; cur?.parent != null; cur = cur.parent ) {
+				Decl?  decl     = cur.decl;
+				string declName = decl?.name ?? "unknown_fix_me";
+				bool includeTplParams = includeOwnTemplateParams || cur != scope;
+				if( includeTplParams
+				 && decl is ITplParams curStruct
+				 && curStruct.TplParams.Count >= 1 )
+					declName += "<" + curStruct.TplParams
+						.Select( t => t.name )
+						.Join( ", " ) + ">";
+				ret.Add( declName );
 			}
+			// WTF dot net framework?
+			return ((IEnumerable<string>) ret).Reverse().Join( "::" );
 		}
 
 		public abstract void AddToGen( HierarchicalGen gen );

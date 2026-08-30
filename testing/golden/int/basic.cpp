@@ -8,6 +8,6 @@ void test01()
     i - j;
     i / j;
     i % j;
-    i | j;
-    i & j;
+    (i) | (j);
+    (i) & (j);
 }

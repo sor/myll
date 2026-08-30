@@ -1,7 +1,7 @@
 #include "main.hpp"
 int main()
 {
-    int sum = answer() + also();
+    int sum = Lib::answer() + Lib::also();
     if( sum != 42 ) {
         return 1;
     }

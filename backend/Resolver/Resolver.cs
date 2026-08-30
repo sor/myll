@@ -646,29 +646,34 @@ namespace Myll.Resolver
 			return PickSingleCandidate( candidates );
 		}
 
-		private List<Decl> LookupNameCandidates( string name, Scope scope, GlobalNamespace module )
-		{
-			List<Decl> result = new();
+	private List<Decl> LookupNameCandidates( string name, Scope scope, GlobalNamespace module )
+	{
+		List<Decl> result = new();
 
-			for( Scope? cur = scope; cur != null; cur = cur.parent ) {
-				AddVisibleChildren( result, cur, name, filterHidden: false );
+		for( Scope? cur = scope; cur != null; cur = cur.parent ) {
+			AddVisibleChildren( result, cur, name, filterHidden: false );
 
-				foreach( Scope imported in cur.importedScopes )
-					AddVisibleChildren( result, imported, name, filterHidden: true );
+			foreach( Scope imported in cur.importedScopes )
+				AddVisibleChildren( result, imported, name, filterHidden: true );
 
-				if( cur.importedNames.TryGetValue( name, out List<Decl>? importedNameList ) )
-					result.AddRange( importedNameList );
-			}
+			if( cur.importedNames.TryGetValue( name, out List<Decl>? importedNameList ) )
+				result.AddRange( importedNameList );
 
-			foreach( string importedModule in module.imps ) {
-				if( !moduleExports.TryGetValue( importedModule, out ModuleExports? exports ) )
-					continue;
-
-				result.AddRange( exports.LookupAll( name ) );
-			}
-
-			return DistinctCandidates( result );
+			// Inner scopes shadow outer scopes. Once we have found any visible
+			// declaration at this scope level, stop looking further out.
+			if( result.Count > 0 )
+				break;
 		}
+
+		foreach( string importedModule in module.imps ) {
+			if( !moduleExports.TryGetValue( importedModule, out ModuleExports? exports ) )
+				continue;
+
+			result.AddRange( exports.LookupAll( name ) );
+		}
+
+		return DistinctCandidates( result );
+	}
 
 		private List<Decl> LookupInHierarchicalCandidates(
 			string      name,

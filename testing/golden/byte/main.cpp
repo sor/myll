@@ -15,13 +15,13 @@ int main()
     if( (std::byte{~a} | b) != std::byte{0xF3} ) {
         return 4;
     }
-    if( (a ^ b) != std::byte{0x3C} ) {
+    if( ((a) ^ (b)) != std::byte{0x3C} ) {
         return 5;
     }
-    if( (a | b) != std::byte{0x3F} ) {
+    if( ((a) | (b)) != std::byte{0x3F} ) {
         return 6;
     }
-    if( (a & b) != std::byte{0x03} ) {
+    if( ((a) & (b)) != std::byte{0x03} ) {
         return 7;
     }
     if( (a << 1) != std::byte{0x1E} ) {

@@ -476,7 +476,37 @@ namespace Myll.Core
 			else if( idTplArgs.id == "null" && idTplArgs.tplArgs.IsEmpty() )
 				return "nullptr";
 
-			return idTplArgs.Gen();
+			// Prefer the resolved declaration. Locals and instance members stay
+			// unqualified; everything else gets a qualified name so we do not depend
+			// on C++ unqualified lookup or using-directives.
+			if( resolvedDecl != null && resolvedDecl.name != "<builtin>" ) {
+				string name = EmitReferenceName( resolvedDecl );
+
+				if( idTplArgs.tplArgs.Count > 0 ) {
+					name += "<" + idTplArgs.tplArgs
+						.Select( t => t.Gen() )
+						.Join( ", " ) + ">";
+				}
+
+				return name.Brace( doBrace );
+			}
+
+			return idTplArgs.Gen().Brace( doBrace );
+		}
+
+		private static string EmitReferenceName( Decl decl )
+		{
+			// Locals and instance members are emitted raw: C++ unqualified lookup
+			// finds them in their own scope/class.
+			if( decl.IsLocal )
+				return decl.name;
+
+			if( decl.IsInStruct && !decl.IsStatic )
+				return decl.name;
+
+			return decl.scope != null
+				? decl.ReferenceName
+				: decl.name;
 		}
 	}
 

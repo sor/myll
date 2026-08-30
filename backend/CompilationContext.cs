@@ -44,6 +44,14 @@ namespace Myll
 		/// </summary>
 		public List<SrcPos> FloatKeywordUsages { get; } = new();
 
+		/// <summary>
+		/// Local-scoped declarations (parameters, local variables, catch variables, times indices,
+		/// lambda parameters) together with the scope they were declared in. Used by the shadowing
+		/// checker, since ephemeral block scopes are not part of the persistent hierarchical scope
+		/// tree.
+		/// </summary>
+		public List<(Decl Local, Scope Scope)> LocalDecls { get; } = new();
+
 		public CompilationContext()
 		{
 			ExprVisitor = new ExprVisitor( this );

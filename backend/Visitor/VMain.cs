@@ -95,23 +95,27 @@ namespace Myll
 		/// Used for parameters, local variables, and other symbols that should not
 		/// be emitted as top-level or field declarations.
 		/// </summary>
-		public void AddScopeOnly( Decl leaf )
-		{
-			Scope parent = scopeStack.Peek();
-			if( parent.decl is Hierarchical h && h.IsExternal )
-				leaf.IsExternNamespace = true;
+	public void AddScopeOnly( Decl leaf )
+	{
+		Scope parent = scopeStack.Peek();
+		if( parent.decl is Hierarchical h && h.IsExternal )
+			leaf.IsExternNamespace = true;
 
-			ScopeLeaf scopeLeaf = new() {
-				parent = parent,
-				decl   = leaf,
-			};
-			leaf.scope = parent;
-			if( !parent.children.TryGetValue( leaf.name, out List<ScopeLeaf>? list ) ) {
-				list = new List<ScopeLeaf>( 1 );
-				parent.children.Add( leaf.name, list );
-			}
-			list.Add( scopeLeaf );
+		leaf.IsLocal = true;
+
+		ScopeLeaf scopeLeaf = new() {
+			parent = parent,
+			decl   = leaf,
+		};
+		leaf.scope = parent;
+		if( !parent.children.TryGetValue( leaf.name, out List<ScopeLeaf>? list ) ) {
+			list = new List<ScopeLeaf>( 1 );
+			parent.children.Add( leaf.name, list );
 		}
+		list.Add( scopeLeaf );
+
+		context?.LocalDecls.Add( (leaf, parent) );
+	}
 
 		protected void AddParamsToScope( List<Param> paras )
 		{

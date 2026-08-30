@@ -69,11 +69,33 @@ namespace Myll.Core
 		SizeFast          = 1 << 6,
 	}
 
+	/// <summary>
+	/// Controls shadowing diagnostics. Each category has both a warning and an error bit so
+	/// they can be combined independently. Future categories (e.g. base-member collisions)
+	/// can add more bits.
+	/// </summary>
+	[Flags]
+	public enum ShadowingMode
+	{
+		None                          = 0,
+		WarnLocalShadowing            = 1 << 0,
+		ErrorLocalShadowing           = 1 << 1,
+		WarnLocalMemberCollision      = 1 << 2,
+		ErrorLocalMemberCollision     = 1 << 3,
+	}
+
 	public static class Dialect
 	{
 		// When true, `new T` is illegal; you must write `new T*` (or another explicit pointer type).
 		// When false, `new T` gets an implicit raw pointer, matching the C++-style default.
 		public static bool StrictNew = false;
+
+		/// <summary>
+		/// Controls which shadowing situations produce warnings or errors.
+		/// Defaults to warnings for local-local and local-instance collisions.
+		/// </summary>
+		public static ShadowingMode Shadowing = ShadowingMode.WarnLocalShadowing
+		                                    | ShadowingMode.WarnLocalMemberCollision;
 
 		// Controls the default behavior of `switch` cases.
 		public static SwitchFallthroughMode SwitchFallthrough = SwitchFallthroughMode.ImplicitBreak;

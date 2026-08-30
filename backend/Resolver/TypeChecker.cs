@@ -27,6 +27,7 @@ namespace Myll.Resolver
 		{
 			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
 				ValidateCalls( context );
+				ValidateShadowing( context );
 				ValidateDecl( module );
 			}
 		}
@@ -812,6 +813,137 @@ namespace Myll.Resolver
 		private void AddError( SrcPos srcPos, string message )
 		{
 			diagnostics.Add( new Diagnostic( srcPos, DiagnosticKind.Error, message ) );
+		}
+
+		private void AddWarning( SrcPos srcPos, string message )
+		{
+			diagnostics.Add( new Diagnostic( srcPos, DiagnosticKind.Warning, message ) );
+		}
+
+		private void ValidateShadowing( CompilationContext context )
+		{
+			if( Dialect.Shadowing == ShadowingMode.None )
+				return;
+
+			// Detect duplicate declarations in the same scope first.
+			HashSet<(Scope Scope, string Name)> reported = new();
+			foreach( (Decl local, Scope scope) in context.LocalDecls ) {
+				if( !reported.Add( (scope, local.name) ) )
+					continue;
+
+				int count = context.LocalDecls.Count( ld
+					=> ld.Scope == scope
+					 && ld.Local.name == local.name );
+
+				if( count > 1 ) {
+					ReportLocalShadowing(
+						local,
+						local,
+						"local variable or parameter",
+						"local variable or parameter" );
+				}
+			}
+
+			foreach( (Decl local, Scope scope) in context.LocalDecls ) {
+				CheckOuterScopeShadowing( local, scope, context );
+				CheckMemberCollisions( local, scope );
+			}
+		}
+
+		private void CheckOuterScopeShadowing( Decl local, Scope scope, CompilationContext context )
+		{
+			foreach( (Decl other, Scope otherScope) in context.LocalDecls ) {
+				if( other == local )
+					continue;
+				if( other.name != local.name )
+					continue;
+				if( !IsAncestorScope( otherScope, scope ) )
+					continue;
+
+				ReportLocalShadowing(
+					local,
+					other,
+					"local variable or parameter",
+					"outer local variable or parameter" );
+				return; // one report per local is enough
+			}
+		}
+
+		private static bool IsAncestorScope( Scope? ancestor, Scope? descendant )
+		{
+			while( descendant != null ) {
+				if( descendant == ancestor )
+					return true;
+					descendant = descendant.parent;
+			}
+
+			return false;
+		}
+
+		private void CheckMemberCollisions( Decl local, Scope scope )
+		{
+			if( (Dialect.Shadowing & (ShadowingMode.WarnLocalMemberCollision | ShadowingMode.ErrorLocalMemberCollision)) == 0 )
+				return;
+
+			for( Scope? outer = scope.parent; outer != null; outer = outer.parent ) {
+				if( outer.decl is not Structural )
+					continue;
+
+				if( !outer.children.TryGetValue( local.name, out List<ScopeLeaf>? leaves ) )
+					continue;
+
+				foreach( ScopeLeaf leaf in leaves ) {
+					Decl? member = leaf.decl;
+					if( member == null )
+						continue;
+
+					if( member.IsInStruct && !member.IsStatic ) {
+						ReportLocalMemberCollision( local, member );
+						return; // one report per local is enough
+					}
+				}
+			}
+		}
+
+		private void ReportLocalShadowing( Decl decl, Decl shadowed, string declKind, string shadowedKind )
+		{
+			bool asError = (Dialect.Shadowing & ShadowingMode.ErrorLocalShadowing) != 0;
+			bool asWarn  = (Dialect.Shadowing & ShadowingMode.WarnLocalShadowing) != 0;
+
+			if( !asError && !asWarn )
+				return;
+
+			string message = String.Format(
+				"{0} '{1}' shadows {2} '{3}'",
+				declKind, decl.name, shadowedKind, shadowed.name );
+
+			if( asError )
+				AddError( decl, message );
+			else
+				AddWarning( decl.srcPos, message );
+		}
+
+		private void ReportLocalMemberCollision( Decl local, Decl member )
+		{
+			bool asError = (Dialect.Shadowing & ShadowingMode.ErrorLocalMemberCollision) != 0;
+			bool asWarn  = (Dialect.Shadowing & ShadowingMode.WarnLocalMemberCollision) != 0;
+
+			if( !asError && !asWarn )
+				return;
+
+			string memberKind = member switch {
+				Func => "method",
+				_    => "field",
+			};
+
+			string message = String.Format(
+				"Local '{0}' collides with instance {1} '{2}'",
+				local.name, memberKind, member.name );
+
+			if( asError )
+				AddError( local, message );
+			else
+				AddWarning( local.srcPos, message );
 		}
 
 		private static string FormatType( Typespec type )
