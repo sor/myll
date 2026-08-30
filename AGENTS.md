@@ -133,7 +133,7 @@ myll/
 - **Myll indirection declarator spacing**: Put spaces on both sides of the reference/pointer block. Examples: `std::istream & in`, `T * ptr`, `const char *[] argv`, `Formatter *! fmt`. Exception: pure array brackets stay tight, e.g. `var int[4] myArray;`. In `new` expressions keep the pointer block tight: `new T*!`, `new T*`.
 - **Myll class layout**: Group fields in a `field { ... }` block at the top; fields are private by default. Outdent access-section specifiers (`[pub]:`, `[priv]:`, `[prot]:`) one level so they line up with the class keyword. Keep per-declaration attributes (`[pure]`, `[override]`, `[static]`) indented with their declaration.
 - **Myll method bodies**: Use the arrow form for simple expression-bodied getters: `func size() -> u64 => _size;`.
-- **Rider links**: When running inside Rider’s terminal, file-line references like `backend/Core/Expr.cs:42` are clickable. If using the `jetbrains://rd/navigate/reference?...` URI from the shell, the `line` value is zero-based, so subtract 1 from the 1-based source line.
+- **Rider links**: When running inside Rider's terminal, file-line references like `backend/Core/Expr.cs:42` are clickable. If using the `jetbrains://rd/navigate/reference?...` URI from the shell, the `line` value is zero-based, so subtract 1 from the 1-based source line.
 - **Unix sample apps**: Build all utilities in `frontend/apps/unix/` with `frontend/apps/make_unix.sh`. It delegates to the existing `unix/Makefile` and supports `clean`, `release`, and `debug` targets.
 
 ## Documentation & Code Formatting Rules
