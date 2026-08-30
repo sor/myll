@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
-using System.Text;
 using Myll.Generator;
 
 namespace Myll.Core
@@ -14,57 +13,14 @@ namespace Myll.Core
 	using IStrings = IEnumerable<string>;
 	using Attribs  = Dictionary<string, List<string>>;
 
-	public abstract class Stmt
+	public abstract class Stmt : AttributedNode
 	{
-		// TODO: If there is no srcPos on myself, redirect to parent
-		public  SrcPos  srcPos = null!;
-		private Attribs attribs { get; set; } = new();
-
-		public bool IsStatic      => HasAttrib( "static" );
-		public bool IsCompileTime => HasAttrib( "ct" );
-		public bool IsHidden      => HasAttrib( "hide" ) || HasAttrib( "hidden" );
-		public bool IsNoInit      => HasAttrib( "noinit" ) || HasAttrib( "uninit" );
-
-		public bool HasAttrib( string attrib )
-			=> attribs.ContainsKey( attrib );
-
-		public bool IsAttrib( string attrib, string value )
-			=> attribs.TryGetValue( attrib, out Strings? values )
-			&& values.Contains( value );
-
 		// Enumerate (depth first) through all contained Stmt and itself
 		// Only overloaded in Stmt which contain more Stmt itself
 		// Filter results with e.g. EnumerateDF.OfType<ReturnStmt>()
 		[Pure]
 		public virtual IEnumerable<Stmt> EnumerateDF {
 			get { yield return this; }
-		}
-
-		public virtual void AssignAttribs( Attribs inAttribs )
-		{
-			// TODO: support multiple attribs, in tandem with ScopeStack
-			attribs = inAttribs;
-
-			AttribsAssigned();
-		}
-
-		// This is the analyze-for-dummies until analyze works
-		protected virtual void AttribsAssigned() {}
-
-		[Pure]
-		public override string ToString()
-		{
-			StringBuilder sb = GetType().GetProperties().Aggregate(
-				new StringBuilder(),
-				( builder, info ) => builder.AppendFormat(
-					"{0}: {1}, ",
-					info.Name,
-					info.GetValue( this, null ) ?? "(null)" ) );
-
-			// Remove the excess ", " from the end of the string
-			sb.Length = Math.Max( sb.Length - 2, 0 );
-
-			return Format( "{{{0} {1}}}", GetType().Name, sb );
 		}
 
 		// Only override in Block and EmptyStmt, is the same as Gen() everywhere else

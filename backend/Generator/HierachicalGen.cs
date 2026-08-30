@@ -270,30 +270,30 @@ namespace Myll.Generator
 			bool isStatic         = obj.IsStatic;
 			bool isHidden         = obj.IsHidden;
 			bool isCompileTime    = obj.IsCompileTime;
-			bool isInline         = obj.IsInline;
+			bool isInlined        = obj.IsInlined;
 			bool isExplicitExtern = obj.IsExternal;
 			bool isConstType      = (obj.type.qual & Qualifier.Const) != 0;
-			bool isExtern         = !isInsideStruct && ( isExplicitExtern || !( isHidden || isInline || isCompileTime || isConstType ) );
+			bool isExtern         = !isInsideStruct && ( isExplicitExtern || !( isHidden || isInlined || isCompileTime || isConstType ) );
 
 			if( obj.IsNoInit && ( isConstType || isCompileTime ) )
 				throw new NotSupportedException( "[noinit]/[uninit] cannot be used with const or compile-time variables" );
 
 			// TODO: report source location (file, line, column) for all of these attribute/duplicate errors.
 			if( isInsideStruct ) {
-				if( isHidden )                   throw new NotSupportedException( "[hide]/[hidden] is only valid at module/namespace scope." );
-				if( isExplicitExtern )           throw new NotSupportedException( "[extern] is only valid at module/namespace scope." );
-				if( isInline      && !isStatic ) throw new NotSupportedException( "[inline] on a class field requires [static]." );
-				if( isCompileTime && !isStatic ) throw new NotSupportedException( "[ct] on a class field requires [static]." );
+				if( isHidden )                    throw new NotSupportedException( "[hide]/[hidden] is only valid at module/namespace scope." );
+				if( isExplicitExtern )            throw new NotSupportedException( "[extern] is only valid at module/namespace scope." );
+				if( isInlined      && !isStatic ) throw new NotSupportedException( "[inline] on a class field requires [static]." );
+				if( isCompileTime && !isStatic )  throw new NotSupportedException( "[ct] on a class field requires [static]." );
 			} else {
-				if( isStatic )              throw new NotSupportedException( "[static] is only valid on class fields; use [hide]/[hidden] for module-level variables." );
-				if( isInline && isHidden )  throw new NotSupportedException( "[inline] and [hide] are mutually exclusive." );
+				if( isStatic )               throw new NotSupportedException( "[static] is only valid on class fields; use [hide]/[hidden] for module-level variables." );
+				if( isInlined && isHidden )  throw new NotSupportedException( "[inline] and [hide] are mutually exclusive." );
 				if( isExplicitExtern ) {
-					if( isInline )          throw new NotSupportedException( "[extern] and [inline] are mutually exclusive." );
+					if( isInlined )         throw new NotSupportedException( "[extern] and [inline] are mutually exclusive." );
 					if( isHidden )          throw new NotSupportedException( "[extern] and [hide]/[hidden] are mutually exclusive." );
 					if( isCompileTime )     throw new NotSupportedException( "[extern] cannot be used with [ct]." );
 				} else if( isHidden ) {
 					// nothing else to set
-				} else if( isInline || isCompileTime || isConstType ) {
+				} else if( isInlined || isCompileTime || isConstType ) {
 					// nothing else to set
 				} else {
 					// module-level variables are external by default unless hidden/inline/ct/const
@@ -303,7 +303,7 @@ namespace Myll.Generator
 			AccessStrings targetDecl = isStatic ? staticFieldDecl : fieldDecl;
 			AccessStrings targetImpl = isStatic ? staticFieldImpl : fieldImpl;
 
-			bool       needsInline   = isInline || (isInsideStruct && isStatic && isCompileTime);
+			bool       needsInline   = isInlined || (isInsideStruct && isStatic && isCompileTime);
 			GenerateAt emitAt        = GenerateAt.Decl;
 			GenerateAt initIn        = GenerateAt.Decl;
 
@@ -318,12 +318,12 @@ namespace Myll.Generator
 				} else if( isHidden ) {
 					emitAt   = GenerateAt.Impl;
 					initIn   = GenerateAt.Impl;
-				} else if( isInline || isCompileTime || isConstType ) {
-					// nothing else to set
-				} else {
-					emitAt   = GenerateAt.Everywhere;
-					initIn   = GenerateAt.Impl;
-				}
+			} else if( isInlined || isCompileTime || isConstType ) {
+				// nothing else to set
+			} else {
+				emitAt   = GenerateAt.Everywhere;
+				initIn   = GenerateAt.Impl;
+			}
 			}
 
 			string initDecl = ( initIn & GenerateAt.Decl ) == 0 ? ""
@@ -375,7 +375,7 @@ namespace Myll.Generator
 			List<TplParam> tplParams = obj.TplParams;
 
 			bool    hasTpl         = tplParams.Count >= 1;
-			bool    isInline       = obj.IsInline;
+			bool    isInlined      = obj.IsInlined;
 			bool    isInsideStruct = obj.IsInStruct;
 			bool    isStatic       = obj.IsStatic;
 			bool    isExternal     = obj.IsExternal;
@@ -394,8 +394,8 @@ namespace Myll.Generator
 			string prefix = (isStatic       ? "static "   : "")
 			              + (isExternal     ? "extern "   : "")
 			              + (obj.IsVirtual  ? "virtual "  : "")
-			              + (isInline       ? "inline "   : "");
-			string suffix = (obj.IsConst    ? " const"    : "")
+			              + (isInlined      ? "inline "   : "");
+			string suffix = (obj.IsPure     ? " const"    : "")
 			              + (obj.IsOverride ? " override" : "");
 			string headlineDecl = Format(
 				FuncFormat[0],
@@ -428,7 +428,7 @@ namespace Myll.Generator
 			}
 
 			// TODO: move inlines to bottom of header
-			if( isInline || isExternal ) {
+			if( isInlined || isExternal ) {
 				if( !isInsideStruct ) {
 					if( hasTpl )
 						targetProto.Add( tplDecl );
@@ -456,7 +456,7 @@ namespace Myll.Generator
 					"",
 					obj.retType.Gen( nameImpl ),
 					paramString,
-					(obj.IsConst ? " const" : "") );
+					(obj.IsPure ? " const" : "") );
 
 				if( hasTpl )
 					targetProto.Add( tplDecl );
@@ -624,7 +624,7 @@ namespace Myll.Generator
 			bool    isDtor     = obj.kind == Structor.Kind.Destructor;
 			bool    isDefault  = obj.IsDefault;
 			bool    isDisabled = obj.IsDisabled;
-			bool    isInline   = obj.IsInline || isDefault || isDisabled;
+			bool    isInlined  = obj.IsInlined || isDefault || isDisabled;
 			string  indentDecl = IndentDecl;
 			string  indentImpl = IndentImpl;
 			string  nameDecl   = obj.name;
@@ -659,7 +659,7 @@ namespace Myll.Generator
 				paramString,
 				followingDecl );
 
-			if( isInline ) {
+			if( isInlined ) {
 				targetDecl.Add( headlineDecl );
 				if( !isDefault && !isDisabled ) {
 					if( obj.body == null )

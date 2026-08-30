@@ -122,11 +122,7 @@ namespace Myll.Resolver
 						ValidateStmt( s, currentFunction );
 					break;
 
-				case VarDecl vd:
-					ValidateDecl( vd );
-					break;
-
-				case VarStmt vs:
+			case VarStmt vs:
 					if( vs.init != null ) {
 						if( vs.type is TypespecBasic { kind: TypespecBasic.Kind.Auto } )
 							vs.type = InferAutoType( typeResolver.Resolve( vs.init ) ) ?? vs.type;
@@ -704,23 +700,23 @@ namespace Myll.Resolver
 			bool isStatic       = vd.IsStatic;
 			bool isHidden       = vd.IsHidden;
 			bool isCompileTime  = vd.IsCompileTime;
-			bool isInline       = vd.IsInline;
+			bool isInlined      = vd.IsInlined;
 			bool isExtern       = vd.IsExternal;
 			bool isConstType    = (vd.type.qual & Qualifier.Const) != 0;
 
 			if( isInsideStruct ) {
-				if( isHidden )                                               AddError( vd, "[hide]/[hidden] is only valid at module/namespace scope." );
-				if( isExtern )                                               AddError( vd, "[extern] is only valid at module/namespace scope." );
-				if( isInline && !isStatic )                                  AddError( vd, "[inline] on a class field requires [static]." );
-				if( isCompileTime && !isStatic )                             AddError( vd, "[ct] on a class field requires [static]." );
+				if( isHidden )                                                AddError( vd, "[hide]/[hidden] is only valid at module/namespace scope." );
+				if( isExtern )                                                AddError( vd, "[extern] is only valid at module/namespace scope." );
+				if( isInlined && !isStatic )                                  AddError( vd, "[inline] on a class field requires [static]." );
+				if( isCompileTime && !isStatic )                              AddError( vd, "[ct] on a class field requires [static]." );
 			} else {
-				if( isStatic )                                               AddError( vd, "[static] is valid only on class fields; use [hide] for module variables." );
-				if( isInline && isHidden )                                   AddError( vd, "[inline] and [hide] are mutually exclusive." );
-				if( isExtern && isInline )                                   AddError( vd, "[extern] and [inline] are mutually exclusive." );
-				if( isExtern && isHidden )                                   AddError( vd, "[extern] and [hide]/[hidden] are mutually exclusive." );
-				if( isExtern && isCompileTime )                              AddError( vd, "[extern] cannot be used with [ct]." );
-				if( isExtern && isConstType )                                AddError( vd, "[extern] cannot be used with const." );
-				if( isExtern && vd.init != null )                            AddError( vd, "[extern] variables cannot have an initializer." );
+				if( isStatic )                                                AddError( vd, "[static] is valid only on class fields; use [hide] for module variables." );
+				if( isInlined && isHidden )                                   AddError( vd, "[inline] and [hide] are mutually exclusive." );
+				if( isExtern && isInlined )                                   AddError( vd, "[extern] and [inline] are mutually exclusive." );
+				if( isExtern && isHidden )                                    AddError( vd, "[extern] and [hide]/[hidden] are mutually exclusive." );
+				if( isExtern && isCompileTime )                               AddError( vd, "[extern] cannot be used with [ct]." );
+				if( isExtern && isConstType )                                 AddError( vd, "[extern] cannot be used with const." );
+				if( isExtern && vd.init != null )                             AddError( vd, "[extern] variables cannot have an initializer." );
 			}
 		}
 

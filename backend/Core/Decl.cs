@@ -25,9 +25,8 @@ namespace Myll.Core
 
 	/// <summary>
 	/// introduces a name (most of the time)
-	/// a Decl is a Stmt, do not question this for now
 	/// </summary>
-	public abstract class Decl : Stmt
+	public abstract class Decl : AttributedNode
 	{
 		public string    name { get; init; } = null!;
 		public Access    access = Access.Public;
@@ -45,9 +44,9 @@ namespace Myll.Core
 			}
 		}
 
-		public bool IsExternNamespace    { get; set; }
-		public bool IsExternal           => IsExternNamespace || HasAttrib( "extern" );
-		public bool IsInline             => HasAttrib( "inline" ) || IsTemplateUp;
+		public bool IsExternNamespace { get; set; }
+		public bool IsExternal        => IsExternNamespace || IsExtern;
+		public bool IsInlined         => IsInline || IsTemplateUp;
 		public bool IsInStruct           => scope?.parent?.decl is Structural;
 		public bool IsForwardDeclaration { get; set; }
 
@@ -146,7 +145,7 @@ namespace Myll.Core
 		}
 
 		// Shouldn't this be abstract?
-		public override Strings Gen( int level )
+		public virtual Strings Gen( int level )
 		{
 			throw new NotImplementedException(
 				Format(
@@ -193,10 +192,6 @@ namespace Myll.Core
 		public MultiStmt?           body; // isScope = true
 		public Typespec             retType = null!;
 
-		public bool IsVirtual  => HasAttrib( "virtual" );
-		public bool IsConst    => HasAttrib( "const" ) || HasAttrib( "pure" );
-		public bool IsOverride => HasAttrib( "override" );
-
 		// TODO: analyze, for void or auto return type of funcs
 		public bool IsReturningSomething => false;
 
@@ -222,11 +217,6 @@ namespace Myll.Core
 		public Kind        kind;
 		public List<Param> paras = new();
 		public MultiStmt?  body; // isScope = true
-
-		public bool IsVirtual  => HasAttrib( "virtual" );
-		public bool IsImplicit => HasAttrib( "implicit" );
-		public bool IsDefault  => HasAttrib( "default" );
-		public bool IsDisabled => HasAttrib( "disable" );
 
 		// TODO: initlist
 
@@ -338,9 +328,6 @@ namespace Myll.Core
 	public class Enumeration : Hierarchical
 	{
 		public TypespecBasic? baseType;
-
-		public bool IsFlags     => HasAttrib( "flags" );
-		public bool IsOpBitwise => IsAttrib( "operators", "bitwise" );
 
 		// TODO this needs to be in the Generator Folder
 		static readonly (string, Operand)[] BitwiseOps = {

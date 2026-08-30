@@ -166,9 +166,8 @@ namespace Myll.Core
 		Literal,
 	}
 
-	public abstract class Expr
+	public abstract class Expr : Node
 	{
-		public SrcPos  srcPos          = null!;
 		public Operand op              { get; set; }
 		public int     PrecedenceLevel => Precedence.PrecedenceLevel[op];
 		/// Is precedence divergent from the based upon language?
@@ -183,22 +182,6 @@ namespace Myll.Core
 		/// name resolution has converged. Null if the type could not be determined.
 		/// </summary>
 		public Typespec? Type { get; set; }
-
-		[Pure]
-		public override string ToString()
-		{
-			StringBuilder sb = GetType().GetProperties().Aggregate(
-				new StringBuilder(),
-				( builder, info ) => builder.AppendFormat(
-					"{0}: {1}, ",
-					info.Name,
-					info.GetValue( this, null ) ?? "(null)" ) );
-
-			// Remove the excess ", " from the end of the string
-			sb.Length = Math.Max( sb.Length - 2, 0 );
-
-			return Format( "{{{0} {1}}}", GetType().Name, sb );
-		}
 
 		public abstract string Gen( bool doBrace = false );
 	}
