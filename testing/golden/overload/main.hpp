@@ -9,7 +9,7 @@
 class Gadget;
 class Gadget
 {
-    int _id;
+    int _id{};
 public:
     explicit Gadget(int value);
     explicit Gadget(float f);

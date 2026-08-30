@@ -6,13 +6,18 @@
 #include <string>
 #include <type_traits>
 #include <utility>
-class Widget;
-class Widget
+class Inner;
+class Outer;
+class Inner
 {
 public:
-    int x{};
-    int y{};
-    Widget();
-    Widget(int a, int b);
+    int value{};
+};
+class Outer
+{
+public:
+    Inner inner{};
+    int scalar{};
+    int arr[4]{};
 };
 int main();

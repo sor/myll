@@ -118,6 +118,15 @@ myll/
   - If you add a new keyword slot to a shared format, update every call site.
   - Consider giving unrelated constructs their own dedicated format array so index shifts do not break them.
 - **No interpolated strings**: Do not use C# interpolated strings (`$"..."`). Prefer `String.Format` or plain concatenation.
+- **Chained ternaries for single-value decisions**: When a variable is initialized from a sequence of mutually exclusive conditions, use a single chained ternary expression formatted as a flat `if / else if / else` ladder rather than multiple `if` statements or a helper function. Align the conditions and results vertically so the decision tree reads top-to-bottom.
+
+  Example:
+  ```csharp
+  string initDecl = ( initIn & GenerateAt.Decl ) == 0 ? ""
+                  : obj.init != null                  ? VarFormat[6] + obj.init.Gen()
+                  : obj.IsNoInit || isExtern          ? ""
+                  : VarEmptyInitFormat;
+  ```
 - **Keep simple getters simple**: Use expression-bodied members for trivial computed properties (e.g. `public Scope UpToNamespace => decl is Namespace ? this : parent?.UpToNamespace ?? UpToGlobal;`). Only expand into a block-bodied accessor when side effects or multi-step logic are required.
 - **Blank line after braceless exit `if`**: Put an empty line after a simple `if` whose body exits the current block (e.g. `return` or `throw`). For other braceless `if`s the blank line is optional but still encouraged.
 - **Indent with tabs**: Use tabs for indentation. Use tabs for alignment too whenever possible. Only use spaces for alignment that cannot be expressed with tabs.

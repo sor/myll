@@ -31,7 +31,12 @@ dotnet test testing/ -v quiet
    - Generator composes base prefixes (`virtual public A`, `private B`, etc.).
    - Ported `testing/cases/bases/` integration test.
 
-2. **Default value-init with `[noinit]` / `[uninit]` opt-out** (`d73f14d`).
+2. **Default value-init with `[noinit]` / `[uninit]` opt-out** (`d73f14d`). ✅ Done
+   - `VarStmt.Gen` and `HierarchicalGen.AddVar` value-initialize variables and fields unless they have an explicit initializer or `[noinit]`/`[uninit]`.
+   - Invalid combinations (`const`/`[ct]` + `[noinit]`) throw.
+   - Regenerated golden files for affected tests: `class`, `class_ctor`, `access_mods`, `overload`, `gol`, `cpp_fail`.
+   - Ported `testing/cases/default_init/` integration test and golden files.
+   - Updated AGENTS.md, language spec, declarations doc, test coverage inventory, and TODO plan.
    - Core behavior: `var T name;` → `T name{};` unless `[noinit]` is set.
    - Upstream `AddVar` no longer contains manual validation, so the `[noinit]` const/ct checks should move to the TypeChecker.
    - Add `VarEmptyInitFormat` / `VarDirectInitFormat` handling to the generator.
@@ -98,7 +103,7 @@ The local `master` branch is still 3 commits ahead of `origin/master`, so the pl
    git commit -m "feat: namespace aliases, base-clause formatting, and CXXFLAGS forwarding"
    ```
 
-4. Continue porting the remaining feature (default value-init) as a separate commit.
+4. Ported all three features as separate commits on `upstream-ideas`.
 
 5. Before submitting, run:
    ```bash

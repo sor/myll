@@ -11,7 +11,7 @@ Widget::Widget(int a, int b)
 }
 int main()
 {
-    Widget a;
+    Widget a{};
     if( a.x != 0 || a.y != 0 ) {
         return 1;
     }

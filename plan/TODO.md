@@ -110,6 +110,7 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 - Function/scope-level namespace aliases using an interim `KnownNamespaces` table, with a new integration test case.
 - Generator changes to support aliases in namespaced modules: trailing return types for out-of-line function definitions and namespace wrapping for constructors/destructors; golden files regenerated.
 - Per-base inheritance access specifiers (`[pub]`, `[priv]`, `[prot]`) and `[virtual]` bases; new `bases` integration test case.
+- Value-initialization by default for `var`/`field`/`const`/`let` declarations without an initializer; `[noinit]`/`[uninit]` opt-out; new `default_init` integration test case.
 - Fixed `EnumerateDF` for `ForStmt`, `WhileStmt`, `DoWhileStmt`, and `TimesStmt` and added unit tests in `testing/LoopEnumerationTests.cs`.
 - Instance-based `CompilationContext` per module; removed static visitor state.
 - Name resolver skeleton with single-segment, cross-module, cyclic-import, and qualified-path resolution.

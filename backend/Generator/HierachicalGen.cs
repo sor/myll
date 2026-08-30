@@ -266,18 +266,43 @@ namespace Myll.Generator
 		{
 			bool needsTypename = false; // TODO how to determine this
 
-			bool isInsideStruct = obj.IsInStruct;
-			bool isStatic       = obj.IsStatic;
-			bool isHidden       = obj.IsHidden;
-			bool isCompileTime  = obj.IsCompileTime;
-			bool isInline       = obj.IsInline;
-			bool isExtern       = obj.IsExternal;
-			bool isConstType    = (obj.type.qual & Qualifier.Const) != 0;
+			bool isInsideStruct   = obj.IsInStruct;
+			bool isStatic         = obj.IsStatic;
+			bool isHidden         = obj.IsHidden;
+			bool isCompileTime    = obj.IsCompileTime;
+			bool isInline         = obj.IsInline;
+			bool isExplicitExtern = obj.IsExternal;
+			bool isConstType      = (obj.type.qual & Qualifier.Const) != 0;
+			bool isExtern         = !isInsideStruct && ( isExplicitExtern || !( isHidden || isInline || isCompileTime || isConstType ) );
+
+			if( obj.IsNoInit && ( isConstType || isCompileTime ) )
+				throw new NotSupportedException( "[noinit]/[uninit] cannot be used with const or compile-time variables" );
+
+			// TODO: report source location (file, line, column) for all of these attribute/duplicate errors.
+			if( isInsideStruct ) {
+				if( isHidden )                   throw new NotSupportedException( "[hide]/[hidden] is only valid at module/namespace scope." );
+				if( isExplicitExtern )           throw new NotSupportedException( "[extern] is only valid at module/namespace scope." );
+				if( isInline      && !isStatic ) throw new NotSupportedException( "[inline] on a class field requires [static]." );
+				if( isCompileTime && !isStatic ) throw new NotSupportedException( "[ct] on a class field requires [static]." );
+			} else {
+				if( isStatic )              throw new NotSupportedException( "[static] is only valid on class fields; use [hide]/[hidden] for module-level variables." );
+				if( isInline && isHidden )  throw new NotSupportedException( "[inline] and [hide] are mutually exclusive." );
+				if( isExplicitExtern ) {
+					if( isInline )          throw new NotSupportedException( "[extern] and [inline] are mutually exclusive." );
+					if( isHidden )          throw new NotSupportedException( "[extern] and [hide]/[hidden] are mutually exclusive." );
+					if( isCompileTime )     throw new NotSupportedException( "[extern] cannot be used with [ct]." );
+				} else if( isHidden ) {
+					// nothing else to set
+				} else if( isInline || isCompileTime || isConstType ) {
+					// nothing else to set
+				} else {
+					// module-level variables are external by default unless hidden/inline/ct/const
+				}
+			}
 
 			AccessStrings targetDecl = isStatic ? staticFieldDecl : fieldDecl;
 			AccessStrings targetImpl = isStatic ? staticFieldImpl : fieldImpl;
 
-			bool       externKw      = !isInsideStruct && ( isExtern || !( isHidden || isInline || isCompileTime || isConstType ) );
 			bool       needsInline   = isInline || (isInsideStruct && isStatic && isCompileTime);
 			GenerateAt emitAt        = GenerateAt.Decl;
 			GenerateAt initIn        = GenerateAt.Decl;
@@ -288,7 +313,7 @@ namespace Myll.Generator
 					initIn = GenerateAt.Impl;
 				}
 			} else {
-				if( isExtern ) {
+				if( isExplicitExtern ) {
 					initIn   = GenerateAt.Nowhere;
 				} else if( isHidden ) {
 					emitAt   = GenerateAt.Impl;
@@ -301,19 +326,29 @@ namespace Myll.Generator
 				}
 			}
 
+			string initDecl = ( initIn & GenerateAt.Decl ) == 0 ? ""
+			                : obj.init != null                  ? VarFormat[6] + obj.init.Gen()
+			                : obj.IsNoInit || isExtern          ? ""
+			                : VarEmptyInitFormat;
+
+			string initImpl = ( initIn & GenerateAt.Impl ) == 0 ? ""
+			                : obj.init != null                  ? VarFormat[6] + obj.init.Gen()
+			                : obj.IsNoInit                      ? ""
+			                : VarEmptyInitFormat;
+
 			// 0 indent, 1 extern, 2 inline, 3 static, 4 constexpr, 5 typename, 6 type & name, 7 init
 			if( (emitAt & GenerateAt.Decl) != 0 ) {
 				Strings retDecl = new() {
 					Format(
 						VarFormat[0],
 						IndentDecl,
-						externKw             ? VarFormat[1] : "",
+						isExtern             ? VarFormat[1] : "",
 						needsInline          ? VarFormat[2] : "",
 						isStatic || isHidden ? VarFormat[3] : "",
 						isCompileTime        ? VarFormat[4] : "",
 						needsTypename        ? VarFormat[5] : "",
 						obj.type.Gen( obj.name ),
-						(initIn & GenerateAt.Decl) != 0 && obj.init != null ? VarFormat[6] + obj.init.Gen() : "" )
+						initDecl )
 				};
 				targetDecl.Add( (obj.access, retDecl) );
 			}
@@ -329,7 +364,7 @@ namespace Myll.Generator
 						"",
 						needsTypename ? VarFormat[5] : "",
 						obj.type.Gen( obj.FullyQualifiedName ),
-						(initIn & GenerateAt.Impl) != 0 && obj.init != null ? VarFormat[6] + obj.init.Gen() : "" )
+						initImpl )
 				};
 				targetImpl.Add( (obj.access, retImpl) );
 			}

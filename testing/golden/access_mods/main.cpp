@@ -1,7 +1,7 @@
 #include "main.hpp"
 int main()
 {
-    Box b;
+    Box b{};
     b.update( 2, 3, 4 );
     if( b.getX() != 2 ) {
         return 1;

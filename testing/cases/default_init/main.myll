@@ -1,0 +1,29 @@
+class Inner {
+[pub]:
+	field int value;
+}
+
+class Outer {
+[pub]:
+	field Inner inner;
+	field int scalar;
+	field int[4] arr;
+}
+
+func main() -> int {
+	var int i;
+	var int[4] localArr;
+	var Inner localInner;
+
+	if( i != 0 ) return 1;
+	if( localInner.value != 0 ) return 2;
+	if( localArr[0] != 0 ) return 3;
+
+	var Outer o;
+	if( o.scalar != 0 ) return 4;
+	if( o.arr[0] != 0 ) return 5;
+	if( o.inner.value != 0 ) return 6;
+
+	[noinit] var int raw;
+	return 0;
+}

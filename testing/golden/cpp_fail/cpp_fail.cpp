@@ -4,7 +4,7 @@ void A::secret()
 }
 int main()
 {
-    A a;
+    A a{};
     a.secret();
     return 0;
 }

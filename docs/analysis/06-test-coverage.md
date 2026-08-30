@@ -140,7 +140,8 @@ Priority order:
 4. `int/*.myll` — validate integer type mapping.
 5. `alias/*.myll` — validate type and namespace alias generation.
 6. `bases/*.myll` — validate base-class access specifiers and virtual inheritance.
-7. `mixed/plasma.myll` — validate simple function generation.
+7. `default_init/*.myll` — validate value-initialization of scalars, arrays, and class members, plus `[noinit]` opt-out.
+8. `mixed/plasma.myll` — validate simple function generation.
 
 ## Recommendations
 

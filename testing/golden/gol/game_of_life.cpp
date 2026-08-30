@@ -58,7 +58,7 @@ int main()
 {
     using namespace JanSordid;
     std::chrono::milliseconds sleepTime = std::getenv( "MYLL_TEST" ) != nullptr ? std::chrono::milliseconds( 0 ) : std::chrono::milliseconds( 166 );
-    JanSordid::GameOfLife gol;
+    JanSordid::GameOfLife gol{};
     while( true ) {
         gol.output( std::cout );
         std::cout.flush();

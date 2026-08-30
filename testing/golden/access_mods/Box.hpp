@@ -12,13 +12,13 @@ class Box
     std::int32_t _x = 0;
     std::int32_t _y = 0;
     std::int32_t _z = 0;
-    std::int32_t _tag;
+    std::int32_t _tag{};
 public:
     const std::int32_t maxSize = 100;
 private:
-    std::int32_t _secret;
+    std::int32_t _secret{};
 protected:
-    std::int32_t _childVisible;
+    std::int32_t _childVisible{};
 private:
     void updatePriv(std::int32_t a, std::int32_t b, std::int32_t c);
     std::int32_t helperA();
