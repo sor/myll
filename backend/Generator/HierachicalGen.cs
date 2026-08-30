@@ -391,11 +391,11 @@ namespace Myll.Generator
 				.Select( p => p.Gen() )
 				.Join( ", " );
 
-			string prefix = (isStatic ? "static " : "")
-			              + (isExternal ? "extern " : "")
-			              + (obj.IsVirtual ? "virtual " : "")
-			              + (isInline ? "inline " : "");
-			string suffix = (obj.IsConst ? " const" : "")
+			string prefix = (isStatic       ? "static "   : "")
+			              + (isExternal     ? "extern "   : "")
+			              + (obj.IsVirtual  ? "virtual "  : "")
+			              + (isInline       ? "inline "   : "");
+			string suffix = (obj.IsConst    ? " const"    : "")
 			              + (obj.IsOverride ? " override" : "");
 			string headlineDecl = Format(
 				FuncFormat[0],

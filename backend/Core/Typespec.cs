@@ -142,7 +142,7 @@ namespace Myll.Core
 		{
 			if( isDefaultSized ) {
 				return kind switch {
-					Kind.Integer => "int",
+					Kind.Integer  => "int",
 					Kind.Unsigned => "unsigned int",
 					Kind.Float    => "float",
 					Kind.Bitwise  => "unsigned int",
