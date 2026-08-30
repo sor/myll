@@ -17,6 +17,7 @@ This document covers all declaration forms in Myll: variables, functions, types,
 var Type name = init;       // variable declaration; mutable unless Type is const-qualified
 var Type name;              // value-initialized (zero for scalars, default-constructed for classes)
 [noinit] var Type name;     // explicitly uninitialized
+var Type name = _;          // also uninitialized (discard initializer)
 const Type name = init;     // preferred form for immutable variables
 let Type name = init;       // immutable binding; currently behaves the same as const
 global Type name = init;    // global scope variable
@@ -25,6 +26,8 @@ global Type name = init;    // global scope variable
 `const Type name` is the preferred form and is equivalent to `var const Type name`. For a true compile-time constant, use `[ct] const Type name = init;`.
 
 Omitting an initializer means value-initialization. `[noinit]` and its synonym `[uninit]` suppress this and leave the object uninitialized, mirroring C++ default initialization. `[noinit]` cannot be used with `const`.
+
+A discard initializer (`var T a = _`) also requests no initializer; it is lowered to the same uninitialized declaration.
 
 ### Constructor initialization
 

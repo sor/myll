@@ -79,6 +79,7 @@ namespace my_ns;
 var Type name = init;       // variable declaration; mutable unless Type is const-qualified
 var Type name;              // value-initialized (zero for scalars, default-constructed for classes)
 [noinit] var Type name;     // explicitly uninitialized
+var Type name = _;          // also uninitialized (discard initializer)
 const Type name = init;     // preferred form for immutable variables
 let Type name = init;       // immutable binding; currently behaves the same as const
 global Type name = init;    // global variable [partial]
@@ -89,6 +90,7 @@ Both forms are equivalent, but the leading `const` form is preferred for readabi
 `var const Type t;` is the explicit form and is required when the type comes from a template parameter that may be const-qualified.
 
 `[uninit]` is accepted as a synonym for `[noinit]`; both suppress the default value-initialization.
+A discard initializer (`var T a = _`) also requests no initializer.
 `[noinit]` is invalid on `const` variables because a const object must be initialized.
 
 Multi-declaration:

@@ -179,13 +179,20 @@ namespace Myll
 				.idAccessors()
 				.idAccessor()
 				.Select(
-					q => new VarStmt {
-						srcPos   = srcPos,
-						name     = q.id().GetText(),
-						kind     = kind,
-						type     = type,
-						init     = TransformInit( q.expr()?.Visit( Context ), kind ),
-					} as Stmt )
+					q => {
+						Expr? init      = q.expr()?.Visit( Context );
+						Expr? finalInit = TransformInit( init, kind );
+						VarStmt stmt = new() {
+							srcPos = srcPos,
+							name   = q.id().GetText(),
+							kind   = kind,
+							type   = type,
+							init   = finalInit,
+						};
+						if( init is Discard && finalInit == null )
+							stmt.AssignAttribs( new Attribs { ["noinit"] = new List<string>() } );
+						return stmt as Stmt;
+					} )
 				.ToList();
 
 			foreach( VarStmt stmt in stmts.OfType<VarStmt>() ) {
