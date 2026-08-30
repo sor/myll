@@ -226,8 +226,10 @@ Use `tmp/` inside the project root for any temporary files or scratch tests. Do 
 1. **Finish ScopeStack / semantic analysis (endboss)** — DONE. The C++ generator uses resolved declarations for unqualified `IdExpr` generation. Shadowing diagnostics are implemented with a flag-based `ShadowingMode`. Remaining semantic-analysis work is normal bug fixing and edge-case handling. See `plan/semantic-analysis.md`, `plan/resolved-idexpr-generation.md`, `backend/Resolver/Resolver.cs`, `backend/Resolver/TypeChecker.cs`.
 2. Testing + CI/CD — xUnit harness is in place under `testing/`; remaining work is CI/CD.
 3. Implement reachable NotImplementedException features:
-   - named args, null coalescing call, copy-cast, else-on-loop, discard (empty stmt done)
+   - discard — DONE. `_ = expr` lowers to `static_cast<void>(expr)`; `_` as a raw-pointer argument becomes `static_cast<T*>(nullptr)`; `_` as a value/reference argument introduces a hidden `myll_tmp_` local; `var`/`let T a = _` omits the initializer. See `backend/Resolver/DiscardTransformer.cs`, `testing/cases/discard/`.
+   - named args, null coalescing call, copy-cast, else-on-loop
    - **NOT** aspect, concept, defer, convert — see `REASONS.md` (2026-06-10)
+   - Note: the `myll_tmp_` name prefix is reserved for the compiler; add it to the list of user-unusable identifiers in the lexer/grammar.
 4. Cleanup — `oldParser`/`oldCodeGen` removal, TODO triage, HACK resolution.
 5. `.idea/` misc.xml shared ANTLR config added to `.gitignore` exception.
 

@@ -1,0 +1,21 @@
+module discard_fail;
+
+func takesUnique( int*! p ) -> void
+{
+}
+
+func getValue() -> int
+{
+	return 1;
+}
+
+func main() -> int
+{
+	_ += 1;
+	return _;
+	var int x = _ + 1;
+	takesUnique( _ );
+	var int y = 0;
+	y = _ = 1;
+	return 0;
+}

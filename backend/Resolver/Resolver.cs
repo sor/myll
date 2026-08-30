@@ -80,6 +80,9 @@ namespace Myll.Resolver
 		// resolvedDecl directly on identifiers, member accesses, and type specs.
 		result.Apply();
 
+		var discardTransformer = new DiscardTransformer( result, diagnostics );
+		discardTransformer.Transform( modules );
+
 		resolver.ValidateTypes( modules );
 		resolver.ReportUnresolved( modules );
 

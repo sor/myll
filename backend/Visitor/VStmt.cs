@@ -183,7 +183,7 @@ namespace Myll
 						name     = q.id().GetText(),
 						kind     = kind,
 						type     = type,
-						init     = q.expr()?.Visit( Context ),
+						init     = TransformInit( q.expr()?.Visit( Context ), kind ),
 					} as Stmt )
 				.ToList();
 
@@ -198,6 +198,24 @@ namespace Myll
 
 			MultiStmt ret = stmts.ToMulti();
 			return ret;
+		}
+
+		// no init
+		private static Expr? TransformInit( Expr? init, VarDecl.Kind kind )
+		{
+			if( init == null )
+				return null;
+
+			if( init is not Discard )
+				return init;
+
+			// var/let with init "_" means "uninitialized".
+			if( kind is VarDecl.Kind.Var or VarDecl.Kind.Let )
+				return null;
+
+			// const/field with init "_" is not supported.
+			throw new NotSupportedException(
+				"'_' initializer is not allowed for " + kind.ToString().ToLowerInvariant() + " declarations" );
 		}
 
 		public override MultiStmt VisitDeclVar( DeclVarContext c )
@@ -437,17 +455,19 @@ namespace Myll
 				name  = c.name?.Visit(),
 			};
 
-			if( !String.IsNullOrEmpty( ret.name ) ) {
-				AddScopeOnly( new VarDecl {
-					name   = ret.name!,
-					type   = new TypespecBasic {
-						kind = TypespecBasic.Kind.Integer,
-						size = TypespecBasic.SizeUndetermined,
-					},
-					access = Access.Public,
-					kind   = VarDecl.Kind.Var,
-				} );
-			}
+			// Anonymous loop variable: treat "_" or omitted name as hidden.
+			if( String.IsNullOrEmpty( ret.name ) || ret.name == "_" )
+				ret.name = Context.NextTempName();
+
+			AddScopeOnly( new VarDecl {
+				name   = ret.name,
+				type   = new TypespecBasic {
+					kind = TypespecBasic.Kind.Integer,
+					size = TypespecBasic.SizeUndetermined,
+				},
+				access = Access.Public,
+				kind   = VarDecl.Kind.Var,
+			} );
 
 			ret.body = VisitBlockify( c.body );
 

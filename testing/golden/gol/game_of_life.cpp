@@ -73,7 +73,7 @@ int main()
 }
 void clear()
 {
-    for( int myll_times_2 = 0; myll_times_2 < 30+0; ++myll_times_2 ) {
+    for( int myll_tmp_0 = 0; myll_tmp_0 < 30+0; ++myll_tmp_0 ) {
         std::cout << "\n";
     }
 }

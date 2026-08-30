@@ -1,0 +1,36 @@
+module discard;
+
+func setPtr( int* x ) -> void
+{
+	if( x != null )
+		*x = 42;
+}
+
+func setRef( int & x ) -> void
+{
+	x = 99;
+}
+
+func getValue() -> int
+{
+	return 42;
+}
+
+func main() -> int
+{
+	var int result = 0;
+
+	setPtr( _ );
+	setRef( _ );
+
+	_ = getValue();
+
+	var int uninitialized = _;
+	uninitialized = 10;
+
+	do 3 times {
+		result = result + 1;
+	}
+
+	return result == 3 ? 0 : 1;
+}

@@ -52,6 +52,16 @@ namespace Myll
 		/// </summary>
 		public List<(Decl Local, Scope Scope)> LocalDecls { get; } = new();
 
+		private int tempNameCounter;
+
+		/// <summary>
+		/// Returns a fresh compiler-generated identifier starting with "myll_tmp_".
+		/// Used for anonymous loop indices, discard temporaries, and other synthesized names.
+		/// The "myll_tmp_" prefix is reserved for the compiler.
+		/// </summary>
+		public string NextTempName()
+			=> "myll_tmp_" + tempNameCounter++;
+
 		public CompilationContext()
 		{
 			ExprVisitor = new ExprVisitor( this );

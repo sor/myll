@@ -513,10 +513,6 @@ namespace Myll.Core
 
 	public class TimesStmt : Stmt
 	{
-		// HACK: solve that better
-		public static int    randomNumber = 1;
-		public static string randomName => "myll_times_" + ++randomNumber;
-
 		public Stmt    body = null!;
 		public Expr    count = null!;
 		public string? name;
@@ -538,7 +534,7 @@ namespace Myll.Core
 		{
 			Strings ret     = new();
 			string  indent  = IndentString.Repeat( level );
-			string  varName = name ?? randomName;
+			string  varName = name ?? "myll_tmp_missing";
 			ret.Add(
 				Format(
 					"{0}for( int {1} = {2}; {1} < {3}+{2}; ++{1} ) {{",

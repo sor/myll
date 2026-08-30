@@ -409,11 +409,14 @@ namespace Myll
 			Expr          ret;
 			WildIdContext cc = c.wildId();
 			if( cc.USCORE() != null ) {
-				ret = new Discard();
+				ret = new Discard {
+					srcPos = c.ToSrcPos(),
+				};
 			}
 			else if( cc.AUTOINDEX() != null ) {
 				IdTplArgs idTplArgs = new() { id = cc.AUTOINDEX().GetText() };
 				ret = new IdExpr {
+					srcPos    = c.ToSrcPos(),
 					op        = Operand.WildId,
 					idTplArgs = idTplArgs,
 				};
