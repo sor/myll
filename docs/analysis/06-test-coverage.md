@@ -138,7 +138,9 @@ Priority order:
 2. `gol/*.myll` — compile and run, verify it produces a game of life grid. Blocked on member access resolution.
 3. `mixed/enum.myll` — validate flags enum generation.
 4. `int/*.myll` — validate integer type mapping.
-5. `mixed/plasma.myll` — validate simple function generation.
+5. `alias/*.myll` — validate type and namespace alias generation.
+6. `bases/*.myll` — validate base-class access specifiers and virtual inheritance.
+7. `mixed/plasma.myll` — validate simple function generation.
 
 ## Recommendations
 

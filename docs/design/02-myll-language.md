@@ -115,8 +115,20 @@ struct Name {
     // fields, methods
 }
 
-class Name : Base {        // inheritance [partial]
+class Name : Base {        // public inheritance by default
     // fields, methods
+}
+
+class PrivateBase : [priv] Base {
+}
+
+class ProtectedBase : [prot] Base {
+}
+
+class VirtualBase : [virtual] Base {     // virtual public base
+}
+
+class Mixed : [pub] Base1, [priv] Base2, [virtual] Base3 {
 }
 
 union Name {

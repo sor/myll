@@ -107,6 +107,9 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 - `var` parameter error message.
 - ProcessRunner thread-safety fix.
 - `ls` vertical slice with classes, inheritance, smart-pointer shorthand, sorting, and hidden files.
+- Function/scope-level namespace aliases using an interim `KnownNamespaces` table, with a new integration test case.
+- Generator changes to support aliases in namespaced modules: trailing return types for out-of-line function definitions and namespace wrapping for constructors/destructors; golden files regenerated.
+- Per-base inheritance access specifiers (`[pub]`, `[priv]`, `[prot]`) and `[virtual]` bases; new `bases` integration test case.
 - Fixed `EnumerateDF` for `ForStmt`, `WhileStmt`, `DoWhileStmt`, and `TimesStmt` and added unit tests in `testing/LoopEnumerationTests.cs`.
 - Instance-based `CompilationContext` per module; removed static visitor state.
 - Name resolver skeleton with single-segment, cross-module, cyclic-import, and qualified-path resolution.

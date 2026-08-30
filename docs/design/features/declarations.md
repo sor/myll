@@ -123,6 +123,15 @@ class Widget : Control {
     // inherits publicly by default
 }
 
+class HiddenWidget : [priv] Control {
+}
+
+class VirtualWidget : [virtual] Control {     // virtual public
+}
+
+class MixedWidget : [pub] Control, [priv] Helper, [virtual] Mixin {
+}
+
 union Value {
     int_val: i64;
     float_val: f64;

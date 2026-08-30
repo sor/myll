@@ -94,15 +94,18 @@ defConcept	:	id	tplParams?		// TODO
 defEnum		:	id
 				(COLON		bases=typespecBasic)?	// TODO: enum inheritance
 				(
-					LCURLY	idExprs?	RCURLY
-				|	SEMI
+					LCURLY	idExprs?		RCURLY
+				| 	SEMI
 				);
-defStruct	:	id	tplParams?
-				(COLON		bases=typespecsNested)?
+baseSpec	:	attribBlk?	typespecNested ;
+baseSpecs	:	baseSpec (COMMA baseSpec)* COMMA? ;
+
+defStruct	:	id		tplParams?
+				(COLON		bases=baseSpecs)?
 				(REQUIRES 	reqs=typespecsNested)?	// TODO: should this rather be "expr" instead of typespecsNested?
 				(
 					LCURLY	decl*		RCURLY	SEMI?
-				|	SEMI
+				| 	SEMI
 				);
 
 // convert is implicit by default?
