@@ -17,7 +17,7 @@ namespace Myll.Resolver
 	/// </list>
 	/// All other uses of <c>_</c> produce a diagnostic error.
 	/// </summary>
-	public sealed class DiscardTransformer
+	public sealed class DiscardTransformer : ITransformer
 	{
 		private readonly ResolutionResult result;
 		private readonly List<Diagnostic> diagnostics;

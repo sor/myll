@@ -58,12 +58,20 @@ namespace Myll.Resolver
 		public static (ResolutionResult Result, IReadOnlyList<Diagnostic> Diagnostics) Resolve(
 			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules )
 		{
-			var exports     = BuildModuleExports( modules );
 			var result      = new ResolutionResult();
 			var diagnostics = new List<Diagnostic>();
-			var resolver    = new NameResolver( exports, result, diagnostics );
 
-		bool progress;
+			var preResolveTransforms = new List<ITransformer> {
+				new EnumTransformer(),
+			};
+
+			foreach( ITransformer transformer in preResolveTransforms )
+				transformer.Transform( modules );
+
+			var exports  = BuildModuleExports( modules );
+			var resolver = new NameResolver( exports, result, diagnostics );
+
+			bool progress;
 			do {
 				progress = false;
 				foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
@@ -77,17 +85,21 @@ namespace Myll.Resolver
 				}
 			} while( progress );
 
-		// Commit resolved declarations to the AST so that type checking can use
-		// resolvedDecl directly on identifiers, member accesses, and type specs.
-		result.Apply();
+			// Commit resolved declarations to the AST so that type checking can use
+			// resolvedDecl directly on identifiers, member accesses, and type specs.
+			result.Apply();
 
-		var discardTransformer = new DiscardTransformer( result, diagnostics );
-		discardTransformer.Transform( modules );
+			var postResolveTransforms = new List<ITransformer> {
+				new DiscardTransformer( result, diagnostics ),
+			};
 
-		resolver.ValidateTypes( modules );
-		resolver.ReportUnresolved( modules );
+			foreach( ITransformer transformer in postResolveTransforms )
+				transformer.Transform( modules );
 
-		return (result, diagnostics);
+			resolver.ValidateTypes( modules );
+			resolver.ReportUnresolved( modules );
+
+			return (result, diagnostics);
 		}
 
 		private static IReadOnlyDictionary<string, ModuleExports> BuildModuleExports(

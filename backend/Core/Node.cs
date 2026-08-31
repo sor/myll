@@ -61,9 +61,6 @@ namespace Myll.Core
 		public virtual void AssignAttribs( Attribs inAttribs )
 		{
 			attribs = inAttribs;
-			AttribsAssigned();
 		}
-
-		protected virtual void AttribsAssigned() {}
 	}
 }
