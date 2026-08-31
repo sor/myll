@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Myll.Core;
 
 namespace Myll.Resolver
@@ -37,7 +38,9 @@ namespace Myll.Resolver
 				TransformEnumeration( enumeration );
 
 			if( decl is Hierarchical h ) {
-				foreach( Decl child in h.children )
+				// Snapshot the children because synthesizing enum operators can add
+				// new declarations to the same namespace we are currently iterating.
+				foreach( Decl child in h.children.ToList() )
 					TransformDecl( child );
 			}
 		}
