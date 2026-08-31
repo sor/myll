@@ -77,8 +77,11 @@ namespace Myll.Resolver
 
 			string[] lines = cache.GetLines( srcPos.file );
 
+			if( srcPos.from.line <= 0 || srcPos.from.line > lines.Length )
+				return;
+
 			int firstLine = Math.Max( srcPos.from.line - 1, 1 );
-			int lastLine  = Math.Min( srcPos.to.line + 1, lines.Length );
+			int lastLine  = Math.Min( Math.Max( srcPos.to.line, srcPos.from.line ) + 1, lines.Length );
 
 			for( int lineNo = firstLine; lineNo <= lastLine; lineNo++ ) {
 				string rawLine    = lines[lineNo - 1];

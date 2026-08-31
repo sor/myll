@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Antlr4.Runtime;
 using Antlr4.Runtime.Tree;
 using Myll.Core;
 using Myll.Resolver;
@@ -27,7 +28,16 @@ namespace Myll
 			if( c == null )
 				throw new ArgumentNullException();
 
-			return base.Visit( c );
+			Expr ret = base.Visit( c )
+				?? throw new InvalidOperationException( "Unexpected terminal or unrecognized expression context" );
+
+			// Any expression node that did not get a source position from its
+			// specific visitor inherits the span of the context that produced it.
+			// This keeps resolver/type-checker diagnostics location-aware.
+			if( ret.srcPos == null && c is ParserRuleContext prc )
+				ret.srcPos = prc.ToSrcPos();
+
+			return ret;
 		}
 
 		public override ScopedExpr VisitScopedExpr( ScopedExprContext c )
@@ -71,13 +81,15 @@ namespace Myll
 			}
 			else if( c.memAccOP() != null ) {
 				IdExpr right = new() {
+					srcPos    = c.idTplArgs().ToSrcPos(),
 					op        = Operand.Id,
 					idTplArgs = VisitIdTplArgs( c.idTplArgs() ),
 				};
 				ret = new BinOp {
-					op    = c.memAccOP().v.ToOp(),
-					left  = left,
-					right = right,
+					srcPos = c.ToSrcPos(),
+					op     = c.memAccOP().v.ToOp(),
+					left   = left,
+					right  = right,
 				};
 				Context.UnresolvedMemberAccesses.Add( new( (BinOp) ret, Context.ScopeStack.Peek() ) );
 			}

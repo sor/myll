@@ -145,8 +145,10 @@ namespace Myll
 			if( scopeStack.Peek().decl is Hierarchical h && h.IsExternal )
 				return;
 
-			throw new InvalidOperationException(
-				"Forward declarations are only allowed in .decl.myll/.d.myll files, [extern] contexts, or OOP special members." );
+			Context.Diagnostics.Add( new Diagnostic(
+				decl.srcPos,
+				DiagnosticKind.Error,
+				"Forward declarations are only allowed in .decl.myll/.d.myll files, [extern] contexts, or OOP special members." ) );
 		}
 
 		public override Decl VisitAttrUsing(	AttrUsingContext	c ) => VisitAttrAnyDecl( c.attribBlk(), c.defUsing(), c.attrUsing(), c.COLON() != null )!;

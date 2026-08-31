@@ -26,9 +26,16 @@ namespace Myll
 	using static ParallelEnumerable;
 #endif
 
-	public sealed class LexerConsoleErrorListener : IAntlrErrorListener<int>
+	public sealed class LexerDiagnosticListener : IAntlrErrorListener<int>
 	{
-		public static readonly LexerConsoleErrorListener Instance = new();
+		private readonly string file;
+		private readonly List<Diagnostic> diagnostics;
+
+		public LexerDiagnosticListener( string file, List<Diagnostic> diagnostics )
+		{
+			this.file        = file;
+			this.diagnostics = diagnostics;
+		}
 
 		public void SyntaxError(
 			TextWriter           output,
@@ -39,18 +46,25 @@ namespace Myll
 			string               msg,
 			RecognitionException e )
 		{
-			output.WriteLine(
-				"In file {0} line {1}:{2} {3}",
-				((MyllLexer)recognizer).SourceName,
-				line,
-				charPositionInLine,
-				msg );
+			diagnostics.Add( new Diagnostic(
+				new SrcPos {
+					file = file,
+					from = new SrcPos.LineCol { line = line, col = charPositionInLine },
+					to   = new SrcPos.LineCol { line = line, col = charPositionInLine + 1 },
+				},
+				DiagnosticKind.Error,
+				msg ) );
 		}
 	}
 
-	public sealed class ParserConsoleErrorListener : IAntlrErrorListener<IToken>
+	public sealed class ParserDiagnosticListener : IAntlrErrorListener<IToken>
 	{
-		public static readonly ParserConsoleErrorListener Instance = new();
+		private readonly List<Diagnostic> diagnostics;
+
+		public ParserDiagnosticListener( List<Diagnostic> diagnostics )
+		{
+			this.diagnostics = diagnostics;
+		}
 
 		public void SyntaxError(
 			TextWriter           output,
@@ -61,12 +75,19 @@ namespace Myll
 			string               msg,
 			RecognitionException e )
 		{
-			output.WriteLine(
-				"In file {0} line {1}:{2} {3}",
-				((MyllParser)recognizer).SourceName,
-				line,
-				charPositionInLine,
-				msg );
+			string file      = offendingSymbol?.TokenSource?.SourceName
+			                ?? ((MyllParser)recognizer).SourceName;
+			int    startCol  = offendingSymbol?.Column ?? charPositionInLine;
+			int    length    = offendingSymbol?.Text?.Length ?? 1;
+
+			diagnostics.Add( new Diagnostic(
+				new SrcPos {
+					file = file,
+					from = new SrcPos.LineCol { line = line, col = startCol },
+					to   = new SrcPos.LineCol { line = line, col = startCol + length },
+				},
+				DiagnosticKind.Error,
+				msg ) );
 		}
 	}
 
@@ -88,41 +109,43 @@ namespace Myll
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static IEnumerable<T> AsSequential<T>( this IEnumerable<T> s ) => s;
 
-		private static MyllParser CreateParser( string filename )
+		private static (MyllParser Parser, List<Diagnostic> Diagnostics) CreateParser( string filename )
 		{
 			string            text        = File.ReadAllText( filename );
 			AntlrInputStream  inputStream = new( text ) { name = filename };
 			MyllLexer         lexer       = new( inputStream );
+			List<Diagnostic>  diagnostics = new();
+
 			lexer.RemoveErrorListeners();
-			lexer.AddErrorListener( LexerConsoleErrorListener.Instance );
+			lexer.AddErrorListener( new LexerDiagnosticListener( filename, diagnostics ) );
+
 			CommonTokenStream tokenStream = new( lexer );
 			MyllParser        parser      = new( tokenStream );
+
 			parser.RemoveErrorListeners();
-			parser.AddErrorListener( ParserConsoleErrorListener.Instance );
+			parser.AddErrorListener( new ParserDiagnosticListener( diagnostics ) );
 			// This will exit after the first problem
 			//parser.ErrorHandler = new BailErrorStrategy();
 			//Console.WriteLine( "Time elapsed after CreateParser   {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
 
-			return parser;
+			return (parser, diagnostics);
 		}
 
-		private static MyllParser.ProgContext ParseCST( MyllParser parser )
+		private static (MyllParser.ProgContext Prog, List<Diagnostic> Diagnostics) ParseCST(
+			(MyllParser Parser, List<Diagnostic> Diagnostics) pd )
 		{
+			MyllParser       parser      = pd.Parser;
+			List<Diagnostic> diagnostics = pd.Diagnostics;
+
 			// if exceptions happen, comment this out
 			//parser.Interpreter.PredictionMode = PredictionMode.SLL;
 			parser.Interpreter.PredictionMode = PredictionMode.LL_EXACT_AMBIG_DETECTION;
 
 			try {
 				MyllParser.ProgContext prog = parser.prog();
-				if( !opt.IsKeepGoing && parser.NumberOfSyntaxErrors > 0 ) {
-					Console.Error.WriteLine(
-						"\nThere were syntactical errors in {0}, aborting execution",
-						parser.SourceName );
-					Environment.Exit( -99 );
-				}
 				//Console.WriteLine( "Time elapsed after ParseCST       {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
 
-				return prog; // STAGE 1
+				return (prog, diagnostics); // STAGE 1
 			}
 			// This might never be reached since the error handling above
 			catch( Exception ex ) { // STAGE 2
@@ -133,8 +156,17 @@ namespace Myll
 				((CommonTokenStream) parser.TokenStream).Reset(); // rewind input stream
 				parser.Reset();
 				parser.Interpreter.PredictionMode = PredictionMode.LL;
-				return parser.prog();
+				return (parser.prog(), diagnostics);
 			}
+		}
+
+		private static bool UseColorForDiagnostics()
+		{
+			string? colorEnv = Environment.GetEnvironmentVariable( "MYLL_COLOR" );
+			return colorEnv == "1" ? true
+			     : colorEnv == "0" ? false
+			     : !Console.IsErrorRedirected
+			       && string.IsNullOrEmpty( Environment.GetEnvironmentVariable( "NO_COLOR" ) );
 		}
 
 		private static string ClassifyModule( MyllParser.ProgContext c )
@@ -253,12 +285,28 @@ namespace Myll
 			List<string> inputFiles = opt.InFiles.ToList();
 			inputFiles.AddRange( CollectExternFiles( opt ) );
 
-			List<(GlobalNamespace Module, CompilationContext Context)> modules
+			List<(MyllParser.ProgContext Prog, List<Diagnostic> Diagnostics)> parseResults
 				= inputFiles
 					.Select( CreateParser )
 					.AsParallel()
 					.Select( ParseCST )
 					.AsSequential()
+					.ToList();
+
+			List<Diagnostic> syntaxDiagnostics = parseResults
+				.SelectMany( r => r.Diagnostics )
+				.ToList();
+
+			if( syntaxDiagnostics.Count > 0 ) {
+				Console.Error.Write( DiagnosticFormatter.Format( syntaxDiagnostics, UseColorForDiagnostics() ) );
+
+				if( !opt.IsKeepGoing )
+					Environment.Exit( -99 );
+			}
+
+			List<(GlobalNamespace Module, CompilationContext Context)> modules
+				= parseResults
+					.Select( r => r.Prog )
 					.GroupBy( ClassifyModule )
 					.ToImmutableArray()
 					// TODO .AsParallel() causes errors, as CompileModule changes globals
@@ -267,17 +315,21 @@ namespace Myll
 						g.All( p => IsPrototypeFile( p.Start.InputStream.SourceName ) ) ) )
 					.ToList();
 
+			List<Diagnostic> visitorDiagnostics = modules
+				.SelectMany( m => m.Context.Diagnostics )
+				.ToList();
+
+			if( visitorDiagnostics.Count > 0 ) {
+				Console.Error.Write( DiagnosticFormatter.Format( visitorDiagnostics, UseColorForDiagnostics() ) );
+
+				if( !opt.IsKeepGoing )
+					Environment.Exit( -99 );
+			}
+
 			if( opt.IsResolve ) {
 				var (result, diagnostics) = NameResolver.Resolve( modules );
 				if( diagnostics.Count > 0 ) {
-					string? colorEnv = Environment.GetEnvironmentVariable( "MYLL_COLOR" );
-					bool useColor = colorEnv == "1" ? true
-					              : colorEnv == "0" ? false
-					              : !Console.IsErrorRedirected
-					                && string.IsNullOrEmpty(
-						                	Environment.GetEnvironmentVariable( "NO_COLOR" ) );
-
-					Console.Error.Write( DiagnosticFormatter.Format( diagnostics, useColor ) );
+					Console.Error.Write( DiagnosticFormatter.Format( diagnostics, UseColorForDiagnostics() ) );
 
 					if( !opt.IsKeepGoing )
 						Environment.Exit( -99 );

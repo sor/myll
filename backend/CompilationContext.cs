@@ -14,6 +14,8 @@ namespace Myll
 
 		public bool IsPrototypeFile { get; init; }
 
+		public List<Diagnostic> Diagnostics { get; } = new();
+
 		public ExprVisitor ExprVisitor { get; }
 
 		public StmtVisitor StmtVisitor { get; }
