@@ -345,6 +345,7 @@ namespace Myll
 			}
 
 			new ElseOnLoopTransformer().Transform( modules, new List<Diagnostic>() );
+			new BreakContinueTransformer().Transform( modules, new List<Diagnostic>() );
 
 			List<(List<(string, IStrings)> Files, List<Diagnostic> Diagnostics)> generationResults
 				= modules

@@ -130,13 +130,7 @@ namespace Myll.Core
 		public int depth = 1; // C++ default is 1, break one level
 
 		public override Strings Gen( int level )
-		{
-			if( depth != 1 )
-				throw new NotImplementedException(
-					"no depth except 1 supported directly, analyze step must take care of this!" );
-
-			return Format( "break;" ).IndentAll( level );
-		}
+			=> Format( "break;" ).IndentAll( level );
 	}
 
 	public class ContinueStmt : Stmt
@@ -144,13 +138,7 @@ namespace Myll.Core
 		public int depth = 1; // C++ default is 1, continue the innermost loop
 
 		public override Strings Gen( int level )
-		{
-			if( depth != 1 )
-				throw new NotImplementedException(
-					"no depth except 1 supported directly, analyze step must take care of this!" );
-
-			return Format( "continue;" ).IndentAll( level );
-		}
+			=> Format( "continue;" ).IndentAll( level );
 	}
 
 	public class CatchClause
