@@ -9,7 +9,7 @@
 //module stack;
 
 // prevents unnecessary nesting
-namespace Rethmann::OOA::Uebung2_3;
+namespace Rethmann::OOA::Uebung2_3:
 
 class StackEmptyException {}
 
