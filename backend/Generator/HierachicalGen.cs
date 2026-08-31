@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Myll.Core;
+using Myll.Resolver;
 
 namespace Myll.Generator
 {
@@ -102,6 +103,8 @@ namespace Myll.Generator
 		private readonly Access defaultAccess;
 
 		private readonly Hierarchical hierarchical;
+
+		public List<Diagnostic> Diagnostics { get; } = new();
 
 		private int LevelDecl { get; }
 		private int LevelImpl { get; }
@@ -436,8 +439,13 @@ namespace Myll.Generator
 				}
 
 				if( !isExternal ) {
-					if( obj.body == null )
-						throw new InvalidOperationException( String.Format( "Non-external function '{0}' must have a body", obj.FullyQualifiedName ) );
+					if( obj.body == null ) {
+						Diagnostics.Add( new Diagnostic(
+							obj.srcPos,
+							DiagnosticKind.Error,
+							String.Format( "Non-external function '{0}' must have a body", obj.FullyQualifiedName ) ) );
+						return;
+					}
 
 					if( hasTpl )
 						targetDecl.Add( tplDecl );
@@ -447,8 +455,13 @@ namespace Myll.Generator
 				}
 			}
 			else {
-				if( obj.body == null )
-					throw new InvalidOperationException( String.Format( "Non-external function '{0}' must have a body", obj.FullyQualifiedName ) );
+				if( obj.body == null ) {
+					Diagnostics.Add( new Diagnostic(
+						obj.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Non-external function '{0}' must have a body", obj.FullyQualifiedName ) ) );
+					return;
+				}
 
 				string headlineImpl = Format(
 					FuncFormat[0],
@@ -662,15 +675,25 @@ namespace Myll.Generator
 			if( isInlined ) {
 				targetDecl.Add( headlineDecl );
 				if( !isDefault && !isDisabled ) {
-					if( obj.body == null )
-						throw new InvalidOperationException( String.Format( "Non-default/non-disabled constructor/destructor '{0}' must have a body", obj.FullyQualifiedName ) );
+					if( obj.body == null ) {
+						Diagnostics.Add( new Diagnostic(
+							obj.srcPos,
+							DiagnosticKind.Error,
+							String.Format( "Non-default/non-disabled constructor/destructor '{0}' must have a body", obj.FullyQualifiedName ) ) );
+						return;
+					}
 
 					targetDecl.AddRange( obj.body.Gen( LevelDecl ) );
 				}
 			}
 			else {
-				if( obj.body == null )
-					throw new InvalidOperationException( String.Format( "Non-default/non-disabled constructor/destructor '{0}' must have a body", obj.FullyQualifiedName ) );
+				if( obj.body == null ) {
+					Diagnostics.Add( new Diagnostic(
+						obj.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Non-default/non-disabled constructor/destructor '{0}' must have a body", obj.FullyQualifiedName ) ) );
+					return;
+				}
 
 				string headlineImpl = Format(
 					FuncFormat[1],

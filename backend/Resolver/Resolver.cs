@@ -66,7 +66,7 @@ namespace Myll.Resolver
 			};
 
 			foreach( ITransformer transformer in preResolveTransforms )
-				transformer.Transform( modules );
+				transformer.Transform( modules, diagnostics );
 
 			var exports  = BuildModuleExports( modules );
 			var resolver = new NameResolver( exports, result, diagnostics );
@@ -94,7 +94,7 @@ namespace Myll.Resolver
 			};
 
 			foreach( ITransformer transformer in postResolveTransforms )
-				transformer.Transform( modules );
+				transformer.Transform( modules, diagnostics );
 
 			resolver.ValidateTypes( modules );
 			resolver.ReportUnresolved( modules );

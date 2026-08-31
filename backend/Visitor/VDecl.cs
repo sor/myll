@@ -129,6 +129,16 @@ namespace Myll
 			if( attribs != null )
 				ret.AssignAttribs( attribs );
 
+			switch( ret ) {
+				case Func func:
+					ValidateForwardDeclaration( func );
+					break;
+				case MultiDecl multi:
+					foreach( Func func in multi.decls.OfType<Func>() )
+						ValidateForwardDeclaration( func );
+					break;
+			}
+
 			return ret;
 		}
 		private void ValidateForwardDeclaration( Decl decl )
@@ -682,7 +692,6 @@ namespace Myll
 
 			PopScope();
 			AddChild( ret );
-			ValidateForwardDeclaration( ret );
 
 			return ret;
 		}

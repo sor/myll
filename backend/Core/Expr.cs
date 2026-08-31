@@ -4,6 +4,7 @@ using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
 using Myll.Generator;
+using Myll.Resolver;
 
 namespace Myll.Core
 {
@@ -379,7 +380,10 @@ namespace Myll.Core
 				.Join( ", " );
 
 			if( func.body == null )
-				throw new InvalidOperationException( String.Format( "Lambda at {0} must have a body", func.srcPos?.ToString() ?? "<unknown location>" ) );
+				throw new DiagnosticException( new Diagnostic(
+					func.srcPos,
+					DiagnosticKind.Error,
+					"Lambda must have a body" ) );
 
 			List<string> body        = func.body.GenWithoutCurly( 1 );
 			bool         shortLambda = body.Count <= 1;
@@ -587,7 +591,10 @@ namespace Myll.Core
 					Pointer.Kind.UniqueArray => "std::make_unique<{0}[]>({1})",
 					Pointer.Kind.Shared      => "std::make_shared<{0}>({1})",
 					Pointer.Kind.SharedArray => "std::make_shared<{0}[]>({1})",
-					_                        => throw new Exception( "weak_ptr can not be new'ed" ),
+					_                        => throw new DiagnosticException( new Diagnostic(
+						srcPos,
+						DiagnosticKind.Error,
+						"weak_ptr can not be new'ed" ) ),
 				};
 
 				// remove the outermost smart pointer from the type without mutating the AST
@@ -600,7 +607,10 @@ namespace Myll.Core
 					Pointer.Kind.Shared      => funcCall.args.Select( a => a.Gen() ).Join( ", " ),
 					Pointer.Kind.UniqueArray => ptr.expr?.Gen() ?? "",
 					Pointer.Kind.SharedArray => ptr.expr?.Gen() ?? "",
-					_                        => throw new Exception( "weak_ptr can not be new'ed" ),
+					_                        => throw new DiagnosticException( new Diagnostic(
+						srcPos,
+						DiagnosticKind.Error,
+						"weak_ptr can not be new'ed" ) ),
 				};
 
 				ret = Format( ptrFmt, innerType, args );

@@ -26,35 +26,37 @@ namespace Myll.Resolver
 			("operator^=", Operand.BitXor),
 		};
 
-		public void Transform( IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules )
+		public void Transform(
+			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules,
+			List<Diagnostic> diagnostics )
 		{
 			foreach( (GlobalNamespace module, _) in modules )
-				TransformDecl( module );
+				TransformDecl( module, diagnostics );
 		}
 
-		private static void TransformDecl( Decl decl )
+		private static void TransformDecl( Decl decl, List<Diagnostic> diagnostics )
 		{
 			if( decl is Enumeration enumeration )
-				TransformEnumeration( enumeration );
+				TransformEnumeration( enumeration, diagnostics );
 
 			if( decl is Hierarchical h ) {
 				// Snapshot the children because synthesizing enum operators can add
 				// new declarations to the same namespace we are currently iterating.
 				foreach( Decl child in h.children.ToList() )
-					TransformDecl( child );
+					TransformDecl( child, diagnostics );
 			}
 		}
 
-		private static void TransformEnumeration( Enumeration enumeration )
+		private static void TransformEnumeration( Enumeration enumeration, List<Diagnostic> diagnostics )
 		{
 			if( enumeration.IsFlags )
-				NumberFlags( enumeration );
+				NumberFlags( enumeration, diagnostics );
 
 			if( enumeration.IsOpBitwise )
 				SynthesizeBitwiseOperators( enumeration );
 		}
 
-		private static void NumberFlags( Enumeration enumeration )
+		private static void NumberFlags( Enumeration enumeration, List<Diagnostic> diagnostics )
 		{
 			uint index = 1;
 			foreach( Decl child in enumeration.children ) {
@@ -66,12 +68,15 @@ namespace Myll.Resolver
 					index = readIndex == 0 ? 1 : readIndex * 2;
 				}
 				else {
-					if( !IsPowerOfTwo( index ) )
-						throw new Exception(
+					if( !IsPowerOfTwo( index ) ) {
+						diagnostics.Add( new Diagnostic(
+							ee.srcPos,
+							DiagnosticKind.Error,
 							String.Format(
-								"'[flags]enum' auto numbering not a power of two: {0} at {1}",
-								index,
-								ee.srcPos ) );
+								"'[flags]enum' auto numbering not a power of two: {0}",
+								index ) ) );
+						return;
+					}
 
 					ee.value = new Literal { op = Operand.Literal, text = index.ToString() };
 					index   *= 2;

@@ -197,10 +197,6 @@ namespace Myll.Core
 
 		public override void AddToGen( HierarchicalGen gen )
 		{
-			// null body could be used for extern stuff
-			if( body == null && !IsExternal )
-				throw new Exception( "Func has body: null" );
-
 			gen.AddFunc( this );
 		}
 	}
@@ -222,9 +218,6 @@ namespace Myll.Core
 
 		public override void AddToGen( HierarchicalGen gen )
 		{
-			if( body == null && !IsDefault && !IsDisabled )
-				throw new Exception( "Structor with no body needs either [default] or [disable](delete in C++)" );
-
 			gen.AddStructor( this );
 		}
 	}

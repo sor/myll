@@ -242,7 +242,8 @@ namespace Myll
 			|| path.EndsWith( ".decl.myll", StringComparison.OrdinalIgnoreCase )
 			|| path.EndsWith( ".extern.myll", StringComparison.OrdinalIgnoreCase );
 
-		private static List<(string, IStrings)> GenerateFiles( GlobalNamespace global_ns )
+		private static (List<(string, IStrings)> Files, List<Diagnostic> Diagnostics) GenerateFiles(
+			GlobalNamespace global_ns )
 		{
 			List<(string, IStrings)> ret = new();
 
@@ -250,15 +251,20 @@ namespace Myll
 			// do NOT call gen.AddNamespace( ret ).
 			// Instead AddToGen() is there to call the correct virtual method on the gen
 			// TODO why is it adding itself as a child?
-			global_ns.AddToGen( gen );
+			try {
+				global_ns.AddToGen( gen );
 
-			IStrings decl = gen.GenDeclGlobal();
-			IStrings? impl = gen.GenImplGlobal();
-			if( decl != null ) ret.Add( (string.Format( "{0}.hpp", global_ns.module ), decl) );
-			if( impl != null ) ret.Add( (string.Format( "{0}.cpp", global_ns.module ), impl) );
+				IStrings decl = gen.GenDeclGlobal();
+				IStrings? impl = gen.GenImplGlobal();
+				if( decl != null ) ret.Add( (string.Format( "{0}.hpp", global_ns.module ), decl) );
+				if( impl != null ) ret.Add( (string.Format( "{0}.cpp", global_ns.module ), impl) );
+			}
+			catch( DiagnosticException ex ) {
+				gen.Diagnostics.Add( ex.Diagnostic );
+			}
 
 			//Console.WriteLine( "Time elapsed after GenerateFiles  {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
-			return ret;
+			return (ret, gen.Diagnostics);
 		}
 
 		public static int Main( string[] args )
@@ -338,13 +344,25 @@ namespace Myll
 				result.Apply();
 			}
 
-			IEnumerable<(string, IStrings)> output
+			List<(List<(string, IStrings)> Files, List<Diagnostic> Diagnostics)> generationResults
 				= modules
 					.Where( m => !m.Context.IsPrototypeFile )
 					.AsParallel()
-					.SelectMany( m => GenerateFiles( m.Module ) )
-					//.ToImmutableArray()
-					;
+					.Select( m => GenerateFiles( m.Module ) )
+					.ToList();
+
+			IEnumerable<(string, IStrings)> output = generationResults.SelectMany( r => r.Files );
+
+			List<Diagnostic> generationDiagnostics = generationResults
+				.SelectMany( r => r.Diagnostics )
+				.ToList();
+
+			if( generationDiagnostics.Count > 0 ) {
+				Console.Error.Write( DiagnosticFormatter.Format( generationDiagnostics, UseColorForDiagnostics() ) );
+
+				if( !opt.IsKeepGoing )
+					Environment.Exit( -99 );
+			}
 
 			Console.WriteLine( "Time elapsed after last ToArray call {0:0}ms\n", (DateTime.Now - start).TotalMilliseconds );
 
