@@ -1,0 +1,10 @@
+module main;
+
+[extern]
+func exit(i32 code);
+
+func main() -> int
+{
+	exit(0);
+	return 0;
+}
