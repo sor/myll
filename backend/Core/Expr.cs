@@ -554,7 +554,10 @@ namespace Myll.Core
 				Operand.ConstCast       => "const_cast<{1}>( {0} )",
 				Operand.BitCast         => "std::bit_cast<{1}>( {0} )",
 				Operand.ReinterpretCast => "reinterpret_cast<{1}>( {0} )",
-				_                       => throw new Exception( Format( "Invalid cast of {0} to {1}", expr?.Gen() ?? "", type.Gen() ) ),
+				_                       => throw new DiagnosticException( new Diagnostic(
+					srcPos,
+					DiagnosticKind.Error,
+					Format( "Invalid cast of {0} to {1}", expr?.Gen() ?? "", type.Gen() ) ) ),
 			};
 			string
 				exprText = expr.Gen(),

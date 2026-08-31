@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
 using Myll.Generator;
+using Myll.Resolver;
 
 namespace Myll.Core
 {
@@ -45,7 +46,10 @@ namespace Myll.Core
 			bool   isConstType   = (type.qual & Qualifier.Const) != 0;
 
 			if( IsNoInit && isConstType )
-				throw new NotSupportedException( "[noinit]/[uninit] cannot be used with const variables" );
+				throw new DiagnosticException( new Diagnostic(
+					srcPos,
+					DiagnosticKind.Error,
+					"[noinit]/[uninit] cannot be used with const variables" ) );
 
 			string initStr = init != null
 				? VarFormat[6] + init.Gen()

@@ -10,7 +10,7 @@ namespace Myll.Resolver
 	}
 
 	public sealed record Diagnostic(
-		SrcPos Location,
+		SrcPos? Location,
 		DiagnosticKind Kind,
 		string Message );
 }

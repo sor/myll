@@ -278,22 +278,28 @@ namespace Myll.Generator
 			bool isConstType      = (obj.type.qual & Qualifier.Const) != 0;
 			bool isExtern         = !isInsideStruct && ( isExplicitExtern || !( isHidden || isInlined || isCompileTime || isConstType ) );
 
-			if( obj.IsNoInit && ( isConstType || isCompileTime ) )
-				throw new NotSupportedException( "[noinit]/[uninit] cannot be used with const or compile-time variables" );
+			bool hadError = false;
+			void Error( string message )
+			{
+				Diagnostics.Add( new Diagnostic( obj.srcPos, DiagnosticKind.Error, message ) );
+				hadError = true;
+			}
 
-			// TODO: report source location (file, line, column) for all of these attribute/duplicate errors.
+			if( obj.IsNoInit && ( isConstType || isCompileTime ) )
+				Error( "[noinit]/[uninit] cannot be used with const or compile-time variables" );
+
 			if( isInsideStruct ) {
-				if( isHidden )                    throw new NotSupportedException( "[hide]/[hidden] is only valid at module/namespace scope." );
-				if( isExplicitExtern )            throw new NotSupportedException( "[extern] is only valid at module/namespace scope." );
-				if( isInlined      && !isStatic ) throw new NotSupportedException( "[inline] on a class field requires [static]." );
-				if( isCompileTime && !isStatic )  throw new NotSupportedException( "[ct] on a class field requires [static]." );
+				if( isHidden )                    Error( "[hide]/[hidden] is only valid at module/namespace scope." );
+				if( isExplicitExtern )            Error( "[extern] is only valid at module/namespace scope." );
+				if( isInlined      && !isStatic ) Error( "[inline] on a class field requires [static]." );
+				if( isCompileTime && !isStatic )  Error( "[ct] on a class field requires [static]." );
 			} else {
-				if( isStatic )               throw new NotSupportedException( "[static] is only valid on class fields; use [hide]/[hidden] for module-level variables." );
-				if( isInlined && isHidden )  throw new NotSupportedException( "[inline] and [hide] are mutually exclusive." );
+				if( isStatic )               Error( "[static] is only valid on class fields; use [hide]/[hidden] for module-level variables." );
+				if( isInlined && isHidden )  Error( "[inline] and [hide] are mutually exclusive." );
 				if( isExplicitExtern ) {
-					if( isInlined )         throw new NotSupportedException( "[extern] and [inline] are mutually exclusive." );
-					if( isHidden )          throw new NotSupportedException( "[extern] and [hide]/[hidden] are mutually exclusive." );
-					if( isCompileTime )     throw new NotSupportedException( "[extern] cannot be used with [ct]." );
+					if( isInlined )         Error( "[extern] and [inline] are mutually exclusive." );
+					if( isHidden )          Error( "[extern] and [hide]/[hidden] are mutually exclusive." );
+					if( isCompileTime )     Error( "[extern] cannot be used with [ct]." );
 				} else if( isHidden ) {
 					// nothing else to set
 				} else if( isInlined || isCompileTime || isConstType ) {
@@ -302,6 +308,9 @@ namespace Myll.Generator
 					// module-level variables are external by default unless hidden/inline/ct/const
 				}
 			}
+
+			if( hadError )
+				return;
 
 			AccessStrings targetDecl = isStatic ? staticFieldDecl : fieldDecl;
 			AccessStrings targetImpl = isStatic ? staticFieldImpl : fieldImpl;

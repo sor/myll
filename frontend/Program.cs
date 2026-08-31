@@ -410,6 +410,11 @@ namespace Myll
 
 				Directory.SetCurrentDirectory( opt.OutPath );
 
+				if( !CppCompiler.TryFindCompiler( out _, out Diagnostic? compilerDiagnostic ) ) {
+					Console.Error.Write( DiagnosticFormatter.Format( compilerDiagnostic!, UseColorForDiagnostics() ) );
+					return -1;
+				}
+
 				string[] cppFiles = Directory.GetFiles( ".", "*.cpp" );
 				string envFlags = Environment.GetEnvironmentVariable( "MYLL_CXXFLAGS" )
 				               ?? Environment.GetEnvironmentVariable( "CXXFLAGS" )

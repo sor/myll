@@ -83,28 +83,49 @@ namespace Myll
 			}
 		}
 
-		private static string FindCompiler()
+		public static bool TryFindCompiler( out string compiler, out Myll.Resolver.Diagnostic? diagnostic )
 		{
 			string? envCompiler = Environment.GetEnvironmentVariable( "MYLL_CXX" );
 			if( !string.IsNullOrWhiteSpace( envCompiler ) ) {
-				if( !Exists( envCompiler ) )
-					throw new InvalidOperationException(
+				if( !Exists( envCompiler ) ) {
+					compiler  = envCompiler;
+					diagnostic = new Myll.Resolver.Diagnostic(
+						null,
+						Myll.Resolver.DiagnosticKind.Error,
 						string.Format( "C++ compiler '{0}' specified by MYLL_CXX was not found.", envCompiler ) );
+					return false;
+				}
 
-				return envCompiler;
+				compiler  = envCompiler;
+				diagnostic = null;
+				return true;
 			}
 
 			string[] compilers = RuntimeInformation.IsOSPlatform( OSPlatform.Windows )
 				? new[] { "cl", "clang++", "g++" }
 				: new[] { "clang++", "g++", "cl" };
 
-			foreach( string compiler in compilers ) {
-				if( Exists( compiler ) )
-					return compiler;
+			foreach( string c in compilers ) {
+				if( Exists( c ) ) {
+					compiler  = c;
+					diagnostic = null;
+					return true;
+				}
 			}
 
-			throw new InvalidOperationException(
+			compiler  = "";
+			diagnostic = new Myll.Resolver.Diagnostic(
+				null,
+				Myll.Resolver.DiagnosticKind.Error,
 				"No C++ compiler found. Tried: " + string.Join( ", ", compilers ) );
+			return false;
+		}
+
+		private static string FindCompiler()
+		{
+			if( !TryFindCompiler( out string compiler, out Myll.Resolver.Diagnostic? diagnostic ) )
+				throw new InvalidOperationException( diagnostic!.Message );
+			return compiler;
 		}
 
 		private static string BuildArguments(
