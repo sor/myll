@@ -344,6 +344,8 @@ namespace Myll
 				result.Apply();
 			}
 
+			new ElseOnLoopTransformer().Transform( modules, new List<Diagnostic>() );
+
 			List<(List<(string, IStrings)> Files, List<Diagnostic> Diagnostics)> generationResults
 				= modules
 					.Where( m => !m.Context.IsPrototypeFile )

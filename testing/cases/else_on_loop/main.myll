@@ -1,0 +1,26 @@
+func main() -> int
+{
+	var int result = 0;
+
+	var int i = 0;
+	for( i = 0; i < 0; i++ ) {
+		result = 100;
+	} else {
+		result = result + 1;
+	}
+
+	while( false ) {
+		result = 100;
+	} else {
+		result = result + 2;
+	}
+
+	var int j = 0;
+	for( j = 0; j < 1; j++ ) {
+		result = result + 10;
+	} else {
+		result = 1000;
+	}
+
+	return result == 13 ? 0 : 1;
+}

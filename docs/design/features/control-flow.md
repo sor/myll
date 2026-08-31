@@ -95,6 +95,29 @@ do n times i {
 
 The `times` loop is a productivity feature for the common "repeat N times" pattern.
 
+## Loop Else
+
+```
+for init; condition; increment {
+    // body
+} else {
+    // runs only if the body was never entered
+}
+
+while condition {
+    // body
+} else {
+    // runs only if the body was never entered
+}
+```
+
+Myll loop `else` is the "was NOT entered" branch.
+The `else` body runs ONLY if the loop condition is false on the first check and the loop body never executes.
+If the body runs even once — even if it immediately `break`s — the `else` body is skipped.
+
+This is NOT the same as Python's loop `else`, which runs when the loop exits normally without a `break`.
+In Python the `else` runs after the body has executed any number of times; in Myll the `else` runs only when the body has executed zero times.
+
 ## Break and Continue
 
 ```

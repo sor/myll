@@ -409,9 +409,6 @@ namespace Myll.Core
 
 		public override Strings Gen( int level )
 		{
-			if( els != null )
-				throw new NotImplementedException( "Else for for-loop not implemented yet" );
-
 			if( init is MultiStmt )
 				throw new NotImplementedException( "A MultiStmt can not be used in for-loop as init" );
 
@@ -456,9 +453,6 @@ namespace Myll.Core
 
 		public override Strings Gen( int level )
 		{
-			if( els != null )
-				throw new NotImplementedException( "implement else for while-loop" );
-
 			Strings ret    = new();
 			string  indent = IndentString.Repeat( level );
 			ret.Add( Format( "{0}while( {1} ) {{", indent, cond.Gen() ) );
