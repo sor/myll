@@ -19,6 +19,7 @@ Myll is an experimental programming language that compiles to C++. It aims to pr
 - Build: `dotnet build myll.sln`
 - Run compiler: `dotnet run --project frontend -- <args>`
 - Run tests: `dotnet test testing/`
+- Run a single integration case: `dotnet test testing/ --filter "DisplayName~caseName"` (use `dotnet test testing/ --list-tests` to discover case names)
 - Targets: net10.0
 - C# Language Version: 9.0
 
