@@ -270,7 +270,14 @@ namespace Myll
 			if( opt.IsResolve ) {
 				var (result, diagnostics) = NameResolver.Resolve( modules );
 				if( diagnostics.Count > 0 ) {
-					Console.Error.Write( DiagnosticFormatter.Format( diagnostics ) );
+					string? colorEnv = Environment.GetEnvironmentVariable( "MYLL_COLOR" );
+					bool useColor = colorEnv == "1" ? true
+					              : colorEnv == "0" ? false
+					              : !Console.IsErrorRedirected
+					                && string.IsNullOrEmpty(
+						                	Environment.GetEnvironmentVariable( "NO_COLOR" ) );
+
+					Console.Error.Write( DiagnosticFormatter.Format( diagnostics, useColor ) );
 
 					if( !opt.IsKeepGoing )
 						Environment.Exit( -99 );

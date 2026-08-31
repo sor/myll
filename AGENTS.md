@@ -70,6 +70,8 @@ dotnet run --project frontend/frontend.csproj -- \
 | `MYLL_CXX` | If set, use this executable as the C++ compiler for the internal `-c` / `-cr` path. When unset, Myll tries `clang++`, `g++`, and `cl` in platform order. |
 | `MYLL_TEST_TEMP` | If set, each test case uses an isolated temp directory under `testing/generated/` instead of the fixed case directory. This prevents concurrent test runs from interfering and avoids relying on `/tmp`, which is often mounted `noexec`. |
 | `MYLL_TEST` | If set, generated test binaries such as game of life reduce delays so automated test runs complete faster. |
+| `MYLL_COLOR` | Overrides color output for diagnostics. `1` forces colors on, `0` forces colors off. When unset, Myll enables colors automatically when stderr is a terminal, unless `NO_COLOR` is set. |
+| `NO_COLOR` | If set to any non-empty value, suppresses diagnostic colors, matching the community convention. |
 
 ## Project Layout
 

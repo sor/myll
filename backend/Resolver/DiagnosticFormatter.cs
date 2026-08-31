@@ -40,7 +40,7 @@ namespace Myll.Resolver
 		{
 			AppendHeader( sb, diagnostic, useColor );
 			if( diagnostic.Location != null )
-				AppendSourceContext( sb, diagnostic.Location, cache );
+				AppendSourceContext( sb, diagnostic.Location, cache, diagnostic.Kind, useColor );
 		}
 
 		private static void AppendHeader( StringBuilder sb, Diagnostic diagnostic, bool useColor )
@@ -65,7 +65,12 @@ namespace Myll.Resolver
 					diagnostic.Message ) );
 		}
 
-		private static void AppendSourceContext( StringBuilder sb, SrcPos srcPos, FileCache cache )
+		private static void AppendSourceContext(
+			StringBuilder sb,
+			SrcPos srcPos,
+			FileCache cache,
+			DiagnosticKind kind,
+			bool useColor )
 		{
 			if( !File.Exists( srcPos.file ) )
 				return;
@@ -100,7 +105,16 @@ namespace Myll.Resolver
 					int length      = visualEnd - visualStart;
 
 					sb.Append( new string( ' ', linePrefix.Length + visualStart ) );
-					sb.AppendLine( new string( '^', Math.Max( length, 1 ) ) );
+
+					if( useColor )
+						sb.Append( ColorFor( kind ) );
+
+					sb.Append( new string( '^', Math.Max( length, 1 ) ) );
+
+					if( useColor )
+						sb.Append( ResetColor );
+
+					sb.AppendLine();
 				}
 			}
 		}
