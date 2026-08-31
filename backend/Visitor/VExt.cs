@@ -190,7 +190,7 @@ namespace Myll
 				},
 				to = {
 					line = c.Stop.Line,
-					col  = c.Stop.Column,
+					col  = c.Stop.Column + ( c.Stop.Text?.Length ?? 0 ),
 				},
 			};
 
