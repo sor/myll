@@ -70,7 +70,12 @@ class Formatter
 {
 [pub]:
 	[virtual]
-	func format( const DirEntry & e ) -> string => "";
+	func format( const DirEntry & e ) -> string
+	{
+		if( e.name().length() == 0 )
+			return "";
+		return "";
+	}
 }
 
 func humanSize( u64 bytes ) -> string
@@ -266,7 +271,7 @@ func main( const int argc, const char *[] argv ) -> int
 	while( argc > i ) {
 		const string arg = (string)argv[i];
 		if( arg.length() > 1 && arg[0] == '-' ) {
-			var int j = 1;
+			var usize j = 1;
 			while( j < arg.length() ) {
 				switch( arg[j] ) {
 					case 'a': options.showAll       = true;

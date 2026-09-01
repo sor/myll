@@ -111,22 +111,32 @@ while condition {
 }
 ```
 
-Myll loop `else` is the "was NOT entered" branch.
-The `else` body runs ONLY if the loop condition is false on the first check and the loop body never executes.
+Myll loop `else` is the **"was NOT entered"** branch.
+The `else` body runs **ONLY** if the loop condition is false on the first check and the loop body never executes.
 If the body runs even once — even if it immediately `break`s — the `else` body is skipped.
 
-This is NOT the same as Python's loop `else`, which runs when the loop exits normally without a `break`.
-In Python the `else` runs after the body has executed any number of times; in Myll the `else` runs only when the body has executed zero times.
+> **Warning: This is deliberately NOT Python's loop `else`.**
+> Python's `else` runs when the loop finishes normally without a `break`.
+> Myll's `else` runs only when the body has executed zero times.
+> If you expect Python semantics you will be surprised: in Myll, `break` does not influence whether `else` runs; only whether the body was entered at all matters.
 
 ## Break and Continue
 
 ```
-break;          // break innermost loop/switch
-break 2;        // break 2 levels [depth > 1 planned]
-continue;       // continue innermost loop
+break;              // break innermost loop or switch
+break N;            // break N enclosing breakable constructs (loops + switches)
+continue;           // continue innermost loop
+continue N;         // continue the Nth enclosing loop; switches are NOT counted
 continue case X;    // [planned: continue to specific case]
 continue default;   // [planned]
 ```
+
+- `break N` counts both loops and switches as levels.
+- `continue N` counts only loops; switches are skipped when determining the target.
+- A plain `break` inside a switch still exits that switch.
+- A plain `continue` inside a loop still continues that loop.
+
+`break` and `continue` with an explicit depth are lowered to hidden flags so the exit works through arbitrary nesting of loops and switches.
 
 ## Return
 

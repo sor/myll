@@ -8,7 +8,7 @@ MYLL_ROOT ?= ../../..
 MYLL      := dotnet run --project $(MYLL_ROOT)/frontend -- -i '*.myll' -o gen
 
 CXX      ?= g++
-CXXFLAGS ?= -std=c++20 -I. -Ithird_party -DCXXOPTS_NO_REGEX -O1 -Wsuggest-override
+CXXFLAGS ?= -std=c++20 -I. -Ithird_party -DCXXOPTS_NO_REGEX -O1 -Wall -Wextra -Wsuggest-override
 
 RELEASE_FLAGS ?= -O2 -s
 DEBUG_FLAGS   ?= -Og -g
