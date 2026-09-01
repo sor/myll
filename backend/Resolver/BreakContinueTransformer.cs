@@ -59,15 +59,50 @@ namespace Myll.Resolver
 			List<Diagnostic> diagnostics )
 		{
 			var newStmts = new List<Stmt>();
+			List<Stmt>? prevGuards = null;
 
 			foreach( Stmt stmt in block.stmts ) {
 				newStmts.Add( TransformStmt( stmt, context, loops, diagnostics ) );
-				newStmts.AddRange( MakeFlagGuards( loops ) );
+
+				List<Stmt> guards = MakeFlagGuards( loops ).ToList();
+				if( !GuardListEquals( guards, prevGuards ) ) {
+					newStmts.AddRange( guards );
+					prevGuards = guards;
+				}
 			}
 
 			block.stmts = newStmts;
 			return block;
 		}
+
+		private static bool GuardListEquals( List<Stmt> a, List<Stmt>? b )
+		{
+			if( b == null || a.Count != b.Count )
+				return false;
+
+			for( int i = 0; i < a.Count; i++ ) {
+				if( !GuardEquals( a[i], b[i] ) )
+					return false;
+			}
+			return true;
+		}
+
+		private static bool GuardEquals( Stmt a, Stmt b )
+		{
+			if( a is not IfStmt ia || b is not IfStmt ib )
+				return false;
+
+			return String.Equals( GuardFlag( ia ), GuardFlag( ib ), StringComparison.Ordinal )
+			    && GuardActionType( ia ) == GuardActionType( ib );
+		}
+
+		private static Type GuardActionType( IfStmt guard )
+			=> guard.ifThens[0].then.GetType();
+
+		private static string GuardFlag( IfStmt guard )
+			=> guard.ifThens[0].cond is IdExpr id
+				? id.idTplArgs.id
+				: "";
 
 		private static IEnumerable<Stmt> MakeFlagGuards( List<LoopContext> loops )
 		{

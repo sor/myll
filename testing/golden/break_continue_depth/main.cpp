@@ -20,9 +20,6 @@ int main()
                 break;
             }
             result = result + 100;
-            if( myll_tmp_0 ) {
-                break;
-            }
         }
     }
     int a = 0;
@@ -44,9 +41,6 @@ int main()
                 continue;
             }
             count = count + 1;
-            if( myll_tmp_5 ) {
-                continue;
-            }
         }
     }
     int x = 0;
