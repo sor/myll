@@ -48,6 +48,8 @@ namespace Myll.Core
 		public bool IsImplicit  => HasAttrib( "implicit" );
 		public bool IsDefault   => HasAttrib( "default" );
 		public bool IsDisabled  => HasAttrib( "disable" );
+		public bool IsAbstract  => HasAttrib( "abstract" );
+		public bool IsDeleted   => HasAttrib( "delete" ) || HasAttrib( "disallow" );
 		public bool IsFlags     => HasAttrib( "flags" );
 		public bool IsOpBitwise => IsAttrib( "operators", "bitwise" );
 

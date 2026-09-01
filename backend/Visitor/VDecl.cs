@@ -155,6 +155,10 @@ namespace Myll
 			if( scopeStack.Peek().decl is Hierarchical h && h.IsExternal )
 				return;
 
+			if( decl is Func func
+			 && ( func.IsAbstract || func.IsDefault || func.IsDeleted ) )
+				return;
+
 			Context.Diagnostics.Add( new Diagnostic(
 				decl.srcPos,
 				DiagnosticKind.Error,
@@ -622,20 +626,21 @@ namespace Myll
 						},
 					};
 
-					ret = new() {
-						srcPos   = c.ToSrcPos(),
-						name     = "operator=",
-						access   = curAccess,
-						body     = c.funcBody().Visit( Context ),
-						Requires = VisitTypespecsNested( c.typespecsNested() ),
-						paras    = new() { param },
-						retType = new TypespecNested() {
-							idTpls = classIdTpls,
-							ptrs = new() {
-								new() { kind = Pointer.Kind.LVRef },
-							},
+				MultiStmt opBody = c.funcBody().Visit( Context );
+				ret = new() {
+					srcPos   = c.ToSrcPos(),
+					name     = "operator=",
+					access   = curAccess,
+					body     = IsEmptyFunctionBody( opBody ) ? null : opBody,
+					Requires = VisitTypespecsNested( c.typespecsNested() ),
+					paras    = new() { param },
+					retType = new TypespecNested() {
+						idTpls = classIdTpls,
+						ptrs = new() {
+							new() { kind = Pointer.Kind.LVRef },
 						},
-					};
+					},
+				};
 					//ret = VisitOpSpecialAssign( c );
 				}
 				else if( c.CONVERT() != null ) {

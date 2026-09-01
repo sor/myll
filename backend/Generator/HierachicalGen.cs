@@ -403,12 +403,21 @@ namespace Myll.Generator
 				.Select( p => p.Gen() )
 				.Join( ", " );
 
+			bool isAbstract = obj.IsAbstract;
+			bool isDefault  = obj.IsDefault;
+			bool isDeleted  = obj.IsDeleted;
+			string specialTail = isAbstract ? " = 0"
+			                   : isDefault  ? " = default"
+			                   : isDeleted  ? " = delete"
+			                   : "";
+			bool isSpecial = specialTail != "";
+
 			string prefix = (isStatic       ? "static "   : "")
-			              + (isExternal     ? "extern "   : "")
-			              + (obj.IsVirtual  ? "virtual "  : "")
-			              + (isInlined      ? "inline "   : "");
+		              + (isExternal     ? "extern "   : "")
+		              + (obj.IsVirtual || isAbstract ? "virtual "  : "")
+		              + (isInlined      ? "inline "   : "");
 			string suffix = (obj.IsPure     ? " const"    : "")
-			              + (obj.IsOverride ? " override" : "");
+		              + (obj.IsOverride ? " override" : "");
 			string headlineDecl = Format(
 				FuncFormat[0],
 				indentDecl,
@@ -416,6 +425,12 @@ namespace Myll.Generator
 				obj.retType.Gen( nameDecl ),
 				paramString,
 				suffix );
+
+			if( isAbstract && obj.IsVirtual )
+				Diagnostics.Add( new Diagnostic(
+					obj.srcPos,
+					DiagnosticKind.Warning,
+					String.Format( "[virtual] is redundant on an abstract method '{0}'", obj.FullyQualifiedName ) ) );
 
 			// TODO add the surrounding templates as well for tplImpl
 			string tplDecl, tplImpl;
@@ -437,6 +452,40 @@ namespace Myll.Generator
 			else {
 				tplDecl = string.Empty;
 				tplImpl = string.Empty;
+			}
+
+			// TODO: [default] on free functions is invalid C++ unless it is a special member;
+			// we currently emit it and let the C++ compiler complain. Add a Myll-side error later.
+			if( isSpecial ) {
+				if( obj.body != null ) {
+					Diagnostics.Add( new Diagnostic(
+						obj.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Special function '{0}' (abstract/default/delete) must not have a body", obj.FullyQualifiedName ) ) );
+					return;
+				}
+
+				if( isAbstract && !isInsideStruct ) {
+					Diagnostics.Add( new Diagnostic(
+						obj.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Abstract method '{0}' must be inside a class or struct", obj.FullyQualifiedName ) ) );
+					return;
+				}
+
+				if( isSpecial && ( isInlined || isExternal || isStatic ) ) {
+					Diagnostics.Add( new Diagnostic(
+						obj.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Special function '{0}' cannot be combined with [inline], [extern] or [static]", obj.FullyQualifiedName ) ) );
+					return;
+				}
+
+				if( hasTpl )
+					targetProto.Add( tplDecl );
+
+				targetProto.Add( headlineDecl + specialTail + ";" );
+				return;
 			}
 
 			// TODO: move inlines to bottom of header

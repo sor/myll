@@ -26,7 +26,7 @@ attrib		:	attribId
 				|	'(' idOrLit (COMMA idOrLit)* COMMA? ')'
 			//	|	'(' idOrLitx+=~')' (COMMA idOrLitx+=~')')* COMMA? ')'
 				)?;
-attribId	:	id | CONST | FALL | THROW | DEFAULT;
+attribId	:	id | CONST | FALL | THROW | DEFAULT | DELETE;
 
 
 // DECLs
