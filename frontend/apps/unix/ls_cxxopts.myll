@@ -1,11 +1,25 @@
-module ls;
+module ls_cxxopts;
 
-import std_iostream, std_filesystem, std_vector, std_string, std_algorithm, ls_helpers;
+import std_iostream, std_filesystem, std_vector, std_string, std_algorithm, ls_helpers, cxxopts.hpp;
 
 enum SortMode {
 	Name,
 	Size,
 	Time,
+}
+
+struct Options
+{
+	field {
+		bool showAll = false;
+		bool almostAll = false;
+		bool nameOnly = false;
+		bool humanReadable = false;
+		bool longFormat = false;
+		bool recursive = false;
+		bool reverse = false;
+		SortMode sortMode = SortMode::Name;
+	}
 }
 
 class DirEntry
@@ -52,18 +66,6 @@ class DirEntry
 
 	[pure]
 	func isDirectory() -> bool => _isDirectory;
-}
-
-struct Options
-{
-	field bool showAll;
-	field bool almostAll;
-	field bool nameOnly;
-	field bool humanReadable;
-	field bool longFormat;
-	field bool recursive;
-	field bool reverse;
-	field SortMode sortMode;
 }
 
 class Formatter
@@ -193,7 +195,7 @@ func shouldShow( const DirEntry & e, const Options & options ) -> bool
 func listPath( const std::filesystem::path & target, const Options & options, Formatter *! & fmt, bool printHeader ) -> int
 {
 	if( !std::filesystem::exists( target ) ) {
-		std::cerr << "ls: " << target.generic_string() << ": No such file or directory\n";
+		std::cerr << "ls_cxxopts: " << target.generic_string() << ": No such file or directory\n";
 		return 1;
 	}
 
@@ -252,49 +254,52 @@ func listPath( const std::filesystem::path & target, const Options & options, Fo
 
 func main( const int argc, const char *[] argv ) -> int
 {
-	var Options options;
-	options.showAll       = false;
-	options.almostAll     = false;
-	options.nameOnly      = false;
-	options.humanReadable = false;
-	options.longFormat    = false;
-	options.recursive     = false;
-	options.reverse       = false;
-	options.sortMode      = SortMode::Name;
-	var int i = 1;
+	var cxxopts::Options cli = cxxopts::Options( "ls_cxxopts", "ls implemented with cxxopts" );
+	cli.add_options()
+		( "a,all",          "do not ignore entries starting with .",
+		  cxxopts::value<bool>()->default_value( "false" ) )
+		( "A,almost-all",   "do not list implied . and ..",
+		  cxxopts::value<bool>()->default_value( "false" ) )
+		( "h,human-readable", "print human readable sizes",
+		  cxxopts::value<bool>()->default_value( "false" ) )
+		( "l,long",         "use long listing format",
+		  cxxopts::value<bool>()->default_value( "false" ) )
+		( "n,nameonly",     "list entry names only",
+		  cxxopts::value<bool>()->default_value( "false" ) )
+		( "1,one",          "list entry names only",
+		  cxxopts::value<bool>()->default_value( "false" ) )
+		( "R,recursive",    "list subdirectories recursively",
+		  cxxopts::value<bool>()->default_value( "false" ) )
+		( "r,reverse",      "reverse order while sorting",
+		  cxxopts::value<bool>()->default_value( "false" ) )
+		( "s,size",         "sort by file size",
+		  cxxopts::value<bool>()->default_value( "false" ) )
+		( "t,time",         "sort by modification time",
+		  cxxopts::value<bool>()->default_value( "false" ) );
 
-	while( argc > i ) {
-		const string arg = (string)argv[i];
-		if( arg.length() > 1 && arg[0] == '-' ) {
-			var usize j = 1;
-			while( j < arg.length() ) {
-				switch( arg[j] ) {
-					case 'a': options.showAll       = true;
-					case 'A': options.almostAll     = true;
-					case 'h': options.humanReadable = true;
-					case 'l': options.longFormat    = true;
-					case 'n':
-					case '1': options.nameOnly      = true;
-					case 'R': options.recursive     = true;
-					case 'r': options.reverse       = true;
-					case 's': options.sortMode      = SortMode::Size;
-					case 't': options.sortMode      = SortMode::Time;
-					default:
-						std::cerr << "ls: unknown option -- " << arg[j] << "\n";
-						return 1;
-				}
-				++j;
-			}
-			++i;
-		}
-		else {
-			break;
-		}
-	}
+	var cxxopts::ParseResult result = cli.parse( argc, argv );
+
+	var Options options;
+	options.showAll       = result["all"].as<bool>();
+	options.almostAll     = result["almost-all"].as<bool>();
+	options.humanReadable = result["human-readable"].as<bool>();
+	options.longFormat    = result["long"].as<bool>();
+	options.nameOnly      = result["nameonly"].as<bool>() || result["one"].as<bool>();
+	options.recursive     = result["recursive"].as<bool>();
+	options.reverse       = result["reverse"].as<bool>();
+	if( result["time"].as<bool>() )
+		options.sortMode = SortMode::Time;
+	else if( result["size"].as<bool>() )
+		options.sortMode = SortMode::Size;
+	else
+		options.sortMode = SortMode::Name;
+
+	const std::vector<string> args = result.unmatched();
 
 	var std::vector<std::filesystem::path> targets = std::vector<std::filesystem::path>();
-	while( i < argc ) {
-		targets.push_back( std::filesystem::path( (string)argv[i] ) );
+	var usize i = 0;
+	while( i < args.size() ) {
+		targets.push_back( std::filesystem::path( args[i] ) );
 		++i;
 	}
 	if( targets.size() == 0 )
