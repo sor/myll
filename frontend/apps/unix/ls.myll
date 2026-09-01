@@ -1,6 +1,6 @@
 module ls;
 
-import std_iostream, std_filesystem, std_vector, std_string, std_algorithm;
+import std_iostream, std_filesystem, std_vector, std_string, std_algorithm, ls_helpers.hpp;
 
 enum SortMode {
 	Name,
@@ -39,6 +39,9 @@ class DirEntry
 	}
 
 	[pure]
+	func path() -> string => (string)_path.generic_string();
+
+	[pure]
 	func name() -> string => (string)_path.filename().generic_string();
 
 	[pure]
@@ -49,6 +52,18 @@ class DirEntry
 
 	[pure]
 	func isDirectory() -> bool => _isDirectory;
+}
+
+struct Options
+{
+	field bool showAll;
+	field bool almostAll;
+	field bool nameOnly;
+	field bool humanReadable;
+	field bool longFormat;
+	field bool recursive;
+	field bool reverse;
+	field SortMode sortMode;
 }
 
 class Formatter
@@ -67,6 +82,42 @@ func humanSize( u64 bytes ) -> string
 	if( bytes >= 1024 )
 		return std::to_string( bytes / 1024 ) + "K";
 	return std::to_string( bytes );
+}
+
+func padLeft( string s, usize width ) -> string
+{
+	while( s.length() < width )
+		s = " " + s;
+	return s;
+}
+
+class LongFormatter : Formatter
+{
+	field bool _humanReadable = false;
+
+[pub]:
+	ctor( bool humanReadable )
+	{
+		_humanReadable = humanReadable;
+	}
+
+	[override]
+	func format( const DirEntry & e ) -> string
+	{
+		var string sizeStr = _humanReadable
+			? humanSize( e.size() )
+			: std::to_string( e.size() );
+
+		return ls_helpers::fileTypeLetter( e.path() )
+			+ ls_helpers::permissionString( e.path() )
+			+ " " + padLeft( std::to_string( ls_helpers::hardLinkCount( e.path() ) ), 2 )
+			+ " " + ls_helpers::ownerName( e.path() )
+			+ " " + ls_helpers::groupName( e.path() )
+			+ " " + padLeft( sizeStr, 10 )
+			+ " " + ls_helpers::formatTime( e.path() )
+			+ " " + e.name()
+			+ "\n";
+	}
 }
 
 class DetailedFormatter : Formatter
@@ -127,43 +178,33 @@ func isHidden( const DirEntry & e ) -> bool
 	return e.name().length() > 0 && e.name().compare( 0, 1, "." ) == 0;
 }
 
-func main( const int argc, const char *[] argv ) -> int
+func isDotOrDotDot( const DirEntry & e ) -> bool
 {
-	var bool     showHidden    = false;
-	var bool     nameOnly      = false;
-	var bool     humanReadable = false;
-	var SortMode sortMode      = SortMode::Name;
-	var int      i = 1;
+	return e.name() == "." || e.name() == "..";
+}
 
-	while( argc > i ) {
-		const string arg = (string)argv[i];
-		if( arg.length() > 1 && arg[0] == '-' ) {
-			switch( arg[1] ) {
-				case 'a': showHidden    = true;
-				case 'n': nameOnly      = true;
-				case 'h': humanReadable = true;
-				case 's': sortMode      = SortMode::Size;
-				case 't': sortMode      = SortMode::Time;
-				default:
-					std::cerr << "ls: unknown option " << arg << "\n";
-					return 1;
-			}
-			++i;
-		}
-		else {
-			// args ended, all are now file/dir-names
-			break;
-		}
-	}
+func shouldShow( const DirEntry & e, const Options & options ) -> bool
+{
+	if( isDotOrDotDot( e ) )
+		return options.showAll;
+	return options.showAll || options.almostAll || !isHidden( e );
+}
 
-	var std::filesystem::path target = std::filesystem::path( "." );
-	if( argc > i )
-		target = std::filesystem::path( (string)argv[i] );
-
-	if( !std::filesystem::exists( target ) || !std::filesystem::is_directory( target ) ) {
-		std::cerr << "ls: " << target.generic_string() << ": no such directory\n";
+func listPath( const std::filesystem::path & target, const Options & options, Formatter *! & fmt, bool printHeader ) -> int
+{
+	if( !std::filesystem::exists( target ) ) {
+		std::cerr << "ls: " << target.generic_string() << ": No such file or directory\n";
 		return 1;
 	}
+
+	if( !std::filesystem::is_directory( target ) ) {
+		var DirEntry e = DirEntry( target );
+		std::cout << fmt->format( e );
+		return 0;
+	}
+
+	if( printHeader )
+		std::cout << target.generic_string() << ":\n";
 
 	var std::vector<DirEntry> entries = std::vector<DirEntry>();
 
@@ -175,25 +216,110 @@ func main( const int argc, const char *[] argv ) -> int
 		++it;
 	}
 
-	if( sortMode == SortMode::Name )
+	if( options.sortMode == SortMode::Name )
 		std::sort( entries.begin(), entries.end(), entryNameLess );
-	else if( sortMode == SortMode::Size )
+	else if( options.sortMode == SortMode::Size )
 		std::sort( entries.begin(), entries.end(), entrySizeLess );
 	else
 		std::sort( entries.begin(), entries.end(), entryTimeLess );
 
-	var Formatter *! fmt;
-	if( nameOnly )
-		fmt = new NameOnlyFormatter*!;
-	else
-		fmt = new DetailedFormatter*!( humanReadable );
+	if( options.reverse )
+		std::reverse( entries.begin(), entries.end() );
 
 	var usize k = 0;
 	while( k < entries.size() ) {
-		if( showHidden || !isHidden( entries[k] ) )
+		if( shouldShow( entries[k], options ) )
 			std::cout << fmt->format( entries[k] );
 		++k;
 	}
+	else {
+		std::cout << "total 0\n";
+	}
+
+	if( options.recursive ) {
+		var usize j = 0;
+		while( j < entries.size() ) {
+			if( entries[j].isDirectory() && !isDotOrDotDot( entries[j] ) && shouldShow( entries[j], options ) ) {
+				std::cout << "\n";
+				listPath( std::filesystem::path( entries[j].path() ), options, fmt, true );
+			}
+			++j;
+		}
+	}
 
 	return 0;
+}
+
+func main( const int argc, const char *[] argv ) -> int
+{
+	var Options options;
+	options.showAll       = false;
+	options.almostAll     = false;
+	options.nameOnly      = false;
+	options.humanReadable = false;
+	options.longFormat    = false;
+	options.recursive     = false;
+	options.reverse       = false;
+	options.sortMode      = SortMode::Name;
+	var int i = 1;
+
+	while( argc > i ) {
+		const string arg = (string)argv[i];
+		if( arg.length() > 1 && arg[0] == '-' ) {
+			var int j = 1;
+			while( j < arg.length() ) {
+				switch( arg[j] ) {
+					case 'a': options.showAll       = true;
+					case 'A': options.almostAll     = true;
+					case 'h': options.humanReadable = true;
+					case 'l': options.longFormat    = true;
+					case 'n':
+					case '1': options.nameOnly      = true;
+					case 'R': options.recursive     = true;
+					case 'r': options.reverse       = true;
+					case 's': options.sortMode      = SortMode::Size;
+					case 't': options.sortMode      = SortMode::Time;
+					default:
+						std::cerr << "ls: unknown option -- " << arg[j] << "\n";
+						return 1;
+				}
+				++j;
+			}
+			++i;
+		}
+		else {
+			break;
+		}
+	}
+
+	var std::vector<std::filesystem::path> targets = std::vector<std::filesystem::path>();
+	while( i < argc ) {
+		targets.push_back( std::filesystem::path( (string)argv[i] ) );
+		++i;
+	}
+	if( targets.size() == 0 )
+		targets.push_back( std::filesystem::path( "." ) );
+
+	var Formatter *! fmt;
+	if( options.longFormat )
+		fmt = new LongFormatter*!( options.humanReadable );
+	else if( options.nameOnly )
+		fmt = new NameOnlyFormatter*!;
+	else
+		fmt = new DetailedFormatter*!( options.humanReadable );
+
+	var bool printHeader = targets.size() > 1;
+	var int exitCode = 0;
+	var usize t = 0;
+	while( t < targets.size() ) {
+		if( t > 0 )
+			std::cout << "\n";
+		if( printHeader )
+			std::cout << targets[t].generic_string() << ":\n";
+		if( listPath( targets[t], options, fmt, false ) != 0 )
+			exitCode = 1;
+		++t;
+	}
+
+	return exitCode;
 }
