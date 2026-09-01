@@ -59,10 +59,20 @@ namespace Myll.Resolver
 			List<Diagnostic> diagnostics )
 		{
 			var newStmts = new List<Stmt>();
-			List<Stmt>? prevGuards = null;
+			List<Stmt>? prevGuards   = null;
+			bool        stopGuards = false;
 
 			foreach( Stmt stmt in block.stmts ) {
-				newStmts.Add( TransformStmt( stmt, context, loops, diagnostics ) );
+				Stmt transformed = TransformStmt( stmt, context, loops, diagnostics );
+				newStmts.Add( transformed );
+
+				if( stopGuards )
+					continue;
+
+				if( EndsWithUnconditionalExit( transformed ) ) {
+					stopGuards = true;
+					continue;
+				}
 
 				List<Stmt> guards = MakeFlagGuards( loops ).ToList();
 				if( !GuardListEquals( guards, prevGuards ) ) {
@@ -74,6 +84,13 @@ namespace Myll.Resolver
 			block.stmts = newStmts;
 			return block;
 		}
+
+		private static bool EndsWithUnconditionalExit( Stmt stmt )
+			=> stmt switch {
+				BreakStmt or ContinueStmt or ReturnStmt or ThrowStmt => true,
+				MultiStmt ms when ms.stmts.Count > 0                 => EndsWithUnconditionalExit( ms.stmts[ms.stmts.Count - 1] ),
+				_                                                    => false,
+			};
 
 		private static bool GuardListEquals( List<Stmt> a, List<Stmt>? b )
 		{

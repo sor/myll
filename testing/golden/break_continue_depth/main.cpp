@@ -12,9 +12,6 @@ int main()
                 j = j + 1;
                 myll_tmp_0 = true;
                 break;
-                if( myll_tmp_0 ) {
-                    break;
-                }
             }
             if( myll_tmp_0 ) {
                 break;
@@ -33,9 +30,6 @@ int main()
                 b = b + 1;
                 myll_tmp_5 = true;
                 break;
-                if( myll_tmp_5 ) {
-                    break;
-                }
             }
             if( myll_tmp_5 ) {
                 continue;
