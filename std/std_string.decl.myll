@@ -3,4 +3,11 @@ module std_string;
 namespace std {
 	// std::string is a typedef for a template specialisation and deferred.
 	// Non-template helpers that Myll code uses can be added here.
+
+	// Numeric conversions from <string>.
+	func to_string( int value ) -> string;
+	func to_string( i64 value ) -> string;
+	func to_string( u64 value ) -> string;
+	func to_string( f32 value ) -> string;
+	func to_string( f64 value ) -> string;
 }
