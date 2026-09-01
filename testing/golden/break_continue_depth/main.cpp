@@ -6,9 +6,11 @@ int main()
     {
         bool myll_tmp_0 = false;
         while( i < 1 ) {
+            myll_tmp_0 = false;
             i = i + 1;
             int j = 0;
             while( j < 10 ) {
+                myll_tmp_0 = false;
                 j = j + 1;
                 myll_tmp_0 = true;
                 break;
@@ -24,9 +26,11 @@ int main()
     {
         bool myll_tmp_5 = false;
         while( a < 3 ) {
+            myll_tmp_5 = false;
             a = a + 1;
             int b = 0;
             while( b < 10 ) {
+                myll_tmp_5 = false;
                 b = b + 1;
                 myll_tmp_5 = true;
                 break;

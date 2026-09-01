@@ -8,18 +8,31 @@ namespace Myll.Resolver
 	/// <summary>
 	/// Lowers multi-level <c>break N;</c> and <c>continue N;</c> to hidden flags.
 	///
-	/// Only loops are counted as levels. <c>break</c> inside a <c>switch</c> keeps
-	/// its normal C-style meaning and does not interact with this transform.
-	///</summary>
+	/// <c>break N</c> exits the <c>N</c>th enclosing breakable construct (loops and
+	/// switches). <c>continue N</c> only targets loops; switches are not counted.
+	///
+	/// A plain <c>break</c> inside a switch still exits that switch. A plain
+	/// <c>continue</c> inside a loop still continues that loop.
+	/// </summary>
 	public sealed class BreakContinueTransformer : ITransformer
 	{
-		private sealed class LoopContext
+		private sealed class BreakableContext
 		{
+			public bool   IsLoop       { get; set; }
 			public string BreakFlag    { get; set; } = null!;
 			public string ContinueFlag { get; set; } = null!;
 			public bool   BreakUsed    { get; set; }
 			public bool   ContinueUsed { get; set; }
 		}
+
+		private static BreakableContext NewBreakableContext(
+			CompilationContext context,
+			bool               isLoop )
+			=> new() {
+				IsLoop       = isLoop,
+				BreakFlag    = context.NextTempName(),
+				ContinueFlag = context.NextTempName(),
+			};
 
 		public void Transform(
 			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules,
@@ -37,12 +50,12 @@ namespace Myll.Resolver
 			switch( decl ) {
 				case Func func:
 					if( func.body != null )
-						func.body = TransformBlock( func.body, context, new List<LoopContext>(), diagnostics );
+						func.body = TransformBlock( func.body, context, new List<BreakableContext>(), diagnostics );
 					break;
 
 				case Structor stc:
 					if( stc.body != null )
-						stc.body = TransformBlock( stc.body, context, new List<LoopContext>(), diagnostics );
+						stc.body = TransformBlock( stc.body, context, new List<BreakableContext>(), diagnostics );
 					break;
 
 				case Hierarchical h:
@@ -55,7 +68,7 @@ namespace Myll.Resolver
 		private static MultiStmt TransformBlock(
 			MultiStmt block,
 			CompilationContext context,
-			List<LoopContext> loops,
+			List<BreakableContext> breakables,
 			List<Diagnostic> diagnostics )
 		{
 			var newStmts = new List<Stmt>();
@@ -63,7 +76,7 @@ namespace Myll.Resolver
 			bool        stopGuards = false;
 
 			foreach( Stmt stmt in block.stmts ) {
-				Stmt transformed = TransformStmt( stmt, context, loops, diagnostics );
+				Stmt transformed = TransformStmt( stmt, context, breakables, diagnostics );
 				newStmts.Add( transformed );
 
 				if( stopGuards )
@@ -74,7 +87,7 @@ namespace Myll.Resolver
 					continue;
 				}
 
-				List<Stmt> guards = MakeFlagGuards( loops ).ToList();
+				List<Stmt> guards = MakeFlagGuards( breakables ).ToList();
 				if( !GuardListEquals( guards, prevGuards ) ) {
 					newStmts.AddRange( guards );
 					prevGuards = guards;
@@ -91,6 +104,34 @@ namespace Myll.Resolver
 				MultiStmt ms when ms.stmts.Count > 0                 => EndsWithUnconditionalExit( ms.stmts[ms.stmts.Count - 1] ),
 				_                                                    => false,
 			};
+
+		private static Stmt PrependResets( Stmt body, List<BreakableContext> breakables )
+		{
+			List<Stmt> resets = MakeFlagResets( breakables );
+			if( resets.Count == 0 )
+				return body;
+
+			MultiStmt block = body is MultiStmt ms
+				? ms
+				: new MultiStmt( new List<Stmt> { body }, false );
+
+			block.stmts.InsertRange( 0, resets );
+			return block;
+		}
+
+		private static List<Stmt> MakeFlagResets( List<BreakableContext> breakables )
+		{
+			var resets = new List<Stmt>();
+
+			foreach( BreakableContext ctx in breakables ) {
+				if( ctx.BreakUsed )
+					resets.Add( AssignFlag( ctx.BreakFlag, "false" ) );
+				if( ctx.ContinueUsed )
+					resets.Add( AssignFlag( ctx.ContinueFlag, "false" ) );
+			}
+
+			return resets;
+		}
 
 		private static bool GuardListEquals( List<Stmt> a, List<Stmt>? b )
 		{
@@ -113,30 +154,29 @@ namespace Myll.Resolver
 			    && GuardActionType( ia ) == GuardActionType( ib );
 		}
 
-		private static Type GuardActionType( IfStmt guard )
-			=> guard.ifThens[0].then.GetType();
-
 		private static string GuardFlag( IfStmt guard )
 			=> guard.ifThens[0].cond is IdExpr id
 				? id.idTplArgs.id
 				: "";
 
-		private static IEnumerable<Stmt> MakeFlagGuards( List<LoopContext> loops )
+		private static Type GuardActionType( IfStmt guard )
+			=> guard.ifThens[0].then.GetType();
+
+		private static IEnumerable<Stmt> MakeFlagGuards( List<BreakableContext> breakables )
 		{
-			if( loops.Count == 0 )
+			if( breakables.Count == 0 )
 				yield break;
 
-			int currentIndex = loops.Count - 1;
+			int currentIndex = breakables.Count - 1;
 
-			for( int i = 0; i < loops.Count; i++ ) {
-				LoopContext ctx = loops[i];
-				bool isCurrent = i == currentIndex;
+			for( int i = 0; i < breakables.Count; i++ ) {
+				BreakableContext ctx = breakables[i];
 
 				if( ctx.BreakUsed )
 					yield return MakeGuard( ctx.BreakFlag, new BreakStmt { depth = 1 } );
 
 				if( ctx.ContinueUsed ) {
-					Stmt action = isCurrent
+					Stmt action = ctx.IsLoop && i == currentIndex
 						? new ContinueStmt { depth = 1 }
 						: new BreakStmt    { depth = 1 };
 					yield return MakeGuard( ctx.ContinueFlag, action );
@@ -147,55 +187,42 @@ namespace Myll.Resolver
 		private static Stmt TransformStmt(
 			Stmt stmt,
 			CompilationContext context,
-			List<LoopContext> loops,
+			List<BreakableContext> breakables,
 			List<Diagnostic> diagnostics )
 		{
 			switch( stmt ) {
 				case ForStmt fs:
-					return TransformLoop( fs, context, loops, diagnostics );
-
 				case WhileStmt ws:
-					return TransformLoop( ws, context, loops, diagnostics );
-
 				case DoWhileStmt dws:
-					return TransformLoop( dws, context, loops, diagnostics );
-
 				case LoopStmt ls:
-					return TransformLoop( ls, context, loops, diagnostics );
-
 				case TimesStmt ts:
-					return TransformLoop( ts, context, loops, diagnostics );
+					return TransformLoop( stmt, context, breakables, diagnostics );
+
+				case SwitchStmt sw:
+					return TransformSwitch( sw, context, breakables, diagnostics );
 
 				case MultiStmt ms:
-					return TransformBlock( ms, context, loops, diagnostics );
+					return TransformBlock( ms, context, breakables, diagnostics );
 
 				case IfStmt ifs:
 					foreach( IfStmt.CondThen ct in ifs.ifThens )
-						ct.then = TransformStmt( ct.then, context, loops, diagnostics );
+						ct.then = TransformStmt( ct.then, context, breakables, diagnostics );
 					ifs.els = ifs.els != null
-						? TransformStmt( ifs.els, context, loops, diagnostics )
+						? TransformStmt( ifs.els, context, breakables, diagnostics )
 						: null;
 					return ifs;
 
 				case TryCatchStmt tcs:
-					tcs.tryBody = TransformStmt( tcs.tryBody, context, loops, diagnostics );
+					tcs.tryBody = TransformStmt( tcs.tryBody, context, breakables, diagnostics );
 					foreach( CatchClause cc in tcs.catches )
-						cc.body = TransformStmt( cc.body, context, loops, diagnostics );
+						cc.body = TransformStmt( cc.body, context, breakables, diagnostics );
 					return tcs;
 
-				case SwitchStmt sw:
-					foreach( SwitchStmt.CaseBlock cb in sw.cases )
-						cb.then = (MultiStmt)TransformStmt( cb.then, context, loops, diagnostics );
-					sw.els = sw.els != null
-						? (MultiStmt)TransformStmt( sw.els, context, loops, diagnostics )
-						: null;
-					return sw;
-
 				case BreakStmt bs:
-					return TransformBreak( bs, loops, diagnostics );
+					return TransformBreak( bs, breakables, diagnostics );
 
 				case ContinueStmt cs:
-					return TransformContinue( cs, loops, diagnostics );
+					return TransformContinue( cs, breakables, diagnostics );
 
 				default:
 					return stmt;
@@ -205,38 +232,57 @@ namespace Myll.Resolver
 		private static Stmt TransformLoop(
 			Stmt loop,
 			CompilationContext context,
-			List<LoopContext> loops,
+			List<BreakableContext> breakables,
 			List<Diagnostic> diagnostics )
 		{
-			var loopContext = new LoopContext {
-				BreakFlag    = context.NextTempName(),
-				ContinueFlag = context.NextTempName(),
-			};
-			loops.Add( loopContext );
+			var loopContext = NewBreakableContext( context, true );
+			breakables.Add( loopContext );
 
 			Stmt body = GetLoopBody( loop ) ?? new EmptyStmt();
-			SetLoopBody( loop, TransformBody( body, context, loops, diagnostics ) );
+			Stmt transformedBody = TransformBody( body, context, breakables, diagnostics );
+			transformedBody     = PrependResets( transformedBody, breakables );
+			SetLoopBody( loop, transformedBody );
 
 			if( loop is ForStmt fs && fs.els != null )
-				fs.els = TransformStmt( fs.els, context, loops, diagnostics );
+				fs.els = TransformStmt( fs.els, context, breakables, diagnostics );
 			else if( loop is WhileStmt ws && ws.els != null )
-				ws.els = TransformStmt( ws.els, context, loops, diagnostics );
+				ws.els = TransformStmt( ws.els, context, breakables, diagnostics );
 
-			loops.RemoveAt( loops.Count - 1 );
+			breakables.RemoveAt( breakables.Count - 1 );
 
-			return WrapLoopIfNeeded( loop, loopContext );
+			return WrapBreakableIfNeeded( loop, loopContext );
+		}
+
+		private static Stmt TransformSwitch(
+			SwitchStmt sw,
+			CompilationContext context,
+			List<BreakableContext> breakables,
+			List<Diagnostic> diagnostics )
+		{
+			var switchContext = NewBreakableContext( context, false );
+			breakables.Add( switchContext );
+
+			foreach( SwitchStmt.CaseBlock cb in sw.cases )
+				cb.then = (MultiStmt)TransformStmt( cb.then, context, breakables, diagnostics );
+
+			if( sw.els != null )
+				sw.els = (MultiStmt)TransformStmt( sw.els, context, breakables, diagnostics );
+
+			breakables.RemoveAt( breakables.Count - 1 );
+
+			return WrapBreakableIfNeeded( sw, switchContext );
 		}
 
 		private static Stmt TransformBody(
 			Stmt body,
 			CompilationContext context,
-			List<LoopContext> loops,
+			List<BreakableContext> breakables,
 			List<Diagnostic> diagnostics )
 		{
 			MultiStmt block = body is MultiStmt ms
 				? ms
 				: new MultiStmt( new List<Stmt> { body }, false );
-			return TransformBlock( block, context, loops, diagnostics );
+			return TransformBlock( block, context, breakables, diagnostics );
 		}
 
 		private static Stmt? GetLoopBody( Stmt loop )
@@ -260,42 +306,44 @@ namespace Myll.Resolver
 			}
 		}
 
-		private static Stmt WrapLoopIfNeeded( Stmt loop, LoopContext loopContext )
+		private static Stmt WrapBreakableIfNeeded(
+			Stmt stmt,
+			BreakableContext ctx )
 		{
-			if( !loopContext.BreakUsed && !loopContext.ContinueUsed )
-				return loop;
+			if( !ctx.BreakUsed && !ctx.ContinueUsed )
+				return stmt;
 
 			var decls = new List<Stmt>();
 
-			if( loopContext.BreakUsed ) {
+			if( ctx.BreakUsed ) {
 				decls.Add( new VarStmt {
-					srcPos = loop.srcPos,
+					srcPos = stmt.srcPos,
 					kind   = VarDecl.Kind.Var,
-					name   = loopContext.BreakFlag,
+					name   = ctx.BreakFlag,
 					type   = new TypespecBasic {
 						kind   = TypespecBasic.Kind.Bool,
 						size   = 1,
-						srcPos = loop.srcPos,
+						srcPos = stmt.srcPos,
 					},
 					init = new Literal { op = Operand.Literal, text = "false" },
 				} );
 			}
 
-			if( loopContext.ContinueUsed ) {
+			if( ctx.ContinueUsed ) {
 				decls.Add( new VarStmt {
-					srcPos = loop.srcPos,
+					srcPos = stmt.srcPos,
 					kind   = VarDecl.Kind.Var,
-					name   = loopContext.ContinueFlag,
+					name   = ctx.ContinueFlag,
 					type   = new TypespecBasic {
 						kind   = TypespecBasic.Kind.Bool,
 						size   = 1,
-						srcPos = loop.srcPos,
+						srcPos = stmt.srcPos,
 					},
 					init = new Literal { op = Operand.Literal, text = "false" },
 				} );
 			}
 
-			decls.Add( loop );
+			decls.Add( stmt );
 			return new MultiStmt( decls, true );
 		}
 
@@ -310,27 +358,27 @@ namespace Myll.Resolver
 
 		private static Stmt TransformBreak(
 			BreakStmt bs,
-			List<LoopContext> loops,
+			List<BreakableContext> breakables,
 			List<Diagnostic> diagnostics )
 		{
 			if( bs.depth <= 1 )
 				return bs;
 
-			if( loops.Count < bs.depth ) {
+			if( breakables.Count < bs.depth ) {
 				diagnostics.Add( new Diagnostic(
 					bs.srcPos,
 					DiagnosticKind.Error,
 					String.Format(
-						"break {0} is not inside {0} enclosing loops",
+						"break {0} is not inside {0} enclosing breakable constructs",
 						bs.depth ) ) );
 				return bs;
 			}
 
 			var stmts = new List<Stmt>();
-			int targetIndex = loops.Count - bs.depth;
+			int targetIndex = breakables.Count - bs.depth;
 
-			for( int i = targetIndex; i < loops.Count - 1; i++ ) {
-				LoopContext ctx = loops[i];
+			for( int i = targetIndex; i < breakables.Count - 1; i++ ) {
+				BreakableContext ctx = breakables[i];
 				ctx.BreakUsed = true;
 				stmts.Add( AssignFlag( ctx.BreakFlag, "true" ) );
 			}
@@ -343,13 +391,15 @@ namespace Myll.Resolver
 
 		private static Stmt TransformContinue(
 			ContinueStmt cs,
-			List<LoopContext> loops,
+			List<BreakableContext> breakables,
 			List<Diagnostic> diagnostics )
 		{
 			if( cs.depth <= 1 )
 				return cs;
 
-			if( loops.Count < cs.depth ) {
+			int targetIndex = FindLoopTargetIndex( breakables, cs.depth, out int loopsFound );
+
+			if( targetIndex < 0 ) {
 				diagnostics.Add( new Diagnostic(
 					cs.srcPos,
 					DiagnosticKind.Error,
@@ -360,15 +410,14 @@ namespace Myll.Resolver
 			}
 
 			var stmts = new List<Stmt>();
-			int targetIndex = loops.Count - cs.depth;
 
-			for( int i = targetIndex + 1; i < loops.Count - 1; i++ ) {
-				LoopContext ctx = loops[i];
+			for( int i = targetIndex + 1; i < breakables.Count - 1; i++ ) {
+				BreakableContext ctx = breakables[i];
 				ctx.BreakUsed = true;
 				stmts.Add( AssignFlag( ctx.BreakFlag, "true" ) );
 			}
 
-			LoopContext target = loops[targetIndex];
+			BreakableContext target = breakables[targetIndex];
 			target.ContinueUsed = true;
 			stmts.Add( AssignFlag( target.ContinueFlag, "true" ) );
 
@@ -376,6 +425,24 @@ namespace Myll.Resolver
 			return stmts.Count == 1
 				? stmts[0]
 				: new MultiStmt( stmts, false );
+		}
+
+		private static int FindLoopTargetIndex(
+			List<BreakableContext> breakables,
+			int depth,
+			out int loopsFound )
+		{
+			loopsFound = 0;
+
+			for( int i = breakables.Count - 1; i >= 0; i-- ) {
+				if( breakables[i].IsLoop ) {
+					loopsFound++;
+					if( loopsFound == depth )
+						return i;
+				}
+			}
+
+			return -1;
 		}
 
 		private static MultiAssign AssignFlag( string flagName, string value )
