@@ -70,12 +70,7 @@ class Formatter
 {
 [pub]:
 	[virtual]
-	func format( const DirEntry & e ) -> string
-	{
-		if( e.name().length() == 0 )
-			return "";
-		return "";
-	}
+	func format( const DirEntry & ) -> string => "";
 }
 
 func humanSize( u64 bytes ) -> string
