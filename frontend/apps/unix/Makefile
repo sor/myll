@@ -8,7 +8,7 @@ MYLL_ROOT ?= ../../..
 MYLL      := dotnet run --project $(MYLL_ROOT)/frontend -- -i '*.myll' -o gen
 
 CXX      ?= g++
-CXXFLAGS ?= -std=c++20 -I. -Ithird_party -DCXXOPTS_NO_REGEX -O1 -Wall -Wextra -Wsuggest-override
+CXXFLAGS ?= -std=c++20 -Ithird_party -DCXXOPTS_NO_REGEX -O1 -Wall -Wextra -Wsuggest-override
 
 RELEASE_FLAGS ?= -O2 -s
 DEBUG_FLAGS   ?= -Og -g
@@ -21,9 +21,12 @@ BINS     := $(addprefix gen/,$(TOOLS))
 all: $(BINS)
 
 # Generate C++ sources for all .myll files in one Myll invocation.
-gen/.stamp: $(wildcard *.myll)
+# Local helper headers are copied next to the generated files so the compiler
+# finds them without needing the source directory on the include path.
+gen/.stamp: $(wildcard *.myll) $(wildcard *.hpp)
 	@mkdir -p gen
 	$(MYLL)
+	@for h in $(wildcard *.hpp); do cp -f "$$h" gen/; done
 	@touch gen/.stamp
 
 # Compile each generated .cpp into its own binary.

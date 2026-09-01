@@ -1,6 +1,6 @@
 module ls;
 
-import std_iostream, std_filesystem, std_vector, std_string, std_algorithm, ls_helpers.hpp;
+import std_iostream, std_filesystem, std_vector, std_string, std_algorithm, ls_helpers;
 
 enum SortMode {
 	Name,

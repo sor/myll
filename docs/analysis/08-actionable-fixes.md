@@ -2,6 +2,53 @@
 
 This document consolidates fixes across all layers, ranked by impact on future development.
 
+## Recently Fixed / Documented Bugs
+
+### Compiler crash on `_ = expr;`
+
+**Status:** open bug  
+**Files:** `backend/Core/Expr.cs`, `backend/Resolver/DiscardTransformer.cs`  
+**Impact:** Using `_ = expr;` to intentionally discard a value causes an unhandled `NotImplementedException` during code generation.
+
+**Repro:** In any function body write
+
+```myll
+func foo( const DirEntry & e ) -> string {
+    _ = e;
+    return "";
+}
+```
+
+The compiler crashes with:
+
+```
+System.NotImplementedException at Myll.Core.Discard.Gen(Boolean doBrace)
+   in backend/Core/Expr.cs
+```
+
+**Workaround:** Reference the value in a harmless way instead of discarding it, or give the parameter no name if your goal is only to silence an unused-parameter warning:
+
+```myll
+func format( const DirEntry & ) -> string => "";
+```
+
+**Root cause:** `Discard.Gen()` is stubbed with `throw new NotImplementedException()`. `DiscardTransformer` is supposed to remove every `Discard` node before generation, but `_ = expr;` apparently reaches the transformer as an `ExprStmt`/`AggrAssign` path that is not lowered, so the raw `Discard` survives.
+
+**Possible fix:** Make `DiscardTransformer` handle `_ = expr` in all statement shapes, or implement a safe fallback in `Discard.Gen()`.
+
+### Multi-level `break`/`continue` flag persistence (fixed)
+
+**Status:** fixed  
+**Files:** `backend/Resolver/BreakContinueTransformer.cs`
+
+**Problem:** The flag-based lowering declared helper flags outside the targeted loop. A flag set during iteration N therefore leaked into iteration N+1.
+
+Concrete example: `continue 2` from inside a `switch` that sits in an outer loop set the outer loop's continue flag. After the continue, iteration N+1 started with the flag still `true`. The guard after the first statement of the outer body immediately continued again, skipping the rest of the body.
+
+**Fix:** Reset all active breakable flags to `false` at the start of every loop body.
+
+**Why flags instead of goto:** Flags keep the existing loop generators untouched and work uniformly for both loops and switches. A goto-based lowering would need different label placement for `for`/`while`/`do-while` and for switch targets.
+
 ## 🔴 Critical — Blocks Progress
 
 ### 1. Fix `EnumerateDF` for Loop Statements — done
