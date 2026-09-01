@@ -55,6 +55,37 @@ The plain `[static]` attribute is intentionally not used.
 - `dispatch` values map to C++ virtual-dispatch behavior. Shortcuts like `[abstract]`, `[override]`, and `[final]` are aliases for the corresponding `dispatch` value combined with any extra requirements (`abstract` also implies no implementation).
 - `execution` values map roughly to C++ as: `CT` → `consteval`, `AT` → `constexpr`, `RT` → no special keyword, `BT` → `constexpr` if possible, otherwise no special keyword.
 
+## Special function bodies
+
+Myll uses attributes for C++ special-member-function bodies instead of special syntax:
+
+```myll
+class Base {
+[pub]:
+    [abstract]
+    func value() -> int;              // C++: virtual int value() = 0;
+};
+
+class Derived : Base {
+[pub]:
+    [override]
+    func value() -> int => 42;        // C++: int value() override;
+};
+
+class Copyable {
+[pub]:
+    [default]
+    operator copy = other;            // C++: T& operator=(const T&) = default;
+
+    [delete]
+    func badOverload( f32 x ) -> int; // C++: int badOverload(float) = delete;
+};
+```
+
+- `[abstract]` may only appear on methods inside a class or struct. Myll automatically emits `virtual` for abstract methods; adding `[virtual]` explicitly triggers a warning.
+- `[default]` and `[delete]` (alias `[disallow]`) may appear on functions, operators, constructors, and destructors. They must not have a body.
+- `[default]` on ordinary free functions is invalid C++ unless the function is a special member; Myll currently emits it and relies on the C++ compiler to reject it.
+
 ## Per-declaration-kind defaults
 
 A value of `default` resolves differently depending on what kind of declaration it is applied to. For example:
