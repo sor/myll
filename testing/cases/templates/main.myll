@@ -1,0 +1,37 @@
+module main;
+
+func max<T>( T a, T b ) -> T
+{
+	return a > b ? a : b;
+}
+
+class Container<T>
+{
+	field T value;
+
+[pub]:
+	method put( T v ) -> void
+	{
+		value = v;
+	}
+
+	method take() -> T
+	{
+		return value;
+	}
+}
+
+func main() -> int
+{
+	var int m = max<int>( 1, 2 );
+
+	var Container<int> c;
+	c.put( 5 );
+	var int v = c.take();
+
+	var Container<f32> cf;
+	cf.put( 3.14 );
+	var f32 f = cf.take();
+
+	return m == 2 && v == 5 && f > 3.13 && f < 3.15 ? 0 : 1;
+}

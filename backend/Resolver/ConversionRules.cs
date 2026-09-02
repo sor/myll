@@ -34,6 +34,12 @@ namespace Myll.Resolver
 			if( source == null || target == null )
 				return ConversionRank.None;
 
+			// Template parameters are opaque type variables; the concrete type-checking
+			// happens inside the C++ compiler after instantiation.
+			if( source is TypespecNested { resolvedDecl: TplParamDecl }
+			 || target is TypespecNested { resolvedDecl: TplParamDecl } )
+				return ConversionRank.Exact;
+
 			if( IsExactMatch( source, target ) )
 				return ConversionRank.Exact;
 

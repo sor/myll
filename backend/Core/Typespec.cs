@@ -194,6 +194,9 @@ namespace Myll.Core
 
 		public override string GenType()
 		{
+			if( resolvedDecl is TplParamDecl tpl )
+				return tpl.name;
+
 			if( resolvedDecl != null
 			 && resolvedDecl.name != "<builtin>"
 			 && idTpls.TrueForAll( it => it.tplArgs.Count == 0 ) )

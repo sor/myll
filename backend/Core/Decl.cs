@@ -287,6 +287,26 @@ namespace Myll.Core
 		}
 	}
 
+	/// <summary>
+	/// Compiler-internal declaration for a type template parameter (e.g. the T in
+	/// <c>class C&lt;T&gt;</c> or <c>func f&lt;T&gt;()</c>). It only exists in scope so that
+	/// the resolver accepts uses of the parameter name; it is never emitted.
+	/// </summary>
+	public class TplParamDecl : Decl
+	{
+		public TplParamDecl()
+		{
+			IsLocal = true;
+			AssignAttribs( new Attribs { ["hide"] = new List<string>() } );
+		}
+
+		public override void AddToGen( HierarchicalGen gen )
+		{
+			throw new InvalidOperationException(
+				"TplParamDecl should never reach code generation." );
+		}
+	}
+
 	public class MultiDecl : Decl
 	{
 		public List<Decl> decls = new();

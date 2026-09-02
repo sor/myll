@@ -42,17 +42,24 @@ Using `stable` or `mutable` as variable modifiers is a compile-time error, excep
 
 ## Templates
 
-### Basic Templates
+### Basic Templates — done
 
 ```
-struct Container<T> {
-    field T[*] data;
+class Container<T> {
+    field T value;
+
+    [pub]:
+    method put(T v) -> void { value = v; }
+    method take() -> T     { return value; }
 }
 
-func max<T>(a: T, b: T) -> T {
+func max<T>(T a, T b) -> T {
     return a > b ? a : b;
 }
 ```
+
+Function and class/struct templates with type parameters compile and run.
+Explicit template arguments are required on calls and instantiations for now.
 
 ### Constraints [Planned]
 

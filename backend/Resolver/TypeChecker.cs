@@ -721,19 +721,19 @@ namespace Myll.Resolver
 			bool isStatic       = vd.IsStatic;
 			bool isHidden       = vd.IsHidden;
 			bool isCompileTime  = vd.IsCompileTime;
-			bool isInlined      = vd.IsInlined;
+			bool isInline       = vd.IsInline;
 			bool isExtern       = vd.IsExternal;
 			bool isConstType    = (vd.type.qual & Qualifier.Const) != 0;
 
 			if( isInsideStruct ) {
 				if( isHidden )                                                AddError( vd, "[hide]/[hidden] is only valid at module/namespace scope." );
 				if( isExtern )                                                AddError( vd, "[extern] is only valid at module/namespace scope." );
-				if( isInlined && !isStatic )                                  AddError( vd, "[inline] on a class field requires [static]." );
+				if( isInline && !isStatic )                                   AddError( vd, "[inline] on a class field requires [static]." );
 				if( isCompileTime && !isStatic )                              AddError( vd, "[ct] on a class field requires [static]." );
 			} else {
 				if( isStatic )                                                AddError( vd, "[static] is valid only on class fields; use [hide] for module variables." );
-				if( isInlined && isHidden )                                   AddError( vd, "[inline] and [hide] are mutually exclusive." );
-				if( isExtern && isInlined )                                   AddError( vd, "[extern] and [inline] are mutually exclusive." );
+				if( isInline && isHidden )                                    AddError( vd, "[inline] and [hide] are mutually exclusive." );
+				if( isExtern && isInline )                                    AddError( vd, "[extern] and [inline] are mutually exclusive." );
 				if( isExtern && isHidden )                                    AddError( vd, "[extern] and [hide]/[hidden] are mutually exclusive." );
 				if( isExtern && isCompileTime )                               AddError( vd, "[extern] cannot be used with [ct]." );
 				if( isExtern && isConstType )                                 AddError( vd, "[extern] cannot be used with const." );

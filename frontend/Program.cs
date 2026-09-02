@@ -339,6 +339,8 @@ namespace Myll
 				DiagnosticFormatter.Format( autoReturnDiagnostics, UseColorForDiagnostics() ) );
 		}
 
+		new TemplateParamTransformer().Transform( modules, new List<Diagnostic>() );
+
 		if( opt.IsResolve ) {
 			var (result, diagnostics) = NameResolver.Resolve( modules );
 			if( diagnostics.Count > 0 ) {
