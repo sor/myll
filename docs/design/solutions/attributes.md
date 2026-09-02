@@ -50,7 +50,7 @@ Myll replaces C++'s `public:`, `private:`, `protected:` sections with the same a
 
 ```
 class Point {
-    x: f64;       // private by default in class
+    field f64 x;       // private by default in class
 
 [pub]:
     method get_x() -> f64;
@@ -61,7 +61,7 @@ class Point {
 
 ```
 class Point {
-    [priv] x: f64;
+    [priv] field f64 x;
     [pub]  method get_x() -> f64;
 }
 ```

@@ -97,11 +97,9 @@ Input (`stack.myll`):
 ```
 [pub]
 struct Stack<T> {
-    [priv]
-    data: T[*];
+    [priv] field T[*] data;
 
-    [pub]
-    ctor Stack() { }
+    [pub] ctor() { }
 }
 ```
 

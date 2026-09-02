@@ -170,8 +170,6 @@ class C {
 }
 ```
 
-The shorthand `x: Type;` shown in older examples is planned but not implemented yet.
-
 ### Access Control
 
 Access attributes work in two forms.

@@ -46,7 +46,7 @@ Using `stable` or `mutable` as variable modifiers is a compile-time error, excep
 
 ```
 struct Container<T> {
-    data: T[*];
+    field T[*] data;
 }
 
 func max<T>(a: T, b: T) -> T {
