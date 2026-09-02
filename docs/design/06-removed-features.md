@@ -18,6 +18,13 @@ This document lists features from C and C++ that Myll deliberately drops. Functi
 - **Legacy multi-word C type names** — e.g. `unsigned long long` and similar spellings are gone.
 - **Uniform `{}` initialization everywhere** — Myll avoids the C++ initializer-list ambiguity.
 
+## Intentional divergences from C++ behavior
+
+- **Object slicing is a hard error** — Passing a derived class value where a base class value is expected (e.g. `Base b = derived;` or `func takeBase( Base b )` called with a `Derived`) is rejected. Use a pointer or reference.
+- **Method hiding is automatically undone** — If a derived class redeclares a base method name with a different signature, Myll emits C++ `using Base::name;` inside the derived class so overload resolution sees both the base and the derived overloads. This matches the behavior in C# and avoids the C++ pitfall where `d.do(99)` silently resolves to an unrelated `do(f32)`. An opt-out attribute may be added later.
+- **`x: Type;` field shorthand is intentionally not supported** — Class/struct fields must use the `field` or `var` keyword: `field int x;`.
+- **`method` / `meth` are the preferred aliases for `func` inside classes and structs** — they are valid everywhere `func` is valid.
+
 ## Features added in Myll
 
 - Opt-in conventions via dialects (referred to as "rulesets" in earlier design notes).
