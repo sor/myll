@@ -403,7 +403,7 @@ namespace Myll.Resolver
 			return 0;
 		}
 
-		private static Typespec? CommonType( Typespec? a, Typespec? b )
+		internal static Typespec? CommonType( Typespec? a, Typespec? b )
 		{
 			if( a == null ) return b;
 			if( b == null ) return a;

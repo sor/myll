@@ -67,6 +67,19 @@ namespace Myll.Resolver
 			if( func.body == null )
 				return;
 
+			if( func.retTypeIsInferred ) {
+				if( UsesAutoReturnName( func.body, Dialect.AutoReturnName ) ) {
+					diagnostics.Add( new Diagnostic(
+						func.srcPos,
+						DiagnosticKind.Warning,
+						String.Format(
+							"Auto-return variable '{0}' cannot be used when the return type is omitted; declare a return type or use explicit return statements.",
+							Dialect.AutoReturnName ) ) );
+				}
+
+				return;
+			}
+
 			string alias = Dialect.AutoReturnName;
 			if( String.IsNullOrEmpty( alias ) )
 				return;
@@ -279,7 +292,7 @@ namespace Myll.Resolver
 			};
 		}
 
-		private static bool HasUnconditionalReturn( Stmt stmt )
+		internal static bool HasUnconditionalReturn( Stmt stmt )
 		{
 			return stmt switch {
 				ReturnStmt or ThrowStmt => true,

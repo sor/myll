@@ -87,6 +87,8 @@ namespace Myll.Resolver
 		{
 			switch( decl ) {
 				case Func func:
+					if( func.retTypeIsInferred )
+						InferReturnType( func );
 					if( func.body != null )
 						ValidateStmt( func.body, func );
 					break;
@@ -264,6 +266,200 @@ namespace Myll.Resolver
 			else {
 				ret.expr = BindToBitType( ret.expr, expected );
 			}
+		}
+
+		private void InferReturnType( Func func )
+		{
+			if( !func.retTypeIsInferred )
+				return;
+
+			if( func.body == null ) {
+				if( func.IsForwardDeclaration || func.IsExternal ) {
+					func.retType = new TypespecBasic {
+						kind = TypespecBasic.Kind.Void,
+						size = TypespecBasic.SizeInvalid,
+					};
+					return;
+				}
+
+				diagnostics.Add( new Diagnostic(
+					func.srcPos,
+					DiagnosticKind.Error,
+					String.Format(
+						"Function '{0}' has no return type and no body to infer it from",
+						func.name ) ) );
+				return;
+			}
+
+			List<ReturnStmt> returns = CollectReturns( func.body );
+
+			if( returns.TrueForAll( r => r.expr == null ) ) {
+				func.retType = new TypespecBasic {
+					kind = TypespecBasic.Kind.Void,
+					size = TypespecBasic.SizeInvalid,
+				};
+				return;
+			}
+
+			Typespec? inferred  = null;
+			bool      conflict  = false;
+			SrcPos?   conflictPos = null;
+
+			foreach( ReturnStmt ret in returns ) {
+				if( ret.expr == null ) {
+					conflict = true;
+					conflictPos ??= ret.srcPos;
+					continue;
+				}
+
+				Typespec? t = typeResolver.Resolve( ret.expr );
+				if( t == null )
+					continue;
+
+				t = InferAutoType( t )!;
+
+				if( inferred == null ) {
+					inferred = CloneTypespec( t );
+					continue;
+				}
+
+				Typespec? combined = TypeResolver.CommonType( inferred, t );
+				if( combined != null ) {
+					inferred = combined;
+				}
+				else {
+					conflict = true;
+					conflictPos ??= ret.srcPos;
+				}
+			}
+
+			if( conflict ) {
+				diagnostics.Add( new Diagnostic(
+					conflictPos ?? func.srcPos,
+					DiagnosticKind.Error,
+					String.Format(
+						"Cannot infer return type for '{0}': return expressions have incompatible types",
+						func.name ) ) );
+				return;
+			}
+
+			if( inferred == null ) {
+				diagnostics.Add( new Diagnostic(
+					func.srcPos,
+					DiagnosticKind.Error,
+					String.Format(
+						"Cannot infer return type for '{0}'",
+						func.name ) ) );
+				return;
+			}
+
+			func.retType = inferred;
+		}
+
+		private static List<ReturnStmt> CollectReturns( Stmt stmt )
+		{
+			List<ReturnStmt> ret = new();
+			CollectReturns( stmt, ret );
+			return ret;
+		}
+
+		private static void CollectReturns( Stmt stmt, List<ReturnStmt> output )
+		{
+			switch( stmt ) {
+				case ReturnStmt rs:
+					output.Add( rs );
+					break;
+
+				case MultiStmt ms:
+					foreach( Stmt s in ms.stmts )
+						CollectReturns( s, output );
+					break;
+
+				case IfStmt ifs:
+					foreach( IfStmt.CondThen ct in ifs.ifThens )
+						CollectReturns( ct.then, output );
+					if( ifs.els != null )
+						CollectReturns( ifs.els, output );
+					break;
+
+				case ForStmt fs:
+					if( fs.init != null )
+						CollectReturns( fs.init, output );
+					if( fs.body != null )
+						CollectReturns( fs.body, output );
+					if( fs.els != null )
+						CollectReturns( fs.els, output );
+					break;
+
+				case WhileStmt ws:
+					if( ws.body != null )
+						CollectReturns( ws.body, output );
+					if( ws.els != null )
+						CollectReturns( ws.els, output );
+					break;
+
+				case DoWhileStmt dws:
+					CollectReturns( dws.body, output );
+					break;
+
+				case TimesStmt ts:
+					CollectReturns( ts.body, output );
+					break;
+
+				case SwitchStmt sw:
+					foreach( SwitchStmt.CaseBlock c in sw.cases )
+						CollectReturns( c.then, output );
+					if( sw.els != null )
+						CollectReturns( sw.els, output );
+					break;
+
+				case TryCatchStmt tcs:
+					CollectReturns( tcs.tryBody, output );
+					foreach( CatchClause c in tcs.catches )
+						CollectReturns( c.body, output );
+					break;
+
+				case LoopStmt ls:
+					if( ls.body != null )
+						CollectReturns( ls.body, output );
+					break;
+			}
+		}
+
+		private static Typespec CloneTypespec( Typespec source )
+		{
+			Typespec ret = source switch {
+				TypespecBasic b => new TypespecBasic {
+					kind             = b.kind,
+					size             = b.size,
+					align            = b.align,
+					isDefaultSized   = b.isDefaultSized,
+					usesFloatKeyword = b.usesFloatKeyword,
+					literalText      = b.literalText,
+				},
+				TypespecNested n => new TypespecNested {
+					resolvedDecl = n.resolvedDecl,
+					idTpls       = n.idTpls
+						.Select( it => new IdTplArgs { id = it.id, tplArgs = it.tplArgs } )
+						.ToList(),
+				},
+				TypespecFunc f => new TypespecFunc {
+					paras   = f.paras,
+					retType = f.retType,
+				},
+				_ => throw new InvalidOperationException(
+					String.Format( "unknown Typespec variant: {0}", source.GetType().Name ) ),
+			};
+
+			ret.srcPos = source.srcPos;
+			ret.qual   = source.qual;
+			ret.ptrs   = source.ptrs?.Select( p => new Pointer {
+				kind = p.kind,
+				qual = p.qual,
+				expr = p.expr,
+			} ).ToList();
+
+			return ret;
 		}
 
 		private void ValidateMultiAssign( MultiAssign multiAssign )

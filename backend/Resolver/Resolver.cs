@@ -618,13 +618,26 @@ namespace Myll.Resolver
 						type = f.retType;
 				else if( calleeIdDecl is Structor s && s.kind == Structor.Kind.Constructor )
 						baseType = FindEnclosingStructural( s.scope )!;
-			}
-			else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( calleeScoped, out Decl? calleeScopedDecl ) ) {
-				if( calleeScopedDecl is Func f )
-					type = f.retType;
-				else if( calleeScopedDecl is Structor s && s.kind == Structor.Kind.Constructor )
-					baseType = FindEnclosingStructural( s.scope )!;
-			}
+				}
+				else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( calleeScoped, out Decl? calleeScopedDecl ) ) {
+					if( calleeScopedDecl is Func f )
+						type = f.retType;
+					else if( calleeScopedDecl is Structor s && s.kind == Structor.Kind.Constructor )
+						baseType = FindEnclosingStructural( s.scope )!;
+				}
+				else if( call.expr is BinOp calleeBin
+				      && calleeBin.op.In( Operand.MemberAccess, Operand.MemberPtrAccess )
+				      && calleeBin.right is IdExpr member
+				      && result.Members.TryGetValue( member, out Decl? memberDecl ) ) {
+					switch( memberDecl ) {
+						case VarDecl vd:
+							type = vd.type;
+							break;
+						case Func f:
+							type = f.retType;
+							break;
+					}
+				}
 			}
 			else if( expr is BinOp binop && binop.op.In( Operand.MemberAccess, Operand.MemberPtrAccess ) ) {
 				if( binop.right is IdExpr prevMember && result.Members.TryGetValue( prevMember, out Decl? member ) ) {
@@ -760,6 +773,11 @@ namespace Myll.Resolver
 
 			if( cur.importedNames.TryGetValue( name, out List<Decl>? importedNameList ) )
 				result.AddRange( importedNameList );
+
+			// Inside a class/struct, the unqualified class name refers to the
+			// class itself (C++ injected-class-name), not just the constructor.
+			if( cur.decl is Hierarchical h && h.name == name )
+				result.Add( h );
 
 			// Inner scopes shadow outer scopes. Once we have found any visible
 			// declaration at this scope level, stop looking further out.

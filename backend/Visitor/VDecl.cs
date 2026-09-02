@@ -730,16 +730,16 @@ namespace Myll
 				Requires  = requires,
 				paras     = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
 			};
-			ret.retType = c.typespec() != null ? VisitTypespec( c.typespec() ) :
-				ret.IsReturningSomething ?
-					new TypespecBasic {
-						kind = TypespecBasic.Kind.Auto,
-						size = TypespecBasic.SizeUndetermined,
-					} :
-					new TypespecBasic {
-						kind = TypespecBasic.Kind.Void,
-						size = TypespecBasic.SizeInvalid,
-					};
+			if( c.typespec() != null ) {
+				ret.retType = VisitTypespec( c.typespec() );
+			}
+			else {
+				ret.retTypeIsInferred = true;
+				ret.retType = new TypespecBasic {
+					kind = TypespecBasic.Kind.Auto,
+					size = TypespecBasic.SizeUndetermined,
+				};
+			}
 			return ret;
 		}
 

@@ -22,6 +22,55 @@ func foo() {        // return type inferred from body
 var auto x = complex_expr;
 ```
 
+## Return Type Inference
+
+A function or method without an explicit return type gets its return type from the body.
+
+```
+func noReturn() {            // void
+}
+
+func doubleIt(int x) {       // int
+    return x * 2;
+}
+
+func pick(u8 a, u32 b) {     // u32
+    if( a > 0 )
+        return a;
+    return b;
+}
+```
+
+Rules for multiple return statements:
+
+- Exact matches keep the first type.
+- References that differ only by qualifiers keep the first type.
+- Numeric types in the same category keep the widest size (for example, `u8` and `u32` produce `u32`).
+- Mixed signed/unsigned integer pairs follow the active dialect integer-promotion rule.
+- Other mismatches produce an error.
+
+## Method Chaining
+
+The `[chain]` attribute makes a method or operator return a reference to the enclosing class/struct.
+`[pure]` chained methods return a `const` reference.
+A chained method must not declare a return type.
+
+```
+class Counter {
+    field { int value; }
+[pub]:
+    [chain]
+    method add(int x) { value += x; }
+      // returns Counter&
+
+    [chain, pure]
+    method peek() {}
+      // returns const Counter&
+}
+```
+
+The compiler inserts `return self;` at the end of a chained body that can fall through.
+
 ## Type Aliases
 
 ```

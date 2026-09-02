@@ -340,6 +340,7 @@ namespace Myll
 		}
 
 		new TemplateParamTransformer().Transform( modules, new List<Diagnostic>() );
+		new ChainTransformer().Transform( modules, autoReturnDiagnostics );
 
 		if( opt.IsResolve ) {
 			var (result, diagnostics) = NameResolver.Resolve( modules );
