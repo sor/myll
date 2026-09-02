@@ -209,6 +209,7 @@ Before making changes, read these in `docs/analysis/`:
 4. **Mutating code generation** — `NewExpr.Gen()` used to mutate the AST (`type.ptrs.RemoveAt(0)`). Fixed in `backend/Core/Expr.cs`; the method now temporarily replaces the pointer list and restores it. See `03-ast-core.md` and `plan/suspicious-warnings.md`.
 5. **Dead/future code** — `Symbol.cs` and `Attribute.cs` enums exist but are disconnected. They are stubs intended for semantic analysis. See `07-future-stubs.md`.
 6. **Local target-framework override** — The working tree may temporarily change `.csproj` and Rider `.run.xml` files from `net10.0` to `net6.0` to match a local SDK. Keep these changes unstaged and do **not** commit them; the repository target remains `net10.0`.
+7. **No derived-to-base conversions** — the type checker does not resolve inheritance relationships yet. Polymorphism through base references/pointers (e.g. passing a `Derived*` to a `Base*`) fails with "Cannot convert argument type ...". Abstract base classes compile, but virtual dispatch through a base type requires this gap to be fixed.
 
 ## Current State & Priorities
 
