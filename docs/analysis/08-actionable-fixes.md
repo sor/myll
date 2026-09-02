@@ -80,13 +80,11 @@ public override IEnumerable<Stmt> EnumerateDF {
 **Impact:** `type.ptrs.RemoveAt(0)` destroyed the AST for subsequent passes.
 **Status:** Fixed. `NewExpr.Gen()` now temporarily replaces `type.ptrs` with a copy that excludes the smart pointer and restores the original list after generation. Constructor arguments are passed to `std::make_unique` / `std::make_shared` for scalar smart pointers.
 
-### 3. Fix `Scope.UpToNamespace()` NullReference
+### 3. Fix `Scope.UpToNamespace()` NullReference — done
 
 **File:** `backend/Core/Scope.cs`
-**Impact:** Crash if called on scope with no namespace ancestor.
-**Estimated Effort:** 10 minutes
-
-**Fix:** Add null propagation or ensure root scope is always a namespace.
+**Impact:** Crash if called on a scope with no namespace ancestor.
+**Status:** Fixed. The implementation now uses `parent?.UpToNamespace ?? UpToGlobal` so the root scope is returned when no namespace ancestor exists.
 
 ## 🟡 High — Significantly Improves Maintainability
 
@@ -124,13 +122,11 @@ public override IEnumerable<Stmt> EnumerateDF {
 - **Accessor/property generation** (currently parsed but skipped) — 2–4 hours
 - **Subclass/inheritance generation** (partially implemented) — 2–4 hours
 
-### 8. Fix Resource Leaks
+### 8. Fix Resource Leaks — done
 
 **File:** `frontend/Program.cs`
-**Impact:** `StreamReader` and `FileStream` never disposed.
-**Estimated Effort:** 10 minutes
-
-**Fix:** Dispose `StreamReader` and `FileStream` properly.
+**Impact:** `StreamReader` and `FileStream` were never disposed.
+**Status:** Fixed. The file contents are now read with `File.ReadAllText(...)`; there are no explicit `StreamReader`/`FileStream` instances left in the frontend code path.
 
 ## 🟢 Medium — Quality of Life Improvements
 
