@@ -363,7 +363,8 @@ namespace Myll
 			if( generationDiagnostics.Count > 0 ) {
 				Console.Error.Write( DiagnosticFormatter.Format( generationDiagnostics, UseColorForDiagnostics() ) );
 
-				if( !opt.IsKeepGoing )
+				if( !opt.IsKeepGoing
+				 && generationDiagnostics.Any( d => d.Kind == DiagnosticKind.Error ) )
 					Environment.Exit( -99 );
 			}
 

@@ -428,6 +428,20 @@ namespace Myll.Resolver
 
 					break;
 				}
+
+				case CastExpr cast: {
+					Typespec? sourceType = typeResolver.Resolve( cast.expr );
+					if( sourceType != null
+					 && ConversionRules.IsSlicingAttempt( sourceType, cast.type ) )
+						AddError(
+							cast,
+							String.Format(
+								"Explicit cast from derived type '{0}' to base type '{1}' would slice the object.",
+								FormatType( sourceType ),
+								FormatType( cast.type ) ) );
+
+					break;
+				}
 			}
 		}
 

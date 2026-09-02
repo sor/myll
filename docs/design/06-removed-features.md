@@ -20,8 +20,8 @@ This document lists features from C and C++ that Myll deliberately drops. Functi
 
 ## Intentional divergences from C++ behavior
 
-- **Object slicing is a hard error** — Passing a derived class value where a base class value is expected (e.g. `Base b = derived;` or `func takeBase( Base b )` called with a `Derived`) is rejected. Use a pointer or reference.
-- **Method hiding is automatically undone** — If a derived class redeclares a base method name with a different signature, Myll emits C++ `using Base::name;` inside the derived class so overload resolution sees both the base and the derived overloads. This matches the behavior in C# and avoids the C++ pitfall where `d.do(99)` silently resolves to an unrelated `do(f32)`. An opt-out attribute may be added later.
+- **Object slicing is a hard error** — Passing a derived class value where a base class value is expected (e.g. `Base b = derived;` or `func takeBase( Base b )` called with a `Derived`) is rejected. Any explicit value conversion from derived to base is rejected as well. Use a pointer or reference.
+- **Method hiding is automatically undone** — If a derived class redeclares a base method name with a different signature, Myll emits C++ `using Base::name;` inside the derived class so overload resolution sees both the base and the derived overloads. This matches the behavior in C# and avoids the C++ pitfall where `d.do(99)` silently resolves to an unrelated `do(f32)`. The behavior is controlled by `Dialect.AutoUnhideBaseMethods` (default true) and can be overridden per class or per method with `[shadow]` (suppress) and `[unshadow]` (force). A class-level attribute applies to all methods declared directly in that class and is not inherited by further derived classes. If the same name exists in multiple unrelated bases, auto-unhiding is skipped and a warning is emitted.
 - **`x: Type;` field shorthand is intentionally not supported** — Class/struct fields must use the `field` or `var` keyword: `field int x;`.
 - **`method` / `meth` are the preferred aliases for `func` inside classes and structs** — they are valid everywhere `func` is valid.
 

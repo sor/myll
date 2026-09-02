@@ -100,6 +100,11 @@ namespace Myll.Core
 		// Controls the default behavior of `switch` cases.
 		public static SwitchFallthroughMode SwitchFallthrough = SwitchFallthroughMode.ImplicitBreak;
 
+		// When true, a derived class that reintroduces a base method name with a different
+		// signature automatically emits C++ `using Base::name;` so overload resolution sees both.
+		// Can be overridden per class/method with [shadow] and [unshadow].
+		public static bool AutoUnhideBaseMethods = true;
+
 		// Default rule-of-N enforcement for classes. Can be overridden per class with e.g. `[rule_of=5]`.
 		public static RuleOf DefaultRuleOf = RuleOf.None;
 

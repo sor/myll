@@ -559,6 +559,8 @@ namespace Myll.Generator
 			if( gen.hierarchical is Structural structural )
 				AddHiddenBaseMethodUsings( structural, gen );
 
+			Diagnostics.AddRange( gen.Diagnostics );
+
 			string  indent      = gen.DeIndentDecl;
 			string  nameDecl    = gen.hierarchical.name;
 			Strings targetProto = protoEarly.Target( obj.access );
@@ -688,13 +690,27 @@ namespace Myll.Generator
 					continue;
 
 				List<(BaseType Base, Func Method)> baseMethods
-					= FindBaseMethods( structural, name, new HashSet<Structural>() );
+					= FindBaseMethods( structural, name, new HashSet<Structural>(), gen );
 
 				if( baseMethods.Count == 0 )
 					continue;
 
-				// Ambiguous across multiple unrelated bases: let C++ diagnose it.
-				if( baseMethods.Select( m => m.Method ).Distinct( ReferenceEqualityComparer.Instance ).Count() > 1 )
+				bool autoUnhide = ShouldAutoUnhide( derived, structural );
+
+				if( baseMethods.Select( m => m.Method ).Distinct( ReferenceEqualityComparer.Instance ).Count() > 1 ) {
+					if( autoUnhide ) {
+						gen.Diagnostics.Add( new Diagnostic(
+							derived.srcPos,
+							DiagnosticKind.Warning,
+							String.Format(
+								"Method '{0}' is hidden by an overload in '{1}'; auto-unhiding is skipped because the name exists in multiple base classes. Consider using 'using Base::{0};' explicitly.",
+								name,
+								structural.name ) ) );
+					}
+					continue;
+				}
+
+				if( !autoUnhide )
 					continue;
 
 				Func baseMethod = baseMethods[0].Method;
@@ -721,13 +737,27 @@ namespace Myll.Generator
 			}
 		}
 
+		private static bool ShouldAutoUnhide( Func derived, Structural structural )
+		{
+			if( derived.IsUnshadow )
+				return true;
+			if( derived.IsShadow )
+				return false;
+			if( structural.IsUnshadow )
+				return true;
+			if( structural.IsShadow )
+				return false;
+			return Dialect.AutoUnhideBaseMethods;
+		}
+
 		private static bool IsUnhidableSpecialMember( Func func )
 			=> func.name == "operator=" || func.name.StartsWith( "~" );
 
 		private static List<(BaseType Base, Func Method)> FindBaseMethods(
 			Structural              structural,
 			string                  name,
-			HashSet<Structural>     visited )
+			HashSet<Structural>     visited,
+			HierarchicalGen?        gen )
 		{
 			List<(BaseType Base, Func Method)> ret = new();
 
@@ -735,7 +765,8 @@ namespace Myll.Generator
 				return ret;
 
 			foreach( BaseType bt in structural.basetypes ) {
-				if( bt.type is not TypespecNested nested || nested.resolvedDecl is not Structural baseStruct )
+				Structural? baseStruct = ResolveBaseStructural( bt, gen );
+				if( baseStruct == null )
 					continue;
 
 				Func? direct = baseStruct.children
@@ -746,12 +777,36 @@ namespace Myll.Generator
 					ret.Add( (bt, direct) );
 				}
 				else {
-					ret.AddRange( FindBaseMethods( baseStruct, name, visited )
+					ret.AddRange( FindBaseMethods( baseStruct, name, visited, gen )
 						.Select( m => (bt, m.Method) ) );
 				}
 			}
 
 			return ret;
+		}
+
+		private static Structural? ResolveBaseStructural( BaseType bt, HierarchicalGen? gen )
+		{
+			if( bt.type is not TypespecNested nested )
+				return null;
+
+			if( nested.resolvedDecl is Structural structural )
+				return structural;
+
+			Scope? moduleScope = gen?.hierarchical?.scope?.UpToGlobal;
+			if( moduleScope == null )
+				return null;
+
+			string name = nested.idTpls.Last().id;
+			if( !moduleScope.children.TryGetValue( name, out List<ScopeLeaf>? leaves ) )
+				return null;
+
+			foreach( ScopeLeaf leaf in leaves ) {
+				if( leaf.HasDecl && leaf.decl is Structural s )
+					return s;
+			}
+
+			return null;
 		}
 
 		private static bool HasSameSignature( Func a, Func b )

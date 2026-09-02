@@ -28,6 +28,7 @@ Every attribute eventually normalizes to `category=value`. Built-in attributes m
 | dispatch | @struct __static__ == nonvirtual, @class __dynamic__ (virtual, abstract, override, final) | virtual, override, final, abstract, nonvirtual | methods and operators |
 | (virtual) | see dispatch | - | structural |
 | conversion | auto, implicit, explicit | — | constructor |
+| unhiding | on, off | shadow → off, unshadow → on | methods and structurals |
 | enum | flags, manual | — | enum |
 | alignment | integer value | pack(n), align(n) | type or variable |
 | rule_of | @struct __none__, @class encourage __any__ (0, 3, 5) | rule_of_n → any; rule_of_5 | structural |
@@ -54,6 +55,18 @@ The plain `[static]` attribute is intentionally not used.
 - `effect=default` resolves per declaration kind: getters default to `pure`, ordinary functions to `impure`.
 - `dispatch` values map to C++ virtual-dispatch behavior. Shortcuts like `[abstract]`, `[override]`, and `[final]` are aliases for the corresponding `dispatch` value combined with any extra requirements (`abstract` also implies no implementation).
 - `execution` values map roughly to C++ as: `CT` → `consteval`, `AT` → `constexpr`, `RT` → no special keyword, `BT` → `constexpr` if possible, otherwise no special keyword.
+
+## Method hiding (unhiding)
+
+When a derived class redeclares a base method name with a different signature, Myll normally emits C++ `using Base::name;` so both overloads participate in overload resolution. The `[shadow]` and `[unshadow]` attributes override this behavior.
+
+- `[shadow]` on a method prevents that method from triggering `using Base::name;`.
+- `[unshadow]` on a method forces `using Base::name;` for that method.
+- `[shadow]` on a `class` or `struct` applies to every method declared directly in that type.
+- `[unshadow]` on a `class` or `struct` applies to every method declared directly in that type.
+- Method-level attributes take precedence over type-level attributes.
+- The default is `Dialect.AutoUnhideBaseMethods` (true).
+- A class-level attribute affects only that class and is not inherited by later derived classes.
 
 ## Special function bodies
 

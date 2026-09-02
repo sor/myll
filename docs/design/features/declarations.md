@@ -249,6 +249,23 @@ module my_module;
 - Multiple files can declare the same module; their contents merge.
 - Output files: `my_module.h` and `my_module.cpp`.
 
+## Inheritance and Method Hiding
+
+Myll treats derived-to-base value conversions as object slicing and rejects them in assignments, function arguments, return statements, and explicit conversions. Use pointers (`Base*`) or references (`Base&`) for polymorphism.
+
+By default, Myll automatically undoes C++ method hiding. If a derived class reintroduces a base method name with a different signature, the generated C++ class contains `using Base::name;` so overload resolution sees the base overloads as well as the derived ones. This applies separately to each class and is not inherited by further derived classes.
+
+Control the behavior with attributes and dialect options:
+
+- `[shadow]` on a method suppresses auto-unhiding for that method.
+- `[unshadow]` on a method forces auto-unhiding for that method even when the global default is off.
+- `[shadow]` on a `class` or `struct` suppresses auto-unhiding for every method declared directly in that type.
+- `[unshadow]` on a `class` or `struct` forces auto-unhiding for every method declared directly in that type.
+
+Method-level attributes take precedence over type-level attributes. The global default can be changed with `Dialect.AutoUnhideBaseMethods` or a dialect switch.
+
+If a method name appears in multiple unrelated base classes, auto-unhiding is ambiguous. Myll skips the `using` declaration and emits a warning. Add an explicit `using Base::name;` in C++ interop or restructure the inheritance if the ambiguity matters.
+
 ## Attributes on Declarations
 
 See full list in `02-myll-language.md`.
