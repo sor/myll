@@ -34,6 +34,7 @@ struct Config
     bool flag = true;
     int count = 7;
 };
+int use(Base* b);
 int dispatch(int x);
 int dispatch(float x) = delete;
 int main();

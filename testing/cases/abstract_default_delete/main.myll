@@ -14,6 +14,8 @@ class Derived : Base
 	func compute() -> int => 42;
 }
 
+func use( Base * b ) -> int => b->compute();
+
 class Resource
 {
 	field int _value;
@@ -45,6 +47,9 @@ func main() -> int
 	var Derived d;
 	if( d.compute() != 42 )
 		return 1;
+
+	if( use( &d ) != 42 )
+		return 5;
 
 	var Resource a = Resource( 10 );
 	var Resource b = Resource( 20 );

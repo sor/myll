@@ -1,0 +1,21 @@
+module main;
+
+class Base
+{
+[pub]:
+	method doSomething() -> int => 0;
+}
+
+class Derived : Base
+{
+[pub]:
+	method doSomething() -> int => 1;
+}
+
+func takeBase( Base b ) -> int => b.doSomething();
+
+func main() -> int
+{
+	var Derived d;
+	return takeBase( d );
+}

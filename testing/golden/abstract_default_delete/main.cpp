@@ -11,6 +11,10 @@ int Resource::value()
 {
     return _value;
 }
+int use(Base* b)
+{
+    return b->compute();
+}
 int dispatch(int x)
 {
     return x + 1;
@@ -20,6 +24,9 @@ int main()
     Derived d{};
     if( d.compute() != 42 ) {
         return 1;
+    }
+    if( use( &d ) != 42 ) {
+        return 5;
     }
     Resource a = Resource( 10 );
     Resource b = Resource( 20 );

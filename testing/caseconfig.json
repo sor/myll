@@ -11,7 +11,7 @@
   "myllCompileRun": [ "enum", "func", "ct", "globals", "class_ctor", "return_if" ],
   "noResolve": [],
   "depth": {
-    "generateFailing": [ "overload_fail", "typecheck_fail", "bool_context_fail", "decl_fail", "operator_fail", "conversion_fail", "discard_fail" ],
+    "generateFailing": [ "overload_fail", "typecheck_fail", "bool_context_fail", "decl_fail", "operator_fail", "conversion_fail", "discard_fail", "slicing_fail" ],
     "generate": [ "cpp_fail" ],
     "compile": [ "extern" ],
     "link": [],
