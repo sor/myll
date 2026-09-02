@@ -556,6 +556,9 @@ namespace Myll.Generator
 
 			obj.children.ForEach( c => c.AddToGen( gen ) );
 
+			if( gen.hierarchical is Structural structural )
+				AddHiddenBaseMethodUsings( structural, gen );
+
 			string  indent      = gen.DeIndentDecl;
 			string  nameDecl    = gen.hierarchical.name;
 			Strings targetProto = protoEarly.Target( obj.access );
@@ -660,6 +663,108 @@ namespace Myll.Generator
 				targetDecl.Add( Format( isNamespace ? CurlyClose : CurlyCloseSC, indent ) );
 
 			targetImpl.AddRange( gen.GenImpl() );
+		}
+
+		/// <summary>
+		/// If a derived class reintroduces a base method name with a different signature,
+		/// C++ would hide the base overloads. Emit one or more C++ `using Base::name;`
+		/// declarations so that overload resolution sees both the base and derived overloads.
+		/// </summary>
+		private static void AddHiddenBaseMethodUsings( Structural structural, HierarchicalGen gen )
+		{
+			List<Func> derivedFuncs = structural.children
+				.OfType<Func>()
+				.Where( f => !IsUnhidableSpecialMember( f ) )
+				.ToList();
+
+			if( derivedFuncs.Count == 0 )
+				return;
+
+			HashSet<string> processed = new();
+
+			foreach( Func derived in derivedFuncs ) {
+				string name = derived.name;
+				if( !processed.Add( name ) )
+					continue;
+
+				List<(BaseType Base, Func Method)> baseMethods
+					= FindBaseMethods( structural, name, new HashSet<Structural>() );
+
+				if( baseMethods.Count == 0 )
+					continue;
+
+				// Ambiguous across multiple unrelated bases: let C++ diagnose it.
+				if( baseMethods.Select( m => m.Method ).Distinct( ReferenceEqualityComparer.Instance ).Count() > 1 )
+					continue;
+
+				Func baseMethod = baseMethods[0].Method;
+				BaseType owningBase = baseMethods[0].Base;
+
+				if( owningBase.access != Access.Public || baseMethod.access != Access.Public )
+					continue;
+
+				List<Func> derivedWithName = derivedFuncs
+					.Where( f => f.name == name )
+					.ToList();
+
+				if( derivedWithName.Any( d => HasSameSignature( d, baseMethod ) ) )
+					continue;
+
+				string baseTypeName = owningBase.type.GenType();
+				string usingLine = Format(
+					"{0}using {1}::{2};",
+					gen.IndentDecl,
+					baseTypeName,
+					name );
+
+				gen.methodDecl.Target( Access.Public ).Add( usingLine );
+			}
+		}
+
+		private static bool IsUnhidableSpecialMember( Func func )
+			=> func.name == "operator=" || func.name.StartsWith( "~" );
+
+		private static List<(BaseType Base, Func Method)> FindBaseMethods(
+			Structural              structural,
+			string                  name,
+			HashSet<Structural>     visited )
+		{
+			List<(BaseType Base, Func Method)> ret = new();
+
+			if( !visited.Add( structural ) )
+				return ret;
+
+			foreach( BaseType bt in structural.basetypes ) {
+				if( bt.type is not TypespecNested nested || nested.resolvedDecl is not Structural baseStruct )
+					continue;
+
+				Func? direct = baseStruct.children
+					.OfType<Func>()
+					.FirstOrDefault( f => f.name == name && !IsUnhidableSpecialMember( f ) );
+
+				if( direct != null ) {
+					ret.Add( (bt, direct) );
+				}
+				else {
+					ret.AddRange( FindBaseMethods( baseStruct, name, visited )
+						.Select( m => (bt, m.Method) ) );
+				}
+			}
+
+			return ret;
+		}
+
+		private static bool HasSameSignature( Func a, Func b )
+		{
+			if( a.paras.Count != b.paras.Count )
+				return false;
+
+			for( int i = 0; i < a.paras.Count; i++ ) {
+				if( !ConversionRules.IsExactMatch( a.paras[i].type, b.paras[i].type ) )
+					return false;
+			}
+
+			return true;
 		}
 
 		public void AddForwardDecl( Structural structural )
