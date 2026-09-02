@@ -440,22 +440,69 @@ namespace Myll
 			return ret;
 		}
 
-		public new Literal VisitLit( LitContext c )
+		public new Expr VisitLit( LitContext c )
 		{
+			string text = c.GetText();
+			if( text == "self" )
+				return CreateSelfExpr( c );
+			if( text == "this" )
+				return CreateThisExpr( c );
+
 			Literal ret = new() {
 				op   = Operand.Literal,
-				text = c.GetText() // TODO
+				text = text // TODO
 			};
 			return ret;
 		}
 
 		// TODO remove this or the other above?
-		public override Literal VisitLiteralExpr( LiteralExprContext c )
+		public override Expr VisitLiteralExpr( LiteralExprContext c )
 		{
-			Literal ret = new() {
-				op   = Operand.Literal,
-				text = c.lit().GetText() // TODO
+			return VisitLit( c.lit() );
+		}
+
+		private Structural? FindEnclosingStructural()
+		{
+			Scope? scope = Context.ScopeStack.Peek();
+			for( Scope? cur = scope; cur != null; cur = cur.parent )
+				if( cur.decl is Structural structural )
+					return structural;
+
+			return null;
+		}
+
+		private SelfExpr CreateSelfExpr( ParserRuleContext c )
+		{
+			SelfExpr ret = new() {
+				op     = Operand.Literal,
+				srcPos = c.ToSrcPos(),
 			};
+
+			if( FindEnclosingStructural() is Structural structural ) {
+				ret.Type = new TypespecNested {
+					resolvedDecl = structural,
+					idTpls       = new() { new() { id = structural.name } },
+				};
+			}
+
+			return ret;
+		}
+
+		private ThisExpr CreateThisExpr( ParserRuleContext c )
+		{
+			ThisExpr ret = new() {
+				op     = Operand.Literal,
+				srcPos = c.ToSrcPos(),
+			};
+
+			if( FindEnclosingStructural() is Structural structural ) {
+				ret.Type = new TypespecNested {
+					resolvedDecl = structural,
+					idTpls       = new() { new() { id = structural.name } },
+					ptrs         = new() { new Pointer { kind = Pointer.Kind.RawPtr } },
+				};
+			}
+
 			return ret;
 		}
 

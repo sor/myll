@@ -347,6 +347,13 @@ namespace Myll
 			new ElseOnLoopTransformer().Transform( modules, new List<Diagnostic>() );
 			new BreakContinueTransformer().Transform( modules, new List<Diagnostic>() );
 
+			var baseAliasShadowing = new BaseAliasShadowingTransformer();
+			baseAliasShadowing.Transform( modules );
+			if( baseAliasShadowing.Diagnostics.Count > 0 ) {
+				Console.Error.Write(
+					DiagnosticFormatter.Format( baseAliasShadowing.Diagnostics, UseColorForDiagnostics() ) );
+			}
+
 			List<(List<(string, IStrings)> Files, List<Diagnostic> Diagnostics)> generationResults
 				= modules
 					.Where( m => !m.Context.IsPrototypeFile )

@@ -433,12 +433,13 @@ namespace Myll.Resolver
 					Typespec? sourceType = typeResolver.Resolve( cast.expr );
 					if( sourceType != null
 					 && ConversionRules.IsSlicingAttempt( sourceType, cast.type ) )
-						AddError(
-							cast,
+						diagnostics.Add( new Diagnostic(
+							cast.srcPos,
+							DiagnosticKind.Warning,
 							String.Format(
-								"Explicit cast from derived type '{0}' to base type '{1}' would slice the object.",
+								"Explicit cast from derived type '{0}' to base type '{1}' slices the object.",
 								FormatType( sourceType ),
-								FormatType( cast.type ) ) );
+								FormatType( cast.type ) ) ) );
 
 					break;
 				}

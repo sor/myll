@@ -237,7 +237,7 @@ namespace Myll
 		}
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static Literal Visit( this Parser.LitContext c, CompilationContext context )
+		public static Expr Visit( this Parser.LitContext c, CompilationContext context )
 			=> context.ExprVisitor.VisitLit( c );
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]

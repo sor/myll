@@ -251,7 +251,7 @@ module my_module;
 
 ## Inheritance and Method Hiding
 
-Myll treats derived-to-base value conversions as object slicing and rejects them in assignments, function arguments, return statements, and explicit conversions. Use pointers (`Base*`) or references (`Base&`) for polymorphism.
+Myll treats derived-to-base value conversions as object slicing and rejects them in assignments, function arguments, and returns. An explicit value conversion from derived to base emits a warning instead of an error. Use pointers (`Base*`) or references (`Base&`) for polymorphism.
 
 By default, Myll automatically undoes C++ method hiding. If a derived class reintroduces a base method name with a different signature, the generated C++ class contains `using Base::name;` so overload resolution sees the base overloads as well as the derived ones. This applies separately to each class and is not inherited by further derived classes.
 
@@ -264,7 +264,13 @@ Control the behavior with attributes and dialect options:
 
 Method-level attributes take precedence over type-level attributes. The global default can be changed with `Dialect.AutoUnhideBaseMethods` or a dialect switch.
 
-If a method name appears in multiple unrelated base classes, auto-unhiding is ambiguous. Myll skips the `using` declaration and emits a warning. Add an explicit `using Base::name;` in C++ interop or restructure the inheritance if the ambiguity matters.
+If a method name appears in multiple unrelated base classes, auto-unhiding is ambiguous. Myll skips the `using` declaration and emits a warning.
+
+### `self` and `base`
+
+Inside any class/struct, `self` refers to the current object as a reference (`(*this)`). Use `self.field` and `self.method()` when you want a reference.
+
+`base` and `super` are not lexer keywords. `Dialect.BaseClassAliasName` (default `"base"`) makes the configured identifier behave as a private type alias for the first base class inside any class/struct that inherits. A setting of `null` or `""` disables the alias. If a member, parameter, or local variable uses the same name, Myll emits a shadowing warning and omits the alias from the generated C++ class to avoid duplicate members.
 
 ## Attributes on Declarations
 

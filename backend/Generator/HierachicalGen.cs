@@ -648,13 +648,15 @@ namespace Myll.Generator
 						bases ) );
 				targetDecl.Add( Format( CurlyOpen, indent ) );
 
-			// TODO: wrong spot? move towards the inside or create an alias-decl beforehand
-			if( gen.hierarchical is Structural objStruct && objStruct.basetypes.Count >= 1 ) {
+			if( gen.hierarchical is Structural objStruct
+			 && objStruct.basetypes.Count >= 1
+			 && !String.IsNullOrEmpty( Dialect.BaseClassAliasName )
+			 && !objStruct.children.Any( c => c.name == Dialect.BaseClassAliasName ) ) {
 				targetDecl.Add(
 					Format(
 						AliasFormat[0],
 						gen.IndentDecl,
-						"base",
+						Dialect.BaseClassAliasName,
 						objStruct.basetypes[0].type.GenType() ) );
 			}
 			}

@@ -105,6 +105,10 @@ namespace Myll.Core
 		// Can be overridden per class/method with [shadow] and [unshadow].
 		public static bool AutoUnhideBaseMethods = true;
 
+		// Name of the implicit alias for the first base class inside a class/struct.
+		// If empty or null, no alias is created and the name is treated as an ordinary identifier.
+		public static string BaseClassAliasName = "base";
+
 		// Default rule-of-N enforcement for classes. Can be overridden per class with e.g. `[rule_of=5]`.
 		public static RuleOf DefaultRuleOf = RuleOf.None;
 

@@ -626,6 +626,22 @@ namespace Myll.Core
 		}
 	}
 
+	public class SelfExpr : Expr
+	{
+		public override string Gen( bool doBrace = false )
+		{
+			return "(*this)".Brace( doBrace );
+		}
+	}
+
+	public class ThisExpr : Expr
+	{
+		public override string Gen( bool doBrace = false )
+		{
+			return "this".Brace( doBrace );
+		}
+	}
+
 	// TODO
 	public class Literal : Expr
 	{

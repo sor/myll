@@ -223,13 +223,15 @@ FORWARD		: 'forw'|'forward';
 MOVE		: 'move';
 COPY		: 'copy';
 
+// Must appear before ID so that 'this' and 'self' are lexed as CLASS_LIT.
+CLASS_LIT	: 'this'|'self';
+
 ID			: ALPHA_ ALNUM_*;
 
 // The keywords "ret, result, other, that, nullptr" are not really keywords,
 //	they exist only in special spots and depending on context,
 //	and they are handled by "id"
 NUL			: 'null';
-CLASS_LIT	: 'this'|'self'|'base'|'super';
 BOOL_LIT	: 'true'|'false';
 FLOAT_LIT	:	(	DIGIT* '.' DIGIT+ ( [eE] [+-]? DIGIT+ )?
 				|	DIGIT+ [eE] [+-]? DIGIT+

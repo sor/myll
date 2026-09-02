@@ -568,12 +568,17 @@ namespace Myll.Resolver
 			baseType = null!;
 			Typespec? type = null;
 
-			if( expr is IdExpr id ) {
-				if( id.idTplArgs.id == "self" ) {
-					baseType = FindEnclosingStructural( scope )!;
-					return baseType != null;
-				}
+			if( expr is SelfExpr ) {
+				baseType = FindEnclosingStructural( scope )!;
+				return baseType != null;
+			}
 
+			if( expr is ThisExpr ) {
+				baseType = FindEnclosingStructural( scope )!;
+				return baseType != null;
+			}
+
+			if( expr is IdExpr id ) {
 				if( result.Ids.TryGetValue( id, out Decl? decl ) || result.Members.TryGetValue( id, out decl ) ) {
 					switch( decl ) {
 						case VarDecl vd:
@@ -658,6 +663,21 @@ namespace Myll.Resolver
 			}
 
 			return null;
+		}
+
+		private Structural? GetFirstBaseStructural( Structural structural )
+		{
+			if( structural.basetypes.Count == 0 )
+				return null;
+
+			if( structural.basetypes[0].type is not TypespecNested nested )
+				return null;
+
+			Decl? decl = nested.resolvedDecl;
+			if( decl == null )
+				result.TryGetResolved( nested, out decl );
+
+			return decl as Structural;
 		}
 
 		private bool TryGetBaseHierarchical( Typespec type, out Hierarchical baseType )
@@ -745,6 +765,17 @@ namespace Myll.Resolver
 			// declaration at this scope level, stop looking further out.
 			if( result.Count > 0 )
 				break;
+		}
+
+		// If no visible declaration was found and the name matches the configured
+		// base-class alias, inject the first base class of the enclosing class/struct.
+		if( result.Count == 0
+		 && !String.IsNullOrEmpty( Dialect.BaseClassAliasName )
+		 && name == Dialect.BaseClassAliasName
+		 && FindEnclosingStructural( scope ) is Structural structural ) {
+			Structural? baseClass = GetFirstBaseStructural( structural );
+			if( baseClass != null )
+				result.Add( baseClass );
 		}
 
 		foreach( string importedModule in module.imps ) {

@@ -39,6 +39,8 @@ namespace Myll.Resolver
 		{
 			return expr switch {
 				Literal lit                         => ResolveLiteral( lit ),
+				SelfExpr self                       => self.Type,
+				ThisExpr thisExpr                   => thisExpr.Type,
 				IdExpr id                           => ResolveId( id ),
 				ScopedExpr scoped                   => ResolveScoped( scoped ),
 				FuncCallExpr call                   => ResolveFuncCall( call ),
@@ -92,17 +94,6 @@ namespace Myll.Resolver
 
 		private Typespec? ResolveId( IdExpr id )
 		{
-			if( id.idTplArgs.id == "self" ) {
-				Hierarchical? selfType = FindEnclosingStructural( id );
-				if( selfType == null )
-					return null;
-
-				return new TypespecNested {
-					resolvedDecl = selfType,
-					idTpls       = new() { new() { id = selfType.name } },
-				};
-			}
-
 			if( id.idTplArgs.id == "null" )
 				return new TypespecBasic { kind = TypespecBasic.Kind.Auto, size = TypespecBasic.SizeUndetermined };
 

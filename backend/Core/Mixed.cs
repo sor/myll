@@ -125,7 +125,7 @@ namespace Myll.Core
 	public class TplArg // literal OR type
 	{
 		public Typespec? typespec;
-		public Literal?  lit;
+		public Expr?     lit;
 
 		public string Gen()
 			=> lit?.Gen()
