@@ -767,18 +767,23 @@ namespace Myll.Resolver
 				break;
 		}
 
-		// If no visible declaration was found and the name matches the configured
-		// base-class alias, inject the first base class of the enclosing class/struct.
-		if( result.Count == 0
-		 && !String.IsNullOrEmpty( Dialect.BaseClassAliasName )
-		 && name == Dialect.BaseClassAliasName
-		 && FindEnclosingStructural( scope ) is Structural structural ) {
-			Structural? baseClass = GetFirstBaseStructural( structural );
-			if( baseClass != null )
-				result.Add( baseClass );
-		}
+			// If no visible declaration was found and the name matches one of the
+			// configured class aliases, inject the corresponding class/struct.
+			if( result.Count == 0
+			 && FindEnclosingStructural( scope ) is Structural structural ) {
+				if( !String.IsNullOrEmpty( Dialect.BaseClassAliasName )
+				 && name == Dialect.BaseClassAliasName ) {
+					Structural? baseClass = GetFirstBaseStructural( structural );
+					if( baseClass != null )
+						result.Add( baseClass );
+				}
+				else if( !String.IsNullOrEmpty( Dialect.OwnClassAliasName )
+				      && name == Dialect.OwnClassAliasName ) {
+					result.Add( structural );
+				}
+			}
 
-		foreach( string importedModule in module.imps ) {
+			foreach( string importedModule in module.imps ) {
 			if( !moduleExports.TryGetValue( importedModule, out ModuleExports? exports ) )
 				continue;
 

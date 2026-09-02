@@ -39,6 +39,7 @@ namespace Myll.Core
 		public string       name = null!;
 		public Typespec     type = null!; // contains Qualifier
 		public Expr?        init;
+		public bool         IsAutoReturn { get; set; }
 
 		public override Strings Gen( int level )
 		{

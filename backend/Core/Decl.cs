@@ -192,6 +192,12 @@ namespace Myll.Core
 		public MultiStmt?           body; // isScope = true
 		public Typespec             retType = null!;
 
+		/// <summary>
+		/// The scope that holds parameters and any compiler-generated locals for this
+		/// function. It is a child of the enclosing class/struct/global scope.
+		/// </summary>
+		public Scope? funcScope;
+
 		// TODO: analyze, for void or auto return type of funcs
 		public bool IsReturningSomething => false;
 

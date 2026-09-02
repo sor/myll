@@ -668,6 +668,7 @@ namespace Myll
 					ret.body = c.funcBody().Visit( Context );
 				}
 			}
+			ret.funcScope = scopeStack.Peek();
 			PopScope();
 			AddChild( ret ); // needs ret.name to be set already
 			c.id().Visit();
@@ -679,11 +680,15 @@ namespace Myll
 		{
 			PushScope();
 
+			Scope funcScope = scopeStack.Peek();
+
 			Func ret = VisitDefCoreFunc(
 				c.defCoreFunc(),
 				c.id().Visit(),
 				kind,
 				VisitTypespecsNested( c.typespecsNested() ) );
+
+			ret.funcScope = funcScope;
 
 			AddParamsToScope( ret.paras );
 			MultiStmt body = c.funcBody().Visit( Context );

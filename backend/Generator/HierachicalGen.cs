@@ -648,16 +648,27 @@ namespace Myll.Generator
 						bases ) );
 				targetDecl.Add( Format( CurlyOpen, indent ) );
 
-			if( gen.hierarchical is Structural objStruct
-			 && objStruct.basetypes.Count >= 1
-			 && !String.IsNullOrEmpty( Dialect.BaseClassAliasName )
-			 && !objStruct.children.Any( c => c.name == Dialect.BaseClassAliasName ) ) {
-				targetDecl.Add(
-					Format(
-						AliasFormat[0],
-						gen.IndentDecl,
-						Dialect.BaseClassAliasName,
-						objStruct.basetypes[0].type.GenType() ) );
+			if( gen.hierarchical is Structural objStruct ) {
+				if( objStruct.basetypes.Count >= 1
+				 && !String.IsNullOrEmpty( Dialect.BaseClassAliasName )
+				 && !objStruct.children.Any( c => c.name == Dialect.BaseClassAliasName ) ) {
+					targetDecl.Add(
+						Format(
+							AliasFormat[0],
+							gen.IndentDecl,
+							Dialect.BaseClassAliasName,
+							objStruct.basetypes[0].type.GenType() ) );
+				}
+
+				if( !String.IsNullOrEmpty( Dialect.OwnClassAliasName )
+				 && !objStruct.children.Any( c => c.name == Dialect.OwnClassAliasName ) ) {
+					targetDecl.Add(
+						Format(
+							AliasFormat[0],
+							gen.IndentDecl,
+							Dialect.OwnClassAliasName,
+							objStruct.name ) );
+				}
 			}
 			}
 

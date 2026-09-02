@@ -332,27 +332,34 @@ namespace Myll
 					Environment.Exit( -99 );
 			}
 
-			if( opt.IsResolve ) {
-				var (result, diagnostics) = NameResolver.Resolve( modules );
-				if( diagnostics.Count > 0 ) {
-					Console.Error.Write( DiagnosticFormatter.Format( diagnostics, UseColorForDiagnostics() ) );
+		var autoReturnDiagnostics = new List<Diagnostic>();
+		new AutoReturnTransformer().Transform( modules, autoReturnDiagnostics );
+		if( autoReturnDiagnostics.Count > 0 ) {
+			Console.Error.Write(
+				DiagnosticFormatter.Format( autoReturnDiagnostics, UseColorForDiagnostics() ) );
+		}
 
-					if( !opt.IsKeepGoing )
-						Environment.Exit( -99 );
-				}
+		if( opt.IsResolve ) {
+			var (result, diagnostics) = NameResolver.Resolve( modules );
+			if( diagnostics.Count > 0 ) {
+				Console.Error.Write( DiagnosticFormatter.Format( diagnostics, UseColorForDiagnostics() ) );
 
-				result.Apply();
+				if( !opt.IsKeepGoing )
+					Environment.Exit( -99 );
 			}
 
-			new ElseOnLoopTransformer().Transform( modules, new List<Diagnostic>() );
-			new BreakContinueTransformer().Transform( modules, new List<Diagnostic>() );
+			result.Apply();
+		}
 
-			var baseAliasShadowing = new BaseAliasShadowingTransformer();
-			baseAliasShadowing.Transform( modules );
-			if( baseAliasShadowing.Diagnostics.Count > 0 ) {
-				Console.Error.Write(
-					DiagnosticFormatter.Format( baseAliasShadowing.Diagnostics, UseColorForDiagnostics() ) );
-			}
+		new ElseOnLoopTransformer().Transform( modules, new List<Diagnostic>() );
+		new BreakContinueTransformer().Transform( modules, new List<Diagnostic>() );
+
+		var aliasShadowing = new ConfiguredAliasShadowingTransformer();
+		aliasShadowing.Transform( modules );
+		if( aliasShadowing.Diagnostics.Count > 0 ) {
+			Console.Error.Write(
+				DiagnosticFormatter.Format( aliasShadowing.Diagnostics, UseColorForDiagnostics() ) );
+		}
 
 			List<(List<(string, IStrings)> Files, List<Diagnostic> Diagnostics)> generationResults
 				= modules
