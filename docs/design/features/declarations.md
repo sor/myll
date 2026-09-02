@@ -122,8 +122,10 @@ Supported operators follow C++ rules.
 
 ```
 struct Point {
-    x: f64;
-    y: f64;
+    field {
+        f64 x;
+        f64 y;
+    }
 }
 
 class Widget : Control {
@@ -140,10 +142,35 @@ class MixedWidget : [pub] Control, [priv] Helper, [virtual] Mixin {
 }
 
 union Value {
-    int_val: i64;
-    float_val: f64;
+    field {
+        i64 int_val;
+        f64 float_val;
+    }
 }
 ```
+
+### Field declarations (current syntax)
+
+Inside `class`, `struct`, and `union`, member variables must currently be introduced with the `field` or `var` keyword. Both keywords are accepted in both `class` and `struct`. A `field { ... }` block groups multiple fields.
+
+```myll
+class A {
+    var bool blah = true;
+}
+
+struct B {
+    field int i = 9;
+}
+
+class C {
+    field {
+        int  x = 1;
+        bool y = false;
+    }
+}
+```
+
+The shorthand `x: Type;` shown in older examples is planned but not implemented yet.
 
 ### Access Control
 

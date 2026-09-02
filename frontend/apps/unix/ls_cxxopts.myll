@@ -256,26 +256,16 @@ func main( const int argc, const char *[] argv ) -> int
 {
 	var cxxopts::Options cli = cxxopts::Options( "ls_cxxopts", "ls implemented with cxxopts" );
 	cli.add_options()
-		( "a,all",          "do not ignore entries starting with .",
-		  cxxopts::value<bool>()->default_value( "false" ) )
-		( "A,almost-all",   "do not list implied . and ..",
-		  cxxopts::value<bool>()->default_value( "false" ) )
-		( "h,human-readable", "print human readable sizes",
-		  cxxopts::value<bool>()->default_value( "false" ) )
-		( "l,long",         "use long listing format",
-		  cxxopts::value<bool>()->default_value( "false" ) )
-		( "n,nameonly",     "list entry names only",
-		  cxxopts::value<bool>()->default_value( "false" ) )
-		( "1,one",          "list entry names only",
-		  cxxopts::value<bool>()->default_value( "false" ) )
-		( "R,recursive",    "list subdirectories recursively",
-		  cxxopts::value<bool>()->default_value( "false" ) )
-		( "r,reverse",      "reverse order while sorting",
-		  cxxopts::value<bool>()->default_value( "false" ) )
-		( "s,size",         "sort by file size",
-		  cxxopts::value<bool>()->default_value( "false" ) )
-		( "t,time",         "sort by modification time",
-		  cxxopts::value<bool>()->default_value( "false" ) );
+		( "a,all",            "do not ignore entries starting with .",              cxxopts::value<bool>()->default_value( "false" ) )
+		( "A,almost-all",     "do not list implied . and ..",                       cxxopts::value<bool>()->default_value( "false" ) )
+		( "h,human-readable", "print human readable sizes",                         cxxopts::value<bool>()->default_value( "false" ) )
+		( "l,long",           "use long listing format",                            cxxopts::value<bool>()->default_value( "false" ) )
+		( "n,nameonly",       "list entry names only",                              cxxopts::value<bool>()->default_value( "false" ) )
+		( "1,one",            "list entry names only",                              cxxopts::value<bool>()->default_value( "false" ) )
+		( "R,recursive",      "list subdirectories recursively",                    cxxopts::value<bool>()->default_value( "false" ) )
+		( "r,reverse",        "reverse order while sorting",                        cxxopts::value<bool>()->default_value( "false" ) )
+		( "s,size",           "sort by file size",                                  cxxopts::value<bool>()->default_value( "false" ) )
+		( "t,time",           "sort by modification time",                          cxxopts::value<bool>()->default_value( "false" ) );
 
 	var cxxopts::ParseResult result = cli.parse( argc, argv );
 
