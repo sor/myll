@@ -50,10 +50,14 @@ namespace Myll.Resolver
 			if( IsPromotion( source, target ) )
 				return ConversionRank.Promotion;
 
-			// Value -> reference parameter binding (e.g., passing std::ostream to std::ostream&).
+			// Value -> reference parameter binding (e.g. passing std::ostream to std::ostream&).
 			if( TryStripReference( target, out Typespec? refBase )
 			 && GetRank( source, refBase ) <= ConversionRank.Promotion )
 				return ConversionRank.Promotion;
+
+			// Inheritance conversions: Derived -> Base&, Derived* -> Base*, Derived*! -> Base*!, etc.
+			if( TryGetInheritanceConversionRank( source, target, out ConversionRank inheritanceRank ) )
+				return inheritanceRank;
 
 			// String literal to C-style string pointer.
 			if( source is TypespecBasic { kind: TypespecBasic.Kind.String }
@@ -71,6 +75,116 @@ namespace Myll.Resolver
 
 		public static bool IsImplicitlyConvertible( Typespec? source, Typespec? target )
 			=> GetRank( source, target ) <= ConversionRank.Conversion;
+
+		/// <summary>
+		/// True when <paramref name="source"/> is a class/struct type derived from
+		/// <paramref name="target"/>, considering the full base chain.
+		/// </summary>
+		public static bool IsDerivedFrom( TypespecNested source, TypespecNested target )
+		{
+			if( source.resolvedDecl == null || target.resolvedDecl == null )
+				return false;
+
+			if( source.resolvedDecl == target.resolvedDecl )
+				return false;
+
+			return IsDerivedFrom( source.resolvedDecl, target.resolvedDecl, new HashSet<Decl>() );
+		}
+
+		private static bool IsDerivedFrom( Decl derived, Decl target, HashSet<Decl> visited )
+		{
+			if( derived == target )
+				return true;
+
+			if( derived is not Structural structural )
+				return false;
+
+			if( !visited.Add( structural ) )
+				return false;
+
+			foreach( BaseType bt in structural.basetypes ) {
+				Decl? baseDecl = bt.type is TypespecNested nested ? nested.resolvedDecl : null;
+				if( baseDecl == null )
+					continue;
+
+				if( baseDecl == target )
+					return true;
+
+				if( IsDerivedFrom( baseDecl, target, visited ) )
+					return true;
+			}
+
+			return false;
+		}
+
+		/// <summary>
+		/// True when a value of a derived class type is being used where a base class value
+		/// is expected. Myll treats this as object slicing and rejects it.
+		/// </summary>
+		public static bool IsSlicingAttempt( Typespec source, Typespec target )
+		{
+			if( source.ptrs is { Count: > 0 } )
+				return false;
+
+			if( target.ptrs is { Count: > 0 } )
+				return false;
+
+			if( source is not TypespecNested srcNest || target is not TypespecNested tgtNest )
+				return false;
+
+			return IsDerivedFrom( srcNest, tgtNest );
+		}
+
+		private static bool TryGetInheritanceConversionRank(
+			Typespec           source,
+			Typespec           target,
+			out ConversionRank rank )
+		{
+			rank = ConversionRank.None;
+
+			// Reference binding: Derived -> Base& / Derived -> Base&&.
+			if( target.ptrs is { Count: > 0 }
+			 && TryStripReference( target, out Typespec? refBase )
+			 && refBase is TypespecNested refBaseNest
+			 && source is TypespecNested srcNest
+			 && IsDerivedFrom( srcNest, refBaseNest ) ) {
+				rank = ConversionRank.Conversion;
+				return true;
+			}
+
+			// Pointer / smart-pointer conversion: Derived* -> Base*, Derived*! -> Base*!, ...
+			if( source.ptrs == null || target.ptrs == null
+			 || source.ptrs.Count != target.ptrs.Count
+			 || source.ptrs.Count != 1 )
+				return false;
+
+			Pointer.Kind srcKind = source.ptrs[0].kind;
+			Pointer.Kind tgtKind = target.ptrs[0].kind;
+
+			if( !IsInheritancePointerKind( srcKind ) || srcKind != tgtKind )
+				return false;
+
+			Typespec sourceInner = CloneTypespecBase( source );
+			sourceInner.ptrs = new();
+
+			Typespec targetInner = CloneTypespecBase( target );
+			targetInner.ptrs = new();
+
+			if( sourceInner is TypespecNested sourceNested
+			 && targetInner is TypespecNested targetNested
+			 && IsDerivedFrom( sourceNested, targetNested ) ) {
+				rank = ConversionRank.Conversion;
+				return true;
+			}
+
+			return false;
+		}
+
+		private static bool IsInheritancePointerKind( Pointer.Kind kind )
+			=> kind is Pointer.Kind.RawPtr
+			    or Pointer.Kind.Unique
+			    or Pointer.Kind.Shared
+			    or Pointer.Kind.Weak;
 
 		public static bool IsExactMatch( Typespec? a, Typespec? b )
 		{

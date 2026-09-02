@@ -201,7 +201,7 @@ namespace Myll.Resolver
 				if( !TryGetMemberAccessBaseType( unresolved.Node.left, unresolved.Scope, out Hierarchical? baseType ) )
 					continue;
 
-				Decl? resolved = LookupMember( member.idTplArgs.id, baseType, module );
+				Decl? resolved = LookupMember( member.idTplArgs.id, (Structural) baseType, module );
 				if( resolved != null ) {
 					result.ResolveMember( member, resolved );
 					progress = true;
@@ -698,10 +698,32 @@ namespace Myll.Resolver
 			return false;
 		}
 
-		private Decl? LookupMember( string name, Hierarchical baseType, GlobalNamespace module )
+		private Decl? LookupMember( string name, Structural baseType, GlobalNamespace module )
+			=> LookupMember( name, baseType, module, new HashSet<Structural>() );
+
+		private Decl? LookupMember( string name, Structural baseType, GlobalNamespace module, HashSet<Structural> visited )
 		{
+			if( !visited.Add( baseType ) )
+				return null;
+
 			List<Decl> candidates = new();
 			AddVisibleChildren( candidates, baseType.scope, name, filterHidden: false );
+
+			if( candidates.Count > 0 )
+				return PickSingleCandidate( candidates );
+
+			foreach( BaseType bt in baseType.basetypes ) {
+				Decl? baseDecl = bt.type is TypespecNested nested
+					? nested.resolvedDecl ?? ( result.TryGetResolved( nested, out Decl? d ) ? d : null )
+					: null;
+
+				if( baseDecl is not Structural baseStruct )
+					continue;
+
+				Decl? fromBase = LookupMember( name, baseStruct, module, visited );
+				if( fromBase != null )
+					candidates.Add( fromBase );
+			}
 
 			return PickSingleCandidate( candidates );
 		}
@@ -742,6 +764,19 @@ namespace Myll.Resolver
 		{
 			List<Decl> result = new();
 			AddVisibleChildren( result, h.scope, name, filterHidden: false );
+
+			if( h is Structural structural ) {
+				foreach( BaseType bt in structural.basetypes ) {
+					Decl? baseDecl = bt.type is TypespecNested nested
+						? nested.resolvedDecl ?? ( this.result.TryGetResolved( nested, out Decl? d ) ? d : null )
+						: null;
+
+					if( baseDecl is not Structural baseStruct )
+						continue;
+
+					result.AddRange( LookupInHierarchicalCandidates( name, baseStruct, module ) );
+				}
+			}
 
 			if( h is Namespace ns ) {
 				string fqn = ns.FullyQualifiedName;

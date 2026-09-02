@@ -55,17 +55,19 @@ namespace Myll.Resolver
 					if( argType == null )
 						continue; // cannot determine argument type yet
 
-					if( !ConversionRules.IsImplicitlyConvertible( argType, paras[i].type ) ) {
-						diagnostics.Add( new Diagnostic(
-							call.Call.args[i].expr.srcPos,
-							DiagnosticKind.Error,
-							String.Format(
-								"Cannot convert argument type '{0}' to parameter type '{1}'",
-								FormatType( argType ),
-								FormatType( paras[i].type ) ) ) );
-					}
+				if( !ConversionRules.IsImplicitlyConvertible( argType, paras[i].type ) ) {
+					ReportTypeConversionError(
+						call.Call.args[i].expr.srcPos,
+						argType,
+						paras[i].type,
+						String.Format(
+							"Cannot convert argument type '{0}' to parameter type '{1}'",
+							FormatType( argType ),
+							FormatType( paras[i].type ) ) );
+					continue;
+				}
 
-					call.Call.args[i].expr = BindToBitType( call.Call.args[i].expr, paras[i].type );
+				call.Call.args[i].expr = BindToBitType( call.Call.args[i].expr, paras[i].type );
 				}
 			}
 		}
@@ -249,17 +251,19 @@ namespace Myll.Resolver
 				return;
 
 			if( !ConversionRules.IsImplicitlyConvertible( actual, expected ) ) {
-				diagnostics.Add( new Diagnostic(
+				ReportTypeConversionError(
 					ret.expr.srcPos,
-					DiagnosticKind.Error,
+					actual,
+					expected,
 					String.Format(
 						"Cannot return type '{0}' from function '{1}' expecting '{2}'",
 						FormatType( actual ),
 						currentFunction.name,
-						FormatType( expected ) ) ) );
+						FormatType( expected ) ) );
 			}
-
-			ret.expr = BindToBitType( ret.expr, expected );
+			else {
+				ret.expr = BindToBitType( ret.expr, expected );
+			}
 		}
 
 		private void ValidateMultiAssign( MultiAssign multiAssign )
@@ -284,13 +288,14 @@ namespace Myll.Resolver
 				return;
 
 			if( !ConversionRules.IsImplicitlyConvertible( rightType, leftType ) ) {
-				diagnostics.Add( new Diagnostic(
+				ReportTypeConversionError(
 					srcPos,
-					DiagnosticKind.Error,
+					rightType,
+					leftType,
 					String.Format(
 						"Cannot convert '{0}' to '{1}'",
 						FormatType( rightType ),
-						FormatType( leftType ) ) ) );
+						FormatType( leftType ) ) );
 			}
 		}
 
@@ -303,13 +308,14 @@ namespace Myll.Resolver
 				return;
 
 			if( !ConversionRules.IsImplicitlyConvertible( rightType, leftType ) ) {
-				diagnostics.Add( new Diagnostic(
+				ReportTypeConversionError(
 					srcPos,
-					DiagnosticKind.Error,
+					rightType,
+					leftType,
 					String.Format(
 						"Cannot convert '{0}' to '{1}'",
 						FormatType( rightType ),
-						FormatType( leftType ) ) ) );
+						FormatType( leftType ) ) );
 			}
 		}
 
@@ -798,6 +804,25 @@ namespace Myll.Resolver
 				Type   = castType,
 				srcPos = expr.srcPos,
 			};
+		}
+
+		private void ReportTypeConversionError(
+			SrcPos     srcPos,
+			Typespec   sourceType,
+			Typespec   targetType,
+			string     genericMessage )
+		{
+			if( ConversionRules.IsSlicingAttempt( sourceType, targetType ) ) {
+				diagnostics.Add( new Diagnostic(
+					srcPos,
+					DiagnosticKind.Error,
+					String.Format(
+						"Slicing is not allowed in Myll; use a pointer or reference to '{0}' instead of a value",
+						FormatType( targetType ) ) ) );
+			}
+			else {
+				diagnostics.Add( new Diagnostic( srcPos, DiagnosticKind.Error, genericMessage ) );
+			}
 		}
 
 		private void AddError( Decl decl, string message )
