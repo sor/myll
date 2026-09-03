@@ -1,0 +1,25 @@
+module template_deduction;
+
+func max<T>(T a, T b) -> T
+{
+	return a > b ? a : b;
+}
+
+func first<T>(T* ptr) -> T
+{
+	return *ptr;
+}
+
+func main() -> int
+{
+	var int a = max( 1, 2 );
+	if( a != 2 )
+		return 1;
+
+	var int x = 42;
+	var int* p = &x;
+	if( first( p ) != 42 )
+		return 2;
+
+	return 0;
+}

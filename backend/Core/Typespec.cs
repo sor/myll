@@ -40,6 +40,9 @@ namespace Myll.Core
 
 		public abstract string GenType();
 
+		public virtual bool IsDependentType()
+			=> false;
+
 		public virtual string Gen( string name = "" )
 			=> PointerizeName( GenQualifiers() + GenType(), name );
 
@@ -192,6 +195,20 @@ namespace Myll.Core
 
 		// Set by NameResolver.Apply() once names have been resolved.
 		public Decl? resolvedDecl;
+
+		public override bool IsDependentType()
+		{
+			if( resolvedDecl is TplParamDecl )
+				return true;
+
+			foreach( IdTplArgs segment in idTpls ) {
+				if( segment.tplArgs != null
+				 && segment.tplArgs.Any( a => a.typespec != null && a.typespec.IsDependentType() ) )
+					return true;
+			}
+
+			return false;
+		}
 
 		public override string GenType()
 		{

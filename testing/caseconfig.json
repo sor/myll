@@ -11,10 +11,10 @@
   "myllCompileRun": [ "enum", "func", "ct", "globals", "class_ctor", "return_if" ],
   "noResolve": [],
   "depth": {
-    "generateFailing": [ "overload_fail", "typecheck_fail", "bool_context_fail", "decl_fail", "operator_fail", "conversion_fail", "discard_fail", "slicing_fail" ],
+    "generateFailing": [ "overload_fail", "typecheck_fail", "bool_context_fail", "decl_fail", "operator_fail", "conversion_fail", "discard_fail", "slicing_fail", "template_arg_count_fail", "template_conversion_fail", "template_typename_fail" ],
     "generate": [ "cpp_fail" ],
     "compile": [ "extern" ],
     "link": [],
-    "run": []
+    "run": [ "template_template_call", "template_deduction" ]
   }
 }

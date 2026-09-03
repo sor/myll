@@ -43,6 +43,7 @@ namespace Myll.Resolver
 		private readonly TypeResolver typeResolver;
 		private readonly HashSet<Expr> ambiguousCalls = new();
 		private readonly HashSet<Expr> noMatchingCalls = new();
+		private readonly HashSet<Expr> templateArityMismatchCalls = new();
 
 		private NameResolver(
 			IReadOnlyDictionary<string, ModuleExports> moduleExports,
@@ -96,6 +97,7 @@ namespace Myll.Resolver
 			foreach( ITransformer transformer in postResolveTransforms )
 				transformer.Transform( modules, diagnostics );
 
+			resolver.RejectRequiresClauses( modules );
 			resolver.ValidateTypes( modules );
 			resolver.ReportUnresolved( modules );
 
@@ -179,13 +181,48 @@ namespace Myll.Resolver
 
 				// Types are never call sites: prefer the type over a constructor.
 				Decl? resolved = ResolvePath( unresolved.Node.idTpls, unresolved.Scope, module, out _, callSite: false );
-				if( resolved != null ) {
-					result.Resolve( unresolved.Node, resolved );
-					progress = true;
+				if( resolved == null )
+					continue;
+
+				IReadOnlyList<TplArg> providedArgs = unresolved.Node.idTpls.Last().tplArgs;
+				if( TemplateInference.HasTemplateArityMismatch( resolved, providedArgs )
+				 && !IsInjectedClassName( unresolved.Node, resolved, unresolved.Scope ) ) {
+					diagnostics.Add( new Diagnostic(
+						unresolved.Node.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Template argument count mismatch for type '{0}': expected {1}, got {2}",
+							GetTypeName( unresolved.Node ),
+							TemplateInference.GetTemplateParamCount( resolved ),
+							providedArgs.Count ) ) );
+					continue;
 				}
+
+				result.Resolve( unresolved.Node, resolved );
+				progress = true;
 			}
 
 			return progress;
+		}
+
+		private static string GetTypeName( TypespecNested type )
+		{
+			return String.Join( "::", type.idTpls.Select( s => s.id ) );
+		}
+
+		private static bool IsInjectedClassName( TypespecNested type, Decl resolved, Scope scope )
+		{
+			if( resolved is not Structural structural )
+				return false;
+
+			if( type.idTpls.Count != 1 || type.idTpls[0].tplArgs.Count != 0 )
+				return false;
+
+			for( Scope? cur = scope; cur != null; cur = cur.parent ) {
+				if( cur.decl == structural )
+					return true;
+			}
+
+			return false;
 		}
 
 		private bool ResolveMemberAccesses( GlobalNamespace module, CompilationContext context )
@@ -225,26 +262,52 @@ namespace Myll.Resolver
 		{
 			switch( call.Callee ) {
 				case IdExpr id: {
-					if( result.Ids.ContainsKey( id ) )
+					bool alreadyResolved = result.Ids.TryGetValue( id, out Decl? resolved );
+					if( alreadyResolved && resolved is not Func ) {
+						// Callee resolved to a non-function (builtin variable, external type, ...).
+						// Do not re-validate; the C++ compiler handles the call.
 						return false;
+					}
 
-					List<Decl> candidates = LookupNameCandidates( id.idTplArgs.id, call.Scope, module );
+					List<Decl> candidates = alreadyResolved
+						? new List<Decl> { resolved! }
+						: LookupNameCandidates( id.idTplArgs.id, call.Scope, module );
+
 					var outcome = TryResolveOverload( candidates, call.Call, call.Scope, module, call.Callee );
-					return ApplyOverloadOutcome( outcome, id, call.Callee );
+					ApplyOverloadOutcome( outcome, id, call.Callee );
+					return false;
 				}
 				case ScopedExpr scoped: {
-					if( result.Scopeds.ContainsKey( scoped ) )
+					bool alreadyResolved = result.Scopeds.TryGetValue( scoped, out Decl? resolved );
+					if( alreadyResolved && resolved is not Func ) {
+						// Scoped callee resolved to a type/namespace; accept constructor-style
+						// calls without Myll-side validation.
 						return false;
+					}
 
-					var outcome = ResolveScopedCallOverload( scoped, call.Call, call.Scope, module, call.Callee );
-					return ApplyScopedOverloadOutcome( outcome, scoped, call.Callee );
+					var outcome = alreadyResolved
+						? TryResolveOverload( new List<Decl> { resolved! }, call.Call, call.Scope, module, call.Callee )
+						: ResolveScopedCallOverload( scoped, call.Call, call.Scope, module, call.Callee );
+					ApplyScopedOverloadOutcome( outcome, scoped, call.Callee );
+					return false;
 				}
 				case BinOp binOp when IsMemberAccessOperation( binOp.op ): {
 					if( binOp.right is not IdExpr member )
 						return false;
 
-					if( result.Members.ContainsKey( member ) )
+					if( result.Members.TryGetValue( member, out Decl? memberResolved ) ) {
+						if( memberResolved is not Func ) {
+							// Member resolved to a non-function (e.g. a template type alias).
+							// Leave validation to the C++ compiler.
+							return false;
+						}
+
+						var memberOutcome = TryResolveOverload(
+							new List<Decl> { memberResolved }, call.Call, call.Scope, module, call.Callee );
+						if( memberOutcome.chosen == null )
+							RecordOverloadFailure( memberOutcome, call.Callee, member.idTplArgs.id );
 						return false;
+					}
 
 					if( !TryGetMemberAccessBaseType( binOp.left, call.Scope, out Hierarchical? baseType ) )
 						return false;
@@ -297,21 +360,22 @@ namespace Myll.Resolver
 					String.Format( "Ambiguous call to '{0}'", name ) ) );
 			}
 			else if( outcome.noMatch && noMatchingCalls.Add( callee ) ) {
-				diagnostics.Add( new Diagnostic(
-					GetCalleeSrcPos( callee ),
-					DiagnosticKind.Error,
-					String.Format( "No matching overload for '{0}'", name ) ) );
+				if( !templateArityMismatchCalls.Contains( callee ) ) {
+					diagnostics.Add( new Diagnostic(
+						GetCalleeSrcPos( callee ),
+						DiagnosticKind.Error,
+						String.Format( "No matching overload for '{0}'", name ) ) );
+				}
 			}
 		}
 
 		private static SrcPos GetCalleeSrcPos( Expr callee )
 		{
 			return callee switch {
-				IdExpr id                => id.srcPos,
-				ScopedExpr scoped        => scoped.srcPos,
-				BinOp binOp              => binOp.right is IdExpr m ? m.srcPos : binOp.srcPos,
-				_
-					                       => callee.srcPos,
+				IdExpr     id      => id.srcPos,
+				ScopedExpr scoped  => scoped.srcPos,
+				BinOp      binOp   => binOp.right is IdExpr m ? m.srcPos : binOp.srcPos,
+				_                  => callee.srcPos,
 			};
 		}
 
@@ -357,12 +421,23 @@ namespace Myll.Resolver
 			GlobalNamespace module,
 			Expr            callee )
 		{
-			List<Decl> callable = candidates
-				.Where( d => d is Func or Structor )
-				.ToList();
+			List<Decl> callable = new();
+			foreach( Decl candidate in candidates ) {
+				if( candidate is Func || candidate is Structor ) {
+					callable.Add( candidate );
+					continue;
+				}
 
-			if( callable.Count == 0 )
-				return (null, false, true);
+			if( candidate is Structural structural ) {
+				callable.AddRange(
+					structural.children
+						.OfType<Structor>()
+						.Where( s => s.kind == Structor.Kind.Constructor ) );
+			}
+		}
+
+		if( callable.Count == 0 )
+			return (null, false, true);
 
 			// Prefer an arity match first; if only one candidate has the right arity, pick it.
 			List<Decl> sameArity = callable
@@ -372,11 +447,58 @@ namespace Myll.Resolver
 			if( sameArity.Count == 0 )
 				return (null, false, true);
 
-			if( sameArity.Count == 1 )
-				return (sameArity[0], false, false);
+			IReadOnlyList<TplArg>? explicitTemplateArgs = TemplateInference.GetExplicitTemplateArgs( callee );
+			Dictionary<Decl, List<TplArg>> deducedArgsByCandidate = new();
+			bool templateArityMismatch = false;
 
-			// Multiple candidates with the same arity: resolve argument types and
-			// rank candidates by the worst conversion required for any argument.
+			// Filter candidates by template-argument availability and, when no explicit
+			// arguments are supplied, try to deduce them from the call arguments.
+			List<Decl> templateViable = new();
+			foreach( Decl candidate in sameArity ) {
+				if( explicitTemplateArgs is { Count: > 0 } ) {
+					if( TemplateInference.HasTemplateArityMismatch( candidate, explicitTemplateArgs ) ) {
+						templateArityMismatch = true;
+						continue;
+					}
+
+					templateViable.Add( candidate );
+					continue;
+				}
+
+				if( candidate is Func func
+				 && TemplateInference.TryDeduceTemplateArgs( func, call, typeResolver, result, out List<TplArg>? deduced )
+				 && deduced != null ) {
+					deducedArgsByCandidate[candidate] = deduced;
+					templateViable.Add( candidate );
+					continue;
+				}
+
+				if( TemplateInference.GetTemplateParamCount( candidate ) == 0 )
+					templateViable.Add( candidate );
+			}
+
+			if( templateViable.Count == 0 ) {
+				if( templateArityMismatch && sameArity.Count == 1 )
+					ReportTemplateArityMismatch( sameArity[0], explicitTemplateArgs!, callee );
+				else if( templateArityMismatch )
+					ReportTemplateArityMismatch( sameArity, explicitTemplateArgs!, callee );
+
+				return (null, false, true);
+			}
+
+			// A lone non-template candidate (or a template candidate without explicit/deduced
+			// arguments) is accepted without a conversion check. This preserves the old
+			// resolver behaviour for class-template methods and other dependent calls where
+			// the concrete type-checking is delegated to the C++ compiler.
+			if( templateViable.Count == 1
+			 && explicitTemplateArgs?.Count == 0
+			 && !deducedArgsByCandidate.ContainsKey( templateViable[0] ) ) {
+				return (templateViable[0], false, false);
+			}
+
+			// Resolve argument types and rank every remaining viable candidate by the worst
+			// conversion required. This rejects explicit template instantiations with
+			// incompatible arguments (e.g. identity<int>("hi")) and keeps deduction honest.
 			List<Typespec?> argTypes = call.args
 				.Select( a => typeResolver.Resolve( a.expr ) )
 				.ToList();
@@ -389,7 +511,7 @@ namespace Myll.Resolver
 			List<(Decl Candidate, ConversionRank WorstRank)> viable = new();
 			ConversionRank bestWorst = ConversionRank.None;
 
-			foreach( Decl candidate in sameArity ) {
+			foreach( Decl candidate in templateViable ) {
 				ConversionRank worst = ConversionRank.Exact;
 				bool ok = true;
 
@@ -399,9 +521,19 @@ namespace Myll.Resolver
 					_            => new List<Param>(),
 				};
 
+				List<TplArg>? candidateArgs = explicitTemplateArgs is { Count: > 0 }
+					? explicitTemplateArgs as List<TplArg>
+					: deducedArgsByCandidate.TryGetValue( candidate, out List<TplArg>? deduced )
+						? deduced
+						: null;
+
 				for( int i = 0; i < paras.Count; i++ ) {
-					ConversionRank rank = ConversionRules.GetRank( argTypes[i]!, paras[i].type );
-					if( rank > ConversionRank.Conversion ) {
+					Typespec paramType = candidate is Func func && candidateArgs != null
+						? TemplateInference.SubstituteTemplateParams( paras[i].type, func.TplParams, candidateArgs, result )
+						: paras[i].type;
+
+					ConversionRank rank = ConversionRules.GetRank( argTypes[i]!, paramType );
+					if( rank == ConversionRank.None ) {
 						ok = false;
 						break;
 					}
@@ -423,13 +555,85 @@ namespace Myll.Resolver
 				}
 			}
 
-			if( viable.Count == 1 )
-				return (viable[0].Candidate, false, false);
+			if( viable.Count == 1 ) {
+				Decl chosen = viable[0].Candidate;
+				if( deducedArgsByCandidate.TryGetValue( chosen, out List<TplArg>? deduced ) )
+					TemplateInference.ApplyTemplateArgs( callee, deduced );
+				return (chosen, false, false);
+			}
 
 			if( viable.Count > 1 )
 				return (null, true, false);
 
 			return (null, false, true);
+		}
+
+		private void ReportTemplateArityMismatch( Decl candidate, IReadOnlyList<TplArg> args, Expr callee )
+		{
+			if( !templateArityMismatchCalls.Add( callee ) )
+				return;
+
+			int expected = TemplateInference.GetTemplateParamCount( candidate );
+			int actual   = args.Count;
+			string name  = GetTemplateCalleeName( callee );
+			diagnostics.Add( new Diagnostic(
+				GetCalleeSrcPos( callee ),
+				DiagnosticKind.Error,
+				expected == 0
+					? String.Format( "'{0}' is not a template; 0 template arguments expected, {1} provided", name, actual )
+					: String.Format( "Template argument count mismatch for '{0}': expected {1}, got {2}", name, expected, actual ) ) );
+		}
+
+		private void ReportTemplateArityMismatch( List<Decl> candidates, IReadOnlyList<TplArg> args, Expr callee )
+		{
+			if( !templateArityMismatchCalls.Add( callee ) )
+				return;
+
+			string name = GetTemplateCalleeName( callee );
+			diagnostics.Add( new Diagnostic(
+				GetCalleeSrcPos( callee ),
+				DiagnosticKind.Error,
+				String.Format( "No matching template overload for '{0}' with {1} template argument(s)", name, args.Count ) ) );
+		}
+
+		private static string GetTemplateCalleeName( Expr callee )
+		{
+			return callee switch {
+				IdExpr     id                                       => id.idTplArgs.id,
+				ScopedExpr scoped                                   => scoped.idTpls.Last().id,
+				BinOp      binOp when binOp.right is IdExpr member  => member.idTplArgs.id,
+				_                                                   => "?",
+			};
+		}
+
+		private static Typespec BuildSelfType( Hierarchical hierarchical, bool isReference )
+		{
+			if( hierarchical is not Structural structural )
+				return new TypespecBasic { kind = TypespecBasic.Kind.ExplicitAuto };
+
+			var tplArgList = structural.TplParams
+				.Select( p => new TplArg {
+					typespec = new TypespecNested {
+						resolvedDecl = new TplParamDecl { name = p.name },
+						idTpls       = new List<IdTplArgs> { new() { id = p.name } },
+					},
+				} )
+				.ToList();
+
+			var type = new TypespecNested {
+				resolvedDecl = structural,
+				idTpls       = new List<IdTplArgs> {
+					new() {
+						id      = structural.name,
+						tplArgs = tplArgList,
+					},
+				},
+			};
+
+			if( isReference )
+				type.ptrs = new List<Pointer> { new() { kind = Pointer.Kind.LVRef } };
+
+			return type;
 		}
 
 		private static int GetParamCount( Decl decl )
@@ -568,13 +772,17 @@ namespace Myll.Resolver
 			baseType = null!;
 			Typespec? type = null;
 
-			if( expr is SelfExpr ) {
+			if( expr is SelfExpr selfExpr ) {
 				baseType = FindEnclosingStructural( scope )!;
+				if( baseType != null && selfExpr.Type == null )
+					selfExpr.Type = BuildSelfType( baseType, isReference: true );
 				return baseType != null;
 			}
 
-			if( expr is ThisExpr ) {
+			if( expr is ThisExpr thisExpr ) {
 				baseType = FindEnclosingStructural( scope )!;
+				if( baseType != null && thisExpr.Type == null )
+					thisExpr.Type = BuildSelfType( baseType, isReference: false );
 				return baseType != null;
 			}
 
@@ -715,10 +923,8 @@ namespace Myll.Resolver
 				 || outer.kind == Pointer.Kind.RVRef
 				 || outer.kind.Between( Pointer.Kind.SmartPtr_Begin, Pointer.Kind.SmartPtr_End ) ) {
 					Typespec inner = type switch {
-						TypespecNested n => new TypespecNested { idTpls = n.idTpls, qual = n.qual,
-							resolvedDecl = n.resolvedDecl, ptrs = new( ptrs ) },
-						TypespecBasic b  => new TypespecBasic { kind = b.kind, size = b.size, align = b.align,
-							qual = b.qual, ptrs = new( ptrs ) },
+						TypespecNested n => new TypespecNested { idTpls = n.idTpls, qual = n.qual, resolvedDecl = n.resolvedDecl, ptrs = new( ptrs ) },
+						TypespecBasic b  => new TypespecBasic { kind = b.kind, size = b.size, align = b.align, qual = b.qual, ptrs = new( ptrs ) },
 						_                => throw new NotSupportedException( "unsupported typespec in member access" ),
 					};
 					if( inner.ptrs == null )
@@ -956,6 +1162,36 @@ namespace Myll.Resolver
 			checker.Validate( modules );
 		}
 
+		private void RejectRequiresClauses(
+			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules )
+		{
+			foreach( (GlobalNamespace module, _) in modules ) {
+				RejectRequiresInDecl( module );
+			}
+		}
+
+		private void RejectRequiresInDecl( Decl decl )
+		{
+			if( decl is Func func && func.Requires.Count > 0 ) {
+				diagnostics.Add( new Diagnostic(
+					func.srcPos,
+					DiagnosticKind.Error,
+					"Template constraints ('requires') are not yet supported" ) );
+			}
+
+			if( decl is Structural structural && structural.reqs.Count > 0 ) {
+				diagnostics.Add( new Diagnostic(
+					structural.srcPos,
+					DiagnosticKind.Error,
+					"Template constraints ('requires') are not yet supported" ) );
+			}
+
+			if( decl is Hierarchical h ) {
+				foreach( Decl child in h.children )
+					RejectRequiresInDecl( child );
+			}
+		}
+
 		private void ReportUnresolved(
 			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules )
 		{
@@ -1016,23 +1252,27 @@ namespace Myll.Resolver
 		}
 
 		private void ReportUnresolvedPath(
-			string              kind,
-			SrcPos              srcPos,
+			string                   kind,
+			SrcPos                   srcPos,
 			IReadOnlyList<IdTplArgs> segments,
-			GlobalNamespace       module,
-			Scope                 scope )
+			GlobalNamespace          module,
+			Scope                    scope )
 		{
 			ResolvePath( segments, scope, module, out int unresolvedSegmentIndex, callSite: false );
 			if( unresolvedSegmentIndex < 0 )
 				unresolvedSegmentIndex = 0;
 
 			string unresolvedName = segments[unresolvedSegmentIndex].id;
-			List<Decl> candidates = unresolvedSegmentIndex == 0
-				? LookupNameCandidates( unresolvedName, scope, module )
-				: LookupInHierarchicalCandidates(
-					unresolvedName,
-					(PickSingleCandidate( LookupNameCandidates( segments[0].id, scope, module ), callSite: false ) as Hierarchical)!,
-					module );
+			List<Decl> candidates;
+			if( unresolvedSegmentIndex == 0 ) {
+				candidates = LookupNameCandidates( unresolvedName, scope, module );
+			}
+			else {
+				Decl? prefixCandidate = PickSingleCandidate( LookupNameCandidates( segments[0].id, scope, module ), callSite: false );
+				candidates = prefixCandidate is Hierarchical h
+					? LookupInHierarchicalCandidates( unresolvedName, h, module )
+					: new List<Decl>();
+			}
 
 			if( candidates.Count > 1 && PickSingleCandidate( candidates, callSite: false ) == null ) {
 				ReportAmbiguous( kind, srcPos, unresolvedName, candidates );

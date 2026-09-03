@@ -1,0 +1,13 @@
+module template_conversion_fail;
+
+func identity<T>(T value) -> T
+{
+	return value;
+}
+
+func main() -> int
+{
+	// T is explicitly int, argument is a string literal.
+	identity<int>( "hello" );
+	return 0;
+}

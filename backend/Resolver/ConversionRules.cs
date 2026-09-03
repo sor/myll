@@ -13,6 +13,7 @@ namespace Myll.Resolver
 		Exact,
 		Promotion,
 		Conversion,
+		TemplateParameter,
 		None,
 	}
 
@@ -34,11 +35,13 @@ namespace Myll.Resolver
 			if( source == null || target == null )
 				return ConversionRank.None;
 
-			// Template parameters are opaque type variables; the concrete type-checking
-			// happens inside the C++ compiler after instantiation.
+			// Template parameters are opaque type variables. A value of a template
+			// parameter type can bind to any target and vice versa, but this is weaker
+			// than exact/conversion matches between concrete types so that concrete
+			// overloads are preferred over template overloads when both are viable.
 			if( source is TypespecNested { resolvedDecl: TplParamDecl }
 			 || target is TypespecNested { resolvedDecl: TplParamDecl } )
-				return ConversionRank.Exact;
+				return ConversionRank.TemplateParameter;
 
 			if( IsExactMatch( source, target ) )
 				return ConversionRank.Exact;
@@ -79,8 +82,10 @@ namespace Myll.Resolver
 			return ConversionRank.None;
 		}
 
-		public static bool IsImplicitlyConvertible( Typespec? source, Typespec? target )
-			=> GetRank( source, target ) <= ConversionRank.Conversion;
+		public static bool IsImplicitlyConvertible( Typespec? source, Typespec? target ) {
+			ConversionRank rank = GetRank( source, target );
+			return rank <= ConversionRank.Conversion || rank == ConversionRank.TemplateParameter;
+		}
 
 		/// <summary>
 		/// True when <paramref name="source"/> is a class/struct type derived from
@@ -235,6 +240,10 @@ namespace Myll.Resolver
 				if( !TryParseInteger( srcBasic.literalText, out long value ) )
 					return ConversionRank.None;
 
+				// Default-sized `int` / `float` is the natural target for an unannotated literal.
+				if( tgtBasic.kind == TypespecBasic.Kind.Integer && tgtBasic.isDefaultSized )
+					return ConversionRank.Exact;
+
 				// Integer literal defaults to the platform int size when the target is int.
 				if( tgtBasic.kind == TypespecBasic.Kind.Integer && tgtBasic.size == 4 )
 					return ConversionRank.Exact;
@@ -260,6 +269,10 @@ namespace Myll.Resolver
 			if( srcBasic.kind == TypespecBasic.Kind.UntypedFloat ) {
 				if( !TryParseFloat( srcBasic.literalText, out _ ) )
 					return ConversionRank.None;
+
+				// Default-sized `float` is the natural target for an unannotated literal.
+				if( tgtBasic.kind == TypespecBasic.Kind.Float && tgtBasic.isDefaultSized )
+					return ConversionRank.Exact;
 
 				// The default float type for an unannotated literal is configured by the
 				// dialect (falls back to f32). Any other concrete float size is accepted

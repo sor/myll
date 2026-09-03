@@ -1,0 +1,13 @@
+module template_typename_fail;
+
+// Generated C++ will be `template <typename T> T::Nested f()`;
+// That is ill-formed because dependent nested types need `typename`.
+func f<T>() -> T::Nested
+{
+	return T::Nested();
+}
+
+func main() -> int
+{
+	return 0;
+}

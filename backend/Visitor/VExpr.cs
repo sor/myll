@@ -478,12 +478,8 @@ namespace Myll
 				srcPos = c.ToSrcPos(),
 			};
 
-			if( FindEnclosingStructural() is Structural structural ) {
-				ret.Type = new TypespecNested {
-					resolvedDecl = structural,
-					idTpls       = new() { new() { id = structural.name } },
-				};
-			}
+			if( FindEnclosingStructural() is Structural structural )
+				ret.Type = BuildSelfType( structural, isReference: true );
 
 			return ret;
 		}
@@ -495,15 +491,39 @@ namespace Myll
 				srcPos = c.ToSrcPos(),
 			};
 
-			if( FindEnclosingStructural() is Structural structural ) {
-				ret.Type = new TypespecNested {
-					resolvedDecl = structural,
-					idTpls       = new() { new() { id = structural.name } },
-					ptrs         = new() { new Pointer { kind = Pointer.Kind.RawPtr } },
-				};
-			}
+			if( FindEnclosingStructural() is Structural structural )
+				ret.Type = BuildSelfType( structural, isReference: false );
 
 			return ret;
+		}
+
+		private static TypespecNested BuildSelfType( Structural structural, bool isReference )
+		{
+			var type = new TypespecNested {
+				resolvedDecl = structural,
+				idTpls       = new() {
+					new() {
+						id      = structural.name,
+						tplArgs = structural.TplParams.Count > 0
+							? structural.TplParams
+								.Select( p => new TplArg {
+									typespec = new TypespecNested {
+										resolvedDecl = new TplParamDecl { name = p.name },
+										idTpls       = new() { new() { id = p.name } },
+									},
+								} )
+								.ToList()
+							: new List<TplArg>(),
+					},
+				},
+			};
+
+			if( isReference )
+				type.ptrs = new() { new Pointer { kind = Pointer.Kind.LVRef } };
+			else
+				type.ptrs = new() { new Pointer { kind = Pointer.Kind.RawPtr } };
+
+			return type;
 		}
 
 		public override IdExpr VisitIdTplExpr( IdTplExprContext c )

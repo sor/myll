@@ -260,6 +260,19 @@ namespace Myll.Core
 			string leftStr  = left.Gen( doBraceLeft );
 			string rightStr = right.Gen( doBraceRight );
 
+			// Dependent member template calls need the `.template` / `->template`
+			// disambiguator in the generated C++.
+			bool isMemberAccess = op is Operand.MemberAccess
+				                 or Operand.NCMemberAccess
+				                 or Operand.MemberPtrAccess
+				                 or Operand.MemberAccessPtr
+				                 or Operand.NCMemberAccessPtr
+				                 or Operand.MemberPtrAccessPtr;
+			if( isMemberAccess && right is IdExpr memberId && memberId.idTplArgs.tplArgs.Count > 0
+			 && left.Type?.IsDependentType() == true ) {
+				rightStr = "template " + rightStr;
+			}
+
 			// Bit-family operators generate bitwise C++. Untyped integer literals must
 			// be cast to the bit type; std::byte in particular does not accept naked ints.
 			if( isBitOp ) {

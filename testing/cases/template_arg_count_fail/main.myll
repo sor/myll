@@ -1,0 +1,13 @@
+module template_arg_count_fail;
+
+func max<T>(T a, T b) -> T
+{
+	return a > b ? a : b;
+}
+
+func main() -> int
+{
+	// Too many explicit template arguments.
+	max<int, float>( 1, 2 );
+	return 0;
+}
