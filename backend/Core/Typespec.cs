@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
+using System.Text;
 
 using static System.String;
 using static Myll.Generator.StmtFormatting;
@@ -196,9 +197,21 @@ namespace Myll.Core
 		// Set by NameResolver.Apply() once names have been resolved.
 		public Decl? resolvedDecl;
 
+		// Set by NameResolver when a nested name depends on a template parameter
+		// (e.g. T::Nested or Class<T>::Nested) and cannot be resolved further.
+		public bool isDependent;
+
+		// prefixDependent[i] is true when the path up to and including idTpls[i]
+		// depends on a template parameter. Used to emit the C++ 'template'
+		// disambiguator for dependent nested template-ids.
+		public List<bool> prefixDependent = new();
+
 		public override bool IsDependentType()
 		{
-			if( resolvedDecl is TplParamDecl )
+			if( isDependent || resolvedDecl is TplParamDecl )
+				return true;
+
+			if( idTpls.Count > 1 && prefixDependent.Any( b => b ) )
 				return true;
 
 			foreach( IdTplArgs segment in idTpls ) {
@@ -210,20 +223,42 @@ namespace Myll.Core
 			return false;
 		}
 
-		public override string GenType()
+		public string GenType( bool disambiguateDependent )
 		{
 			if( resolvedDecl is TplParamDecl tpl )
 				return tpl.name;
 
+			bool needsTypename = disambiguateDependent && idTpls.Count > 1 && IsDependentType();
+
 			if( resolvedDecl != null
 			 && resolvedDecl.name != "<builtin>"
-			 && idTpls.TrueForAll( it => it.tplArgs.Count == 0 ) )
-				return resolvedDecl.FullyQualifiedName;
+			 && idTpls.TrueForAll( it => it.tplArgs.Count == 0 ) ) {
+				string name = resolvedDecl.FullyQualifiedName;
+				return needsTypename ? VarFormat[5] + name : name;
+			}
 
-			return idTpls
-				.Select( s => s.Gen() )
-				.Join( "::" );
+			StringBuilder generated = new();
+
+			for( int i = 0; i < idTpls.Count; i++ ) {
+				IdTplArgs segment = idTpls[i];
+
+				if( i > 0 ) {
+					generated.Append( "::" );
+					if( disambiguateDependent
+					 && segment.tplArgs.Count > 0
+					 && prefixDependent.Count > i - 1
+					 && prefixDependent[i - 1] )
+						generated.Append( TemplateKeyword );
+				}
+
+				generated.Append( segment.Gen() );
+			}
+
+			return needsTypename ? VarFormat[5] + generated.ToString() : generated.ToString();
 		}
+
+		public override string GenType()
+			=> GenType( true );
 	}
 
 	public class Pointer

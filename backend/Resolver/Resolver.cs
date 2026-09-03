@@ -90,6 +90,12 @@ namespace Myll.Resolver
 			// resolvedDecl directly on identifiers, member accesses, and type specs.
 			result.Apply();
 
+			// Recompute dependent nested-name information after all template
+			// parameters and type arguments have been resolved. The incremental
+			// resolution pass may have marked a prefix as non-dependent because
+			// a TplParamDecl was not yet resolved when the prefix was checked.
+			resolver.UpdateDependentNestedNames( modules );
+
 			var postResolveTransforms = new List<ITransformer> {
 				new DiscardTransformer( result, diagnostics ),
 			};
@@ -181,8 +187,24 @@ namespace Myll.Resolver
 
 				// Types are never call sites: prefer the type over a constructor.
 				Decl? resolved = ResolvePath( unresolved.Node.idTpls, unresolved.Scope, module, out _, callSite: false );
-				if( resolved == null )
-					continue;
+
+				// Compute per-prefix dependency information for all nested names so
+				// that the generator can emit the C++ 'typename' and 'template'
+				// disambiguators, even when the final segment itself resolves.
+				bool isDependentNestedName = IsDependentNestedName( unresolved.Node, unresolved.Scope, module );
+
+				if( resolved == null ) {
+					if( isDependentNestedName ) {
+				unresolved.Node.isDependent = true;
+					progress = true;
+				}
+
+				continue;
+			}
+
+			// The name resolved but may still depend on a template parameter.
+			// IsDependentNestedName has already populated prefixDependent.
+			unresolved.Node.isDependent = isDependentNestedName;
 
 				IReadOnlyList<TplArg> providedArgs = unresolved.Node.idTpls.Last().tplArgs;
 				if( TemplateInference.HasTemplateArityMismatch( resolved, providedArgs )
@@ -202,6 +224,77 @@ namespace Myll.Resolver
 			}
 
 			return progress;
+		}
+
+		/// <summary>
+		/// Returns true when the type name is a nested name that depends on a template
+		/// parameter, e.g. T::Nested, Class<T>::Nested, or T::Nested<U>.
+		/// Populates <paramref name="type"/>.prefixDependent so the generator can emit
+		/// the C++ 'typename' and 'template' disambiguators.
+		/// </summary>
+		private void UpdateDependentNestedNames(
+			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules )
+		{
+			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+				foreach( UnresolvedType unresolved in context.UnresolvedTypes ) {
+					IsDependentNestedName( unresolved.Node, unresolved.Scope, module );
+				}
+			}
+		}
+
+		private bool IsDependentNestedName( TypespecNested type, Scope scope, GlobalNamespace module )
+		{
+			bool anyDependent = false;
+			type.prefixDependent.Clear();
+
+			for( int i = 0; i < type.idTpls.Count; i++ ) {
+				IdTplArgs segment = type.idTpls[i];
+
+				IReadOnlyList<IdTplArgs> prefix = type.idTpls.Take( i + 1 ).ToList();
+				Decl? prefixDecl = ResolvePath( prefix, scope, module, out _, callSite: false );
+				bool prefixIsDependent = prefixDecl is TplParamDecl;
+
+				foreach( IdTplArgs prefixSegment in prefix ) {
+					foreach( TplArg arg in prefixSegment.tplArgs ) {
+						if( arg.typespec == null )
+							continue;
+
+						if( IsDependentArg( arg.typespec ) ) {
+							prefixIsDependent = true;
+							break;
+						}
+					}
+
+					if( prefixIsDependent )
+						break;
+				}
+
+				type.prefixDependent.Add( prefixIsDependent );
+				anyDependent |= prefixIsDependent;
+			}
+
+			// Mark the whole nested name as dependent whenever any prefix depends on a
+			// template parameter. GenType uses this flag together with prefixDependent
+			// to emit the required 'typename' and 'template' C++ disambiguators.
+			type.isDependent = anyDependent;
+
+			return anyDependent;
+		}
+
+		private bool IsDependentArg( Typespec typespec )
+		{
+			if( typespec is not TypespecNested nested )
+				return false;
+
+			if( nested.resolvedDecl is TplParamDecl )
+				return true;
+
+			if( nested.resolvedDecl == null
+			 && result.TryGetResolved( nested, out Decl? resolved )
+			 && resolved is TplParamDecl )
+				return true;
+
+			return nested.IsDependentType();
 		}
 
 		private static string GetTypeName( TypespecNested type )
@@ -1219,6 +1312,9 @@ namespace Myll.Resolver
 
 				foreach( UnresolvedType unresolved in context.UnresolvedTypes ) {
 					if( result.Types.ContainsKey( unresolved.Node ) )
+						continue;
+
+					if( unresolved.Node.IsDependentType() )
 						continue;
 
 					ReportUnresolvedPath( "type", unresolved.Node.srcPos, unresolved.Node.idTpls, module, unresolved.Scope );

@@ -1,0 +1,30 @@
+module template_typename;
+
+func main() -> int
+{
+	var int result = checkReturn();
+	if( result != 0 )
+		return result;
+
+	result = checkParam();
+	if( result != 0 )
+		return result;
+
+	result = checkVar();
+	if( result != 0 )
+		return result;
+
+	result = checkBase();
+	if( result != 0 )
+		return result;
+
+	result = checkNestedTpl();
+	if( result != 0 )
+		return result;
+
+	result = checkComplex();
+	if( result != 0 )
+		return result;
+
+	return 0;
+}

@@ -60,6 +60,8 @@ namespace Myll.Generator
 			" = ",
 		};
 
+		internal const string TemplateKeyword = "template ";
+
 		public const string VarEmptyInitFormat = "{}";
 
 		public static readonly string[] EntryFormat = {

@@ -46,8 +46,8 @@ namespace Myll
 		[Option( 'M', "main", HelpText = "Set from which module the main func to generate", Default = "" )]
 		public string MainModule { get; init; } = "";
 
-		[Option( 'R', "resolve", HelpText = "Run semantic name resolution and report errors", Default = false )]
-		public bool IsResolve { get; init; } = false;
+		[Option( 'R', "resolve", HelpText = "Run semantic name resolution and report errors", Default = true )]
+		public bool IsResolve { get; init; } = true;
 
 		[Option( "extern-dir", HelpText = "Directory containing .extern.myll prototype files; replaces default extern/ subfolder" )]
 		public IEnumerable<string> ExternDirs { get; set; } = Enumerable.Empty<string>();

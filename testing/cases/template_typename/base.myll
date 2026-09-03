@@ -1,0 +1,25 @@
+module template_typename;
+
+class BaseOuter<T>
+{
+[pub]:
+	class Base
+	{
+	[pub]:
+		field T value;
+	}
+}
+
+class BaseDerived<T> : BaseOuter<T>::Base
+{
+[pub]:
+	field T extra;
+}
+
+func checkBase() -> int
+{
+	var BaseDerived<int> d;
+	d.value = 11;
+	d.extra = 12;
+	return ( d.value == 11 && d.extra == 12 ) ? 0 : 1;
+}

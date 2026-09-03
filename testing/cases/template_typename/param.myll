@@ -1,0 +1,29 @@
+module template_typename;
+
+class ParamOuter<T>
+{
+[pub]:
+	class Inner
+	{
+	[pub]:
+		field T value;
+
+		method assign( T v ) -> void
+		{
+			value = v;
+		}
+	}
+}
+
+func testParam<T>( ParamOuter<T>::Inner i, T v ) -> int
+{
+	i.assign( v );
+	return i.value == v ? 0 : 1;
+}
+
+func checkParam() -> int
+{
+	var ParamOuter<int>::Inner x;
+	x.value = 7;
+	return testParam<int>( x, 7 );
+}

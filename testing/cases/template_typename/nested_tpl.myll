@@ -1,0 +1,26 @@
+module template_typename;
+
+class NestedOuter<T>
+{
+[pub]:
+	class Inner<U>
+	{
+	[pub]:
+		field T a;
+		field U b;
+	}
+}
+
+func testNestedTpl<T, U>( T a, U b ) -> NestedOuter<T>::Inner<U>
+{
+	var NestedOuter<T>::Inner<U> result;
+	result.a = a;
+	result.b = b;
+	return result;
+}
+
+func checkNestedTpl() -> int
+{
+	var NestedOuter<int>::Inner<f32> r = testNestedTpl<int, f32>( 1, 2.5 );
+	return ( r.a == 1 && r.b > 2.4 && r.b < 2.6 ) ? 0 : 1;
+}

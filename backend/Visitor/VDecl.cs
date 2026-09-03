@@ -474,7 +474,6 @@ namespace Myll
 				access    = curAccess,
 				kind      = kind,
 				TplParams = VisitTplParams( c.tplParams() ),
-				basetypes = BuildBaseSpecs( c.bases ),
 				reqs      = VisitTypespecsNested( c.reqs?.typespecNested() ),
 			};
 
@@ -484,6 +483,11 @@ namespace Myll
 			if( c.LCURLY() != null ) {
 				PushScope( ret );
 				{
+					// Build base specs after the class scope has been pushed so that
+					// the class's own template parameters are visible in dependent
+					// base types such as Outer<T>::Base.
+					ret.basetypes = BuildBaseSpecs( c.bases );
+
 					// HACK: will be buggy. needs to move to ScopeStack, when ScopeStack works.
 					// turns out to be not so buggy after all...
 					Access savedAccess = curAccess;
@@ -498,6 +502,11 @@ namespace Myll
 			else {
 				ret.IsForwardDeclaration = true;
 				PushScope( ret );
+				{
+					// Same as above: base specs may reference the class's own
+					// template parameters.
+					ret.basetypes = BuildBaseSpecs( c.bases );
+				}
 				PopScope();
 			}
 

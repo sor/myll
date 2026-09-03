@@ -267,7 +267,10 @@ namespace Myll.Generator
 		// Those need to be kept in adding order
 		public void AddVar( VarDecl obj )
 		{
-			bool needsTypename = false; // TODO how to determine this
+			// Dependent nested types emit 'typename ' from TypespecNested.GenType().
+			// The VarFormat typename slot is intentionally left empty here to avoid
+			// a duplicate prefix.
+			bool needsTypename = false;
 
 			bool isInsideStruct   = obj.IsInStruct;
 			bool isStatic         = obj.IsStatic;
@@ -623,12 +626,20 @@ namespace Myll.Generator
 					_                => "public ",
 				};
 
+			string BaseTypeName( BaseType b )
+			{
+				if( b.type is TypespecNested nested )
+					return nested.GenType( false );
+
+				return b.type.GenType();
+			}
+
 			bases = (objStruct.basetypes.Count < 1)
 				? ""
-				: Format( StructFormat[1], BasePrefix( objStruct.basetypes[0] ), objStruct.basetypes[0].type.GenType() )
+				: Format( StructFormat[1], BasePrefix( objStruct.basetypes[0] ), BaseTypeName( objStruct.basetypes[0] ) )
 				  + objStruct.basetypes
 					.Skip( 1 )
-					.Select( t => Format( StructFormat[2], BasePrefix( t ), t.type.GenType() ) )
+					.Select( t => Format( StructFormat[2], BasePrefix( t ), BaseTypeName( t ) ) )
 					.Join( "" );
 		}
 			else {

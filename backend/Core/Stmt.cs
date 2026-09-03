@@ -43,7 +43,10 @@ namespace Myll.Core
 
 		public override Strings Gen( int level )
 		{
-			bool   needsTypename = false; // TODO how to determine this
+			// Dependent nested types emit 'typename ' from TypespecNested.GenType().
+			// The VarFormat typename slot is intentionally left empty here to avoid
+			// a duplicate prefix.
+			bool   needsTypename = false;
 			bool   isConstType   = (type.qual & Qualifier.Const) != 0;
 
 			if( IsNoInit && isConstType )

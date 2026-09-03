@@ -1,13 +1,24 @@
 module template_typename_fail;
 
-// Generated C++ will be `template <typename T> T::Nested f()`;
-// That is ill-formed because dependent nested types need `typename`.
-func f<T>() -> T::Nested
+class Wrapper<T>
 {
-	return T::Nested();
+[pub]:
+	class Inner
+	{
+	[pub]:
+		field T value;
+	}
+}
+
+func make<T>( T v ) -> Wrapper<T>::Inner
+{
+	var Wrapper<T>::Inner result;
+	result.value = v;
+	return result;
 }
 
 func main() -> int
 {
-	return 0;
+	var Wrapper<int>::Inner x = make<int>( 99 );
+	return x.value == 99 ? 0 : 1;
 }

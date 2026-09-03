@@ -1,0 +1,23 @@
+module template_typename;
+
+class VarOuter<T>
+{
+[pub]:
+	class Inner
+	{
+	[pub]:
+		field T x;
+	}
+}
+
+func testVar<T>( T v ) -> int
+{
+	var VarOuter<T>::Inner item;
+	item.x = v;
+	return item.x == v ? 0 : 1;
+}
+
+func checkVar() -> int
+{
+	return testVar<int>( 5 );
+}

@@ -1,0 +1,24 @@
+module template_typename;
+
+class ReturnOuter<T>
+{
+[pub]:
+	class Inner
+	{
+	[pub]:
+		field T value;
+	}
+}
+
+func testReturn<T>( T v ) -> ReturnOuter<T>::Inner
+{
+	var ReturnOuter<T>::Inner result;
+	result.value = v;
+	return result;
+}
+
+func checkReturn() -> int
+{
+	var ReturnOuter<int>::Inner r = testReturn<int>( 42 );
+	return r.value == 42 ? 0 : 1;
+}
