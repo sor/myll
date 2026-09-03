@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Atn;
@@ -242,6 +243,46 @@ namespace Myll
 			|| path.EndsWith( ".decl.myll", StringComparison.OrdinalIgnoreCase )
 			|| path.EndsWith( ".extern.myll", StringComparison.OrdinalIgnoreCase );
 
+		private static IEnumerable<string> CollectMyllLibraryFiles( IEnumerable<string> importedModules )
+		{
+			string? repoRoot = TryGetRepoRoot();
+			if( repoRoot == null )
+				yield break;
+
+			string myllDir = Path.Combine( repoRoot, "myll" );
+			if( !Directory.Exists( myllDir ) )
+				yield break;
+
+			HashSet<string> wanted = new( importedModules );
+			foreach( string file in Directory.EnumerateFiles( myllDir, "*.myll" ) ) {
+				string moduleName = Path.GetFileNameWithoutExtension( file );
+				if( wanted.Contains( moduleName ) )
+					yield return file;
+			}
+		}
+
+		private static IEnumerable<string> ExtractImportedModules( string path )
+		{
+			if( !File.Exists( path ) )
+				yield break;
+
+			foreach( string rawLine in File.ReadLines( path ) ) {
+				// strip line comments so imports inside comments are not picked up
+				int comment = rawLine.IndexOf( "//", StringComparison.Ordinal );
+				string line = comment < 0 ? rawLine : rawLine.Substring( 0, comment );
+
+				Match match = Regex.Match( line, @"^\s*import\s+([^;]+);" );
+				if( !match.Success )
+					continue;
+
+				foreach( string name in match.Groups[1].Value.Split( ',' ) ) {
+					string trimmed = name.Trim();
+					if( !String.IsNullOrEmpty( trimmed ) )
+						yield return trimmed;
+				}
+			}
+		}
+
 		private static (List<(string, IStrings)> Files, List<Diagnostic> Diagnostics) GenerateFiles(
 			GlobalNamespace global_ns )
 		{
@@ -286,12 +327,17 @@ namespace Myll
 			ThreadPool.SetMinThreads( cpus*2, cpus*2 );
 			//ThreadPool.SetMaxThreads( cpus*2, 1000 );
 
-			//  ParallelQuery<(string, IStrings)>
-			// OR IEnumerable<(string, IStrings)>
-			List<string> inputFiles = opt.InFiles.ToList();
-			inputFiles.AddRange( CollectExternFiles( opt ) );
+		//  ParallelQuery<(string, IStrings)>
+		// OR IEnumerable<(string, IStrings)>
+		List<string> inputFiles = opt.InFiles.ToList();
+		inputFiles.AddRange( CollectExternFiles( opt ) );
 
-			List<(MyllParser.ProgContext Prog, List<Diagnostic> Diagnostics)> parseResults
+		HashSet<string> importedModules = new(
+			inputFiles.SelectMany( ExtractImportedModules ) );
+		inputFiles.AddRange( CollectMyllLibraryFiles( importedModules ) );
+		inputFiles = inputFiles.Distinct().ToList();
+
+		List<(MyllParser.ProgContext Prog, List<Diagnostic> Diagnostics)> parseResults
 				= inputFiles
 					.Select( CreateParser )
 					.AsParallel()

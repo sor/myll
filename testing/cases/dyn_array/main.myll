@@ -1,0 +1,160 @@
+module dyn_array_test;
+
+import dyn_array;
+
+struct Point {
+[pub]:
+	field {
+		int x = 0;
+		int y = 0;
+	}
+
+	ctor() {}
+
+	ctor( int x_, int y_ ) {
+		x = x_;
+		y = y_;
+	}
+}
+
+namespace Test {
+
+func checkBasic() -> int
+{
+	var Myll::DynArray<int> arr;
+	arr.pushBack( 10 ).pushBack( 20 ).pushBack( 30 );
+
+	if( arr.size() != 3 )
+		return 1;
+	if( arr.isEmpty() )
+		return 2;
+	if( arr.at( 0 ) != 10 )
+		return 3;
+	if( arr.at( 1 ) != 20 )
+		return 4;
+	if( arr.at( 2 ) != 30 )
+		return 5;
+
+	arr.at( 1 ) = 99;
+	if( arr.at( 1 ) != 99 )
+		return 6;
+	if( arr[0] != 10 )
+		return 7;
+	if( arr[2] != 30 )
+		return 8;
+
+	return 0;
+}
+
+func checkGrowth() -> int
+{
+	var Myll::DynArray<int> arr;
+	const int n = 100;
+	var int i = 0;
+	while( i < n ) {
+		arr.pushBack( i );
+		++i;
+	}
+	if( arr.size() != n )
+		return 1;
+
+	i = 0;
+	while( i < n ) {
+		if( arr.at( i ) != i )
+			return 2;
+		++i;
+	}
+	return 0;
+}
+
+func checkStack() -> int
+{
+	var Myll::DynArray<int> stack;
+	stack.pushBack( 1 ).pushBack( 2 ).pushBack( 3 );
+
+	if( stack.top() != 3 )
+		return 1;
+	stack.popBack();
+	if( stack.back() != 2 )
+		return 2;
+	stack.clear();
+	if( !stack.isEmpty() )
+		return 3;
+	return 0;
+}
+
+func checkStruct() -> int
+{
+	var Myll::DynArray<Point> arr;
+	arr.pushBack( Point( 1, 2 ) ).pushBack( Point( 3, 4 ) );
+
+	var Point p0 = arr.at( 0 );
+	var Point p1 = arr.at( 1 );
+	if( p0.x != 1 )
+		return 1;
+	if( p1.y != 4 )
+		return 2;
+
+	arr[0] = Point( 10, 2 );
+	p0 = arr[0];
+	if( p0.x != 10 )
+		return 3;
+	return 0;
+}
+
+func checkIterator() -> int
+{
+	var Myll::DynArray<int> arr;
+	arr.pushBack( 1 ).pushBack( 2 ).pushBack( 3 ).pushBack( 4 );
+	var int sum = 0;
+
+	// named methods
+	var Myll::DynArray<int>::Iterator it = arr.begin();
+	while( !it.equals( arr.end() ) ) {
+		sum += it.value();
+		it.next();
+	}
+	if( sum != 10 )
+		return 1;
+
+	// operator style
+	var Myll::DynArray<int>::Iterator jt = arr.begin();
+	while( jt != arr.end() ) {
+		sum += *jt;
+		++jt;
+	}
+	if( sum != 20 )
+		return 2;
+
+	return 0;
+}
+
+func checkShrink() -> int
+{
+	var Myll::DynArray<int> arr;
+	arr.pushBack( 1 ).pushBack( 2 ).pushBack( 3 );
+	arr.shrinkToFit();
+	if( arr.size() != 3 )
+		return 1;
+	if( arr.at( 2 ) != 3 )
+		return 2;
+
+	arr.clear();
+	arr.shrinkToFit();
+	if( !arr.isEmpty() )
+		return 3;
+	return 0;
+}
+
+} // namespace Test
+
+func main() -> int
+{
+	if( Test::checkBasic()    != 0 ) return 1;
+	if( Test::checkGrowth()   != 0 ) return 2;
+	if( Test::checkStack()    != 0 ) return 3;
+	if( Test::checkStruct()   != 0 ) return 4;
+	if( Test::checkIterator() != 0 ) return 5;
+	if( Test::checkShrink()   != 0 ) return 6;
+	return 0;
+}

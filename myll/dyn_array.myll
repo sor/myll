@@ -1,0 +1,143 @@
+module dyn_array;
+
+namespace Myll {
+
+const usize DEFAULT_CAPACITY = 8;
+
+class DynArray<T> {
+field {
+	T[]!	_data;
+	usize	_size     = 0;
+	usize	_capacity = 0;
+}
+
+[pub]:
+	ctor() : ctor( DEFAULT_CAPACITY ) {}
+
+	ctor( usize capacity ) {
+		_capacity = capacity;
+		if( capacity > 0 )
+			_data = new T[capacity]!;
+	}
+
+	[chain]
+	method reserve( usize capacity ) -> DynArray& {
+		if( capacity > _capacity ) {
+			var T[]! new_data = new T[capacity]!;
+			do _size times i {
+				new_data[i] = _data[i];
+			}
+			_capacity = capacity;
+			_data     = (move)new_data;
+		}
+		return self;
+	}
+
+	[chain]
+	method pushBack( const T& value ) -> DynArray& {
+		if( _size >= _capacity )
+			grow();
+		_data[_size] = value;
+		++_size;
+		return self;
+	}
+
+	[chain]
+	method popBack() -> DynArray& {
+		--_size;
+		return self;
+	}
+
+	[chain]
+	method clear() -> DynArray& {
+		_size = 0;
+		return self;
+	}
+
+	[chain]
+	method shrinkToFit() -> DynArray& {
+		if( _capacity > _size ) {
+			if( _size == 0 ) {
+				_data     = null;
+				_capacity = 0;
+			}
+			else {
+				var T[]! new_data = new T[_size]!;
+				do _size times i {
+					new_data[i] = _data[i];
+				}
+				_capacity = _size;
+				_data     = (move)new_data;
+			}
+		}
+		return self;
+	}
+
+	[pure]
+	method size() -> usize => _size;
+
+	[pure]
+	method isEmpty() -> bool => _size == 0;
+
+	method at( usize index ) -> T& => _data[index];
+
+	method front() -> T& => _data[0];
+
+	method back() -> T& => _data[_size - 1];
+
+	method top() -> T& => back();
+
+	operator [] ( usize index ) -> T& => _data[index];
+
+	class Iterator {
+	field {
+		T* _ptr;
+	}
+
+	[pub]:
+		ctor( T* ptr ) { _ptr = ptr; }
+
+		[chain]
+		method next() -> Iterator& {
+			++_ptr;
+			return self;
+		}
+
+		[pure]
+		method value() -> T& => *_ptr;
+
+		[pure]
+		method equals( Iterator other ) -> bool => _ptr == other._ptr;
+
+		operator ++ () -> Iterator& {
+			++_ptr;
+			return self;
+		}
+
+		operator * () -> T& => *_ptr;
+
+		operator == ( Iterator other ) -> bool => _ptr == other._ptr;
+
+		operator != ( Iterator other ) -> bool => _ptr != other._ptr;
+	}
+
+	method begin() -> Iterator {
+		if( _size == 0 )
+			return Iterator( null );
+		return Iterator( &_data[0] );
+	}
+
+	method end() -> Iterator {
+		if( _size == 0 )
+			return Iterator( null );
+		return Iterator( &_data[_size] );
+	}
+
+[priv]:
+	method grow() {
+		const usize new_capacity = _capacity == 0 ? 1 : _capacity * 2;
+		reserve( new_capacity );
+	}
+}
+
+} // namespace Myll
