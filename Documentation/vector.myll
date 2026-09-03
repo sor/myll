@@ -19,17 +19,17 @@ public:
 
 		// [pre] or the 'this'
 		[pre]
-		operator "++this" () -> iterator& {
+		operator ++ () -> iterator& {
 			++ptr;
 			return self;
 		}
 
 		[post]
-		operator "this++" () -> iterator {
+		operator ++ () -> iterator {
 			return ptr++;
 		}
 
-		operator "==" (const iterator& other) {
+		operator == (const iterator& other) {
 			return self.ptr == other.ptr;
 		} 
 	}
@@ -68,7 +68,7 @@ public:
 		--size;
 	}
 
-	operator "[]" (int index) -> T& => buff[index];
+	operator [] (int index) -> T& => buff[index];
 
 private:
 	func grow() {

@@ -124,12 +124,23 @@ defCtor		:	(	kindOfPassing				id?
 				funcBody;
 defDtor		:	(LPAREN RPAREN)?
 				funcBody;
-defOp		:	(	kindOfPassing	ASSIGN				id?
-				|	CONVERT			tplParams?	RARROW?	typespec // no param == no id
-				|	STRING_LIT		defCoreFunc
+defOp		:	(	kindOfPassing	ASSIGN				id?									// operator copy = other; / operator move = other;
+				|	CONVERT			tplParams?	RARROW?	typespec						// no param == no id
+				|	opSymbol		defCoreFunc										// operator +, operator [], operator ++, ...
 				)
 				(REQUIRES	typespecsNested)?
 				funcBody;
+opSymbol	:	PLUS | MINUS | STAR | SLASH | MOD | HAT | AMP | PIPE | TILDE | EM		// arithmetic / bitwise
+			|	EQ | NEQ | LT | GT | LTEQ | GTEQ | COMPARE							// comparison
+			|	DBL_AMP | DBL_PIPE												// logical
+			|	DBL_PLUS | DBL_MINUS											// increment / decrement
+			|	LSHIFT | GT GT												// shift (right shift is two GT tokens by design)
+			|	STAR STAR														// power (not generatable yet)
+			|	QM_COLON														// null-coalescing (not generatable yet)
+			|	LBRACK RBRACK | LPAREN RPAREN | RARROW								// subscript, call, arrow
+			|	ASSIGN | AS_POW | AS_MUL | AS_SLASH | AS_MOD | AS_ADD | AS_SUB		// assignment / compound assignment
+			|	AS_LSH | AS_RSH | AS_AND | AS_OR | AS_XOR | AS_QM					// compound assignment continued
+			;
 defFunc		:	id			defCoreFunc
 				(REQUIRES	typespecsNested)?
 				funcBody;

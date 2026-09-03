@@ -90,7 +90,7 @@ func hansX(int a) -> bool* => new bool();
 // HACK: running this will result in a crash with 0x0000008B linux
 func mainX()->int { return test(); }
 /*
-operator "|" (MyEnum lhs, MyEnum rhs) -> MyEnum
+operator | (MyEnum lhs, MyEnum rhs) -> MyEnum
 {
 	return (MyEnum) (
 		(std::underlying_type<MyEnum>::type)lhs |
@@ -151,7 +151,7 @@ namespace MyNS
 /*
 namespace MyNamespace
 {
-	operator "|" (MyEnum lhs, MyEnum rhs) -> FE
+	operator | (MyEnum lhs, MyEnum rhs) -> FE
 	{
 		return (MyEnum) (
 			(std::underlying_type<MyEnum>::type)lhs |
@@ -178,7 +178,7 @@ namespace MyNamespace
 		//var int i = 9;
 	}
 
-	operator "|" ( int a, int b ) -> int => a | b;
+	operator | ( int a, int b ) -> int => a | b;
 
 	const float pi = 3.14;
 

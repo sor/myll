@@ -336,11 +336,11 @@ namespace ctor_fun {
 		dtor	{}	// same as above
 	//	dtor;		// defaulted dtor
 
-		operator "=" ( const Test & other )	{ f = other.f;	}
+		operator = ( const Test & other )	{ f = other.f;	}
 		operator copy=						{ f = other.f;	} // same as above
 		operator copy= o					{ f = o.f;		} // same as above
 
-		operator "=" ( Test && other )		{ f = other.f;	}
+		operator = ( Test && other )		{ f = other.f;	}
 		operator move=						{ f = other.f;	} // same as above
 		operator move= o					{ f = o.f;		} // same as above
 

@@ -42,7 +42,7 @@ namespace TestNS {
 			convert int -> { _i = other._i; }
 		}
 		dtor { delete this; }
-		operator "+"(int lhs, int rhs) -> int { return lhs + rhs; }
+		operator + (int lhs, int rhs) -> int { return lhs + rhs; }
 		operator move= o { _i = o._i; }
 		func dbl(i8 value) -> i16 => value * 2;
 		proc setGlob(int value) { someGlobal = value; }

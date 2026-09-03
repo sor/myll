@@ -608,7 +608,7 @@ namespace Myll
 			Func ret;
 			PushScope();
 			{
-				if( c.ASSIGN() != null ) {
+				if( c.kindOfPassing() != null ) {
 					string?     id          = c.id().Visit();
 					PassingKind passingKind = c.kindOfPassing().Visit();
 					bool        isCopy      = passingKind == PassingKind.Copy;
@@ -665,23 +665,44 @@ namespace Myll
 						retType   = VisitTypespec( c.typespec() ),
 					};
 				}
-				else {
-					string stringOp  = c.STRING_LIT().GetText();
-					string cleanedOp = "operator" + stringOp.Substring( 1, stringOp.Length - 2 );
+				else if( c.opSymbol() != null ) {
+					string opName = "operator" + c.opSymbol().GetText();
+
+					if( IsUnsupportedOperator( opName ) ) {
+						Context.Diagnostics.Add( new Diagnostic(
+							c.ToSrcPos(),
+							DiagnosticKind.Error,
+							String.Format( "Operator '{0}' is parsed but not yet supported by the C++ generator.", opName ) ) );
+					}
+
 					ret = VisitDefCoreFunc(
 						c.defCoreFunc(),
-						cleanedOp,
+						opName,
 						Func.Kind.Operator,
 						VisitTypespecsNested( c.typespecsNested() ) );
 					AddParamsToScope( ret.paras );
 					ret.body = c.funcBody().Visit( Context );
 				}
+				else {
+					throw new NotSupportedException( "Unknown operator definition form." );
+				}
 			}
 			ret.funcScope = scopeStack.Peek();
 			PopScope();
 			AddChild( ret ); // needs ret.name to be set already
-			c.id().Visit();
+			c.id()?.Visit();
 			return ret;
+		}
+
+		private static bool IsUnsupportedOperator( string opName )
+		{
+			return opName switch {
+				"operator**"   => true,
+				"operator?:"   => true,
+				"operator**="  => true,
+				"operator?="   => true,
+				_              => false,
+			};
 		}
 
 		// no override
