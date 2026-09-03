@@ -1,0 +1,13 @@
+module new_in_myll;
+
+import using_ns_helper;
+
+using Lib;
+
+func check_using_ns() -> int
+{
+	var int sum = answer() + also();
+	if( sum != 42 )
+		return 1;
+	return 0;
+}

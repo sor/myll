@@ -1,0 +1,49 @@
+module new_in_myll;
+
+func implicitReturn() -> int
+{
+	ret = 42;
+}
+
+func withFinalReturn() -> int
+{
+	ret = 5;
+	return ret;
+}
+
+func withEarlyReturn( int x ) -> int
+{
+	if( x > 0 )
+		return 1;
+	ret = 0;
+	return ret;
+}
+
+func unusedRet() -> int
+{
+	return 7;
+}
+
+func declaredRet() -> int
+{
+	var int ret = 3;
+	return ret;
+}
+
+func paramRet( int ret ) -> int
+{
+	return ret + 1;
+}
+
+func check_auto_return() -> int
+{
+	var int result = implicitReturn()
+	               + withFinalReturn()
+	               + withEarlyReturn( 5 )
+	               + withEarlyReturn( -1 )
+	               + unusedRet()
+	               + declaredRet()
+	               + paramRet( 3 );
+
+	return result == 62 ? 0 : 1;
+}

@@ -1,0 +1,85 @@
+module language_basics;
+
+enum Test {
+	A,
+	B,
+	C
+}
+
+enum TestComma {
+	A,
+	B,
+	C,
+}
+
+enum TestNumbered {
+	A = 1,
+	B = 2,
+	C = 3
+}
+
+enum TestNumberedComma {
+	A = 1,
+	B = 2,
+	C = 3,
+}
+
+enum TestNumberedPartially {
+	A = 1,
+	B,
+	C
+}
+
+[flags]
+enum TestFlags {
+	A,
+	B,
+	C
+}
+
+[flags]
+enum TestFlagsNumbered {
+	A = 1,
+	B = 2,
+	C = 4
+}
+
+[flags]
+enum TestFlagsNumberedPartially {
+	A = 4,
+	B,
+	C
+}
+
+func check_enum() -> int
+{
+	var Test basic = Test::A;
+	var TestComma basicComma = TestComma::B;
+
+	if( (int)(basic) != 0 || (int)(basicComma) != 1 )
+		return 1;
+
+	if( (int)(TestNumbered::A) != 1 || (int)(TestNumberedComma::A) != 1 || (int)(TestNumberedPartially::A) != 1 )
+		return 2;
+
+	if( (int)(TestNumbered::B) != 2 || (int)(TestNumbered::C) != 3 )
+		return 3;
+
+	if( (int)(TestNumberedComma::B) != 2 || (int)(TestNumberedComma::C) != 3 )
+		return 4;
+
+	if( (int)(TestNumberedPartially::B) != 2 || (int)(TestNumberedPartially::C) != 3 )
+		return 5;
+
+	if( (int)(TestFlags::A) != 1 || (int)(TestFlags::B) != 2 || (int)(TestFlags::C) != 4 )
+		return 6;
+
+	if( (int)(TestFlagsNumbered::A) != 1 || (int)(TestFlagsNumbered::B) != 2 || (int)(TestFlagsNumbered::C) != 4 )
+		return 7;
+
+	// especially test the offsetted auto-numbered flag values: A=4, B=8, C=16
+	if( (int)(TestFlagsNumberedPartially::B) != 8 || (int)(TestFlagsNumberedPartially::C) != 16 )
+		return 8;
+
+	return 0;
+}

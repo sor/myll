@@ -1,0 +1,33 @@
+module new_in_myll;
+
+func main() -> int
+{
+	var int r = check_alias();
+	if( r != 0 ) return r;
+
+	r = check_auto_return();
+	if( r != 0 ) return r;
+
+	r = check_bint();
+	if( r != 0 ) return r;
+
+	r = check_default_init();
+	if( r != 0 ) return r;
+
+	r = check_discard();
+	if( r != 0 ) return r;
+
+	r = check_else_on_loop();
+	if( r != 0 ) return r;
+
+	r = check_return_if();
+	if( r != 0 ) return r;
+
+	r = check_return_type_inference();
+	if( r != 0 ) return r;
+
+	r = check_using_ns();
+	if( r != 0 ) return r;
+
+	return 0;
+}

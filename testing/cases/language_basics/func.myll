@@ -1,0 +1,12 @@
+module language_basics;
+
+func takesInt(int) -> int
+{
+	return 42;
+}
+
+func check_func() -> int
+{
+	var int unused = takesInt( 7 );
+	return 0;
+}

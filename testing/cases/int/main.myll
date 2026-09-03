@@ -1,8 +1,0 @@
-module main;
-import basic;
-
-func main() -> int
-{
-	test01();
-	return 0;
-}

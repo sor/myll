@@ -1,0 +1,24 @@
+module oo_basics;
+
+func main() -> int
+{
+	var int r = check_access_mods();
+	if( r != 0 ) return r;
+
+	r = check_abstract_default_delete();
+	if( r != 0 ) return r;
+
+	r = check_bases();
+	if( r != 0 ) return r;
+
+	r = check_class();
+	if( r != 0 ) return r;
+
+	r = check_class_ctor();
+	if( r != 0 ) return r;
+
+	r = check_inheritance();
+	if( r != 0 ) return r;
+
+	return 0;
+}

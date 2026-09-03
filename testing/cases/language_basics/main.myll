@@ -1,0 +1,30 @@
+module language_basics;
+
+func main() -> int
+{
+	var int r = check_byte();
+	if( r != 0 ) return r;
+
+	r = check_conversion();
+	if( r != 0 ) return r;
+
+	r = check_ct();
+	if( r != 0 ) return r;
+
+	r = check_default_sized();
+	if( r != 0 ) return r;
+
+	r = check_enum();
+	if( r != 0 ) return r;
+
+	r = check_func();
+	if( r != 0 ) return r;
+
+	r = check_globals();
+	if( r != 0 ) return r;
+
+	r = check_int();
+	if( r != 0 ) return r;
+
+	return 0;
+}

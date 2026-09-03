@@ -1,0 +1,20 @@
+module language_basics;
+
+import globals_extern, globals_classes, globals_ns;
+
+func check_globals() -> int
+{
+	var int r = outside_check();
+	if( r != 0 )
+		return r;
+
+	r = ns_check();
+	if( r != 0 )
+		return r;
+
+	r = cls_check();
+	if( r != 0 )
+		return r;
+
+	return 0;
+}

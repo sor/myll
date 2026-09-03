@@ -1,0 +1,20 @@
+module language_basics;
+
+func test01() -> void
+{
+	var int i = 4, j = 7;
+	i + j;
+	i * j;
+	i - j;
+	i / j;
+	i % j;
+
+	i | j;
+	i & j;
+}
+
+func check_int() -> int
+{
+	test01();
+	return 0;
+}

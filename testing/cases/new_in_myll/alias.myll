@@ -1,0 +1,11 @@
+module new_in_myll;
+
+import std_iostream;
+
+alias s = std;
+alias MyInt = int;
+
+func check_alias() -> int
+{
+	return 0;
+}

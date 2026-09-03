@@ -1,0 +1,35 @@
+module oo_basics;
+
+class Alpha {
+	field int a = 1;
+}
+
+class Beta {
+	field int b = 2;
+}
+
+class Gamma {
+	field int c = 3;
+}
+
+class PubDef : Alpha {
+}
+
+class Priv : [priv] Alpha {
+}
+
+class Prot : [prot] Alpha {
+}
+
+class Virt : [virtual] Alpha {
+}
+
+class PubVirt : [pub, virtual] Alpha {
+}
+
+class Multi : [pub] Alpha, [priv] Beta, [virtual] Gamma {
+}
+
+func check_bases() -> int {
+	return 0;
+}

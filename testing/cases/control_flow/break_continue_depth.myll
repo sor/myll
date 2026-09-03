@@ -1,0 +1,54 @@
+module control_flow;
+
+func check_break_continue_depth() -> int
+{
+	var int result = 0;
+
+	// break 2 must exit both the inner and outer loop.
+	var int i = 0;
+	while( i < 1 ) {
+		i = i + 1;
+		var int j = 0;
+		while( j < 10 ) {
+			j = j + 1;
+			break 2;
+		}
+		result = result + 100;
+	}
+
+	// continue 2 must skip to the next outer iteration.
+	var int a = 0;
+	var int count = 0;
+	while( a < 3 ) {
+		a = a + 1;
+		var int b = 0;
+		while( b < 10 ) {
+			b = b + 1;
+			continue 2;
+		}
+		count = count + 1;
+	}
+
+	// break 1 is the normal break and should still work.
+	var int x = 0;
+	while( x < 1 ) {
+		x = x + 1;
+		var int y = 0;
+		while( y < 10 ) {
+			y = y + 1;
+			result = result + 5;
+			break;
+		}
+	}
+
+	if( result != 5 )
+		return 1;
+
+	if( a != 3 )
+		return 2;
+
+	if( count != 0 )
+		return 3;
+
+	return 0;
+}

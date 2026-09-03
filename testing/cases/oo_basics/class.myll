@@ -1,0 +1,32 @@
+module oo_basics;
+
+func do_a( A * a ) -> void
+{
+}
+
+class A
+{
+	[pub]:
+	class C
+	{
+		[pub]:
+		func do_b( B * b ) -> void
+		{
+		}
+	}
+	class B
+	{
+	}
+}
+
+func check_class() -> int
+{
+	var A a;
+	do_a( &a );
+
+	var A::B b;
+	var A::C c;
+	c.do_b( &b );
+
+	return 0;
+}

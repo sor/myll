@@ -1,0 +1,15 @@
+module control_flow;
+
+func main() -> int
+{
+	var int r = check_loop();
+	if( r != 0 ) return r;
+
+	r = check_break_continue_depth();
+	if( r != 0 ) return r;
+
+	r = check_break_continue_switch();
+	if( r != 0 ) return r;
+
+	return 0;
+}

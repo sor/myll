@@ -1,0 +1,80 @@
+module control_flow;
+
+func check_break_continue_switch() -> int
+{
+	var int failures = 0;
+
+	// switch containing a loop: break 2 exits the loop and the switch.
+	var int x = 1;
+	var int r1 = 0;
+	switch( x ) {
+		case 1: {
+			var int i = 0;
+			while( i < 1 ) {
+				i = i + 1;
+				break 2;
+			}
+			r1 = 99;
+		}
+		case 2: r1 = 1;
+	}
+	if( r1 != 0 )
+		failures = failures + 1;
+
+	// loop containing a switch: break 2 exits the switch and the loop.
+	var int i2 = 0;
+	var int r2 = 0;
+	while( i2 < 1 ) {
+		i2 = i2 + 1;
+		switch( i2 ) {
+			case 1: break 2;
+		}
+		r2 = 99;
+	}
+	if( r2 != 0 )
+		failures = failures + 1;
+
+	// two stacked switches: break 2 exits the outer switch.
+	var int r3 = 0;
+	var int x3 = 1;
+	switch( x3 ) {
+		case 1: {
+			switch( x3 ) {
+				case 1: break 2;
+			}
+			r3 = 99;
+		}
+		case 2: r3 = 1;
+	}
+	if( r3 != 0 )
+		failures = failures + 1;
+
+	// continue through a switch: continue 2 targets the outer loop only,
+	// skipping the rest of the switch case and the rest of the outer body.
+	var int a = 0;
+	var int count = 0;
+	var int r4 = 0;
+	while( a < 2 ) {
+		a = a + 1;
+		var int b = 0;
+		switch( a ) {
+			case 1: {
+				while( b < 5 ) {
+					b = b + 1;
+					continue 2;
+				}
+				count = count + 1;
+			}
+			default: {}
+		}
+		r4 = r4 + 1;
+	}
+	if( a != 2 )
+		failures = failures + 1;
+	if( count != 0 )
+		failures = failures + 1;
+	if( r4 != 1 )
+		failures = failures + 1;
+
+	return failures;
+}

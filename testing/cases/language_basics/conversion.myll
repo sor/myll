@@ -1,0 +1,47 @@
+module language_basics;
+
+func takes_u32( u32 x ) -> u32
+{
+	return x;
+}
+
+func takes_i64( i64 x ) -> i64
+{
+	return x;
+}
+
+func test_widening() -> void
+{
+	var i32 a = 1;
+	var i64 b = a;
+
+	var u16 c = 2;
+	var u32 d = c;
+
+	var bool flag = true;
+	var i32 count = flag;
+}
+
+func test_mixed_signed() -> void
+{
+	var i32 x = -2;
+	var u32 y = 9000;
+	var i64 result = x * y;
+}
+
+func test_arguments() -> void
+{
+	var u8 v = 7;
+	var u32 r = takes_u32( v );
+
+	var i32 s = -1;
+	var i64 t = takes_i64( s );
+}
+
+func check_conversion() -> int
+{
+	test_widening();
+	test_mixed_signed();
+	test_arguments();
+	return 0;
+}

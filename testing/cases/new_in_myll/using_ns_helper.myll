@@ -1,0 +1,6 @@
+module using_ns_helper;
+
+namespace Lib {
+	func answer() -> int { return 21; }
+	func also() -> int { return 21; }
+}

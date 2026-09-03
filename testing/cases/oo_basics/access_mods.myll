@@ -1,0 +1,72 @@
+module oo_basics;
+
+class Box
+{
+	// no specifier: private by default in a class
+	field i32 _x = 0;
+	field i32 _y = 0;
+	field i32 _z = 0;
+
+	[priv] field i32 _tag;
+
+[pub]:
+	const i32 maxSize = 100;
+
+	func getX() -> i32 => _x;
+
+	[priv] method updatePriv( i32 a, i32 b, i32 c ) -> void
+	{
+		_x = a;
+		_y = b;
+		_z = c;
+	}
+
+	method update( i32 a, i32 b, i32 c ) -> void
+	{
+		updatePriv( a, b, c );
+	}
+
+	func volume() -> i32 => _x * _y * _z;
+
+[priv]:
+	field i32 _secret;
+	method helperA() -> i32 => _x + _y;
+	method helperB() -> i32 => _y + _z;
+
+[prot]:
+	field i32 _childVisible;
+
+[pub]:
+	func getY() -> i32 => _y;
+	func getZ() -> i32 => _z;
+
+	method setSecret( i32 v ) -> void { _secret = v; }
+	func getSecret() -> i32 => _secret;
+
+	method setChildVisible( i32 v ) -> void { _childVisible = v; }
+	func getChildVisible() -> i32 => _childVisible;
+
+	[prot] func sum() -> i32 => helperA() + helperB();
+	method getSum() -> i32 => sum();
+}
+
+func check_access_mods() -> int
+{
+	var Box b;
+	b.update( 2, 3, 4 );
+
+	if( b.getX() != 2 ) return 1;
+	if( b.getY() != 3 ) return 2;
+	if( b.getZ() != 4 ) return 3;
+	if( b.volume() != 24 ) return 4;
+
+	b.setSecret( 42 );
+	if( b.getSecret() != 42 ) return 5;
+
+	b.setChildVisible( 7 );
+	if( b.getChildVisible() != 7 ) return 6;
+
+	if( b.getSum() != ( 2 + 3 ) + ( 3 + 4 ) ) return 7;
+
+	return 0;
+}
