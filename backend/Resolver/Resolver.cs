@@ -96,6 +96,8 @@ namespace Myll.Resolver
 			// a TplParamDecl was not yet resolved when the prefix was checked.
 			resolver.UpdateDependentNestedNames( modules );
 
+			resolver.ValidateGlobalUsings( modules );
+
 			var postResolveTransforms = new List<ITransformer> {
 				new DiscardTransformer( result, diagnostics ),
 			};
@@ -238,6 +240,34 @@ namespace Myll.Resolver
 			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
 				foreach( UnresolvedType unresolved in context.UnresolvedTypes ) {
 					IsDependentNestedName( unresolved.Node, unresolved.Scope, module );
+				}
+			}
+		}
+
+		private void ValidateGlobalUsings(
+			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules )
+		{
+			if( Dialect.GlobalUsingNS == GlobalUsingNSMode.Leaky )
+				return;
+
+			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+				foreach( UnresolvedUsing unresolved in context.UnresolvedUsings ) {
+					UsingDecl usingDecl = unresolved.Node;
+
+					if( !usingDecl.IsNamespaceUsing )
+						continue;
+
+					// Scoped `using` inside a namespace is always allowed.
+					if( unresolved.Scope.decl is not GlobalNamespace )
+						continue;
+
+					diagnostics.Add( new Diagnostic(
+						usingDecl.srcPos,
+						DiagnosticKind.Error,
+						Dialect.GlobalUsingNS == GlobalUsingNSMode.Disabled
+							? "Global `using` of a namespace is disabled in this dialect."
+							: "`Dialect.GlobalUsingNSMode.Contained` is not implemented yet."
+					) );
 				}
 			}
 		}

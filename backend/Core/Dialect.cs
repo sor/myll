@@ -52,6 +52,30 @@ namespace Myll.Core
 	}
 
 	/// <summary>
+	/// Controls where module-scope (global) `using NS;` declarations are emitted.
+	/// Scoped `using` inside a namespace is always allowed.
+	/// </summary>
+	public enum GlobalUsingNSMode
+	{
+		/// <summary>
+		/// Emit `using namespace NS;` in the header. This is simple but leaks names
+		/// into every translation unit that includes the header (C++ antipattern).
+		/// </summary>
+		Leaky,
+
+		/// <summary>
+		/// Emit `using namespace NS;` only in the implementation file and fully
+		/// qualify names in the header. Not yet implemented.
+		/// </summary>
+		Contained,
+
+		/// <summary>
+		/// Reject module-scope `using NS;` entirely.
+		/// </summary>
+		Disabled,
+	}
+
+	/// <summary>
 	/// Controls how default-sized types (<c>int</c>, <c>uint</c>, <c>float</c>,
 	/// <c>bint</c>) are treated by the type system. Only <see cref="SizeIndeterminate"/>
 	/// is currently honored; the other values are reserved for future dialect support.
@@ -104,6 +128,13 @@ namespace Myll.Core
 		// signature automatically emits C++ `using Base::name;` so overload resolution sees both.
 		// Can be overridden per class/method with [shadow] and [unshadow].
 		public static bool AutoUnhideBaseMethods = true;
+
+		/// <summary>
+		/// Controls whether and where module-scope `using NS;` of a namespace is
+		/// emitted. Defaults to <see cref="GlobalUsingNSMode.Leaky"/> for backward
+		/// compatibility.
+		/// </summary>
+		public static GlobalUsingNSMode GlobalUsingNS = GlobalUsingNSMode.Leaky;
 
 		// Name of the implicit alias for the first base class inside a class/struct.
 		// If empty or null, no alias is created and the name is treated as an ordinary identifier.

@@ -104,6 +104,9 @@ namespace Myll.Generator
 
 		private readonly Hierarchical hierarchical;
 
+		private readonly HashSet<string> definedNamespaces = new();
+		private readonly HashSet<string> namespaceUsingNames = new();
+
 		public List<Diagnostic> Diagnostics { get; } = new();
 
 		private int LevelDecl { get; }
@@ -153,6 +156,16 @@ namespace Myll.Generator
 			string accessIndent = DeIndentDecl;
 
 			Strings ret = new();
+
+			if( Dialect.GlobalUsingNS == GlobalUsingNSMode.Leaky
+			 && namespaceUsingNames.Count > 0 ) {
+				foreach( string ns in namespaceUsingNames
+					.Where( n => definedNamespaces.Contains( n ) )
+					.OrderBy( n => n ) ) {
+					ret.Add( Format( "{0}namespace {1} {{}}", IndentDecl, ns ) );
+				}
+			}
+
 			IAccessStrings
 				listDecl = new AccessStrings()
 					.Concat( protoEarly )
@@ -249,6 +262,9 @@ namespace Myll.Generator
 				obj.type.Gen() );
 
 			protoEarly.Target( obj.access ).Add( ret );
+
+			if( obj.IsNamespaceUsing )
+				namespaceUsingNames.Add( obj.name );
 		}
 
 		public void AddAlias( AliasDecl obj )
@@ -598,6 +614,9 @@ namespace Myll.Generator
 			bool isGlobal    = gen.hierarchical is GlobalNamespace;
 			bool isNamespace = gen.hierarchical is Namespace;
 			bool isEnum      = gen.hierarchical is Enumeration;
+
+			if( isNamespace )
+				definedNamespaces.Add( nameDecl );
 
 			string keyword, bases;
 			if( isNamespace ) {

@@ -2,12 +2,33 @@ module new_in_myll;
 
 import using_ns_helper;
 
+namespace SameFileLib {
+	func sameFileValue() -> int { return 21; }
+}
+
+using SameFileLib;
 using Lib;
+
+namespace InnerScopeTest {
+	using Lib;
+
+	func innerSum() -> int {
+		return answer() + also();
+	}
+}
 
 func check_using_ns() -> int
 {
-	var int sum = answer() + also();
-	if( sum != 42 )
+	var int imported   = answer() + also();
+	var int sameFile   = sameFileValue() * 2;
+	var int innerScope = InnerScopeTest::innerSum();
+
+	if( imported != 42 )
 		return 1;
+	if( sameFile != 42 )
+		return 2;
+	if( innerScope != 42 )
+		return 3;
+
 	return 0;
 }
