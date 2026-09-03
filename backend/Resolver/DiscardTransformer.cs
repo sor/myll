@@ -453,7 +453,7 @@ namespace Myll.Resolver
 				text   = "nullptr",
 				srcPos = srcPos,
 				Type   = new TypespecBasic {
-					kind = TypespecBasic.Kind.Auto,
+					kind = TypespecBasic.Kind.ExplicitAuto,
 					size = TypespecBasic.SizeUndetermined,
 				},
 			};

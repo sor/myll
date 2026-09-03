@@ -61,7 +61,7 @@ namespace Myll
 				return new TypespecBasic {
 					//kind = TypespecBasic.Kind.Void,
 					//size = TypespecBasic.SizeInvalid,
-					kind = TypespecBasic.Kind.Auto,
+					kind = TypespecBasic.Kind.ExplicitAuto,
 					size = TypespecBasic.SizeUndetermined,
 				};
 
@@ -147,9 +147,9 @@ namespace Myll
 				case RULE_specialType: {
 					int t = c.specialType().v.Type;
 					switch( t ) {
-						case MyllParser.AUTO:
-							ret.kind = TypespecBasic.Kind.Auto;
-							break;
+					case MyllParser.AUTO:
+						ret.kind = TypespecBasic.Kind.ExplicitAuto;
+						break;
 
 						case MyllParser.VOID:
 							ret.kind = TypespecBasic.Kind.Void;

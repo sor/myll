@@ -392,7 +392,7 @@ namespace Myll
 			func.retType = c.typespec() != null ? VisitTypespec( c.typespec() ) :
 				func.IsReturningSomething ?
 					new TypespecBasic {
-						kind = TypespecBasic.Kind.Auto,
+						kind = TypespecBasic.Kind.ImplicitAuto,
 						size = TypespecBasic.SizeUndetermined,
 					} :
 					new TypespecBasic {

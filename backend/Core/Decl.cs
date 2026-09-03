@@ -193,11 +193,6 @@ namespace Myll.Core
 		public Typespec             retType = null!;
 
 		/// <summary>
-		/// True when the return type was omitted in source and should be inferred from the body.
-		/// </summary>
-		public bool retTypeIsInferred;
-
-		/// <summary>
 		/// The scope that holds parameters and any compiler-generated locals for this
 		/// function. It is a child of the enclosing class/struct/global scope.
 		/// </summary>

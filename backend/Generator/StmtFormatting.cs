@@ -86,7 +86,11 @@ namespace Myll.Generator
 		public static readonly IReadOnlyDictionary<TypespecBasic.Kind, IntToString>
 			BasicFormat = new Dictionary<TypespecBasic.Kind, IntToString> {
 				{
-					TypespecBasic.Kind.Auto, new IntToString {
+					TypespecBasic.Kind.ExplicitAuto, new IntToString {
+						{ TypespecBasic.SizeUndetermined, "auto" }
+					}
+				}, {
+					TypespecBasic.Kind.ImplicitAuto, new IntToString {
 						{ TypespecBasic.SizeUndetermined, "auto" }
 					}
 				}, {

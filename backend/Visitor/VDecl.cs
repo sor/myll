@@ -734,9 +734,8 @@ namespace Myll
 				ret.retType = VisitTypespec( c.typespec() );
 			}
 			else {
-				ret.retTypeIsInferred = true;
 				ret.retType = new TypespecBasic {
-					kind = TypespecBasic.Kind.Auto,
+					kind = TypespecBasic.Kind.ImplicitAuto,
 					size = TypespecBasic.SizeUndetermined,
 				};
 			}

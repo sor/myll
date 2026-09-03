@@ -47,7 +47,7 @@ namespace Myll.Resolver
 			if( !func.HasAttrib( "chain" ) )
 				return;
 
-			if( !func.retTypeIsInferred ) {
+			if( func.retType is not TypespecBasic { kind: TypespecBasic.Kind.ImplicitAuto } ) {
 				diagnostics.Add( new Diagnostic(
 					func.srcPos,
 					DiagnosticKind.Error,
@@ -76,8 +76,7 @@ namespace Myll.Resolver
 			if( func.IsPure )
 				retType.qual = Qualifier.Const;
 
-			func.retType          = retType;
-			func.retTypeIsInferred = false;
+			func.retType = retType;
 
 			if( func.body == null )
 				return;

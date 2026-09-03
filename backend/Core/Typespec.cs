@@ -91,7 +91,8 @@ namespace Myll.Core
 	{
 		public enum Kind
 		{
-			Auto,
+			ImplicitAuto,   // return type was omitted and must be inferred
+			ExplicitAuto,   // user wrote `auto`
 			Void,
 			Bool,
 			Char,

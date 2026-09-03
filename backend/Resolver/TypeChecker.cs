@@ -86,12 +86,12 @@ namespace Myll.Resolver
 		private void ValidateDecl( Decl decl )
 		{
 			switch( decl ) {
-				case Func func:
-					if( func.retTypeIsInferred )
-						InferReturnType( func );
-					if( func.body != null )
-						ValidateStmt( func.body, func );
-					break;
+			case Func func:
+				if( IsAutoKind( func.retType ) )
+					InferReturnType( func );
+				if( func.body != null )
+					ValidateStmt( func.body, func );
+				break;
 
 				case Structor stc:
 					if( stc.body != null )
@@ -102,8 +102,8 @@ namespace Myll.Resolver
 				ValidateVarAttributes( vd );
 				ValidateDefaultSizedField( vd );
 				if( vd.init != null ) {
-						if( vd.type is TypespecBasic { kind: TypespecBasic.Kind.Auto } )
-							vd.type = InferAutoType( typeResolver.Resolve( vd.init ) ) ?? vd.type;
+					if( IsAutoKind( vd.type ) )
+						vd.type = InferAutoType( typeResolver.Resolve( vd.init ) ) ?? vd.type;
 
 						CheckAssignment( vd.type, vd.init, vd.init.srcPos );
 						vd.init = BindToBitType( vd.init, vd.type );
@@ -128,8 +128,8 @@ namespace Myll.Resolver
 
 			case VarStmt vs:
 					if( vs.init != null ) {
-						if( vs.type is TypespecBasic { kind: TypespecBasic.Kind.Auto } )
-							vs.type = InferAutoType( typeResolver.Resolve( vs.init ) ) ?? vs.type;
+					if( IsAutoKind( vs.type ) )
+						vs.type = InferAutoType( typeResolver.Resolve( vs.init ) ) ?? vs.type;
 
 						CheckAssignment( vs.type, vs.init, vs.init.srcPos );
 						vs.init = BindToBitType( vs.init, vs.type );
@@ -270,7 +270,7 @@ namespace Myll.Resolver
 
 		private void InferReturnType( Func func )
 		{
-			if( !func.retTypeIsInferred )
+			if( func.retType is not TypespecBasic { kind: TypespecBasic.Kind.ExplicitAuto or TypespecBasic.Kind.ImplicitAuto } )
 				return;
 
 			if( func.body == null ) {
@@ -910,6 +910,11 @@ namespace Myll.Resolver
 				_ => initType,
 			};
 		}
+
+		private static bool IsAutoKind( Typespec? type )
+			=> type is TypespecBasic basic
+			&& ( basic.kind == TypespecBasic.Kind.ExplicitAuto
+			  || basic.kind == TypespecBasic.Kind.ImplicitAuto );
 
 		private void ValidateVarAttributes( VarDecl vd )
 		{

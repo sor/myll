@@ -95,7 +95,7 @@ namespace Myll.Resolver
 		private Typespec? ResolveId( IdExpr id )
 		{
 			if( id.idTplArgs.id == "null" )
-				return new TypespecBasic { kind = TypespecBasic.Kind.Auto, size = TypespecBasic.SizeUndetermined };
+				return new TypespecBasic { kind = TypespecBasic.Kind.ExplicitAuto, size = TypespecBasic.SizeUndetermined };
 
 			if( !result.TryGetResolved( id, out Decl? decl ) )
 				return null;
