@@ -14,6 +14,12 @@ It is separate from `suspicious-warnings.md`, which is reserved for warning clus
 - Added `-Wsuggest-override` to the Unix app Makefile.
 - Implemented a class-heavy `ls` vertical slice with inheritance, virtual formatters, smart-pointer shorthand, sorting options, and hidden-file filtering.
 
+## C# source formatting
+
+A `.clang-format` configuration was prepared in `plan/clang-format-config.yml` after a tryout session. The saved file is a full Microsoft-based style that preserves the existing manual formatting as far as possible (indentation, brace placement, parameter/variable alignment, and multi-line signatures) while applying `SpacesInParentheses` and `BeforeElse`.
+
+The idea of starting from an empty `.clang-format` and enabling one switch at a time was abandoned, because `clang-format` requires a base style; individual switches only take effect when the formatter is active, and then all other options fall back to a default style. The saved configuration is the practical baseline. It is not actively used, but it is kept here so the work can be resumed without starting from scratch.
+
 ## Remove null-forgiving initializers (`= null!`)
 
 When migrating files to `#nullable enable`, late-bound fields and properties (typically filled in by the visitor after construction) were initialized with `= null!` to silence `CS8618` without immediately rewriting every call site.
