@@ -128,3 +128,4 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 - `ctor copy`/`ctor move` shorthand generates the `const C&` / `C&&` parameter automatically, supports optional parameter names, and works with `[default]`/`[delete]`. Case: `testing/cases/special_ctors/`.
 - Per-kind default attributes (`Dialect.DefaultAttributesClass`/`Struct`/`Union`/`Enum`) are parsed and merged before other attribute-consuming transforms.
 - Built-in `(move)` and `(forward)` casts return the operand's own type and emit `std::move(...)` / `std::forward(...)`.
+- `null` is allowed as an implicit null-pointer constant for raw pointers and smart pointers (`T*`, `T*!`, `T[]!`, `T^`, `T*?`, etc.). It is rejected for value types and references. Added move ctor/move assignment to `Myll::DynArray<T>` that nulls the moved-from `_data`.

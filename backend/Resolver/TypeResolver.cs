@@ -94,6 +94,8 @@ namespace Myll.Resolver
 
 		private Typespec? ResolveId( IdExpr id )
 		{
+			// `null` is represented as ExplicitAuto. ConversionRules has a special case
+			// that lets this bind to raw/smart pointer targets.
 			if( id.idTplArgs.id == "null" )
 				return new TypespecBasic { kind = TypespecBasic.Kind.ExplicitAuto, size = TypespecBasic.SizeUndetermined };
 

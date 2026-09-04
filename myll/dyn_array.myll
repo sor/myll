@@ -20,6 +20,27 @@ field {
 			_data = new T[initialCapacity]!;
 	}
 
+	ctor move src {
+		_size     = src._size;
+		_capacity = src._capacity;
+		_data     = (move)src._data;
+		src._size     = 0;
+		src._capacity = 0;
+		src._data     = null;
+	}
+
+	operator move = src {
+		if( &self == &src )
+			return self;
+		_data     = (move)src._data;
+		_size     = src._size;
+		_capacity = src._capacity;
+		src._data     = null;
+		src._size     = 0;
+		src._capacity = 0;
+		return self;
+	}
+
 	[chain]
 	method reserve( usize newCapacity ) -> DynArray& {
 		if( newCapacity > _capacity ) {

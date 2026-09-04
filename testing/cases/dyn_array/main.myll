@@ -208,6 +208,37 @@ func checkImportedRefMember() -> int
 	return 0;
 }
 
+func checkMove() -> int
+{
+	var Myll::DynArray<int> arr;
+	arr.pushBack( 1 ).pushBack( 2 ).pushBack( 3 );
+
+	var Myll::DynArray<int> moved = (move)arr;
+	if( moved.size() != 3 )
+		return 1;
+	if( moved.at( 0 ) != 1 )
+		return 2;
+
+	if( !arr.isEmpty() )
+		return 3;
+	if( arr.size() != 0 )
+		return 4;
+	if( arr.capacity() != 0 )
+		return 5;
+
+	var Myll::DynArray<int> other;
+	other.pushBack( 10 );
+	other = (move)moved;
+	if( other.size() != 3 )
+		return 6;
+	if( other.at( 1 ) != 2 )
+		return 7;
+	if( !moved.isEmpty() )
+		return 8;
+
+	return 0;
+}
+
 } // namespace Test
 
 func main() -> int
@@ -220,5 +251,6 @@ func main() -> int
 	if( Test::checkShrink()            != 0 ) return 6;
 	if( Test::checkAlgorithms()        != 0 ) return 7;
 	if( Test::checkImportedRefMember() != 0 ) return 8;
+	if( Test::checkMove()              != 0 ) return 9;
 	return 0;
 }

@@ -61,8 +61,10 @@ struct Handle {
 		*_ptr = *other._ptr;
 	}
 
-	[delete]
-	ctor move src;
+	ctor move src {
+		_ptr     = src._ptr;
+		src._ptr = null;
+	}
 
 	operator = ( const Handle & other ) {
 		if( &self == &other )
@@ -75,7 +77,8 @@ struct Handle {
 	operator move = src {
 		if( &self == &src )
 			return self;
-		_ptr = src._ptr;
+		_ptr     = src._ptr;
+		src._ptr = null;
 		return self;
 	}
 }
@@ -95,6 +98,51 @@ struct DefaultCopy {
 	operator = ( const DefaultCopy & other ) {
 		value = other.value;
 		return self;
+	}
+}
+
+struct UBox {
+[pub]:
+	field {
+		int[]! data;
+	}
+
+	ctor() {}
+
+	ctor( usize n ) {
+		data = new int[n]!;
+	}
+
+	ctor move src {
+		data     = (move)src.data;
+		src.data = null;
+	}
+
+	operator move = src {
+		if( &self == &src )
+			return self;
+		data     = (move)src.data;
+		src.data = null;
+		return self;
+	}
+}
+
+struct PtrBox {
+[pub]:
+	field {
+		int*! ptr;
+	}
+
+	ctor() {}
+
+	ctor( int value ) {
+		ptr = new int*!;
+		*ptr = value;
+	}
+
+	ctor move src {
+		ptr     = (move)src.ptr;
+		src.ptr = null;
 	}
 }
 
@@ -118,10 +166,35 @@ func main() -> int {
 	j = i;                        // copy assign
 	if( *j._ptr != 42 ) return 5;
 
+	var Handle k = (move)h;       // move ctor
+	if( *k._ptr != 42 ) return 6;
+	// h's raw pointer is now null; do not dereference it.
+
+	var Handle m;
+	m = (move)k;                  // move assign
+	if( *m._ptr != 42 ) return 7;
+
 	var DefaultCopy d1;
 	d1.value = 7;
 	var DefaultCopy d2 = d1;      // defaulted copy ctor
-	if( d2.value != 7 ) return 6;
+	if( d2.value != 7 ) return 8;
+
+	var int* rp = null;
+	rp = null;                    // null assignment to raw pointer
+
+	var int*! up = null;          // null init of unique object pointer
+	up = null;                    // null assignment
+
+	var int[]! ua = null;         // null init of unique array pointer
+	ua = null;                    // null assignment
+
+	var UBox box = UBox( 4 );
+	var UBox movedBox;
+	movedBox = (move)box;         // move assign with null reset
+
+	var PtrBox pb = PtrBox( 7 );
+	var PtrBox qb = (move)pb;     // move ctor with unique object pointer null reset
+	if( *qb.ptr != 7 ) return 9;
 
 	return 0;
 }

@@ -43,6 +43,12 @@ namespace Myll.Resolver
 			 || target is TypespecNested { resolvedDecl: TplParamDecl } )
 				return ConversionRank.TemplateParameter;
 
+			// The `null` literal is represented as ExplicitAuto. Allow it to bind to any
+			// raw or smart pointer kind, matching C++ nullptr behavior.
+			if( source is TypespecBasic { kind: TypespecBasic.Kind.ExplicitAuto }
+			 && IsNullablePointerType( target ) )
+				return ConversionRank.Conversion;
+
 			if( IsExactMatch( source, target ) )
 				return ConversionRank.Exact;
 
@@ -196,6 +202,22 @@ namespace Myll.Resolver
 			    or Pointer.Kind.Unique
 			    or Pointer.Kind.Shared
 			    or Pointer.Kind.Weak;
+
+		private static bool IsNullablePointerType( Typespec? type )
+		{
+			if( type?.ptrs is not { Count: > 0 } )
+				return false;
+
+			return type.ptrs[type.ptrs.Count - 1].kind is
+				   Pointer.Kind.RawPtr
+				or Pointer.Kind.PtrToAry
+				or Pointer.Kind.Unique
+				or Pointer.Kind.UniqueArray
+				or Pointer.Kind.Shared
+				or Pointer.Kind.SharedArray
+				or Pointer.Kind.Weak
+				or Pointer.Kind.WeakArray;
+		}
 
 		public static bool IsExactMatch( Typespec? a, Typespec? b )
 		{
