@@ -59,10 +59,13 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    - Add grammar/visitor/generator support for forward declarations in prototype files.
    - See `plan/prototype-files.md`.
 
+6. **Direct constructor syntax**
+   - Allow `T name(args);` and `T(args);` as alternatives to `var T name = T(args);`.
+   - Update the variable declaration grammar/visitor and ensure copy/move ctors are selected correctly.
+
 ## Medium priority
 
 4. **Language syntax gaps**
-   - Direct constructor syntax (`T name(args);`, `T(args);`) instead of only `var T name = T(args);`.
    - Range-based `for` loops (`for( a : b )`).
    - Namespace aliases via `alias` (`alias fs = std::filesystem;` should generate `namespace fs = std::filesystem;`).
    - Auto-property / combined private-field + public-getter syntax.
@@ -128,4 +131,4 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 - `ctor copy`/`ctor move` shorthand generates the `const C&` / `C&&` parameter automatically, supports optional parameter names, and works with `[default]`/`[delete]`. Case: `testing/cases/special_ctors/`.
 - Per-kind default attributes (`Dialect.DefaultAttributesClass`/`Struct`/`Union`/`Enum`) are parsed and merged before other attribute-consuming transforms.
 - Built-in `(move)` and `(forward)` casts return the operand's own type and emit `std::move(...)` / `std::forward(...)`.
-- `null` is allowed as an implicit null-pointer constant for raw pointers and smart pointers (`T*`, `T*!`, `T[]!`, `T^`, `T*?`, etc.). It is rejected for value types and references. Added move ctor/move assignment to `Myll::DynArray<T>` that nulls the moved-from `_data`.
+- `null` is allowed as an implicit null-pointer constant for raw pointers and smart pointers (`T*`, `T*!`, `T*+`, `T*?`, `T[]!`, `T[]+`, `T[]?`, etc.). It is rejected for value types and references. Added move ctor/move assignment to `Myll::DynArray<T>` that nulls the moved-from `_data`.
