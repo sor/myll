@@ -12,7 +12,7 @@ namespace Myll.Resolver
 	public sealed class TemplateParamTransformer : ITransformer
 	{
 		public void Transform(
-			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules,
+			IReadOnlyList<CompiledModuleResult> modules,
 			List<Diagnostic> diagnostics )
 		{
 			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
@@ -23,8 +23,7 @@ namespace Myll.Resolver
 			}
 		}
 
-		public void Transform(
-			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules )
+		public void Transform( IReadOnlyList<CompiledModuleResult> modules )
 			=> Transform( modules, new List<Diagnostic>() );
 
 		private static void TransformDecl( Decl decl, CompilationContext context )

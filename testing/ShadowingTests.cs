@@ -11,7 +11,7 @@ namespace Myll.Tests
 {
 	public sealed class ShadowingTests
 	{
-		private static (GlobalNamespace Module, CompilationContext Context) CompileModule(
+		private static CompiledModuleResult CompileModule(
 			string source,
 			string moduleName = "test" )
 		{
@@ -27,12 +27,12 @@ namespace Myll.Tests
 				.First();
 
 			GlobalNamespace module = context.DeclVisitor.VisitProgs( group );
-			return (module, context);
+			return new( module, context );
 		}
 
 		private static List<Diagnostic> RunTypeChecker(
 			ShadowingMode mode,
-			params (GlobalNamespace Module, CompilationContext Context)[] modules )
+			params CompiledModuleResult[] modules )
 		{
 			ShadowingMode previous = Dialect.Shadowing;
 			try {

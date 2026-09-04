@@ -56,8 +56,7 @@ namespace Myll.Resolver
 			this.typeResolver  = new TypeResolver( result );
 		}
 
-		public static (ResolutionResult Result, IReadOnlyList<Diagnostic> Diagnostics) Resolve(
-			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules )
+		public static ResolveResult Resolve( IReadOnlyList<CompiledModuleResult> modules )
 		{
 			var result      = new ResolutionResult();
 			var diagnostics = new List<Diagnostic>();
@@ -109,11 +108,11 @@ namespace Myll.Resolver
 			resolver.ValidateTypes( modules );
 			resolver.ReportUnresolved( modules );
 
-			return (result, diagnostics);
+			return new( result, diagnostics );
 		}
 
 		private static IReadOnlyDictionary<string, ModuleExports> BuildModuleExports(
-			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules )
+			IReadOnlyList<CompiledModuleResult> modules )
 		{
 			Dictionary<string, ModuleExports> ret = new();
 			foreach( (GlobalNamespace module, _) in modules ) {
@@ -236,8 +235,7 @@ namespace Myll.Resolver
 		/// Populates <paramref name="type"/>.prefixDependent so the generator can emit
 		/// the C++ 'typename' and 'template' disambiguators.
 		/// </summary>
-		private void UpdateDependentNestedNames(
-			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules )
+		private void UpdateDependentNestedNames( IReadOnlyList<CompiledModuleResult> modules )
 		{
 			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
 				foreach( UnresolvedType unresolved in context.UnresolvedTypes ) {
@@ -246,8 +244,7 @@ namespace Myll.Resolver
 			}
 		}
 
-		private void ValidateGlobalUsings(
-			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules )
+		private void ValidateGlobalUsings( IReadOnlyList<CompiledModuleResult> modules )
 		{
 			if( Dialect.GlobalUsingNS == GlobalUsingNSMode.Leaky )
 				return;
@@ -1411,8 +1408,7 @@ namespace Myll.Resolver
 			return null;
 		}
 
-		private void ValidateTypes(
-			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules )
+		private void ValidateTypes( IReadOnlyList<CompiledModuleResult> modules )
 		{
 			if( (Dialect.DefaultFloat & DefaultTypeMode.Forbidden) != 0 ) {
 				foreach( (_, CompilationContext context) in modules ) {
@@ -1430,7 +1426,7 @@ namespace Myll.Resolver
 		}
 
 		private void RejectRequiresClauses(
-			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules )
+			IReadOnlyList<CompiledModuleResult> modules )
 		{
 			foreach( (GlobalNamespace module, _) in modules ) {
 				RejectRequiresInDecl( module );
@@ -1459,8 +1455,7 @@ namespace Myll.Resolver
 			}
 		}
 
-		private void ReportUnresolved(
-			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules )
+		private void ReportUnresolved( IReadOnlyList<CompiledModuleResult> modules )
 		{
 			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
 				foreach( UnresolvedId unresolved in context.UnresolvedIds ) {

@@ -11,7 +11,7 @@ namespace Myll.Tests
 {
 	public sealed class AutoReturnTests
 	{
-		private static (GlobalNamespace Module, CompilationContext Context) CompileModule(
+		private static CompiledModuleResult CompileModule(
 			string source,
 			string moduleName = "test" )
 		{
@@ -27,10 +27,10 @@ namespace Myll.Tests
 				.First();
 
 			GlobalNamespace module = context.DeclVisitor.VisitProgs( group );
-			return (module, context);
+			return new( module, context );
 		}
 
-		private static List<Diagnostic> Transform( (GlobalNamespace Module, CompilationContext Context) module )
+		private static List<Diagnostic> Transform( CompiledModuleResult module )
 		{
 			var diagnostics = new List<Diagnostic>();
 			new AutoReturnTransformer().Transform(

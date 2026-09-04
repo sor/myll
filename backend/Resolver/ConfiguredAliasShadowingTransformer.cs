@@ -17,8 +17,7 @@ namespace Myll.Resolver
 
 		public IReadOnlyList<Diagnostic> Diagnostics => diagnostics;
 
-		public void Transform(
-			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules )
+		public void Transform( IReadOnlyList<CompiledModuleResult> modules )
 		{
 			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
 				if( context.IsPrototypeFile )
@@ -41,8 +40,7 @@ namespace Myll.Resolver
 
 		private void VisitStructural( Structural structural )
 		{
-			CheckClassAlias( structural, Dialect.BaseClassAliasName, "base-class alias",
-				structural.basetypes.Count >= 1 );
+			CheckClassAlias( structural, Dialect.BaseClassAliasName, "base-class alias", structural.basetypes.Count >= 1 );
 
 			CheckClassAlias( structural, Dialect.OwnClassAliasName, "own-class alias", true );
 		}
@@ -168,8 +166,7 @@ namespace Myll.Resolver
 			return false;
 		}
 
-		public void CheckAutoReturnConflicts(
-			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules )
+		public void CheckAutoReturnConflicts( IReadOnlyList<CompiledModuleResult> modules )
 		{
 			if( String.IsNullOrEmpty( Dialect.AutoReturnName ) )
 				return;
