@@ -1,0 +1,24 @@
+module external_algorithms;
+
+namespace Algo {
+
+func sortRange<It>( It first, It last ) {
+	if( first == last )
+		return;
+	var It i = first;
+	while( i != last ) {
+		var It j = i;
+		++j;
+		while( j != last ) {
+			if( *j < *i ) {
+				var auto tmp = *i;
+				*i = *j;
+				*j = tmp;
+			}
+			++j;
+		}
+		++i;
+	}
+}
+
+} // namespace Algo

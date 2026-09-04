@@ -1,0 +1,104 @@
+module external_algorithms_test;
+
+import external_algorithms;
+
+namespace App {
+
+class Simple<T> {
+field {
+	T[]! _data;
+	usize _size = 0;
+}
+[pub]:
+	ctor() {}
+
+	[chain]
+	method pushBack( const T& value ) -> Simple& {
+		if( _size >= _capacity )
+			grow();
+		_data[_size] = value;
+		++_size;
+		return self;
+	}
+
+	method begin() -> Iterator {
+		if( _size == 0 )
+			return Iterator( null );
+		return Iterator( &_data[0] );
+	}
+
+	method end() -> Iterator {
+		if( _size == 0 )
+			return Iterator( null );
+		return Iterator( &_data[_size] );
+	}
+
+	[chain]
+	method sort() -> Simple& {
+		Algo::sortRange( begin(), end() );
+		return self;
+	}
+
+	[ct, pure]
+	method size() -> usize => _size;
+
+	method at( usize index ) -> T& => _data[index];
+
+field {
+	usize _capacity = 0;
+}
+
+	class Iterator {
+	field {
+		T* _ptr;
+	}
+	[pub]:
+		ctor( T* ptr ) { _ptr = ptr; }
+
+		[chain]
+		method next() -> Iterator& {
+			++_ptr;
+			return self;
+		}
+
+		[pure]
+		method value() -> T& => *_ptr;
+
+		operator ++ () -> Iterator& {
+			++_ptr;
+			return self;
+		}
+
+		operator * () -> T& => *_ptr;
+
+		operator == ( Iterator other ) -> bool => _ptr == other._ptr;
+		operator != ( Iterator other ) -> bool => _ptr != other._ptr;
+	}
+
+[priv]:
+	method grow() {
+		const usize new_capacity = _capacity == 0 ? 1 : _capacity * 2;
+		var T[]! new_data = new T[new_capacity]!;
+		var usize i = 0;
+		while( i < _size ) {
+			new_data[i] = _data[i];
+			++i;
+		}
+		_capacity = new_capacity;
+		_data     = (move)new_data;
+	}
+}
+
+} // namespace App
+
+func main() -> int {
+	var App::Simple<int> s;
+	s.pushBack( 3 ).pushBack( 1 ).pushBack( 4 ).pushBack( 1 ).pushBack( 5 );
+	s.sort();
+	if( s.at( 0 ) != 1 ) return 1;
+	if( s.at( 1 ) != 1 ) return 2;
+	if( s.at( 2 ) != 3 ) return 3;
+	if( s.at( 3 ) != 4 ) return 4;
+	if( s.at( 4 ) != 5 ) return 5;
+	return 0;
+}
