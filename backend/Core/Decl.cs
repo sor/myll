@@ -44,11 +44,11 @@ namespace Myll.Core
 			}
 		}
 
-		public bool IsExternNamespace { get; set; }
-		public bool IsExternal        => IsExternNamespace || IsExtern;
-		public bool IsInlined         => IsInline || IsTemplateUp;
-		public bool IsInStruct           => scope?.parent?.decl is Structural;
 		public bool IsForwardDeclaration { get; set; }
+		public bool IsExternNamespace    { get; set; }
+		public bool IsExternal           => IsExternNamespace || IsExtern;
+		public bool IsInlined            => IsInline || IsTemplateUp;
+		public bool IsInStruct           => scope?.parent?.decl is Structural;
 
 		/// <summary>
 		/// True for symbols that live in a block/function scope and are not emitted as
@@ -158,10 +158,7 @@ namespace Myll.Core
 		public virtual Access defaultAccess => Access.Public;
 
 		// the children add themselves through AddChild or PushScope
-		public void AddChild( Decl decl )
-		{
-			children.Add( decl );
-		}
+		public void AddChild( Decl decl ) { children.Add( decl ); }
 	}
 
 	// functions, methods, operators, accessors (in the end)
@@ -192,10 +189,7 @@ namespace Myll.Core
 		// TODO: analyze, for void or auto return type of funcs
 		public bool IsReturningSomething => false;
 
-		public override void AddToGen( HierarchicalGen gen )
-		{
-			gen.AddFunc( this );
-		}
+		public override void AddToGen( HierarchicalGen gen ) { gen.AddFunc( this ); }
 	}
 
 	// Constructor / Destructor
@@ -213,10 +207,7 @@ namespace Myll.Core
 
 		// TODO: initlist
 
-		public override void AddToGen( HierarchicalGen gen )
-		{
-			gen.AddStructor( this );
-		}
+		public override void AddToGen( HierarchicalGen gen ) { gen.AddStructor( this ); }
 	}
 
 	public class UsingDecl : Decl
@@ -228,10 +219,7 @@ namespace Myll.Core
 		// Set by the resolver when this using declaration targets a namespace.
 		public bool IsNamespaceUsing { get; set; }
 
-		public override void AddToGen( HierarchicalGen gen )
-		{
-			gen.AddUsing( this );
-		}
+		public override void AddToGen( HierarchicalGen gen ) { gen.AddUsing( this ); }
 	}
 
 	public class AliasDecl : Decl
@@ -241,10 +229,7 @@ namespace Myll.Core
 		// Set by the resolver when the aliased type is a namespace.
 		public bool IsNamespaceAlias { get; set; }
 
-		public override void AddToGen( HierarchicalGen gen )
-		{
-			gen.AddAlias( this );
-		}
+		public override void AddToGen( HierarchicalGen gen ) { gen.AddAlias( this ); }
 	}
 
 	/**
