@@ -194,15 +194,15 @@ func checkImportedRefMember() -> int
 	var Myll::DynArray<Other::OtherPoint> arr;
 	arr.pushBack( Other::OtherPoint( 1, 2 ) );
 
-	if( arr.at( 0 ).u != 1 )
+	if( arr.at( 0 ).x != 1 )
 		return 41;
 
-	arr[0].u = 10;
-	if( arr[0].u != 10 )
+	arr[0].x = 10;
+	if( arr[0].x != 10 )
 		return 42;
 
-	arr.front().v = 20;
-	if( arr.back().v != 20 )
+	arr.front().y = 20;
+	if( arr.back().y != 20 )
 		return 43;
 
 	return 0;

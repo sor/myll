@@ -137,8 +137,10 @@ namespace Myll.Resolver
 
 					exports.Add( name, decl );
 
-					if( decl is Hierarchical h )
-						CollectExports( h.scope, exports );
+					// Only namespaces expose their children to unqualified cross-module lookup.
+					// Members of classes/structs/enums are accessed through their enclosing type.
+					if( decl is Namespace ns )
+						CollectExports( ns.scope, exports );
 				}
 			}
 		}
@@ -1254,10 +1256,11 @@ namespace Myll.Resolver
 				break;
 		}
 
-			// If no visible declaration was found and the name matches one of the
-			// configured class aliases, inject the corresponding class/struct.
-			if( result.Count == 0
-			 && FindEnclosingStructural( scope ) is Structural structural ) {
+		// If no visible declaration was found in the enclosing scopes, consider
+		// configured class aliases and names exported by imported modules.
+		// This mirrors C++ behavior: inner-scope names hide imported ones.
+		if( result.Count == 0 ) {
+			if( FindEnclosingStructural( scope ) is Structural structural ) {
 				if( !String.IsNullOrEmpty( Dialect.BaseClassAliasName )
 				 && name == Dialect.BaseClassAliasName ) {
 					Structural? baseClass = GetFirstBaseStructural( structural );
@@ -1271,10 +1274,11 @@ namespace Myll.Resolver
 			}
 
 			foreach( string importedModule in module.imps ) {
-			if( !moduleExports.TryGetValue( importedModule, out ModuleExports? exports ) )
-				continue;
+				if( !moduleExports.TryGetValue( importedModule, out ModuleExports? exports ) )
+					continue;
 
-			result.AddRange( exports.LookupAll( name ) );
+				result.AddRange( exports.LookupAll( name ) );
+			}
 		}
 
 		return DistinctCandidates( result );
