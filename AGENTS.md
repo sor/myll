@@ -133,7 +133,10 @@ myll/
   ```
 - **Keep simple getters simple**: Use expression-bodied members for trivial computed properties (e.g. `public Scope UpToNamespace => decl is Namespace ? this : parent?.UpToNamespace ?? UpToGlobal;`). Only expand into a block-bodied accessor when side effects or multi-step logic are required.
 - **Blank line after braceless exit `if`**: Put an empty line after a simple `if` whose body exits the current block (e.g. `return` or `throw`). For other braceless `if`s the blank line is optional but still encouraged.
-- **Indent with tabs**: Use tabs for indentation. Use tabs for alignment too whenever possible. Only use spaces for alignment that cannot be expressed with tabs.
+- **C# source formatting**:
+  - Use tabs for indentation and for the continuation of broken-down statements.
+  - Use spaces for alignment.
+  - This matches the formatter setup: indentation/continuation are tab-based, but `AlignConsecutive*` options align with spaces.
 - **Myll indirection declarator spacing**: Put spaces on both sides of the reference/pointer block. Examples: `std::istream & in`, `T * ptr`, `const char *[] argv`, `Formatter *! fmt`. Exception: pure array brackets stay tight, e.g. `var int[4] myArray;`. In `new` expressions keep the pointer block tight: `new T*!`, `new T*`.
 - **Myll class layout**: Group fields in a `field { ... }` block at the top; fields are private by default. Outdent access-section specifiers (`[pub]:`, `[priv]:`, `[prot]:`) one level so they line up with the class keyword. Keep per-declaration attributes (`[pure]`, `[override]`, `[static]`) indented with their declaration.
 - **Myll method bodies**: Use the arrow form for simple expression-bodied getters: `func size() -> u64 => _size;`.

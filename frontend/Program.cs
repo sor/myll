@@ -110,7 +110,7 @@ namespace Myll
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static IEnumerable<T> AsSequential<T>( this IEnumerable<T> s ) => s;
 
-		private static (MyllParser Parser, List<Diagnostic> Diagnostics) CreateParser( string filename )
+		private static ParserResult CreateParser( string filename )
 		{
 			string            text        = File.ReadAllText( filename );
 			AntlrInputStream  inputStream = new( text ) { name = filename };
@@ -129,11 +129,10 @@ namespace Myll
 			//parser.ErrorHandler = new BailErrorStrategy();
 			//Console.WriteLine( "Time elapsed after CreateParser   {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
 
-			return (parser, diagnostics);
+			return new( parser, diagnostics );
 		}
 
-		private static (MyllParser.ProgContext Prog, List<Diagnostic> Diagnostics) ParseCST(
-			(MyllParser Parser, List<Diagnostic> Diagnostics) pd )
+		private static ParseResult ParseCST( ParserResult pd )
 		{
 			MyllParser       parser      = pd.Parser;
 			List<Diagnostic> diagnostics = pd.Diagnostics;
@@ -146,7 +145,7 @@ namespace Myll
 				MyllParser.ProgContext prog = parser.prog();
 				//Console.WriteLine( "Time elapsed after ParseCST       {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
 
-				return (prog, diagnostics); // STAGE 1
+				return new( prog, diagnostics ); // STAGE 1
 			}
 			// This might never be reached since the error handling above
 			catch( Exception ex ) { // STAGE 2
@@ -157,7 +156,7 @@ namespace Myll
 				((CommonTokenStream) parser.TokenStream).Reset(); // rewind input stream
 				parser.Reset();
 				parser.Interpreter.PredictionMode = PredictionMode.LL;
-				return (parser.prog(), diagnostics);
+				return new( parser.prog(), diagnostics );
 			}
 		}
 
@@ -179,7 +178,7 @@ namespace Myll
 			return ret;
 		}
 
-		private static (GlobalNamespace Module, CompilationContext Context) CompileModule(
+		private static CompiledModuleResult CompileModule(
 			ModuleGroup progContext,
 			bool        isPrototypeFile )
 		{
@@ -188,7 +187,7 @@ namespace Myll
 			};
 			//Console.WriteLine( "Time elapsed after CompileModule  {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
 			GlobalNamespace module = context.DeclVisitor.VisitProgs( progContext );
-			return (module, context);
+			return new( module, context );
 		}
 
 		private static IEnumerable<string> CollectExternFiles( Options opt )
@@ -283,10 +282,9 @@ namespace Myll
 			}
 		}
 
-		private static (List<(string, IStrings)> Files, List<Diagnostic> Diagnostics) GenerateFiles(
-			GlobalNamespace global_ns )
+		private static GeneratedFilesResult GenerateFiles( GlobalNamespace global_ns )
 		{
-			List<(string, IStrings)> ret = new();
+			List<(string Path, IEnumerable<string> Lines)> ret = new();
 
 			HierarchicalGen gen = new( global_ns, -1, 0 );
 			// do NOT call gen.AddNamespace( ret ).
@@ -305,7 +303,7 @@ namespace Myll
 			}
 
 			//Console.WriteLine( "Time elapsed after GenerateFiles  {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
-			return (ret, gen.Diagnostics);
+			return new( ret, gen.Diagnostics );
 		}
 
 		public static int Main( string[] args )
@@ -337,7 +335,7 @@ namespace Myll
 		inputFiles.AddRange( CollectMyllLibraryFiles( importedModules ) );
 		inputFiles = inputFiles.Distinct().ToList();
 
-		List<(MyllParser.ProgContext Prog, List<Diagnostic> Diagnostics)> parseResults
+		List<ParseResult> parseResults
 				= inputFiles
 					.Select( CreateParser )
 					.AsParallel()
@@ -356,7 +354,7 @@ namespace Myll
 					Environment.Exit( -99 );
 			}
 
-			List<(GlobalNamespace Module, CompilationContext Context)> modules
+			List<CompiledModuleResult> modules
 				= parseResults
 					.Select( r => r.Prog )
 					.GroupBy( ClassifyModule )
@@ -410,7 +408,7 @@ namespace Myll
 				DiagnosticFormatter.Format( aliasShadowing.Diagnostics, UseColorForDiagnostics() ) );
 		}
 
-			List<(List<(string, IStrings)> Files, List<Diagnostic> Diagnostics)> generationResults
+			List<GeneratedFilesResult> generationResults
 				= modules
 					.Where( m => !m.Context.IsPrototypeFile )
 					.AsParallel()

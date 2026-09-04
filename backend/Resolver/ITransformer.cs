@@ -6,7 +6,7 @@ namespace Myll.Resolver
 	public interface ITransformer
 	{
 		void Transform(
-			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules,
+			IReadOnlyList<CompiledModuleResult> modules,
 			List<Diagnostic> diagnostics );
 	}
 }

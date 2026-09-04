@@ -22,8 +22,7 @@ namespace Myll.Resolver
 			this.diagnostics   = diagnostics;
 		}
 
-		public void Validate(
-			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules )
+		public void Validate( IReadOnlyList<CompiledModuleResult> modules )
 		{
 			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
 				ValidateCalls( context );

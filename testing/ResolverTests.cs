@@ -11,7 +11,7 @@ namespace Myll.Tests
 {
 	public sealed class ResolverTests
 	{
-		private static (GlobalNamespace Module, CompilationContext Context) CompileModule(
+		private static CompiledModuleResult CompileModule(
 			string source,
 			string moduleName = "test" )
 		{
@@ -27,11 +27,10 @@ namespace Myll.Tests
 				.First();
 
 			GlobalNamespace module = context.DeclVisitor.VisitProgs( group );
-			return (module, context);
+			return new( module, context );
 		}
 
-		private static (ResolutionResult Result, IReadOnlyList<Diagnostic> Diagnostics) Resolve(
-			params (GlobalNamespace Module, CompilationContext Context)[] modules )
+		private static ResolveResult Resolve( params CompiledModuleResult[] modules )
 			=> NameResolver.Resolve( modules );
 
 		[Fact]

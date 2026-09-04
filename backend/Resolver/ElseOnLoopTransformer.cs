@@ -15,7 +15,7 @@ namespace Myll.Resolver
 	public sealed class ElseOnLoopTransformer : ITransformer
 	{
 		public void Transform(
-			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules,
+			IReadOnlyList<CompiledModuleResult> modules,
 			List<Diagnostic> diagnostics )
 		{
 			foreach( (GlobalNamespace module, CompilationContext context) in modules )

@@ -29,7 +29,7 @@ namespace Myll.Resolver
 		}
 
 		public void Transform(
-			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules,
+			IReadOnlyList<CompiledModuleResult> modules,
 			List<Diagnostic> diagnostics )
 		{
 			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {

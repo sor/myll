@@ -8,6 +8,14 @@ namespace Myll
 	/// Owns the visitor instances and scope stack for one module compilation.
 	/// This replaces the static visitor state that used to live in VisitorExtensions.
 	/// </summary>
+	public sealed record CompiledModuleResult(
+		GlobalNamespace Module,
+		CompilationContext Context )
+	{
+		public static implicit operator CompiledModuleResult( ( GlobalNamespace module, CompilationContext context ) value )
+			=> new( value.module, value.context );
+	}
+
 	public sealed class CompilationContext
 	{
 		public Stack<Scope> ScopeStack { get; } = new();
