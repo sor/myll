@@ -155,9 +155,9 @@ namespace Myll
 			if( scopeStack.Peek().decl is Hierarchical h && h.IsExternal )
 				return;
 
-		if( decl is Func func
+			if( decl is Func func
 			 && ( func.IsAbstract || func.IsDefault || func.IsDisabled ) )
-			return;
+				return;
 
 			Context.Diagnostics.Add( new Diagnostic(
 				decl.srcPos,
