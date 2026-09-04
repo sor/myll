@@ -63,6 +63,7 @@ namespace Myll.Resolver
 			var diagnostics = new List<Diagnostic>();
 
 			var preResolveTransforms = new List<ITransformer> {
+				new DefaultAttributesTransformer(),
 				new EnumTransformer(),
 			};
 
@@ -100,6 +101,7 @@ namespace Myll.Resolver
 
 			var postResolveTransforms = new List<ITransformer> {
 				new DiscardTransformer( result, diagnostics ),
+				new RuleOfTransformer(),
 			};
 
 			foreach( ITransformer transformer in postResolveTransforms )

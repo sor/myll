@@ -1,0 +1,127 @@
+module special_ctors;
+
+struct Buffer {
+[pub]:
+	field {
+		int[]! _data;
+		usize  _size = 0;
+	}
+
+	ctor() {}
+
+	ctor( usize size ) {
+		_size = size;
+		_data = new int[size]!;
+	}
+
+	dtor() {}
+
+	ctor copy other {
+		_size = other._size;
+		_data = new int[_size]!;
+		var usize i = 0;
+		while( i < _size ) {
+			_data[i] = other._data[i];
+			++i;
+		}
+	}
+
+	operator = ( const Buffer & other ) {
+		if( &self == &other )
+			return self;
+		_size = other._size;
+		_data = new int[_size]!;
+		var usize i = 0;
+		while( i < _size ) {
+			_data[i] = other._data[i];
+			++i;
+		}
+		return self;
+	}
+}
+
+[rule_of_5]
+struct Handle {
+[pub]:
+	field {
+		int* _ptr;
+	}
+
+	ctor() {}
+
+	ctor( int value ) {
+		_ptr = new int;
+		*_ptr = value;
+	}
+
+	dtor() {}
+
+	ctor copy other {
+		_ptr = new int;
+		*_ptr = *other._ptr;
+	}
+
+	[delete]
+	ctor move src;
+
+	operator = ( const Handle & other ) {
+		if( &self == &other )
+			return self;
+		_ptr = new int;
+		*_ptr = *other._ptr;
+		return self;
+	}
+
+	operator move = src {
+		if( &self == &src )
+			return self;
+		_ptr = src._ptr;
+		return self;
+	}
+}
+
+[rule_of_3]
+struct DefaultCopy {
+[pub]:
+	field { int value = 0; }
+
+	ctor() {}
+
+	[default]
+	ctor copy;
+
+	dtor() {}
+
+	operator = ( const DefaultCopy & other ) {
+		value = other.value;
+		return self;
+	}
+}
+
+func main() -> int {
+	var Buffer a = Buffer( 3 );
+	a._data[0] = 10;
+
+	var Buffer b = a;             // shorthand copy ctor
+	if( b._size != 3 ) return 1;
+	if( b._data[0] != 10 ) return 2;
+
+	var Buffer c;
+	c = a;                        // copy assign
+	if( c._data[0] != 10 ) return 3;
+
+	var Handle h = Handle( 42 );
+	var Handle i = h;             // copy ctor
+	if( *i._ptr != 42 ) return 4;
+
+	var Handle j;
+	j = i;                        // copy assign
+	if( *j._ptr != 42 ) return 5;
+
+	var DefaultCopy d1;
+	d1.value = 7;
+	var DefaultCopy d2 = d1;      // defaulted copy ctor
+	if( d2.value != 7 ) return 6;
+
+	return 0;
+}

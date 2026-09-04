@@ -567,18 +567,77 @@ namespace Myll
 				throw new Exception( "parent of ctor has no decl or is not a structural" );
 
 			PushScope();
-			Structor ret = new() {
+			Structor ret;
+
+			if( c.kindOfPassing() != null ) {
+				ret = BuildSpecialConstructor( c, structuralParent );
+			}
+			else {
+				ret = new() {
+					srcPos = c.ToSrcPos(),
+					name   = structuralParent.name,
+					access = curAccess,
+					kind   = Structor.Kind.Constructor,
+					paras  = c.funcTypeDef() != null
+						? VisitFuncTypeDef( c.funcTypeDef() ).ToList()
+						: new(),
+					// TODO: cc.initList(); // opt
+				};
+				AddParamsToScope( ret.paras );
+			}
+
+			MultiStmt body = c.funcBody().Visit( Context );
+			ret.body = IsEmptyFunctionBody( body ) ? null : body;
+
+			if( (ret.IsDefault || ret.IsDeleted) && ret.body != null ) {
+				Context.Diagnostics.Add( new Diagnostic(
+					ret.srcPos,
+					DiagnosticKind.Error,
+					"Defaulted or deleted constructors must be declared with ';', not a body." ) );
+				ret.body = null;
+			}
+
+			PopScope();
+			AddChild( ret );
+			return ret;
+		}
+
+		private Structor BuildSpecialConstructor( DefCtorContext c, Structural structuralParent )
+		{
+			PassingKind passingKind = c.kindOfPassing().Visit();
+
+			if( passingKind != PassingKind.Copy && passingKind != PassingKind.Move )
+				throw new NotSupportedException( "only copy and move constructors are supported" );
+
+			string className = structuralParent.name;
+			string paramName = c.id()?.Visit() ?? "other";
+
+			List<IdTplArgs> classIdTpls = new() {
+				new() { id = className },
+			};
+
+			var qualPtrsTuple = passingKind.ToQualPtrs();
+			var paramType = new TypespecNested {
+				idTpls = classIdTpls,
+				qual   = qualPtrsTuple.qual,
+				ptrs   = qualPtrsTuple.ptrs,
+			};
+			Context.UnresolvedTypes.Add( new UnresolvedType( paramType, scopeStack.Peek() ) );
+
+			Param param = new() {
+				name = paramName,
+				type = paramType,
+			};
+
+			var ret = new Structor {
 				srcPos = c.ToSrcPos(),
 				name   = structuralParent.name,
 				access = curAccess,
 				kind   = Structor.Kind.Constructor,
-				paras  = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
+				paras  = new() { param },
 				// TODO: cc.initList(); // opt
 			};
 			AddParamsToScope( ret.paras );
-			ret.body = c.funcBody().Visit( Context );
-			PopScope();
-			AddChild( ret );
 			return ret;
 		}
 
@@ -626,30 +685,37 @@ namespace Myll
 					};
 
 					var qualPtrsTuple = passingKind.ToQualPtrs();
+					var paramType = new TypespecNested {
+						idTpls = classIdTpls,
+						qual   = qualPtrsTuple.qual,
+						ptrs   = qualPtrsTuple.ptrs,
+					};
+					Context.UnresolvedTypes.Add( new UnresolvedType( paramType, scopeStack.Peek() ) );
+
 					Param param = new() {
 						name = id ?? "other", // TODO: replace "other" with configuration
-						type = new TypespecNested {
-							idTpls = classIdTpls,
-							qual   = qualPtrsTuple.qual,
-							ptrs   = qualPtrsTuple.ptrs,
-						},
+						type = paramType,
 					};
+					AddParamsToScope( new() { param } );
 
-				MultiStmt opBody = c.funcBody().Visit( Context );
-				ret = new() {
-					srcPos   = c.ToSrcPos(),
-					name     = "operator=",
-					access   = curAccess,
-					body     = IsEmptyFunctionBody( opBody ) ? null : opBody,
-					Requires = VisitTypespecsNested( c.typespecsNested() ),
-					paras    = new() { param },
-					retType = new TypespecNested() {
+					var retType = new TypespecNested() {
 						idTpls = classIdTpls,
 						ptrs = new() {
 							new() { kind = Pointer.Kind.LVRef },
 						},
-					},
-				};
+					};
+					Context.UnresolvedTypes.Add( new UnresolvedType( retType, scopeStack.Peek() ) );
+
+					MultiStmt opBody = c.funcBody().Visit( Context );
+					ret = new() {
+						srcPos   = c.ToSrcPos(),
+						name     = "operator=",
+						access   = curAccess,
+						body     = IsEmptyFunctionBody( opBody ) ? null : opBody,
+						Requires = VisitTypespecsNested( c.typespecsNested() ),
+						paras    = new() { param },
+						retType  = retType,
+					};
 					//ret = VisitOpSpecialAssign( c );
 				}
 				else if( c.CONVERT() != null ) {

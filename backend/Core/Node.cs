@@ -66,5 +66,13 @@ namespace Myll.Core
 		{
 			attribs = inAttribs;
 		}
+
+		public void MergeAttribs( Attribs incoming )
+		{
+			foreach( KeyValuePair<string, Strings> kv in incoming ) {
+				if( !attribs.ContainsKey( kv.Key ) )
+					attribs[kv.Key] = kv.Value;
+			}
+		}
 	}
 }

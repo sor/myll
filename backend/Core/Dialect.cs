@@ -148,8 +148,13 @@ namespace Myll.Core
 		// If empty or null, no implicit variable is created.
 		public static string AutoReturnName = "ret";
 
-		// Default rule-of-N enforcement for classes. Can be overridden per class with e.g. `[rule_of=5]`.
-		public static RuleOf DefaultRuleOf = RuleOf.None;
+		// Default attributes applied to class, struct, union, and enum declarations that do not
+		// already specify the corresponding attribute. Use the same syntax as source attributes,
+		// e.g. "rule_of_n=5" or "[rule_of_n=3, pub]". Brackets are optional.
+		public static string DefaultAttributesClass  = "";
+		public static string DefaultAttributesStruct = "";
+		public static string DefaultAttributesUnion  = "";
+		public static string DefaultAttributesEnum   = "";
 
 		/// <summary>
 		/// Controls which concrete size the `float` keyword refers to. `Unspecified` means the

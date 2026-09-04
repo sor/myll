@@ -1,0 +1,22 @@
+module rule_of_n_fail;
+
+[rule_of_3]
+struct Bad {
+[pub]:
+	field { int[]! _data; }
+
+	ctor() {}
+
+	dtor() {}
+
+	ctor( const Bad & other ) {
+		_data = new int[1]!;
+		_data[0] = other._data[0];
+	}
+
+	// Missing copy assignment: should fail rule-of-3 validation.
+}
+
+func main() -> int {
+	return 0;
+}

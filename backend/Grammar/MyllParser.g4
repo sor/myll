@@ -115,7 +115,7 @@ defConvert	:	(	RARROW		to=typespec					// convert -> TYPE	- convert to TYPE	- op
 				|	LARROW		from=typespec	id?			// convert <- TYPE	- convert from TYPE	- ctor( TYPE )
 				)
 				funcBody;
-defCtor		:	(	kindOfPassing				id?
+defCtor		:	(	kindOfPassing				id?	initList?
 				|	CONVERT	LARROW?	typespec	id?
 				|	CONVERT			typespec	id?	RARROW?
 				|	funcTypeDef?	initList?

@@ -96,8 +96,7 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    - Should `switch` support `else:` as an alias for `default:`?
    - Should `(copy)(expr)` be allowed on prvalues?
    - **Switch-case fallthrough dialect**: allow the user/program to select whether cases implicitly `break`, implicitly fall through, or require an explicit `break`/`fallthrough` annotation per case. The mode is modeled in `backend/Core/Dialect.cs` (`SwitchFallthroughMode`) but is not wired through the parser/generator yet.
-   - **Rule-of-N class enforcement**: allow `[rule_of=0|3|5]` on a class to require the corresponding C++ special member functions. A default is modeled as a `[Flags]` enum in `backend/Core/Dialect.cs` (`RuleOf`) and should be checked during/after class declaration analysis. The dialect mask can list multiple allowed rules; a class passes if it adheres to any one of them.
-   - **Linkage model**: work in progress on another machine. Decide which declarations get internal/external/module linkage and how it interacts with cross-module imports.
+    - **Linkage model**: work in progress on another machine. Decide which declarations get internal/external/module linkage and how it interacts with cross-module imports.
    - **Export control**: is `[hide]`/`[hidden]` the only module-export mechanism, or will there be explicit `export`?
 
 ## Recently completed
@@ -125,3 +124,7 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 - Bit-container types (`bint`, `b8`, `b16`, `b32`, `b64`) backed by unsigned integers; the internal AST kind is now `TypespecBasic.Kind.Bitwise`. `byte` is a separate `std::byte`-backed `TypespecBasic.Kind.Byte`. Bit operators are aliased so `+` is OR, `*` is AND, `-` is AND-NOT, `/` is implication, and `^` is XOR. `byte` and the `b##` family may not mix and only support `==`/`!=`. End-to-end tests: `testing/cases/bint/`, `testing/cases/byte/`.
 - Default-sized type dialect model with `DefaultTypeMode` flags (`SizeIndeterminate`, `Forbidden`, `ForbiddenInStruct`, `Size8`...`Size64`, `SizeFast`) and per-type `Dialect.DefaultInt`, `DefaultUInt`, `Dialect.DefaultFloat`, and `Dialect.DefaultBint`. The old on/off `AllowFloatKeyword` switch is replaced by `DefaultFloat & Forbidden`. The `ForbiddenInStruct` mode is checked by the type checker for struct/class fields.
 - Generator fixes for bit/byte expressions: untyped integer literals are cast to the bit/byte type in comparisons and operator aliases; `std::byte` casts are emitted as `std::byte{ n }`; `0x...E` literals are no longer mis-resolved as floats.
+- Rule-of-N class enforcement via `[rule_of_n=0|3|5]`, `[rule_of_0]`, `[rule_of_3]`, and `[rule_of_5]`. The active rule set is checked after name resolution; classes must satisfy at least one allowed rule. Copy/move constructors are recognized and are no longer emitted with `explicit`, enabling copy/move initialization. Cases: `testing/cases/rule_of_n/`, `testing/cases/rule_of_n_fail/`.
+- `ctor copy`/`ctor move` shorthand generates the `const C&` / `C&&` parameter automatically, supports optional parameter names, and works with `[default]`/`[delete]`. Case: `testing/cases/special_ctors/`.
+- Per-kind default attributes (`Dialect.DefaultAttributesClass`/`Struct`/`Union`/`Enum`) are parsed and merged before other attribute-consuming transforms.
+- Built-in `(move)` and `(forward)` casts return the operand's own type and emit `std::move(...)` / `std::forward(...)`.

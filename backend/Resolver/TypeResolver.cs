@@ -217,6 +217,11 @@ namespace Myll.Resolver
 
 		private Typespec? ResolveCast( CastExpr cast )
 		{
+			// (move) and (forward) are not real type casts; they produce an rvalue
+			// or forwarding-reference of the operand's own type.
+			if( cast.op is Operand.MoveCast || cast.op is Operand.ForwardCast )
+				return Resolve( cast.expr );
+
 			return cast.type;
 		}
 

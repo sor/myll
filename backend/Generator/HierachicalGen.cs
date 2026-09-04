@@ -809,6 +809,36 @@ namespace Myll.Generator
 		private static bool IsUnhidableSpecialMember( Func func )
 			=> func.name == "operator=" || func.name.StartsWith( "~" );
 
+		private static bool IsCopyOrMoveConstructor( Structor ctor )
+		{
+			if( ctor.kind != Structor.Kind.Constructor || ctor.paras.Count != 1 )
+				return false;
+
+			if( ctor.scope?.parent?.decl is not Structural parent )
+				return false;
+
+			Typespec type = ctor.paras[0].type;
+			if( type is not TypespecNested nested )
+				return false;
+
+			bool nameMatches = nested.resolvedDecl == parent
+				|| nested.idTpls.LastOrDefault()?.id == parent.name;
+			if( !nameMatches )
+				return false;
+
+			if( nested.ptrs == null || nested.ptrs.Count != 1 )
+				return false;
+
+			Pointer ptr = nested.ptrs[0];
+			if( ptr.kind != Pointer.Kind.LVRef && ptr.kind != Pointer.Kind.RVRef )
+				return false;
+
+			Qualifier qual = ptr.qual == Qualifier.None ? nested.qual : ptr.qual;
+			bool isCopy = ptr.kind == Pointer.Kind.LVRef && qual == Qualifier.Const;
+			bool isMove = ptr.kind == Pointer.Kind.RVRef && qual == Qualifier.None;
+			return isCopy || isMove;
+		}
+
 		private static List<(BaseType Base, Func Method)> FindBaseMethods(
 			Structural              structural,
 			string                  name,
@@ -910,7 +940,7 @@ namespace Myll.Generator
 			bool    isCtor     = obj.kind == Structor.Kind.Constructor;
 			bool    isDtor     = obj.kind == Structor.Kind.Destructor;
 			bool    isDefault  = obj.IsDefault;
-			bool    isDisabled = obj.IsDisabled;
+			bool    isDisabled = obj.IsDeleted;
 			bool    isInlined  = obj.IsInlined || isDefault || isDisabled;
 			string  indentDecl = IndentDecl;
 			string  indentImpl = IndentImpl;
@@ -925,7 +955,8 @@ namespace Myll.Generator
 
 			string leadingAttrDecl = "";
 			if( obj.paras.Count == 1 // TODO: 0, 1 or more parameterizable
-					&& !obj.IsImplicit ) {
+					&& !obj.IsImplicit
+					&& !IsCopyOrMoveConstructor( obj ) ) {
 				leadingAttrDecl += "explicit ";
 			}
 
