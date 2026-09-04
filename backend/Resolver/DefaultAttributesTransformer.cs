@@ -14,11 +14,11 @@ namespace Myll.Resolver
 	public sealed class DefaultAttributesTransformer : ITransformer
 	{
 		public void Transform(
-			IReadOnlyList<(GlobalNamespace Module, CompilationContext Context)> modules,
+			IReadOnlyList<CompiledModuleResult> modules,
 			List<Diagnostic> diagnostics )
 		{
-			foreach( (GlobalNamespace module, _) in modules ) {
-				foreach( Decl decl in module.children )
+			foreach( CompiledModuleResult result in modules ) {
+				foreach( Decl decl in result.Module.children )
 					ApplyDefaults( decl );
 			}
 		}
