@@ -2,7 +2,7 @@ module dyn_array;
 
 namespace Myll {
 
-const usize DEFAULT_CAPACITY = 8;
+[ct] var usize DEFAULT_CAPACITY = 8;
 
 class DynArray<T> {
 field {
@@ -14,20 +14,20 @@ field {
 [pub]:
 	ctor() : ctor( DEFAULT_CAPACITY ) {}
 
-	ctor( usize capacity ) {
-		_capacity = capacity;
-		if( capacity > 0 )
-			_data = new T[capacity]!;
+	ctor( usize initialCapacity ) {
+		_capacity = initialCapacity;
+		if( initialCapacity > 0 )
+			_data = new T[initialCapacity]!;
 	}
 
 	[chain]
-	method reserve( usize capacity ) -> DynArray& {
-		if( capacity > _capacity ) {
-			var T[]! new_data = new T[capacity]!;
+	method reserve( usize newCapacity ) -> DynArray& {
+		if( newCapacity > _capacity ) {
+			var T[]! new_data = new T[newCapacity]!;
 			do _size times i {
 				new_data[i] = _data[i];
 			}
-			_capacity = capacity;
+			_capacity = newCapacity;
 			_data     = (move)new_data;
 		}
 		return self;
@@ -73,10 +73,13 @@ field {
 		return self;
 	}
 
-	[pure]
+	[ct, pure]
 	method size() -> usize => _size;
 
-	[pure]
+	[ct, pure]
+	method capacity() -> usize => _capacity;
+
+	[ct, pure]
 	method isEmpty() -> bool => _size == 0;
 
 	method at( usize index ) -> T& => _data[index];
@@ -88,6 +91,73 @@ field {
 	method top() -> T& => back();
 
 	operator [] ( usize index ) -> T& => _data[index];
+
+	[chain]
+	method sort() -> DynArray& {
+		if( _size > 1 )
+			sortRange( 0, _size - 1 );
+		return self;
+	}
+
+	[chain]
+	method reverse() -> DynArray& {
+		if( _size == 0 )
+			return self;
+		var usize i = 0;
+		var usize j = _size - 1;
+		while( i < j ) {
+			swap( i, j );
+			++i;
+			--j;
+		}
+		return self;
+	}
+
+	[chain]
+	method fill( const T& value ) -> DynArray& {
+		var usize i = 0;
+		while( i < _size ) {
+			_data[i] = value;
+			++i;
+		}
+		return self;
+	}
+
+	method find( const T& value ) -> Iterator {
+		var usize i = 0;
+		while( i < _size ) {
+			if( _data[i] == value )
+				return Iterator( &_data[i] );
+			++i;
+		}
+		return end();
+	}
+
+	method binarySearch( const T& value ) -> bool {
+		var usize left  = 0;
+		var usize right = _size;
+		while( left < right ) {
+			var usize mid = left + ( right - left ) / 2;
+			if( _data[mid] < value )
+				left = mid + 1;
+			else if( value < _data[mid] )
+				right = mid;
+			else
+				return true;
+		}
+		return false;
+	}
+
+	method count( const T& value ) -> usize {
+		var usize result = 0;
+		var usize i      = 0;
+		while( i < _size ) {
+			if( _data[i] == value )
+				++result;
+			++i;
+		}
+		return result;
+	}
 
 	class Iterator {
 	field {
@@ -133,10 +203,52 @@ field {
 		return Iterator( &_data[_size] );
 	}
 
+	method beginPtr() -> T* {
+		if( _size == 0 )
+			return null;
+		return &_data[0];
+	}
+
+	method endPtr() -> T* {
+		if( _size == 0 )
+			return null;
+		return &_data[_size];
+	}
+
 [priv]:
 	method grow() {
 		const usize new_capacity = _capacity == 0 ? 1 : _capacity * 2;
 		reserve( new_capacity );
+	}
+
+	method swap( usize i, usize j ) {
+		var T tmp   = _data[i];
+		_data[i]    = _data[j];
+		_data[j]    = tmp;
+	}
+
+	method sortRange( usize left, usize right ) {
+		if( left < right ) {
+			var usize pivot = partition( left, right );
+			if( pivot > 0 )
+				sortRange( left, pivot - 1 );
+			sortRange( pivot + 1, right );
+		}
+	}
+
+	method partition( usize left, usize right ) -> usize {
+		var T     pivotValue = _data[right];
+		var usize i          = left;
+		var usize j          = left;
+		while( j < right ) {
+			if( _data[j] < pivotValue ) {
+				swap( i, j );
+				++i;
+			}
+			++j;
+		}
+		swap( i, right );
+		return i;
 	}
 }
 

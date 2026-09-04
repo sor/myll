@@ -146,15 +146,61 @@ func checkShrink() -> int
 	return 0;
 }
 
+func checkAlgorithms() -> int
+{
+	var Myll::DynArray<int> arr;
+	arr.pushBack( 3 ).pushBack( 1 ).pushBack( 4 ).pushBack( 1 ).pushBack( 5 ).pushBack( 9 ).pushBack( 2 ).pushBack( 6 );
+	arr.sort();
+
+	if( arr.at( 0 ) != 1 ) return 11;
+	if( arr.at( 1 ) != 1 ) return 12;
+	if( arr.at( 2 ) != 2 ) return 13;
+	if( arr.at( 3 ) != 3 ) return 14;
+	if( arr.at( 4 ) != 4 ) return 15;
+	if( arr.at( 5 ) != 5 ) return 16;
+	if( arr.at( 6 ) != 6 ) return 17;
+	if( arr.at( 7 ) != 9 ) return 18;
+
+	arr.reverse();
+	if( arr.at( 0 ) != 9 ) return 21;
+	if( arr.at( 7 ) != 1 ) return 22;
+
+	var Myll::DynArray<int>::Iterator it = arr.find( 5 );
+	if( it == arr.end() ) return 23;
+	if( *it != 5 ) return 24;
+
+	var Myll::DynArray<int>::Iterator missing = arr.find( 42 );
+	if( missing != arr.end() ) return 25;
+
+	if( arr.count( 1 ) != 2 ) return 26;
+
+	var Myll::DynArray<int> sorted;
+	sorted.pushBack( 10 ).pushBack( 20 ).pushBack( 30 ).pushBack( 40 );
+	if( sorted.at( 2 ) != 30 ) return 27;
+	if( !sorted.binarySearch( 30 ) ) return 28;
+	if( sorted.binarySearch( 25 ) ) return 29;
+
+	arr.fill( 7 );
+	var int i = 0;
+	while( i < arr.size() ) {
+		if( arr.at( i ) != 7 )
+			return 30;
+		++i;
+	}
+
+	return 0;
+}
+
 } // namespace Test
 
 func main() -> int
 {
-	if( Test::checkBasic()    != 0 ) return 1;
-	if( Test::checkGrowth()   != 0 ) return 2;
-	if( Test::checkStack()    != 0 ) return 3;
-	if( Test::checkStruct()   != 0 ) return 4;
-	if( Test::checkIterator() != 0 ) return 5;
-	if( Test::checkShrink()   != 0 ) return 6;
+	if( Test::checkBasic()      != 0 ) return 1;
+	if( Test::checkGrowth()     != 0 ) return 2;
+	if( Test::checkStack()      != 0 ) return 3;
+	if( Test::checkStruct()     != 0 ) return 4;
+	if( Test::checkIterator()   != 0 ) return 5;
+	if( Test::checkShrink()     != 0 ) return 6;
+	if( Test::checkAlgorithms() != 0 ) return 7;
 	return 0;
 }

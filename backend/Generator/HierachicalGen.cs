@@ -443,10 +443,11 @@ namespace Myll.Generator
 			                   : "";
 			bool isSpecial = specialTail != "";
 
-			string prefix = (isStatic       ? "static "   : "")
-		              + (isExternal     ? "extern "   : "")
-		              + (obj.IsVirtual || isAbstract ? "virtual "  : "")
-		              + (isInlined      ? "inline "   : "");
+			string prefix = (obj.IsCompileTime ? "constexpr " : "")
+		              + (isStatic          ? "static "    : "")
+		              + (isExternal        ? "extern "    : "")
+		              + (obj.IsVirtual || isAbstract ? "virtual "   : "")
+		              + (isInlined         ? "inline "    : "");
 			string suffix = (obj.IsPure     ? " const"    : "")
 		              + (obj.IsOverride ? " override" : "");
 			string headlineDecl = Format(
