@@ -436,10 +436,10 @@ namespace Myll.Generator
 
 			bool isAbstract = obj.IsAbstract;
 			bool isDefault  = obj.IsDefault;
-			bool isDeleted  = obj.IsDeleted;
+			bool isDisabled = obj.IsDisabled;
 			string specialTail = isAbstract ? " = 0"
 			                   : isDefault  ? " = default"
-			                   : isDeleted  ? " = delete"
+			                   : isDisabled ? " = delete"
 			                   : "";
 			bool isSpecial = specialTail != "";
 
@@ -940,7 +940,7 @@ namespace Myll.Generator
 			bool    isCtor     = obj.kind == Structor.Kind.Constructor;
 			bool    isDtor     = obj.kind == Structor.Kind.Destructor;
 			bool    isDefault  = obj.IsDefault;
-			bool    isDisabled = obj.IsDeleted;
+			bool    isDisabled = obj.IsDisabled;
 			bool    isInlined  = obj.IsInlined || isDefault || isDisabled;
 			string  indentDecl = IndentDecl;
 			string  indentImpl = IndentImpl;

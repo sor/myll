@@ -155,9 +155,9 @@ namespace Myll
 			if( scopeStack.Peek().decl is Hierarchical h && h.IsExternal )
 				return;
 
-			if( decl is Func func
-			 && ( func.IsAbstract || func.IsDefault || func.IsDeleted ) )
-				return;
+		if( decl is Func func
+			 && ( func.IsAbstract || func.IsDefault || func.IsDisabled ) )
+			return;
 
 			Context.Diagnostics.Add( new Diagnostic(
 				decl.srcPos,
@@ -589,7 +589,7 @@ namespace Myll
 			MultiStmt body = c.funcBody().Visit( Context );
 			ret.body = IsEmptyFunctionBody( body ) ? null : body;
 
-			if( (ret.IsDefault || ret.IsDeleted) && ret.body != null ) {
+			if( (ret.IsDefault || ret.IsDisabled) && ret.body != null ) {
 				Context.Diagnostics.Add( new Diagnostic(
 					ret.srcPos,
 					DiagnosticKind.Error,
