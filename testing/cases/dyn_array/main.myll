@@ -1,6 +1,7 @@
 module dyn_array_test;
 
 import dyn_array;
+import other_point;
 
 struct Point {
 [pub]:
@@ -88,16 +89,13 @@ func checkStruct() -> int
 	var Myll::DynArray<Point> arr;
 	arr.pushBack( Point( 1, 2 ) ).pushBack( Point( 3, 4 ) );
 
-	var Point p0 = arr.at( 0 );
-	var Point p1 = arr.at( 1 );
-	if( p0.x != 1 )
+	if( arr.at( 0 ).x != 1 )
 		return 1;
-	if( p1.y != 4 )
+	if( arr.at( 1 ).y != 4 )
 		return 2;
 
-	arr[0] = Point( 10, 2 );
-	p0 = arr[0];
-	if( p0.x != 10 )
+	arr[0].x = 10;
+	if( arr[0].x != 10 )
 		return 3;
 	return 0;
 }
@@ -191,16 +189,36 @@ func checkAlgorithms() -> int
 	return 0;
 }
 
+func checkImportedRefMember() -> int
+{
+	var Myll::DynArray<Other::OtherPoint> arr;
+	arr.pushBack( Other::OtherPoint( 1, 2 ) );
+
+	if( arr.at( 0 ).u != 1 )
+		return 41;
+
+	arr[0].u = 10;
+	if( arr[0].u != 10 )
+		return 42;
+
+	arr.front().v = 20;
+	if( arr.back().v != 20 )
+		return 43;
+
+	return 0;
+}
+
 } // namespace Test
 
 func main() -> int
 {
-	if( Test::checkBasic()      != 0 ) return 1;
-	if( Test::checkGrowth()     != 0 ) return 2;
-	if( Test::checkStack()      != 0 ) return 3;
-	if( Test::checkStruct()     != 0 ) return 4;
-	if( Test::checkIterator()   != 0 ) return 5;
-	if( Test::checkShrink()     != 0 ) return 6;
-	if( Test::checkAlgorithms() != 0 ) return 7;
+	if( Test::checkBasic()             != 0 ) return 1;
+	if( Test::checkGrowth()            != 0 ) return 2;
+	if( Test::checkStack()             != 0 ) return 3;
+	if( Test::checkStruct()            != 0 ) return 4;
+	if( Test::checkIterator()          != 0 ) return 5;
+	if( Test::checkShrink()            != 0 ) return 6;
+	if( Test::checkAlgorithms()        != 0 ) return 7;
+	if( Test::checkImportedRefMember() != 0 ) return 8;
 	return 0;
 }

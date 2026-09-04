@@ -1,0 +1,12 @@
+module other_point;
+
+namespace Other {
+
+struct OtherPoint {
+[pub]:
+	field { int u = 0; int v = 0; }
+	ctor() {}
+	ctor( int u_, int v_ ) { u = u_; v = v_; }
+}
+
+} // namespace Other

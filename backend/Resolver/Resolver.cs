@@ -358,7 +358,7 @@ namespace Myll.Resolver
 				if( result.Members.ContainsKey( member ) )
 					continue;
 
-				if( !TryGetMemberAccessBaseType( unresolved.Node.left, unresolved.Scope, out Hierarchical? baseType ) )
+				if( !TryGetMemberAccessBaseType( unresolved.Node.left, unresolved.Scope, module, out Hierarchical? baseType ) )
 					continue;
 
 				Decl? resolved = LookupMember( member.idTplArgs.id, (Structural) baseType, module );
@@ -432,7 +432,7 @@ namespace Myll.Resolver
 						return false;
 					}
 
-					if( !TryGetMemberAccessBaseType( binOp.left, call.Scope, out Hierarchical? baseType ) )
+					if( !TryGetMemberAccessBaseType( binOp.left, call.Scope, module, out Hierarchical? baseType ) )
 						return false;
 
 					List<Decl> candidates = LookupInHierarchicalCandidates(
@@ -890,7 +890,7 @@ namespace Myll.Resolver
 			return current;
 		}
 
-		private bool TryGetMemberAccessBaseType( Expr expr, Scope scope, out Hierarchical baseType )
+		private bool TryGetMemberAccessBaseType( Expr expr, Scope scope, GlobalNamespace module, out Hierarchical baseType )
 		{
 			baseType = null!;
 			Typespec? type = null;
@@ -934,39 +934,51 @@ namespace Myll.Resolver
 				}
 			}
 			else if( expr is UnOp parenUnop && parenUnop.op == Operand.Parens ) {
-				return TryGetMemberAccessBaseType( parenUnop.expr, scope, out baseType );
+				return TryGetMemberAccessBaseType( parenUnop.expr, scope, module, out baseType );
 			}
 			else if( expr is UnOp derefUnop && derefUnop.op == Operand.Dereference ) {
-				if( TryGetMemberAccessBaseType( derefUnop.expr, scope, out Hierarchical inner ) ) {
+				if( TryGetMemberAccessBaseType( derefUnop.expr, scope, module, out Hierarchical inner ) ) {
 					baseType = inner;
 					return true;
 				}
 			}
 			else if( expr is FuncCallExpr call ) {
-				// `ctor()` or other calls: derive the returned type from the callee.
-				if( call.expr is IdExpr calleeId && result.Ids.TryGetValue( calleeId, out Decl? calleeIdDecl ) ) {
-					if( calleeIdDecl is Func f )
-						type = f.retType;
-				else if( calleeIdDecl is Structor s && s.kind == Structor.Kind.Constructor )
-						baseType = FindEnclosingStructural( s.scope )!;
+				if( call.funcCall.indexer ) {
+					if( TryGetIndexerElementType( call.expr, module, out Typespec elementType ) )
+						type = elementType;
 				}
-				else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( calleeScoped, out Decl? calleeScopedDecl ) ) {
-					if( calleeScopedDecl is Func f )
-						type = f.retType;
-					else if( calleeScopedDecl is Structor s && s.kind == Structor.Kind.Constructor )
-						baseType = FindEnclosingStructural( s.scope )!;
-				}
-				else if( call.expr is BinOp calleeBin
-				      && calleeBin.op.In( Operand.MemberAccess, Operand.MemberPtrAccess )
-				      && calleeBin.right is IdExpr member
-				      && result.Members.TryGetValue( member, out Decl? memberDecl ) ) {
-					switch( memberDecl ) {
-						case VarDecl vd:
-							type = vd.type;
-							break;
-						case Func f:
+
+				if( type == null ) {
+					// `ctor()` or other calls: derive the returned type from the callee.
+					if( call.expr is IdExpr calleeId && result.Ids.TryGetValue( calleeId, out Decl? calleeIdDecl ) ) {
+						if( calleeIdDecl is Func f )
 							type = f.retType;
-							break;
+						else if( calleeIdDecl is Structor s && s.kind == Structor.Kind.Constructor )
+							baseType = FindEnclosingStructural( s.scope )!;
+					}
+					else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( calleeScoped, out Decl? calleeScopedDecl ) ) {
+						if( calleeScopedDecl is Func f )
+							type = f.retType;
+						else if( calleeScopedDecl is Structor s && s.kind == Structor.Kind.Constructor )
+							baseType = FindEnclosingStructural( s.scope )!;
+					}
+					else if( call.expr is BinOp calleeBin
+					     && calleeBin.op.In( Operand.MemberAccess, Operand.MemberPtrAccess )
+					     && calleeBin.right is IdExpr member
+					     && result.Members.TryGetValue( member, out Decl? memberDecl ) ) {
+						switch( memberDecl ) {
+							case VarDecl vd:
+								type = vd.type;
+								break;
+							case Func f:
+								type = f.retType;
+								if( TryGetReceiverType( calleeBin.left, out Typespec receiverType ) ) {
+									Typespec? substituted = SubstituteMethodReturnType( f, receiverType );
+									if( substituted != null )
+										type = substituted;
+								}
+								break;
+						}
 					}
 				}
 			}
@@ -987,6 +999,112 @@ namespace Myll.Resolver
 				return true;
 
 			return type != null && TryGetBaseHierarchical( type, out baseType );
+		}
+
+		private bool TryGetReceiverType( Expr expr, out Typespec receiverType )
+		{
+			receiverType = null!;
+
+			if( expr is IdExpr id ) {
+				if( result.Ids.TryGetValue( id, out Decl? decl ) || result.Members.TryGetValue( id, out decl ) ) {
+					switch( decl ) {
+						case VarDecl vd:
+							receiverType = vd.type;
+							return true;
+						case Func f:
+							receiverType = f.retType;
+							return true;
+					}
+				}
+			}
+			else if( expr is BinOp binop && IsMemberAccessOperation( binop.op )
+			     && binop.right is IdExpr member
+			     && result.Members.TryGetValue( member, out Decl? memberDecl ) ) {
+				switch( memberDecl ) {
+					case VarDecl vd:
+						receiverType = vd.type;
+						return true;
+					case Func f:
+						receiverType = f.retType;
+						return true;
+				}
+			}
+
+			return false;
+		}
+
+		private Typespec? SubstituteMethodReturnType( Func method, Typespec receiverType )
+		{
+			Structural? owner = FindEnclosingStructural( method.scope ) as Structural;
+			if( owner == null || owner.TplParams.Count == 0 )
+				return null;
+
+			if( receiverType is not TypespecNested nested )
+				return null;
+
+			List<TplArg>? args = nested.idTpls.LastOrDefault()?.tplArgs;
+			if( args == null || args.Count < owner.TplParams.Count )
+				return null;
+
+			if( !UsesClassTplParam( method.retType, owner.TplParams ) )
+				return null;
+
+			foreach( TplArg arg in args ) {
+				if( arg.typespec is TypespecNested argNested && argNested.resolvedDecl == null
+				 && result.TryGetResolved( argNested, out Decl? decl ) ) {
+					argNested.resolvedDecl = decl;
+				}
+			}
+
+			return TemplateInference.SubstituteTemplateParams( method.retType, owner.TplParams, args, result );
+		}
+
+		private bool TryGetIndexerElementType( Expr receiver, GlobalNamespace module, out Typespec elementType )
+		{
+			elementType = null!;
+
+			if( !TryGetReceiverType( receiver, out Typespec receiverType ) )
+				return false;
+
+			if( !TryGetBaseHierarchical( receiverType, out Hierarchical? container ) )
+				return false;
+
+			if( container is not Structural structural )
+				return false;
+
+			Decl? indexer = LookupMember( "operator[]", structural, module );
+			if( indexer is not Func idxFunc )
+				return false;
+
+			Typespec ret = idxFunc.retType;
+			Typespec? substituted = SubstituteMethodReturnType( idxFunc, receiverType );
+			if( substituted != null )
+				ret = substituted;
+
+			elementType = ret;
+			return true;
+		}
+
+		private bool UsesClassTplParam( Typespec type, List<TplParam> parameters )
+		{
+			if( type is TypespecNested nested ) {
+				Decl? decl = nested.resolvedDecl;
+				if( decl == null )
+					result.TryGetResolved( nested, out decl );
+				if( decl is TplParamDecl tpl && parameters.Any( p => p.name == tpl.name ) )
+					return true;
+
+				foreach( IdTplArgs segment in nested.idTpls ) {
+					if( segment.tplArgs == null )
+						continue;
+					foreach( TplArg arg in segment.tplArgs ) {
+						if( arg.typespec != null && UsesClassTplParam( arg.typespec, parameters ) )
+							return true;
+					}
+				}
+			}
+
+			return false;
 		}
 
 		private static Hierarchical? FindEnclosingStructural( Scope scope )
@@ -1024,6 +1142,26 @@ namespace Myll.Resolver
 			return decl as Structural;
 		}
 
+		private static Structural? GetDefiningStructural( Structural structural )
+		{
+			if( !structural.IsForwardDeclaration )
+				return structural;
+
+			Scope? parent = structural.scope?.parent;
+			if( parent == null )
+				return null;
+
+			if( !parent.children.TryGetValue( structural.name, out List<ScopeLeaf>? leaves ) )
+				return null;
+
+			foreach( ScopeLeaf leaf in leaves ) {
+				if( leaf.decl is Structural s && !s.IsForwardDeclaration )
+					return s;
+			}
+
+			return null;
+		}
+
 		private bool TryGetBaseHierarchical( Typespec type, out Hierarchical baseType )
 		{
 			baseType = null!;
@@ -1031,6 +1169,8 @@ namespace Myll.Resolver
 				Decl? decl = nested.resolvedDecl;
 				if( decl == null )
 					result.TryGetResolved( nested, out decl );
+				if( decl is Structural st && st.IsForwardDeclaration )
+					decl = GetDefiningStructural( st ) ?? decl;
 				if( decl is Hierarchical h ) {
 					baseType = h;
 					return true;
@@ -1357,25 +1497,25 @@ namespace Myll.Resolver
 					if( result.Members.ContainsKey( member ) )
 						continue;
 
-					if( ambiguousCalls.Contains( unresolved.Node ) || noMatchingCalls.Contains( unresolved.Node ) )
-						continue;
+				if( ambiguousCalls.Contains( unresolved.Node ) || noMatchingCalls.Contains( unresolved.Node ) )
+					continue;
 
-					string? typeName = null;
-					if( TryGetMemberAccessBaseType( unresolved.Node.left, unresolved.Scope, out Hierarchical? baseType ) )
-						typeName = baseType!.FullyQualifiedName;
+				string? typeName = null;
+				if( TryGetMemberAccessBaseType( unresolved.Node.left, unresolved.Scope, module, out Hierarchical? baseType ) )
+					typeName = baseType!.FullyQualifiedName;
 
-					diagnostics.Add( new Diagnostic(
-						member.srcPos,
-						DiagnosticKind.Error,
-						String.Format(
-							typeName != null
-								? "Unresolved member '{0}' in '{1}'"
-								: "Unresolved member '{0}'",
-							member.idTplArgs.id,
-							typeName ) ) );
-				}
+				diagnostics.Add( new Diagnostic(
+					member.srcPos,
+					DiagnosticKind.Error,
+					String.Format(
+						typeName != null
+							? "Unresolved member '{0}' in '{1}'"
+							: "Unresolved member '{0}'",
+						member.idTplArgs.id,
+						typeName ) ) );
 			}
 		}
+	}
 
 		private void ReportUnresolvedPath(
 			string                   kind,
