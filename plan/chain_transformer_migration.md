@@ -52,7 +52,4 @@ Removed manual `-> Class&` and trailing `return self;` from:
 ## Completed optional follow-up
 
 - Moved `ElseOnLoopTransformer` and `BreakContinueTransformer` into `Resolver.Resolve` post-resolution transforms for full backend consistency.
-
-## Remaining optional follow-up
-
-- Move `ConfiguredAliasShadowingTransformer` warnings into the resolver. It does not affect resolution, so it is lower priority.
+- Moved `ConfiguredAliasShadowingTransformer` into `Resolver.Resolve` post-resolution transforms, making the backend fully self-contained.

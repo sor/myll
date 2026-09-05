@@ -11,7 +11,7 @@ namespace Myll.Resolver
 	/// This runs independently of name resolution so the warnings are available even
 	/// when the semantic resolver is not enabled.
 	/// </summary>
-	public sealed class ConfiguredAliasShadowingTransformer
+	public sealed class ConfiguredAliasShadowingTransformer : ITransformer
 	{
 		private readonly List<Diagnostic> diagnostics = new();
 
@@ -25,6 +25,14 @@ namespace Myll.Resolver
 
 				VisitHierarchical( module );
 			}
+		}
+
+		public void Transform(
+			IReadOnlyList<CompiledModuleResult> modules,
+			List<Diagnostic> diagnostics )
+		{
+			Transform( modules );
+			diagnostics.AddRange( Diagnostics );
 		}
 
 		private void VisitHierarchical( Hierarchical hierarchical )

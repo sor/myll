@@ -106,6 +106,7 @@ namespace Myll.Resolver
 				new RuleOfTransformer(),
 				new ElseOnLoopTransformer(),
 				new BreakContinueTransformer(),
+				new ConfiguredAliasShadowingTransformer(),
 			};
 
 			foreach( ITransformer transformer in postResolveTransforms )

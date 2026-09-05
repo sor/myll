@@ -388,13 +388,6 @@ namespace Myll
 			result.Apply();
 		}
 
-		var aliasShadowing = new ConfiguredAliasShadowingTransformer();
-		aliasShadowing.Transform( modules );
-		if( aliasShadowing.Diagnostics.Count > 0 ) {
-			Console.Error.Write(
-				DiagnosticFormatter.Format( aliasShadowing.Diagnostics, UseColorForDiagnostics() ) );
-		}
-
 			List<GeneratedFilesResult> generationResults
 				= modules
 					.Where( m => !m.Context.IsPrototypeFile )
