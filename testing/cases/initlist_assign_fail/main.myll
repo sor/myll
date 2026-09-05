@@ -1,0 +1,38 @@
+module initlist_assign_fail;
+
+// This case should eventually pass. Myll currently does not resolve `a = b`
+// to a user-defined `operator=` overload, so assigning an initializer list
+// to an object with `operator initlist<T> =` is rejected.
+
+import std_initializer_list;
+
+class Box {
+[pub]:
+	field { int sum = 0; }
+
+	ctor initlist<int> values {
+		var const int* it   = values.begin();
+		var const int* last = values.end();
+		while( it != last ) {
+			sum += *it;
+			++it;
+		}
+	}
+
+	operator initlist<int> = values {
+		var const int* it   = values.begin();
+		var const int* last = values.end();
+		sum = 0;
+		while( it != last ) {
+			sum += *it;
+			++it;
+		}
+		return self;
+	}
+}
+
+func main() -> int {
+	var Box box = [1, 2, 3];
+	box = [4, 5];  // TODO: should call operator initlist<int> =
+	return box.sum != 9;
+}

@@ -1,0 +1,129 @@
+module special_member_names;
+
+import std_initializer_list;
+
+struct NamedBox {
+[pub]:
+	field { int value = 0; }
+
+	ctor() {}
+	ctor( int v ) { value = v; }
+
+	ctor copy other { value = other.value; }
+	ctor move src   { value = src.value; }
+
+	operator copy = other {
+		value = other.value;
+		return self;
+	}
+	operator move = src {
+		value = src.value;
+		return self;
+	}
+}
+
+struct DefaultBox {
+[pub]:
+	field { int value = 0; }
+
+	ctor() {}
+	ctor( int v ) { value = v; }
+
+	ctor copy { value = other.value; }
+	ctor move { value = other.value; }
+
+	operator copy = {
+		value = other.value;
+		return self;
+	}
+	operator move = {
+		value = other.value;
+		return self;
+	}
+}
+
+class NamedInitList<T> {
+[pub]:
+	field { int sum = 0; }
+
+	ctor initlist<T> list {
+		var const T* it   = list.begin();
+		var const T* last = list.end();
+		while( it != last ) {
+			sum += (int)(*it);
+			++it;
+		}
+	}
+
+	operator initlist<T> = list {
+		var const T* it   = list.begin();
+		var const T* last = list.end();
+		sum = 0;
+		while( it != last ) {
+			sum += (int)(*it);
+			++it;
+		}
+		return self;
+	}
+}
+
+class DefaultInitList<T> {
+[pub]:
+	field { int sum = 0; }
+
+	ctor initlist {
+		var const T* it   = init.begin();
+		var const T* last = init.end();
+		while( it != last ) {
+			sum += (int)(*it);
+			++it;
+		}
+	}
+
+	operator initlist = {
+		var const T* it   = other.begin();
+		var const T* last = other.end();
+		sum = 0;
+		while( it != last ) {
+			sum += (int)(*it);
+			++it;
+		}
+		return self;
+	}
+}
+
+func main() -> int {
+	// Named special members
+	var NamedBox a = NamedBox( 7 );
+	var NamedBox b = a;
+	if( b.value != 7 ) return 1;
+	var NamedBox c = (move)a;
+	if( c.value != 7 ) return 2;
+	var NamedBox d;
+	d = b;
+	if( d.value != 7 ) return 3;
+	d = (move)c;
+	if( d.value != 7 ) return 4;
+
+	// Default-name special members (copy/move default to "other")
+	var DefaultBox e = DefaultBox( 8 );
+	var DefaultBox f = e;
+	if( f.value != 8 ) return 5;
+	var DefaultBox g = (move)e;
+	if( g.value != 8 ) return 6;
+	var DefaultBox h;
+	h = f;
+	if( h.value != 8 ) return 7;
+	h = (move)g;
+	if( h.value != 8 ) return 8;
+
+	// Named initlist members (construction only; assignment overloads are not yet resolved)
+	var NamedInitList<int> ni = [1, 2, 3];
+	if( ni.sum != 6 ) return 9;
+
+	// Default-name initlist members
+	var DefaultInitList<int> di = [1, 2, 3, 4];
+	if( di.sum != 10 ) return 10;
+
+	return 0;
+}

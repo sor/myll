@@ -19,30 +19,45 @@ struct Point {
 	}
 }
 
+func takes( initlist<int> values ) -> int {
+	return (int)values.size();
+}
+
 func main() -> int {
-	// infer std::initializer_list<int> from the elements
+	// infer std::initializer_list<int> from the elements via auto
 	var auto ints = [1, 2, 3];
 
 	// verifying the inferred type by binding to an explicitly typed variable
-	var std::initializer_list<int> copied = ints;
+	var initlist<int> copied = ints;
+	if( copied.size() != 3 ) return 1;
 
-	// explicit std::initializer_list variable
-	var std::initializer_list<int> moreInts = [4, 5];
+	// explicit initlist variable
+	var initlist<int> moreInts = [4, 5];
+	if( moreInts.size() != 2 ) return 2;
+
+	// shorthand alias
+	var ilist aliased = [6, 7, 8];
+	var initlist<int> copiedAlias = aliased;
+	if( copiedAlias.size() != 3 ) return 3;
+
+	// pass literal and variable to a function taking initlist<int>
+	if( takes( [10, 20, 30] ) != 3 ) return 4;
+	if( takes( moreInts ) != 2 ) return 5;
 
 	// std::vector uses its std::initializer_list<T> constructor
 	var std::vector<int> vec = [10, 20, 30];
 
-	// DynArray uses the initializer-list constructor
+	// DynArray uses the new ctor initlist shorthand
 	var Myll::DynArray<int> arr = [100, 200, 300];
-	if( arr.size() != 3 ) return 1;
-	if( arr.at( 0 ) != 100 ) return 2;
-	if( arr.at( 2 ) != 300 ) return 3;
+	if( arr.size() != 3 ) return 7;
+	if( arr.at( 0 ) != 100 ) return 8;
+	if( arr.at( 2 ) != 300 ) return 9;
 
 	// list of structs
 	var Myll::DynArray<Point> points = [Point( 1, 2 ), Point( 3, 4 )];
-	if( points.size() != 2 ) return 4;
-	if( points.at( 0 ).x != 1 ) return 5;
-	if( points.at( 1 ).y != 4 ) return 6;
+	if( points.size() != 2 ) return 10;
+	if( points.at( 0 ).x != 1 ) return 11;
+	if( points.at( 1 ).y != 4 ) return 12;
 
 	return 0;
 }

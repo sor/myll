@@ -11,7 +11,7 @@
   "myllCompileRun": [ "language_basics", "new_in_myll", "oo_basics", "control_flow" ],
   "noResolve": [],
   "depth": {
-    "generateFailing": [ "overload_fail", "typecheck_fail", "bool_context_fail", "decl_fail", "operator_fail", "conversion_fail", "discard_fail", "slicing_fail", "template_arg_count_fail", "template_conversion_fail", "rule_of_n_fail" ],
+    "generateFailing": [ "overload_fail", "typecheck_fail", "bool_context_fail", "decl_fail", "operator_fail", "conversion_fail", "discard_fail", "slicing_fail", "template_arg_count_fail", "template_conversion_fail", "rule_of_n_fail", "initlist_assign_fail" ],
     "generate": [ "cpp_fail" ],
     "compile": [ "extern" ],
     "link": [],

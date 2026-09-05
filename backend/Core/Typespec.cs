@@ -25,6 +25,7 @@ namespace Myll.Core
 		Copy,
 		Move,
 		Forward,
+		InitList,
 	}
 
 	/// <summary>
@@ -133,11 +134,6 @@ namespace Myll.Core
 		public string? literalText;
 
 		/// <summary>
-		/// True when this type was written with the `float` keyword (as opposed to `f16/f32/f64/f128`).
-		/// </summary>
-		public bool usesFloatKeyword;
-
-		/// <summary>
 		/// True when this type is a default-sized type (<c>int</c>, <c>uint</c>, <c>float</c>,
 		/// <c>bint</c>). Its backing C++ name is emitted without a fixed-width prefix.
 		/// </summary>
@@ -205,6 +201,13 @@ namespace Myll.Core
 		// depends on a template parameter. Used to emit the C++ 'template'
 		// disambiguator for dependent nested template-ids.
 		public List<bool> prefixDependent = new();
+
+		/// <summary>
+		/// True when this type was written with the <c>initlist</c>/<c>ilist</c> keyword.
+		/// It is an alias for <c>std::initializer_list&lt;T&gt;</c> but is identified
+		/// separately so the compiler can special-case it.
+		/// </summary>
+		public bool isInitList;
 
 		public override bool IsDependentType()
 		{

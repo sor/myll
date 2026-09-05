@@ -67,6 +67,7 @@ namespace Myll
 
 			Typespec ret;
 			if(		 c.typespecBasic()	!= null ) ret = VisitTypespecBasic( c.typespecBasic() );
+			else if( c.initlistType()	!= null ) ret = VisitInitlistType( c.initlistType() );
 			else if( c.typespecFunc()	!= null ) ret = VisitTypespecFunc( c.typespecFunc() );
 			else if( c.typespecNested()	!= null ) ret = VisitTypespecNested( c.typespecNested() );
 			else throw new Exception( "unknown typespec" );
@@ -190,9 +191,8 @@ namespace Myll
 					ret.kind = TypespecBasic.Kind.Float;
 
 					if( t == MyllParser.FLOAT ) {
-						ret.size             = Dialect.DefaultFloatSize();
-						ret.isDefaultSized   = true;
-						ret.usesFloatKeyword = true;
+						ret.size           = Dialect.DefaultFloatSize();
+						ret.isDefaultSized = true;
 						Context.FloatKeywordUsages.Add( ret.srcPos );
 					}
 					else {
@@ -255,6 +255,31 @@ namespace Myll
 				default:
 					throw new Exception( "unknown typespec" );
 			}
+			return ret;
+		}
+
+		public new TypespecNested VisitInitlistType( InitlistTypeContext c )
+		{
+			Typespec? elementType = c.typespec() != null
+				? VisitTypespec( c.typespec() )
+				: new TypespecBasic {
+					kind = TypespecBasic.Kind.ExplicitAuto,
+					size = TypespecBasic.SizeUndetermined,
+				};
+
+			TypespecNested ret = new() {
+				srcPos     = c.ToSrcPos(),
+				isInitList = true,
+				idTpls     = new List<IdTplArgs> {
+					new() { id = "std" },
+					new() {
+						id      = "initializer_list",
+						tplArgs = new List<TplArg> { new() { typespec = elementType } },
+					},
+				},
+			};
+
+			Context.UnresolvedTypes.Add( new( ret, Context.ScopeStack.Peek() ) );
 			return ret;
 		}
 

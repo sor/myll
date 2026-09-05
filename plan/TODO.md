@@ -61,11 +61,12 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 
 6. **Direct constructor syntax and initializer-list literals** — done
    - Variables can be declared with `var T name(args);` (and `const`/`let`/`field` variants) instead of `var T name = T(args);`.
-   - Grammar: `idAccessor` accepts an optional `funcCall` in addition to `= expr`; `expr` accepts `LBRACK args? RBRACK` as `InitListExpr`.
-   - AST: `VarDecl`/`VarStmt` carry an explicit `isDirectConstruct` flag and store the constructor call in `init` as a `FuncCallExpr`. A new `InitListExpr` node stores the brace-init-list elements.
-   - Generator emits `type name(args);` for direct construction and `{ e1, e2 }` for initializer lists.
-   - Type inference: an empty `[ ]` with `auto` is rejected; otherwise the element common type is computed and `var auto a = [1,2,3];` becomes `std::initializer_list<int>`.
-   - Added `std/std_initializer_list.decl.myll` and an initializer-list constructor to `myll/dyn_array.myll`.
+   - Grammar: `idAccessor` accepts an optional `funcCall` in addition to `= expr`; `expr` accepts `LBRACK args? RBRACK` as `InitListExpr`; `typespec` accepts `initlistType`; `kindOfPassing` accepts `INITLIST`.
+   - AST: `VarDecl`/`VarStmt` carry an explicit `isDirectConstruct` flag and store the constructor call in `init` as a `FuncCallExpr`. A new `InitListExpr` node stores the brace-init-list elements. `TypespecNested.isInitList` identifies the `initlist`/`ilist` keyword type.
+   - Generator emits `type name(args);` for direct construction and `{ e1, e2 }` for initializer lists. `initlist<T>`/`ilist<T>` emit `std::initializer_list<T>`.
+   - Type inference: an empty `[ ]` with `auto`/bare `initlist`/`ilist` is rejected; otherwise the element common type is computed. `var auto a = [1,2,3];`, `var initlist<int> a = [1,2,3];`, and `var ilist a = [1,2,3];` all infer `std::initializer_list<int>`.
+   - Added special members `ctor initlist` and `operator initlist =`. They generate a `const std::initializer_list<E>&` parameter, default parameter name `init`, and are implicitly `[implicit]`. The element type `E` defaults to the enclosing class's first template parameter or can be written explicitly (`ctor initlist<E>`).
+   - Added `std/std_initializer_list.decl.myll` and updated `myll/dyn_array.myll` to use `ctor initlist`. The `<initializer_list>` header is now included by default.
    - Regression cases: `testing/cases/direct_ctor/`, `testing/cases/initializer_list/`.
 
 ## Medium priority

@@ -115,8 +115,9 @@ namespace Myll.Resolver
 			}
 
 			return new TypespecNested {
-				srcPos = initList.srcPos,
-				idTpls = new List<IdTplArgs> {
+				srcPos     = initList.srcPos,
+				isInitList = true,
+				idTpls     = new List<IdTplArgs> {
 					new() { id = "std" },
 					new() {
 						id      = "initializer_list",

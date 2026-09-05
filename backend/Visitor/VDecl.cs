@@ -606,28 +606,72 @@ namespace Myll
 		{
 			PassingKind passingKind = c.kindOfPassing().Visit();
 
-			if( passingKind != PassingKind.Copy && passingKind != PassingKind.Move )
-				throw new NotSupportedException( "only copy and move constructors are supported" );
+			if( c.tplType != null && passingKind != PassingKind.InitList )
+				throw new NotSupportedException(
+					"explicit element type is only supported for `ctor initlist`" );
 
 			string className = structuralParent.name;
-			string paramName = c.id()?.Visit() ?? "other";
+			string paramName = c.id()?.Visit()
+				?? ( passingKind == PassingKind.InitList ? "init" : "other" );
 
-			List<IdTplArgs> classIdTpls = new() {
-				new() { id = className },
-			};
+			Param param;
+			if( passingKind == PassingKind.InitList ) {
+				Typespec elementType;
+				if( c.tplType != null ) {
+					elementType = VisitTypespec( c.tplType );
+				}
+				else if( structuralParent.TplParams.Count >= 1 ) {
+					elementType = new TypespecNested {
+						idTpls = new List<IdTplArgs> {
+							new() { id = structuralParent.TplParams[0].name },
+						},
+					};
+				}
+				else {
+					throw new NotSupportedException(
+						"`ctor initlist` requires an explicit element type or a templated class" );
+				}
 
-			var qualPtrsTuple = passingKind.ToQualPtrs();
-			var paramType = new TypespecNested {
-				idTpls = classIdTpls,
-				qual   = qualPtrsTuple.qual,
-				ptrs   = qualPtrsTuple.ptrs,
-			};
-			Context.UnresolvedTypes.Add( new UnresolvedType( paramType, scopeStack.Peek() ) );
+				var paramType = new TypespecNested {
+					isInitList = true,
+					idTpls     = new List<IdTplArgs> {
+						new() { id = "std" },
+						new() {
+							id      = "initializer_list",
+							tplArgs = new List<TplArg> { new() { typespec = elementType } },
+						},
+					},
+					qual = Qualifier.Const,
+					ptrs = new List<Pointer> { new() { kind = Pointer.Kind.LVRef } },
+				};
+				Context.UnresolvedTypes.Add( new UnresolvedType( paramType, scopeStack.Peek() ) );
 
-			Param param = new() {
-				name = paramName,
-				type = paramType,
-			};
+				param = new() {
+					name = paramName,
+					type = paramType,
+				};
+			}
+			else {
+				if( passingKind != PassingKind.Copy && passingKind != PassingKind.Move )
+					throw new NotSupportedException( "only copy, move and initlist constructors are supported" );
+
+				List<IdTplArgs> classIdTpls = new() {
+					new() { id = className },
+				};
+
+				var qualPtrsTuple = passingKind.ToQualPtrs();
+				var paramType = new TypespecNested {
+					idTpls = classIdTpls,
+					qual   = qualPtrsTuple.qual,
+					ptrs   = qualPtrsTuple.ptrs,
+				};
+				Context.UnresolvedTypes.Add( new UnresolvedType( paramType, scopeStack.Peek() ) );
+
+				param = new() {
+					name = paramName,
+					type = paramType,
+				};
+			}
 
 			var ret = new Structor {
 				srcPos = c.ToSrcPos(),
@@ -637,6 +681,10 @@ namespace Myll
 				paras  = new() { param },
 				// TODO: cc.initList(); // opt
 			};
+
+			if( passingKind == PassingKind.InitList )
+				ret.MergeAttribs( new Attribs { ["implicit"] = new List<string>() } );
+
 			AddParamsToScope( ret.paras );
 			return ret;
 		}
@@ -668,29 +716,69 @@ namespace Myll
 			PushScope();
 			{
 				if( c.kindOfPassing() != null ) {
-					string?     id          = c.id().Visit();
+					string?     id          = c.id()?.Visit();
 					PassingKind passingKind = c.kindOfPassing().Visit();
 					bool        isCopy      = passingKind == PassingKind.Copy;
 					bool        isMove      = passingKind == PassingKind.Move;
+					bool        isInitList  = passingKind == PassingKind.InitList;
 
-					if( !isCopy && !isMove )
-						throw new NotSupportedException( "only copy and move special assignment ops are supported" );
+					if( c.tplType != null && !isInitList )
+						throw new NotSupportedException(
+							"explicit element type is only supported for `operator initlist =`" );
+
+					if( !isCopy && !isMove && !isInitList )
+						throw new NotSupportedException(
+							"only copy, move and initlist special assignment ops are supported" );
 
 					if( parent.decl is not Structural structuralParent )
-						throw new Exception( "parent of operator= copy or move has no decl or is not a structural" );
+						throw new Exception( "parent of operator= special assignment has no decl or is not a structural" );
 
 					string className = structuralParent.name;
 					List<IdTplArgs> classIdTpls = new() {
 						new() { id = className },
 					};
 
-					var qualPtrsTuple = passingKind.ToQualPtrs();
-					var paramType = new TypespecNested {
-						idTpls = classIdTpls,
-						qual   = qualPtrsTuple.qual,
-						ptrs   = qualPtrsTuple.ptrs,
-					};
-					Context.UnresolvedTypes.Add( new UnresolvedType( paramType, scopeStack.Peek() ) );
+					Typespec paramType;
+					if( isInitList ) {
+						Typespec elementType;
+						if( c.tplType != null ) {
+							elementType = VisitTypespec( c.tplType );
+						}
+						else if( structuralParent.TplParams.Count >= 1 ) {
+							elementType = new TypespecNested {
+								idTpls = new List<IdTplArgs> {
+									new() { id = structuralParent.TplParams[0].name },
+								},
+							};
+						}
+						else {
+							throw new NotSupportedException(
+								"`operator initlist =` requires an explicit element type or a templated class" );
+						}
+
+						paramType = new TypespecNested {
+							isInitList = true,
+							idTpls     = new List<IdTplArgs> {
+								new() { id = "std" },
+								new() {
+									id      = "initializer_list",
+									tplArgs = new List<TplArg> { new() { typespec = elementType } },
+								},
+							},
+							qual = Qualifier.Const,
+							ptrs = new List<Pointer> { new() { kind = Pointer.Kind.LVRef } },
+						};
+						Context.UnresolvedTypes.Add( new UnresolvedType( (TypespecNested)paramType, scopeStack.Peek() ) );
+					}
+					else {
+						var qualPtrsTuple = passingKind.ToQualPtrs();
+						paramType = new TypespecNested {
+							idTpls = classIdTpls,
+							qual   = qualPtrsTuple.qual,
+							ptrs   = qualPtrsTuple.ptrs,
+						};
+						Context.UnresolvedTypes.Add( new UnresolvedType( (TypespecNested)paramType, scopeStack.Peek() ) );
+					}
 
 					Param param = new() {
 						name = id ?? "other", // TODO: replace "other" with configuration

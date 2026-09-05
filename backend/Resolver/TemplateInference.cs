@@ -329,7 +329,6 @@ namespace Myll.Resolver
 					size             = b.size,
 					align            = b.align,
 					isDefaultSized   = b.isDefaultSized,
-					usesFloatKeyword = b.usesFloatKeyword,
 					literalText      = b.literalText,
 				},
 				TypespecNested n => new TypespecNested {

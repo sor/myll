@@ -4,7 +4,7 @@ import std_initializer_list;
 
 namespace Myll {
 
-[ct] var usize DEFAULT_CAPACITY = 8;
+[ct] var usize DefaultCapacity = 8;
 
 class DynArray<T> {
 field {
@@ -14,7 +14,7 @@ field {
 }
 
 [pub]:
-	ctor() : ctor( DEFAULT_CAPACITY ) {}
+	ctor() : ctor( DefaultCapacity ) {}
 
 	ctor( usize initialCapacity ) {
 		_capacity = initialCapacity;
@@ -22,8 +22,7 @@ field {
 			_data = new T[initialCapacity]!;
 	}
 
-	[implicit]
-	ctor( std::initializer_list<T> init ) {
+	ctor initlist /*init*/ { // init is the default name, override by specifying it at instead of the /**/
 		var const T* it   = init.begin();
 		var const T* last = init.end();
 		reserve( (usize)( last - it ) );
@@ -33,24 +32,24 @@ field {
 		}
 	}
 
-	ctor move src {
-		_size     = src._size;
-		_capacity = src._capacity;
-		_data     = (move)src._data;
-		src._size     = 0;
-		src._capacity = 0;
-		src._data     = null;
+	ctor move /*other*/ { // other is the default name
+		_data     = (move)other._data;
+		_size     = other._size;
+		_capacity = other._capacity;
+		other._data     = null;
+		other._size     = 0;
+		other._capacity = 0;
 	}
 
-	operator move = src {
-		if( &self == &src )
+	operator move = /*other*/ { // other is the default name
+		if( &self == &other )
 			return self;
-		_data     = (move)src._data;
-		_size     = src._size;
-		_capacity = src._capacity;
-		src._data     = null;
-		src._size     = 0;
-		src._capacity = 0;
+		_data     = (move)other._data;
+		_size     = other._size;
+		_capacity = other._capacity;
+		other._data     = null;
+		other._size     = 0;
+		other._capacity = 0;
 		return self;
 	}
 

@@ -13,6 +13,7 @@ namespace Myll.Generator
 			"#include <cmath>",       // math
 			"#include <cstddef>",     // std::byte, size_t, nullptr_t
 			"#include <cstdint>",     // std::int8_t, std::uint64_t, etc.
+			"#include <initializer_list>", // std::initializer_list
 			"#include <memory>",      // smart pointer (expensive)
 			"#include <string>",      // std::string
 			"#include <type_traits>", // underlying_type, remove_const_t

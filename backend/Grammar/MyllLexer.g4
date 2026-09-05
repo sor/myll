@@ -222,6 +222,7 @@ CONVERT		: 'conv'|'convert';
 FORWARD		: 'forw'|'forward';
 MOVE		: 'move';
 COPY		: 'copy';
+INITLIST	: 'initlist'|'ilist';
 
 // Must appear before ID so that 'this' and 'self' are lexed as CLASS_LIT.
 CLASS_LIT	: 'this'|'self';

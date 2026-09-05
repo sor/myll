@@ -351,10 +351,11 @@ namespace Myll
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static PassingKind Visit( this KindOfPassingContext c )
 			=> c.v.Type switch {
-				Parser.COPY    => PassingKind.Copy,
-				Parser.MOVE    => PassingKind.Move,
-				Parser.FORWARD => PassingKind.Forward,
-				_              => throw new ArgumentOutOfRangeException( "PassingKind Visit out of range " + c )
+				Parser.COPY     => PassingKind.Copy,
+				Parser.MOVE     => PassingKind.Move,
+				Parser.FORWARD  => PassingKind.Forward,
+				Parser.INITLIST => PassingKind.InitList,
+				_               => throw new ArgumentOutOfRangeException( "PassingKind Visit out of range " + c )
 			};
 
 

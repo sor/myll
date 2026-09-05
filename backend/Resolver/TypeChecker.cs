@@ -109,6 +109,9 @@ namespace Myll.Resolver
 							vd.type = InferAutoType( typeResolver.Resolve( vd.init ) ) ?? vd.type;
 						}
 					}
+					else if( IsUnspecifiedInitList( vd.type ) ) {
+						InferInitListElementFromInit( vd.type, vd.init );
+					}
 
 					CheckAssignment( vd.type, vd.init, vd.init.srcPos );
 					vd.init = BindToBitType( vd.init, vd.type );
@@ -142,6 +145,11 @@ namespace Myll.Resolver
 							if( vs.decl != null )
 								vs.decl.type = vs.type;
 						}
+					}
+					else if( IsUnspecifiedInitList( vs.type ) ) {
+						InferInitListElementFromInit( vs.type, vs.init );
+						if( vs.decl != null )
+							InferInitListElementFromInit( vs.decl.type, vs.init );
 					}
 
 					CheckAssignment( vs.type, vs.init, vs.init.srcPos );
@@ -447,7 +455,6 @@ namespace Myll.Resolver
 					size             = b.size,
 					align            = b.align,
 					isDefaultSized   = b.isDefaultSized,
-					usesFloatKeyword = b.usesFloatKeyword,
 					literalText      = b.literalText,
 				},
 				TypespecNested n => new TypespecNested {
@@ -948,6 +955,43 @@ namespace Myll.Resolver
 			=> type is TypespecBasic basic
 			&& ( basic.kind == TypespecBasic.Kind.ExplicitAuto
 			  || basic.kind == TypespecBasic.Kind.ImplicitAuto );
+
+		private static bool IsUnspecifiedInitList( Typespec? type )
+			=> type is TypespecNested nested
+			&& nested.isInitList
+			&& nested.idTpls.Count >= 2
+			&& nested.idTpls[1].tplArgs.Count >= 1
+			&& IsAutoKind( nested.idTpls[1].tplArgs[0].typespec );
+
+		private static Typespec? GetInitListElementType( Typespec? type )
+			=> type is TypespecNested nested
+			&& nested.isInitList
+			&& nested.idTpls.Count >= 2
+			&& nested.idTpls[1].tplArgs.Count >= 1
+				? nested.idTpls[1].tplArgs[0].typespec
+				: null;
+
+		private static void SetInitListElementType( Typespec type, Typespec elementType )
+		{
+			if( type is TypespecNested nested
+			 && nested.isInitList
+			 && nested.idTpls.Count >= 2
+			 && nested.idTpls[1].tplArgs.Count >= 1 )
+				nested.idTpls[1].tplArgs[0].typespec = elementType;
+		}
+
+		private void InferInitListElementFromInit( Typespec type, Expr init )
+		{
+			if( init is InitListExpr il && il.args.Count == 0 ) {
+				AddError( il, "Cannot infer element type of an empty initializer list" );
+				return;
+			}
+
+			Typespec? resolved = typeResolver.Resolve( init );
+			Typespec? element  = GetInitListElementType( resolved );
+			if( element != null )
+				SetInitListElementType( type, element );
+		}
 
 		private void ValidateVarAttributes( VarDecl vd )
 		{

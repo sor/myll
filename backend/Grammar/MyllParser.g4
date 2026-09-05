@@ -115,7 +115,7 @@ defConvert	:	(	RARROW		to=typespec					// convert -> TYPE	- convert to TYPE	- op
 				|	LARROW		from=typespec	id?			// convert <- TYPE	- convert from TYPE	- ctor( TYPE )
 				)
 				funcBody;
-defCtor		:	(	kindOfPassing				id?	initList?
+defCtor		:	(	kindOfPassing	(LT	tplType=typespec	GT)?	id?	initList?
 				|	CONVERT	LARROW?	typespec	id?
 				|	CONVERT			typespec	id?	RARROW?
 				|	funcTypeDef?	initList?
@@ -124,7 +124,7 @@ defCtor		:	(	kindOfPassing				id?	initList?
 				funcBody;
 defDtor		:	(LPAREN RPAREN)?
 				funcBody;
-defOp		:	(	kindOfPassing	ASSIGN				id?									// operator copy = other; / operator move = other;
+defOp		:	(		kindOfPassing	(LT	tplType=typespec	GT)?	ASSIGN		id?									// operator copy = other; / operator move = other;
 				|	CONVERT			tplParams?	RARROW?	typespec						// no param == no id
 				|	opSymbol		defCoreFunc										// operator +, operator [], operator ++, ...
 				)
@@ -224,7 +224,7 @@ kindOfStruct:	v=(	STRUCT	|	CLASS	|	UNION	);
 kindOfFunc	:	v=(	FUNC	|	PROC	|	METHOD	);
 kindOfVar	:	v=(	VAR		|	FIELD	|	CONST	|	LET	);
 
-kindOfPassing:	v=(	COPY	|	MOVE	|	FORWARD	);
+kindOfPassing:	v=(	COPY	|	MOVE	|	FORWARD	|	INITLIST	);
 
 
 // The great reordering Part 2, everything below still TODO
@@ -283,6 +283,7 @@ idTplArgs	:	id	tplArgs?;
 
 typespec	:	qual*
 				(	typespecBasic	typePtr*
+				|	initlistType	typePtr*
 				|	FUNC			typePtr*	typespecFunc
 				|	typespecNested	typePtr*);
 
@@ -292,6 +293,8 @@ typespecBasic	:	specialType
 				|	binaryType
 				|	signedIntType
 				|	unsignIntType;
+
+initlistType	:	INITLIST (LT typespec GT)?;
 
 typespecFunc	:	funcTypeDef? (RARROW typespec)?;
 
