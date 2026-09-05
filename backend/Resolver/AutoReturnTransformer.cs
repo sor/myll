@@ -83,7 +83,7 @@ namespace Myll.Resolver
 			if( String.IsNullOrEmpty( alias ) )
 				return;
 
-			if( conflictChecker.HasAutoReturnConflict( func ) ) {
+			if( conflictChecker.HasAutoReturnConflict( func, context ) ) {
 				diagnostics.Add( new Diagnostic(
 					func.srcPos,
 					DiagnosticKind.Warning,

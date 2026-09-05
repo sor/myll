@@ -8,8 +8,11 @@ namespace Myll.Resolver
 	/// <summary>
 	/// Warns when a configured alias name is shadowed by a class/struct member,
 	/// method parameter, local variable, or catch parameter.
-	/// This runs independently of name resolution so the warnings are available even
-	/// when the semantic resolver is not enabled.
+	///
+	/// The transform now walks the resolved scope tree via
+	/// <see cref="CompilationContext.LocalDecls"/> instead of the broken
+	/// <see cref="Stmt.EnumerateDF"/> traversal, so locals inside loops are
+	/// correctly checked.
 	/// </summary>
 	public sealed class ConfiguredAliasShadowingTransformer : ITransformer
 	{
@@ -19,45 +22,86 @@ namespace Myll.Resolver
 
 		public void Transform( IReadOnlyList<CompiledModuleResult> modules )
 		{
-			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
-				if( context.IsPrototypeFile )
-					continue;
-
-				VisitHierarchical( module );
-			}
+			diagnostics.Clear();
+			Transform( modules, diagnostics );
 		}
 
 		public void Transform(
 			IReadOnlyList<CompiledModuleResult> modules,
 			List<Diagnostic> diagnostics )
 		{
-			Transform( modules );
-			diagnostics.AddRange( Diagnostics );
-		}
+			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+				if( context.IsPrototypeFile )
+					continue;
 
-		private void VisitHierarchical( Hierarchical hierarchical )
-		{
-			foreach( Decl child in hierarchical.children ) {
-				if( child is Structural structural )
-					VisitStructural( structural );
-
-				if( child is Hierarchical nested )
-					VisitHierarchical( nested );
+				VisitHierarchical( module, context, diagnostics );
 			}
 		}
 
-		private void VisitStructural( Structural structural )
+		/// <summary>
+		/// Returns true when the function has a parameter, local variable, or catch
+		/// parameter whose name matches the configured auto-return variable name.
+		/// </summary>
+		public bool HasAutoReturnConflict( Func func, CompilationContext context )
 		{
-			CheckClassAlias( structural, Dialect.BaseClassAliasName, "base-class alias", structural.basetypes.Count >= 1 );
+			string alias = Dialect.AutoReturnName;
+			if( String.IsNullOrEmpty( alias ) )
+				return false;
 
-			CheckClassAlias( structural, Dialect.OwnClassAliasName, "own-class alias", true );
+			foreach( Param p in func.paras ) {
+				if( p.name == alias )
+					return true;
+			}
+
+			if( func.funcScope == null )
+				return false;
+
+			foreach( (Decl local, Scope scope) in context.LocalDecls ) {
+				if( local.name != alias )
+					continue;
+				if( local is TplParamDecl )
+					continue;
+				if( !IsScopeInsideFunction( scope, func.funcScope ) )
+					continue;
+
+				return true;
+			}
+
+			return false;
 		}
 
-		private void CheckClassAlias(
+		private static void VisitHierarchical(
+			Hierarchical hierarchical,
+			CompilationContext context,
+			List<Diagnostic> diagnostics )
+		{
+			foreach( Decl child in hierarchical.children ) {
+				if( child is Structural structural )
+					VisitStructural( structural, context, diagnostics );
+
+				if( child is Hierarchical nested )
+					VisitHierarchical( nested, context, diagnostics );
+			}
+		}
+
+		private static void VisitStructural(
+			Structural structural,
+			CompilationContext context,
+			List<Diagnostic> diagnostics )
+		{
+			CheckAlias( structural, Dialect.BaseClassAliasName, "base-class alias",
+				structural.basetypes.Count >= 1, context, diagnostics );
+			CheckAlias( structural, Dialect.OwnClassAliasName, "own-class alias",
+				true, context, diagnostics );
+		}
+
+		private static void CheckAlias(
 			Structural structural,
 			string alias,
 			string aliasKind,
-			bool applies )
+			bool applies,
+			CompilationContext context,
+			List<Diagnostic> diagnostics )
 		{
 			if( String.IsNullOrEmpty( alias ) || !applies )
 				return;
@@ -75,16 +119,18 @@ namespace Myll.Resolver
 				}
 
 				if( child is Func func ) {
-					CheckFunctionNameShadows( func, structural, alias, aliasKind );
+					CheckFunctionNameShadows( func, structural, alias, aliasKind, context, diagnostics );
 				}
 			}
 		}
 
-		private void CheckFunctionNameShadows(
+		private static void CheckFunctionNameShadows(
 			Func func,
 			Structural structural,
 			string alias,
-			string aliasKind )
+			string aliasKind,
+			CompilationContext context,
+			List<Diagnostic> diagnostics )
 		{
 			foreach( Param p in func.paras ) {
 				if( p.name == alias ) {
@@ -100,132 +146,73 @@ namespace Myll.Resolver
 				}
 			}
 
-			if( func.body != null )
-				CheckStmtForNameShadows( func.body, structural, func, alias, aliasKind );
-		}
-
-		private void CheckStmtForNameShadows(
-			Stmt stmt,
-			Structural? structural,
-			Func func,
-			string alias,
-			string aliasKind )
-		{
-			foreach( VarStmt varStmt in stmt.EnumerateDF.OfType<VarStmt>() ) {
-				if( varStmt.IsAutoReturn )
-					continue;
-
-				if( varStmt.name == alias ) {
-					diagnostics.Add( new Diagnostic(
-						varStmt.srcPos,
-						DiagnosticKind.Warning,
-						String.Format(
-							"Local variable '{0}' in '{1}.{2}' shadows the configured {3}.",
-							alias,
-							structural?.name ?? func.name,
-							func.name,
-							aliasKind ) ) );
-				}
-			}
-
-			foreach( TryCatchStmt tryCatch in stmt.EnumerateDF.OfType<TryCatchStmt>() ) {
-				foreach( CatchClause cc in tryCatch.catches ) {
-					if( cc.param?.name == alias ) {
-						diagnostics.Add( new Diagnostic(
-							tryCatch.srcPos,
-							DiagnosticKind.Warning,
-							String.Format(
-								"Catch parameter '{0}' in '{1}.{2}' shadows the configured {3}.",
-								alias,
-								structural?.name ?? func.name,
-								func.name,
-								aliasKind ) ) );
-					}
-				}
-			}
-		}
-
-		public bool HasAutoReturnConflict( Func func )
-		{
-			if( String.IsNullOrEmpty( Dialect.AutoReturnName ) )
-				return false;
-
-			string alias = Dialect.AutoReturnName;
-
-			foreach( Param p in func.paras ) {
-				if( p.name == alias )
-					return true;
-			}
-
-			if( func.body != null ) {
-				foreach( VarStmt varStmt in func.body.EnumerateDF.OfType<VarStmt>() ) {
-					if( !varStmt.IsAutoReturn && varStmt.name == alias )
-						return true;
-				}
-
-				foreach( TryCatchStmt tryCatch in func.body.EnumerateDF.OfType<TryCatchStmt>() ) {
-					foreach( CatchClause cc in tryCatch.catches ) {
-						if( cc.param?.name == alias )
-							return true;
-					}
-				}
-			}
-
-			return false;
-		}
-
-		public void CheckAutoReturnConflicts( IReadOnlyList<CompiledModuleResult> modules )
-		{
-			if( String.IsNullOrEmpty( Dialect.AutoReturnName ) )
+			if( func.funcScope == null )
 				return;
 
-			string alias = Dialect.AutoReturnName;
+			ISet<string> autoReturnNames = GetAutoReturnNames( func );
 
-			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
-				if( context.IsPrototypeFile )
+			foreach( (Decl local, Scope scope) in context.LocalDecls ) {
+				if( local.name != alias )
+					continue;
+				if( local is TplParamDecl )
+					continue;
+				if( autoReturnNames.Contains( local.name ) )
+					continue;
+				if( IsParameterOf( func, local ) )
+					continue;
+				if( !IsScopeInsideFunction( scope, func.funcScope ) )
 					continue;
 
-				CheckAutoReturnConflictsInHierarchical( module, alias );
+				// The source position of a compiler-generated VarDecl may be empty;
+				// fall back to the function position so the warning is clickable.
+				SrcPos srcPos = local.srcPos?.file != null
+					? local.srcPos
+					: func.srcPos;
+
+				diagnostics.Add( new Diagnostic(
+					srcPos,
+					DiagnosticKind.Warning,
+					String.Format(
+						"Local variable or catch parameter '{0}' in '{1}.{2}' shadows the configured {3}.",
+						alias,
+						structural.name,
+						func.name,
+						aliasKind ) ) );
 			}
 		}
 
-		private void CheckAutoReturnConflictsInHierarchical( Hierarchical hierarchical, string alias )
+		private static bool IsParameterOf( Func func, Decl local )
 		{
-			foreach( Decl child in hierarchical.children ) {
-				if( child is Func func
-				 && func.body != null
-				 && HasParameterOrLocalNamed( func, alias ) ) {
-					diagnostics.Add( new Diagnostic(
-						func.srcPos,
-						DiagnosticKind.Warning,
-						String.Format(
-							"Function '{0}' declares '{1}'; auto-return generation is disabled.",
-							func.name,
-							alias ) ) );
-				}
-
-				if( child is Hierarchical nested )
-					CheckAutoReturnConflictsInHierarchical( nested, alias );
-			}
-		}
-
-		private bool HasParameterOrLocalNamed( Func func, string alias )
-		{
-			foreach( Param p in func.paras )
-				if( p.name == alias )
-					return true;
-
-			if( func.body == null )
+			if( local is not VarDecl varDecl )
 				return false;
 
-			foreach( VarStmt varStmt in func.body.EnumerateDF.OfType<VarStmt>() )
-				if( !varStmt.IsAutoReturn && varStmt.name == alias )
+			return func.paras.Any( p => p.name == varDecl.name );
+		}
+
+		private static ISet<string> GetAutoReturnNames( Func func )
+		{
+			HashSet<string> result = new();
+
+			Stmt? body = func.body;
+			if( body is MultiStmt ms && ms.stmts.Count > 0 ) {
+				if( ms.stmts[0] is VarStmt vs && vs.IsAutoReturn && !String.IsNullOrEmpty( vs.name ) )
+					result.Add( vs.name );
+			}
+
+			return result;
+		}
+
+		private static bool IsScopeInsideFunction( Scope scope, Scope functionScope )
+		{
+			for( Scope? cur = scope; cur != null; cur = cur.parent ) {
+				if( cur == functionScope )
 					return true;
 
-			foreach( TryCatchStmt tryCatch in func.body.EnumerateDF.OfType<TryCatchStmt>() ) {
-				foreach( CatchClause cc in tryCatch.catches )
-					if( cc.param?.name == alias )
-						return true;
+				// If we hit another function/constructor scope before the target,
+				// the local belongs to a nested lambda/closure, not this function.
+				Decl? owner = ((ScopeLeaf)cur).decl;
+				if( owner is Func or Structor )
+					return false;
 			}
 
 			return false;
