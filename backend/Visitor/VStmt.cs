@@ -180,14 +180,23 @@ namespace Myll
 				.idAccessor()
 				.Select(
 					q => {
-						Expr? init      = q.expr()?.Visit( Context );
-						Expr? finalInit = TransformInit( init, kind );
+						Expr? init              = q.funcCall() != null
+							? new FuncCallExpr {
+								srcPos     = srcPos,
+								expr       = TypespecToExpr( type, srcPos ),
+								funcCall   = VisitFuncCall( q.funcCall() ),
+							}
+							: q.expr()?.Visit( Context );
+						bool  isDirectConstruct = q.funcCall() != null;
+						Expr? finalInit         = TransformInit( init, kind );
+						isDirectConstruct      &= finalInit != null;
 						VarStmt stmt = new() {
-							srcPos = srcPos,
-							name   = q.id().GetText(),
-							kind   = kind,
-							type   = type,
-							init   = finalInit,
+							srcPos             = srcPos,
+							name               = q.id().GetText(),
+							kind               = kind,
+							type               = type,
+							init               = finalInit,
+							isDirectConstruct  = isDirectConstruct,
 						};
 						if( init is Discard && finalInit == null )
 							stmt.AssignAttribs( new Attribs { ["noinit"] = new List<string>() } );

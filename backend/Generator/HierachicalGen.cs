@@ -369,12 +369,21 @@ namespace Myll.Generator
 				}
 			}
 
+			string directArgs = obj.isDirectConstruct
+				? ( ( obj.init as FuncCallExpr )?.funcCall ) is FuncCall fc
+					&& fc.args.Count > 0
+					? fc.Gen()
+					: VarEmptyInitFormat
+				: "";
+
 			string initDecl = ( initIn & GenerateAt.Decl ) == 0 ? ""
+			                : obj.isDirectConstruct             ? directArgs
 			                : obj.init != null                  ? VarFormat[6] + obj.init.Gen()
 			                : obj.IsNoInit || isExtern          ? ""
 			                : VarEmptyInitFormat;
 
 			string initImpl = ( initIn & GenerateAt.Impl ) == 0 ? ""
+			                : obj.isDirectConstruct             ? directArgs
 			                : obj.init != null                  ? VarFormat[6] + obj.init.Gen()
 			                : obj.IsNoInit                      ? ""
 			                : VarEmptyInitFormat;

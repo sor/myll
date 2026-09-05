@@ -256,6 +256,7 @@ namespace Myll.Core
 		public Typespec       type     = null!; // contains Qualifier
 		public List<Accessor> accessor = new(); // opt, structural or global
 		public Expr?          init;
+		public bool           isDirectConstruct;
 
 		public override void AddToGen( HierarchicalGen gen )
 		{

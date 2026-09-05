@@ -39,6 +39,7 @@ namespace Myll.Core
 		public string       name = null!;
 		public Typespec     type = null!; // contains Qualifier
 		public Expr?        init;
+		public bool         isDirectConstruct;
 		public bool         IsAutoReturn { get; set; }
 
 		public override Strings Gen( int level )
@@ -55,11 +56,17 @@ namespace Myll.Core
 					DiagnosticKind.Error,
 					"[noinit]/[uninit] cannot be used with const variables" ) );
 
-			string initStr = init != null
-				? VarFormat[6] + init.Gen()
-				: IsNoInit
-					? ""
-					: VarEmptyInitFormat;
+			FuncCall? directCall = ( init as FuncCallExpr )?.funcCall;
+			string initStr = isDirectConstruct
+				? directCall != null && directCall.args.Count > 0
+					? directCall.Gen()
+					: VarEmptyInitFormat
+				: init != null
+					? VarFormat[6] + init.Gen()
+					: IsNoInit
+						? ""
+						: VarEmptyInitFormat;
+
 			string typeAndName = type.Gen( name );
 
 			string ret = Format(

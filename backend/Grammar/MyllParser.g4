@@ -390,7 +390,7 @@ expr		:	(idTplArgs	SCOPE)+	idTplArgs	# ScopedExpr
 			|	idTplArgs						# IdTplExpr		// same as rule 1 ?
 			;
 
-idAccessor	:	id	(LCURLY accessorDef+ RCURLY)?	(ASSIGN expr)?;
+idAccessor	:	id	(LCURLY	accessorDef+	RCURLY)?	(funcCall | ASSIGN	expr)?;
 idExpr		:	id									(ASSIGN expr)?;
 idAccessors	:	idAccessor	(COMMA idAccessor)*	COMMA?;
 idExprs		:	idExpr		(COMMA idExpr)*		COMMA?;

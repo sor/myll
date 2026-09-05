@@ -1,0 +1,56 @@
+module direct_ctor;
+
+import dyn_array;
+
+struct Point {
+[pub]:
+	field {
+		int x = 0;
+		int y = 0;
+	}
+
+	ctor() {}
+
+	ctor( int x_, int y_ ) {
+		x = x_;
+		y = y_;
+	}
+}
+
+struct Counter {
+[pub]:
+	field {
+		int value = 0;
+	}
+
+	ctor() { value = 0; }
+
+	ctor( int v ) { value = v; }
+}
+
+func main() -> int {
+	// direct default construction
+	var Counter c1();
+	if( c1.value != 0 ) return 1;
+
+	// direct argument construction
+	var Counter c2( 42 );
+	if( c2.value != 42 ) return 2;
+
+	// direct copy construction
+	var Counter c3( c2 );
+	if( c3.value != 42 ) return 3;
+
+	// direct construction with multiple arguments
+	var Point p1( 1, 2 );
+	if( p1.x != 1 ) return 4;
+	if( p1.y != 2 ) return 5;
+
+	// direct construction of namespaced template type
+	var Myll::DynArray<int> arr( 5 );
+	if( arr.capacity() != 5 ) return 6;
+	arr.pushBack( 10 );
+	if( arr.at( 0 ) != 10 ) return 7;
+
+	return 0;
+}

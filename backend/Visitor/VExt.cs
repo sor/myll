@@ -50,6 +50,29 @@ namespace Myll
 				indexer  = false,
 			};
 
+		protected Expr TypespecToExpr( Typespec type, SrcPos srcPos )
+		{
+			if( type is TypespecNested nested )
+				return nested.idTpls.Count == 1
+					? new IdExpr {
+						srcPos     = srcPos,
+						idTplArgs  = nested.idTpls[ 0 ],
+					}
+					: new ScopedExpr {
+						srcPos     = srcPos,
+						idTpls     = nested.idTpls,
+					};
+
+			if( type is TypespecBasic basic )
+				return new IdExpr {
+					srcPos     = srcPos,
+					idTplArgs  = new IdTplArgs { id = basic.GenType() },
+				};
+
+			throw new NotSupportedException(
+				String.Format( "Typespec {0} cannot be used as a constructor callee", type.GetType().Name ) );
+		}
+
 		protected new Param VisitParam( ParamContext c )
 		{
 			if( c.VAR() != null ) {

@@ -59,9 +59,13 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    - Add grammar/visitor/generator support for forward declarations in prototype files.
    - See `plan/prototype-files.md`.
 
-6. **Direct constructor syntax**
-   - Allow `T name(args);` and `T(args);` as alternatives to `var T name = T(args);`.
-   - Update the variable declaration grammar/visitor and ensure copy/move ctors are selected correctly.
+6. **Direct constructor syntax** — done
+   - Variables can be declared with `var T name(args);` (and `const`/`let`/`field` variants) instead of `var T name = T(args);`.
+   - Grammar: `idAccessor` accepts an optional `funcCall` in addition to `= expr`.
+   - AST: `VarDecl`/`VarStmt` carry an explicit `isDirectConstruct` flag and store the constructor call in `init` as a `FuncCallExpr`.
+   - Generator emits `type name(args);`; an empty argument list emits `{}` to avoid the C++ most-vexing parse.
+   - Also covered: `T(args);` as an expression-statement already worked via `stmtExpr`.
+   - Regression case: `testing/cases/direct_ctor/`.
 
 ## Medium priority
 

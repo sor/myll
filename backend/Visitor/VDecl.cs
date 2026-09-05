@@ -853,16 +853,27 @@ namespace Myll
 				.idAccessors()
 				.idAccessor()
 				.Select(
-					q => new VarDecl {
-						srcPos   = srcPos,
-						name     = q.id().GetText(),
-						kind     = kind,
-						access   = curAccess,
-						type     = type,
-						init     = q.expr()?.Visit( Context ),
-						accessor = q.accessorDef().Visit( Context ),
-						// TODO: Accessors, is this still valid?
-					} as Decl )
+					q => {
+						bool isDirectConstruct = q.funcCall() != null;
+						Expr? init = isDirectConstruct
+							? new FuncCallExpr {
+								srcPos     = srcPos,
+								expr       = TypespecToExpr( type, srcPos ),
+								funcCall   = VisitFuncCall( q.funcCall() ),
+							}
+							: q.expr()?.Visit( Context );
+						return new VarDecl {
+							srcPos             = srcPos,
+							name               = q.id().GetText(),
+							kind               = kind,
+							access             = curAccess,
+							type               = type,
+							init               = init,
+							isDirectConstruct  = isDirectConstruct,
+							accessor           = q.accessorDef().Visit( Context ),
+							// TODO: Accessors, is this still valid?
+						} as Decl;
+					} )
 				.ToList();
 			AddChildren( decls );
 			MultiDecl ret = new( decls );
