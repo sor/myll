@@ -64,6 +64,9 @@ namespace Myll.Resolver
 			var preResolveTransforms = new List<ITransformer> {
 				new DefaultAttributesTransformer(),
 				new EnumTransformer(),
+				new AutoReturnTransformer(),
+				new TemplateParamTransformer(),
+				new ChainTransformer(),
 			};
 
 			foreach( ITransformer transformer in preResolveTransforms )

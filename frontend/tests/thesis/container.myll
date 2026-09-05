@@ -65,13 +65,12 @@ class MyStack<T> {
 		method top() -> T => _data[_size-1];
 	}
 
-	[chain] // when this works, then the return type "-> MyStack&" and return statement "return self;" can be omitted
-	method push( T val ) -> MyStack& {
+	[chain]
+	method push( T val ) {
 		if( _size >= _reserved )
 			grow();
 		_data[_size] = val;
 		++_size;
-		return self;
 	}
 
 	//[precond(!isEmpty())]

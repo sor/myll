@@ -27,6 +27,25 @@ namespace Myll.Resolver
 		public void Transform( IReadOnlyList<CompiledModuleResult> modules )
 			=> Transform( modules, new List<Diagnostic>() );
 
+		private static bool HasTrailingReturnSelf( Stmt stmt )
+		{
+			return stmt switch {
+				ReturnStmt rs when rs.expr is SelfExpr => true,
+				MultiStmt ms when ms.stmts.Count > 0
+					=> HasTrailingReturnSelf( ms.stmts[ms.stmts.Count - 1] ),
+				IfStmt ifs when ifs.els != null
+					=> ifs.ifThens.TrueForAll( ct => HasTrailingReturnSelf( ct.then ) )
+					&& HasTrailingReturnSelf( ifs.els ),
+				SwitchStmt sw when sw.els != null
+					=> sw.cases.TrueForAll( cb => HasTrailingReturnSelf( cb.then ) )
+					&& HasTrailingReturnSelf( sw.els ),
+				TryCatchStmt tcs
+					=> HasTrailingReturnSelf( tcs.tryBody )
+					&& tcs.catches.TrueForAll( cc => HasTrailingReturnSelf( cc.body ) ),
+				_ => false,
+			};
+		}
+
 		private static void TransformDecl( Decl decl, List<Diagnostic> diagnostics )
 		{
 			switch( decl ) {
@@ -84,7 +103,15 @@ namespace Myll.Resolver
 				? ms
 				: new MultiStmt( new List<Stmt> { func.body }, false );
 
-			if( !AutoReturnTransformer.HasUnconditionalReturn( block ) ) {
+			if( HasTrailingReturnSelf( block ) ) {
+				diagnostics.Add( new Diagnostic(
+					func.srcPos,
+					DiagnosticKind.Warning,
+					String.Format(
+						"[chain] method/operator '{0}' has a redundant trailing 'return self;'.",
+						func.name ) ) );
+			}
+			else if( !AutoReturnTransformer.HasUnconditionalReturn( block ) ) {
 				block.stmts.Add( new ReturnStmt {
 					srcPos = block.srcPos,
 					expr   = new SelfExpr { srcPos = block.srcPos },

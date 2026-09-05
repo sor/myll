@@ -376,22 +376,12 @@ namespace Myll
 					Environment.Exit( -99 );
 			}
 
-		var autoReturnDiagnostics = new List<Diagnostic>();
-		new AutoReturnTransformer().Transform( modules, autoReturnDiagnostics );
-		if( autoReturnDiagnostics.Count > 0 ) {
-			Console.Error.Write(
-				DiagnosticFormatter.Format( autoReturnDiagnostics, UseColorForDiagnostics() ) );
-		}
-
-		new TemplateParamTransformer().Transform( modules, new List<Diagnostic>() );
-		new ChainTransformer().Transform( modules, autoReturnDiagnostics );
-
 		if( opt.IsResolve ) {
 			var (result, diagnostics) = NameResolver.Resolve( modules );
 			if( diagnostics.Count > 0 ) {
 				Console.Error.Write( DiagnosticFormatter.Format( diagnostics, UseColorForDiagnostics() ) );
 
-				if( !opt.IsKeepGoing )
+				if( !opt.IsKeepGoing && diagnostics.Any( d => d.Kind == DiagnosticKind.Error ) )
 					Environment.Exit( -99 );
 			}
 

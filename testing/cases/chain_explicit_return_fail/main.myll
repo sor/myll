@@ -1,0 +1,13 @@
+module chain_explicit_return_fail;
+
+class C
+{
+[pub]:
+	[chain]
+	method foo() -> C& { return self; }
+}
+
+func main() -> int
+{
+	return 0;
+}

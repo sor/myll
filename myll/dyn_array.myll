@@ -54,7 +54,7 @@ field {
 	}
 
 	[chain]
-	method reserve( usize newCapacity ) -> DynArray& {
+	method reserve( usize newCapacity ) {
 		if( newCapacity > _capacity ) {
 			var T[]! new_data = new T[newCapacity]!;
 			do _size times i {
@@ -63,32 +63,28 @@ field {
 			_capacity = newCapacity;
 			_data     = (move)new_data;
 		}
-		return self;
 	}
 
 	[chain]
-	method pushBack( const T& value ) -> DynArray& {
+	method pushBack( const T& value ) {
 		if( _size >= _capacity )
 			grow();
 		_data[_size] = value;
 		++_size;
-		return self;
 	}
 
 	[chain]
-	method popBack() -> DynArray& {
+	method popBack() {
 		--_size;
-		return self;
 	}
 
 	[chain]
-	method clear() -> DynArray& {
+	method clear() {
 		_size = 0;
-		return self;
 	}
 
 	[chain]
-	method shrinkToFit() -> DynArray& {
+	method shrinkToFit() {
 		if( _capacity > _size ) {
 			if( _size == 0 ) {
 				_data     = null;
@@ -103,7 +99,6 @@ field {
 				_data     = (move)new_data;
 			}
 		}
-		return self;
 	}
 
 	[ct, pure]
@@ -126,14 +121,13 @@ field {
 	operator [] ( usize index ) -> T& => _data[index];
 
 	[chain]
-	method sort() -> DynArray& {
+	method sort() {
 		if( _size > 1 )
 			sortRange( 0, _size - 1 );
-		return self;
 	}
 
 	[chain]
-	method reverse() -> DynArray& {
+	method reverse() {
 		if( _size == 0 )
 			return self;
 		var usize i = 0;
@@ -143,17 +137,15 @@ field {
 			++i;
 			--j;
 		}
-		return self;
 	}
 
 	[chain]
-	method fill( const T& value ) -> DynArray& {
+	method fill( const T& value ) {
 		var usize i = 0;
 		while( i < _size ) {
 			_data[i] = value;
 			++i;
 		}
-		return self;
 	}
 
 	method find( const T& value ) -> Iterator {
@@ -201,9 +193,8 @@ field {
 		ctor( T* ptr ) { _ptr = ptr; }
 
 		[chain]
-		method next() -> Iterator& {
+		method next() {
 			++_ptr;
-			return self;
 		}
 
 		[pure]
