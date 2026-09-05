@@ -59,13 +59,14 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    - Add grammar/visitor/generator support for forward declarations in prototype files.
    - See `plan/prototype-files.md`.
 
-6. **Direct constructor syntax** — done
+6. **Direct constructor syntax and initializer-list literals** — done
    - Variables can be declared with `var T name(args);` (and `const`/`let`/`field` variants) instead of `var T name = T(args);`.
-   - Grammar: `idAccessor` accepts an optional `funcCall` in addition to `= expr`.
-   - AST: `VarDecl`/`VarStmt` carry an explicit `isDirectConstruct` flag and store the constructor call in `init` as a `FuncCallExpr`.
-   - Generator emits `type name(args);`; an empty argument list emits `{}` to avoid the C++ most-vexing parse.
-   - Also covered: `T(args);` as an expression-statement already worked via `stmtExpr`.
-   - Regression case: `testing/cases/direct_ctor/`.
+   - Grammar: `idAccessor` accepts an optional `funcCall` in addition to `= expr`; `expr` accepts `LBRACK args? RBRACK` as `InitListExpr`.
+   - AST: `VarDecl`/`VarStmt` carry an explicit `isDirectConstruct` flag and store the constructor call in `init` as a `FuncCallExpr`. A new `InitListExpr` node stores the brace-init-list elements.
+   - Generator emits `type name(args);` for direct construction and `{ e1, e2 }` for initializer lists.
+   - Type inference: an empty `[ ]` with `auto` is rejected; otherwise the element common type is computed and `var auto a = [1,2,3];` becomes `std::initializer_list<int>`.
+   - Added `std/std_initializer_list.decl.myll` and an initializer-list constructor to `myll/dyn_array.myll`.
+   - Regression cases: `testing/cases/direct_ctor/`, `testing/cases/initializer_list/`.
 
 ## Medium priority
 

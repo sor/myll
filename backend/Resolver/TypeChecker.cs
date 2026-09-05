@@ -101,13 +101,19 @@ namespace Myll.Resolver
 				ValidateVarAttributes( vd );
 				ValidateDefaultSizedField( vd );
 				if( vd.init != null ) {
-					if( IsAutoKind( vd.type ) )
-						vd.type = InferAutoType( typeResolver.Resolve( vd.init ) ) ?? vd.type;
-
-						CheckAssignment( vd.type, vd.init, vd.init.srcPos );
-						vd.init = BindToBitType( vd.init, vd.type );
+					if( IsAutoKind( vd.type ) ) {
+						if( vd.init is InitListExpr il && il.args.Count == 0 ) {
+							AddError( il, "Cannot infer element type of an empty initializer list for `auto`" );
+						}
+						else {
+							vd.type = InferAutoType( typeResolver.Resolve( vd.init ) ) ?? vd.type;
+						}
 					}
-					break;
+
+					CheckAssignment( vd.type, vd.init, vd.init.srcPos );
+					vd.init = BindToBitType( vd.init, vd.type );
+				}
+				break;
 
 				case Hierarchical h:
 					ValidateUniqueVarNames( h );
@@ -126,14 +132,22 @@ namespace Myll.Resolver
 					break;
 
 			case VarStmt vs:
-					if( vs.init != null ) {
-					if( IsAutoKind( vs.type ) )
-						vs.type = InferAutoType( typeResolver.Resolve( vs.init ) ) ?? vs.type;
-
-						CheckAssignment( vs.type, vs.init, vs.init.srcPos );
-						vs.init = BindToBitType( vs.init, vs.type );
+				if( vs.init != null ) {
+					if( IsAutoKind( vs.type ) ) {
+						if( vs.init is InitListExpr il && il.args.Count == 0 ) {
+							AddError( il, "Cannot infer element type of an empty initializer list for `auto`" );
+						}
+						else {
+							vs.type = InferAutoType( typeResolver.Resolve( vs.init ) ) ?? vs.type;
+							if( vs.decl != null )
+								vs.decl.type = vs.type;
+						}
 					}
-					break;
+
+					CheckAssignment( vs.type, vs.init, vs.init.srcPos );
+					vs.init = BindToBitType( vs.init, vs.type );
+				}
+				break;
 
 				case ReturnStmt ret:
 					ValidateReturn( ret, currentFunction );
@@ -498,6 +512,12 @@ namespace Myll.Resolver
 		{
 			ValidateExpression( right );
 
+			if( right is InitListExpr initList ) {
+				foreach( Arg arg in initList.args )
+					ValidateExpression( arg.expr );
+				return;
+			}
+
 			Typespec? rightType = typeResolver.Resolve( right );
 			if( rightType == null )
 				return;
@@ -635,6 +655,20 @@ namespace Myll.Resolver
 								"Explicit cast from derived type '{0}' to base type '{1}' slices the object.",
 								FormatType( sourceType ),
 								FormatType( cast.type ) ) ) );
+
+					break;
+				}
+
+				case InitListExpr initList: {
+					foreach( Arg arg in initList.args ) {
+						if( arg.name != null ) {
+							diagnostics.Add( new Diagnostic(
+								arg.expr.srcPos,
+								DiagnosticKind.Error,
+								"Named arguments are not allowed in initializer lists" ) );
+						}
+						ValidateExpression( arg.expr );
+					}
 
 					break;
 				}

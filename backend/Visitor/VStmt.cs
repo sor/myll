@@ -205,12 +205,14 @@ namespace Myll
 				.ToList();
 
 			foreach( VarStmt stmt in stmts.OfType<VarStmt>() ) {
-				AddScopeOnly( new VarDecl {
+				VarDecl vd = new() {
 					name   = stmt.name,
 					type   = stmt.type,
 					kind   = stmt.kind,
 					access = Access.Public,
-				} );
+				};
+				AddScopeOnly( vd );
+				stmt.decl = vd;
 			}
 
 			MultiStmt ret = stmts.ToMulti();

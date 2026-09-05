@@ -1,0 +1,48 @@
+module initializer_list;
+
+import dyn_array;
+import std_initializer_list;
+import std_vector;
+
+struct Point {
+[pub]:
+	field {
+		int x = 0;
+		int y = 0;
+	}
+
+	ctor() {}
+
+	ctor( int x_, int y_ ) {
+		x = x_;
+		y = y_;
+	}
+}
+
+func main() -> int {
+	// infer std::initializer_list<int> from the elements
+	var auto ints = [1, 2, 3];
+
+	// verifying the inferred type by binding to an explicitly typed variable
+	var std::initializer_list<int> copied = ints;
+
+	// explicit std::initializer_list variable
+	var std::initializer_list<int> moreInts = [4, 5];
+
+	// std::vector uses its std::initializer_list<T> constructor
+	var std::vector<int> vec = [10, 20, 30];
+
+	// DynArray uses the initializer-list constructor
+	var Myll::DynArray<int> arr = [100, 200, 300];
+	if( arr.size() != 3 ) return 1;
+	if( arr.at( 0 ) != 100 ) return 2;
+	if( arr.at( 2 ) != 300 ) return 3;
+
+	// list of structs
+	var Myll::DynArray<Point> points = [Point( 1, 2 ), Point( 3, 4 )];
+	if( points.size() != 2 ) return 4;
+	if( points.at( 0 ).x != 1 ) return 5;
+	if( points.at( 1 ).y != 4 ) return 6;
+
+	return 0;
+}

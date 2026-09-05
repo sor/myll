@@ -639,6 +639,23 @@ namespace Myll.Core
 		}
 	}
 
+	public class InitListExpr : Expr
+	{
+		public List<Arg> args = new();
+
+		public override string Gen( bool doBrace = false )
+		{
+			string ret = args.Count == 0
+				? "{}"
+				: Format(
+					"{{ {0} }}",
+					args
+						.Select( a => a.Gen() )
+						.Join( ", " ) );
+			return ret.Brace( doBrace );
+		}
+	}
+
 	public class SelfExpr : Expr
 	{
 		public override string Gen( bool doBrace = false )

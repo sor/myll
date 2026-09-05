@@ -1,5 +1,7 @@
 module dyn_array;
 
+import std_initializer_list;
+
 namespace Myll {
 
 [ct] var usize DEFAULT_CAPACITY = 8;
@@ -18,6 +20,17 @@ field {
 		_capacity = initialCapacity;
 		if( initialCapacity > 0 )
 			_data = new T[initialCapacity]!;
+	}
+
+	[implicit]
+	ctor( std::initializer_list<T> init ) {
+		var const T* it   = init.begin();
+		var const T* last = init.end();
+		reserve( (usize)( last - it ) );
+		while( it != last ) {
+			pushBack( *it );
+			++it;
+		}
 	}
 
 	ctor move src {

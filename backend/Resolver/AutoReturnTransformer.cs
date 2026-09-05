@@ -286,6 +286,8 @@ namespace Myll.Resolver
 					|| ContainsAutoReturnName( to.right, alias ),
 				NewExpr ne
 					=> ne.funcCall.args.Any( a => ContainsAutoReturnName( a.expr, alias ) ),
+				InitListExpr ile
+					=> ile.args.Any( a => ContainsAutoReturnName( a.expr, alias ) ),
 				Lambda => false,
 				_ => false,
 			};

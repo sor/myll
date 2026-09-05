@@ -304,6 +304,17 @@ namespace Myll.Resolver
 
 					break;
 
+				case InitListExpr initList:
+					foreach( Arg arg in initList.args ) {
+						if( arg.expr is Discard )
+							Error( arg.expr.srcPos,
+								"'_' cannot be used as an initializer-list element" );
+						else
+							TransformExpr( arg.expr, preStmts, context );
+					}
+
+					break;
+
 				case UnOp unOp:
 					TransformExpr( unOp.expr, preStmts, context );
 					break;

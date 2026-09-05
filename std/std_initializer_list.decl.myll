@@ -1,0 +1,9 @@
+module std_initializer_list;
+
+namespace std {
+	class initializer_list<T> {
+		method size() -> usize;
+		method begin() -> const T*;
+		method end() -> const T*;
+	}
+}

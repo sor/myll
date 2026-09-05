@@ -40,6 +40,7 @@ namespace Myll.Core
 		public Typespec     type = null!; // contains Qualifier
 		public Expr?        init;
 		public bool         isDirectConstruct;
+		public VarDecl?     decl;
 		public bool         IsAutoReturn { get; set; }
 
 		public override Strings Gen( int level )

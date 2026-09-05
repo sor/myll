@@ -384,9 +384,10 @@ expr		:	(idTplArgs	SCOPE)+	idTplArgs	# ScopedExpr
 				THROW	expr					# ThrowExpr		// Good or not?
 			|	FUNC capture? tplParams? funcTypeDef?
 				(RARROW typespec)?	funcBody	# LambdaExpr	// TODO
-			|	LPAREN	expr	RPAREN			# ParenExpr
-			|	wildId							# WildIdExpr
-			|	lit								# LiteralExpr	// TODO
+		|	LPAREN	expr	RPAREN			# ParenExpr
+		|	LBRACK	args?	RBRACK			# InitListExpr
+		|	wildId							# WildIdExpr
+		|	lit								# LiteralExpr	// TODO
 			|	idTplArgs						# IdTplExpr		// same as rule 1 ?
 			;
 

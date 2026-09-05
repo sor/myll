@@ -49,6 +49,7 @@ namespace Myll.Resolver
 				BinOp binOp                         => ResolveBinOp( binOp ),
 				TernOp ternOp                       => ResolveTernOp( ternOp ),
 				NewExpr newExpr                     => ResolveNew( newExpr ),
+				InitListExpr initList               => ResolveInitList( initList ),
 				Lambda lambda                       => ResolveLambda( lambda ),
 				_                                   => null,
 			};
@@ -90,6 +91,51 @@ namespace Myll.Resolver
 				size        = TypespecBasic.SizeUndetermined,
 				literalText = t,
 			};
+		}
+
+		private Typespec? ResolveInitList( InitListExpr initList )
+		{
+			if( initList.args.Count == 0 )
+				return null;
+
+			Typespec? common = null;
+			foreach( Arg arg in initList.args ) {
+				if( arg.name != null )
+					return null;
+
+				Typespec? elementType = ResolveElementType( arg.expr );
+				if( elementType == null )
+					return null;
+
+				common = common == null
+					? elementType
+					: CommonType( common, elementType );
+				if( common == null )
+					return null;
+			}
+
+			return new TypespecNested {
+				srcPos = initList.srcPos,
+				idTpls = new List<IdTplArgs> {
+					new() { id = "std" },
+					new() {
+						id      = "initializer_list",
+						tplArgs = new List<TplArg> { new() { typespec = common } },
+					},
+				},
+			};
+		}
+
+		private Typespec? ResolveElementType( Expr expr )
+		{
+			Typespec? type = Resolve( expr );
+			if( type is TypespecBasic basic ) {
+				if( basic.kind == TypespecBasic.Kind.UntypedInteger )
+					return new TypespecBasic { kind = TypespecBasic.Kind.Integer, size = 4 };
+				if( basic.kind == TypespecBasic.Kind.UntypedFloat )
+					return new TypespecBasic { kind = TypespecBasic.Kind.Float, size = Dialect.DefaultFloatSize() };
+			}
+			return type;
 		}
 
 		private Typespec? ResolveId( IdExpr id )

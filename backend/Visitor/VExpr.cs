@@ -416,6 +416,14 @@ namespace Myll
 			return ret;
 		}
 
+		public override Expr VisitInitListExpr( InitListExprContext c )
+		{
+			return new InitListExpr {
+				srcPos = c.ToSrcPos(),
+				args   = VisitArgs( c.args() ).ToList(),
+			};
+		}
+
 		public override Expr VisitWildIdExpr( WildIdExprContext c )
 		{
 			Expr          ret;

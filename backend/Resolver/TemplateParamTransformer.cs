@@ -16,9 +16,6 @@ namespace Myll.Resolver
 			List<Diagnostic> diagnostics )
 		{
 			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
-				if( context.IsPrototypeFile )
-					continue;
-
 				TransformDecl( module, context );
 			}
 		}
