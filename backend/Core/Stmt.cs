@@ -16,13 +16,6 @@ namespace Myll.Core
 
 	public abstract class Stmt : AttributedNode
 	{
-		// Enumerate (depth first) through all contained Stmt and itself
-		// Only overloaded in Stmt which contain more Stmt itself
-		// Filter results with e.g. EnumerateDF.OfType<ReturnStmt>()
-		[Pure]
-		public virtual IEnumerable<Stmt> EnumerateDF {
-			get { yield return this; }
-		}
 
 		// Only override in Block and EmptyStmt, is the same as Gen() everywhere else
 		public virtual Strings GenWithoutCurly( int level )
@@ -261,21 +254,6 @@ namespace Myll.Core
 		public List<CondThen> ifThens = new();
 		public Stmt?          els;
 
-		[Pure]
-		public override IEnumerable<Stmt> EnumerateDF {
-			get {
-				foreach( CondThen ifThen in ifThens )
-					foreach( Stmt subStmt in ifThen.then.EnumerateDF )
-						yield return subStmt;
-
-				if( els != null )
-					foreach( Stmt subStmt in els.EnumerateDF )
-						yield return subStmt;
-
-				yield return this;
-			}
-		}
-
 		public override Strings Gen( int level )
 		{
 			Strings ret     = new();
@@ -316,21 +294,6 @@ namespace Myll.Core
 		public List<CaseBlock> cases = new();
 		public MultiStmt?      els; // isScope = true
 
-		[Pure]
-		public override IEnumerable<Stmt> EnumerateDF {
-			get {
-				foreach( CaseBlock caseStmt in cases )
-					foreach( Stmt subStmt in caseStmt.then.EnumerateDF )
-						yield return subStmt;
-
-				if( els != null )
-					foreach( Stmt subStmt in els.EnumerateDF )
-						yield return subStmt;
-
-				yield return this;
-			}
-		}
-
 		public override Strings Gen( int level )
 		{
 			Strings ret      = new();
@@ -357,16 +320,6 @@ namespace Myll.Core
 	{
 		public Stmt body = null!;
 
-		[Pure]
-		public override IEnumerable<Stmt> EnumerateDF {
-			get {
-				foreach( Stmt subStmt in body.EnumerateDF )
-					yield return subStmt;
-
-				yield return this;
-			}
-		}
-
 		public override Strings Gen( int level )
 		{
 			Strings ret    = new();
@@ -386,26 +339,6 @@ namespace Myll.Core
 		public Expr? cond;
 		public Expr? iter;
 		public Stmt? els; // TODO: not implemented yet
-
-		[Pure]
-		public override IEnumerable<Stmt> EnumerateDF {
-			get {
-				if( init != null )
-					foreach( Stmt subStmt in init.EnumerateDF )
-						yield return subStmt;
-
-				if( body != null )
-					foreach( Stmt subStmt in body.EnumerateDF )
-						yield return subStmt;
-
-				if( els != null )
-					foreach( Stmt subStmt in els.EnumerateDF )
-						yield return subStmt;
-
-				foreach( Stmt baseStmt in base.EnumerateDF )
-					yield return baseStmt;
-			}
-		}
 
 		public override Strings Gen( int level )
 		{
@@ -435,22 +368,6 @@ namespace Myll.Core
 		public Expr  cond = null!;
 		public Stmt? els;
 
-		[Pure]
-		public override IEnumerable<Stmt> EnumerateDF {
-			get {
-				if( body != null )
-					foreach( Stmt subStmt in body.EnumerateDF )
-						yield return subStmt;
-
-				if( els != null )
-					foreach( Stmt subStmt in els.EnumerateDF )
-						yield return subStmt;
-
-				foreach( Stmt baseStmt in base.EnumerateDF )
-					yield return baseStmt;
-			}
-		}
-
 		public override Strings Gen( int level )
 		{
 			Strings ret    = new();
@@ -466,18 +383,6 @@ namespace Myll.Core
 	{
 		public Stmt body = null!;
 		public Expr cond = null!;
-
-		[Pure]
-		public override IEnumerable<Stmt> EnumerateDF {
-			get {
-				if( body != null )
-					foreach( Stmt subStmt in body.EnumerateDF )
-						yield return subStmt;
-
-				foreach( Stmt baseStmt in base.EnumerateDF )
-					yield return baseStmt;
-			}
-		}
 
 		public override Strings Gen( int level )
 		{
@@ -496,18 +401,6 @@ namespace Myll.Core
 		public Expr    count = null!;
 		public string? name;
 		public long    offset = 0;
-
-		[Pure]
-		public override IEnumerable<Stmt> EnumerateDF {
-			get {
-				if( body != null )
-					foreach( Stmt subStmt in body.EnumerateDF )
-						yield return subStmt;
-
-				foreach( Stmt baseStmt in base.EnumerateDF )
-					yield return baseStmt;
-			}
-		}
 
 		public override Strings Gen( int level )
 		{
@@ -541,16 +434,6 @@ namespace Myll.Core
 				? stmts
 				: stmts.Where( s => s is not EmptyStmt );
 
-		[Pure]
-		public override IEnumerable<Stmt> EnumerateDF {
-			get {
-				foreach( Stmt stmt in stmts )
-				foreach( Stmt subStmt in stmt.EnumerateDF )
-					yield return subStmt;
-
-				yield return this;
-			}
-		}
 
 		public MultiStmt( IEnumerable<Stmt>? stmts, bool isScope )
 		{

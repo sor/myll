@@ -47,7 +47,7 @@ func f() -> int {
 			NameResolver.Resolve( new CompiledModuleResult[] { (module, context) } );
 
 			Func func = FindFunc( module, "f" );
-			Assert.Contains( func.body!.EnumerateDF.OfType<BreakStmt>(), b => b.depth == 1 );
+			Assert.Contains( func.body!.DescendantsAndSelf().OfType<BreakStmt>(), b => b.depth == 1 );
 		}
 
 		[Fact]
@@ -68,8 +68,8 @@ func f() -> int {
 			NameResolver.Resolve( new CompiledModuleResult[] { (module, context) } );
 
 			Func func = FindFunc( module, "f" );
-			Assert.NotEmpty( func.body!.EnumerateDF.OfType<VarStmt>() );
-			Assert.DoesNotContain( func.body.EnumerateDF.OfType<BreakStmt>(), b => b.depth > 1 );
+			Assert.NotEmpty( func.body!.DescendantsAndSelf().OfType<VarStmt>() );
+			Assert.DoesNotContain( func.body.DescendantsAndSelf().OfType<BreakStmt>(), b => b.depth > 1 );
 		}
 
 		[Fact]
@@ -90,8 +90,8 @@ func f() -> int {
 			NameResolver.Resolve( new CompiledModuleResult[] { (module, context) } );
 
 			Func func = FindFunc( module, "f" );
-			Assert.NotEmpty( func.body!.EnumerateDF.OfType<VarStmt>() );
-			Assert.DoesNotContain( func.body.EnumerateDF.OfType<ContinueStmt>(), c => c.depth > 1 );
+			Assert.NotEmpty( func.body!.DescendantsAndSelf().OfType<VarStmt>() );
+			Assert.DoesNotContain( func.body.DescendantsAndSelf().OfType<ContinueStmt>(), c => c.depth > 1 );
 		}
 
 		[Fact]

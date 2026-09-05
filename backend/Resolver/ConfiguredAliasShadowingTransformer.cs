@@ -9,9 +9,8 @@ namespace Myll.Resolver
 	/// Warns when a configured alias name is shadowed by a class/struct member,
 	/// method parameter, local variable, or catch parameter.
 	///
-	/// The transform now walks the resolved scope tree via
-	/// <see cref="CompilationContext.LocalDecls"/> instead of the broken
-	/// <see cref="Stmt.EnumerateDF"/> traversal, so locals inside loops are
+	/// The transform walks the resolved scope tree via
+	/// <see cref="CompilationContext.LocalDecls"/>, so locals inside loops are
 	/// correctly checked.
 	/// </summary>
 	public sealed class ConfiguredAliasShadowingTransformer : ITransformer

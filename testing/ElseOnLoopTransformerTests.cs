@@ -49,11 +49,11 @@ func f() -> int {
 
 			Func func = FindFunc( module, "f" );
 
-			var loop = func.body!.EnumerateDF.OfType<WhileStmt>().Single();
+			var loop = func.body!.DescendantsAndSelf().OfType<WhileStmt>().Single();
 			Assert.Null( loop.els );
 
-			Assert.Single( func.body.EnumerateDF.OfType<IfStmt>() );
-			Assert.True( func.body.EnumerateDF.OfType<VarStmt>().Any() );
+			Assert.Single( func.body.DescendantsAndSelf().OfType<IfStmt>() );
+			Assert.True( func.body.DescendantsAndSelf().OfType<VarStmt>().Any() );
 		}
 
 		[Fact]
@@ -70,7 +70,7 @@ func f() -> int {
 			NameResolver.Resolve( new CompiledModuleResult[] { (module, context) } );
 
 			Func func = FindFunc( module, "f" );
-			var loop = func.body!.EnumerateDF.OfType<WhileStmt>().Single();
+			var loop = func.body!.DescendantsAndSelf().OfType<WhileStmt>().Single();
 			Assert.Null( loop.els );
 		}
 	}

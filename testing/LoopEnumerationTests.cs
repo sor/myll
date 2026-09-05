@@ -17,7 +17,7 @@ namespace Myll.Tests
 				body = body,
 			};
 
-			var enumerated = forStmt.EnumerateDF.ToList();
+			var enumerated = forStmt.DescendantsAndSelf().ToList();
 
 			Assert.Contains( body, enumerated );
 			Assert.Contains( forStmt, enumerated );
@@ -32,7 +32,7 @@ namespace Myll.Tests
 				body = body,
 			};
 
-			var enumerated = whileStmt.EnumerateDF.ToList();
+			var enumerated = whileStmt.DescendantsAndSelf().ToList();
 
 			Assert.Contains( body, enumerated );
 			Assert.Contains( whileStmt, enumerated );
@@ -47,7 +47,7 @@ namespace Myll.Tests
 				body = body,
 			};
 
-			var enumerated = doWhileStmt.EnumerateDF.ToList();
+			var enumerated = doWhileStmt.DescendantsAndSelf().ToList();
 
 			Assert.Contains( body, enumerated );
 			Assert.Contains( doWhileStmt, enumerated );
@@ -62,7 +62,7 @@ namespace Myll.Tests
 				body  = body,
 			};
 
-			var enumerated = timesStmt.EnumerateDF.ToList();
+			var enumerated = timesStmt.DescendantsAndSelf().ToList();
 
 			Assert.Contains( body, enumerated );
 			Assert.Contains( timesStmt, enumerated );

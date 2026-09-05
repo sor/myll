@@ -49,6 +49,7 @@ Removed manual `-> Class&` and trailing `return self;` from:
 - Added `testing/ChainTransformerTests.cs` covering return-type inference, const refs, explicit-return errors, redundant-return warnings, and early-return appending.
 - Added `testing/cases/chain_explicit_return_fail/` as a generate-failing integration case.
 - Added direct unit tests for `AutoReturnTransformer`, `TemplateParamTransformer`, `ElseOnLoopTransformer`, `BreakContinueTransformer`, and `ConfiguredAliasShadowingTransformer`.
+- Removed the broken `Stmt.EnumerateDF` traversal and replaced it with a test-only `DescendantsAndSelf` extension.
 
 ## Completed optional follow-up
 

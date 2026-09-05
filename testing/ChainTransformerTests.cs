@@ -153,7 +153,7 @@ field { int _x; }
 
 			Func func = FindMethod( module, "C", "inc" );
 			Assert.IsType<ReturnStmt>( func.body!.stmts.Last() );
-			Assert.Equal( 2, func.body.EnumerateDF.OfType<ReturnStmt>().Count() );
+			Assert.Equal( 2, func.body.DescendantsAndSelf().OfType<ReturnStmt>().Count() );
 		}
 	}
 }
