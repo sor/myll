@@ -49,7 +49,10 @@ Removed manual `-> Class&` and trailing `return self;` from:
 - Added `testing/ChainTransformerTests.cs` covering return-type inference, const refs, explicit-return errors, redundant-return warnings, and early-return appending.
 - Added `testing/cases/chain_explicit_return_fail/` as a generate-failing integration case.
 
-## Optional follow-up
+## Completed optional follow-up
 
-- Move `ElseOnLoopTransformer` and `BreakContinueTransformer` into `Resolver.Resolve` post-resolution transforms for full backend consistency.
+- Moved `ElseOnLoopTransformer` and `BreakContinueTransformer` into `Resolver.Resolve` post-resolution transforms for full backend consistency.
+
+## Remaining optional follow-up
+
 - Move `ConfiguredAliasShadowingTransformer` warnings into the resolver. It does not affect resolution, so it is lower priority.

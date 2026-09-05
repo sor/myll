@@ -104,6 +104,8 @@ namespace Myll.Resolver
 			var postResolveTransforms = new List<ITransformer> {
 				new DiscardTransformer( result, diagnostics ),
 				new RuleOfTransformer(),
+				new ElseOnLoopTransformer(),
+				new BreakContinueTransformer(),
 			};
 
 			foreach( ITransformer transformer in postResolveTransforms )

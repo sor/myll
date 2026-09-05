@@ -388,9 +388,6 @@ namespace Myll
 			result.Apply();
 		}
 
-		new ElseOnLoopTransformer().Transform( modules, new List<Diagnostic>() );
-		new BreakContinueTransformer().Transform( modules, new List<Diagnostic>() );
-
 		var aliasShadowing = new ConfiguredAliasShadowingTransformer();
 		aliasShadowing.Transform( modules );
 		if( aliasShadowing.Diagnostics.Count > 0 ) {
