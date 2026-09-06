@@ -1,7 +1,6 @@
 module initializer_list;
 
 import dyn_array;
-import std_initializer_list;
 import std_vector;
 
 struct Point {
@@ -26,6 +25,9 @@ func takes( initlist<int> values ) -> int {
 func main() -> int {
 	// infer std::initializer_list<int> from the elements via auto
 	var auto ints = [1, 2, 3];
+
+	// member access must work on the auto-inferred variable too
+	if( ints.size() != 3 ) return 13;
 
 	// verifying the inferred type by binding to an explicitly typed variable
 	var initlist<int> copied = ints;

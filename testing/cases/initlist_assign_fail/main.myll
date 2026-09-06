@@ -4,8 +4,6 @@ module initlist_assign_fail;
 // to a user-defined `operator=` overload, so assigning an initializer list
 // to an object with `operator initlist<T> =` is rejected.
 
-import std_initializer_list;
-
 class Box {
 [pub]:
 	field { int sum = 0; }

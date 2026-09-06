@@ -1,7 +1,5 @@
 module dyn_array;
 
-import std_initializer_list;
-
 namespace Myll {
 
 [ct] var usize DefaultCapacity = 8;

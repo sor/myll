@@ -7,10 +7,10 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <cstdlib>
+#include <chrono>
 #include <iostream>
 #include <thread>
-#include <chrono>
-#include <cstdlib>
 namespace JanSordid
 {
     class GameOfLife;

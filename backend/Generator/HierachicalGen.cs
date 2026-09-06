@@ -130,19 +130,42 @@ namespace Myll.Generator
 		{
 			// throw if not global
 			GlobalNamespace globalNS = (GlobalNamespace) hierarchical;
-			IStrings includes = globalNS.imps
-				.Where( i => i != globalNS.module )
-				.Select(
-					i => i.StartsWith( "std_" )
-						? Format( "#include <{0}>", i.Substring( 4 ) )
-						: i.StartsWith( "c_" )
-						? Format( "#include <c{0}>", i.Substring( 2 ) )
-						: i.Contains( "." )
-						? Format( "#include \"{0}\"", i )
-						: Format( "#include \"{0}.hpp\"", i ) );
+			ISet<string> implicitImports = new HashSet<string>( StdBuiltins.ImplicitStdImports );
+
+			Strings includes = new();
+			HashSet<string> seen = new();
+
+			string MapImport( string imp )
+				=> imp.StartsWith( "std_" )
+					? Format( "#include <{0}>", imp.Substring( 4 ) )
+					: imp.StartsWith( "c_" )
+					? Format( "#include <c{0}>", imp.Substring( 2 ) )
+					: imp.Contains( "." )
+					? Format( "#include \"{0}\"", imp )
+					: Format( "#include \"{0}.hpp\"", imp );
+
+			// Implicit standard imports in a fixed, stable order.
+			foreach( string imp in StdBuiltins.ImplicitStdImports ) {
+				if( imp == globalNS.module )
+					continue;
+				if( !globalNS.imps.Contains( imp ) )
+					continue;
+				string include = MapImport( imp );
+				if( seen.Add( include ) )
+					includes.Add( include );
+			}
+
+			// Remaining imports in deterministic order.
+			foreach( string imp in globalNS.imps
+				.Where( i => i != globalNS.module && !implicitImports.Contains( i ) )
+				.OrderBy( i => i, StringComparer.Ordinal ) ) {
+				string include = MapImport( imp );
+				if( seen.Add( include ) )
+					includes.Add( include );
+			}
 
 			IStrings declList = GenDecl();
-			IStrings decl = DefaultIncludes
+			IStrings decl = new Strings { PragmaOnce }
 				.Concat( includes )
 				.Concat( declList );
 

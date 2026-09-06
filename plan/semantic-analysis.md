@@ -136,26 +136,29 @@ A sequential fixed-point resolver is the first target. The same input/output sha
 - `backend/Core/Symbol.cs` is kept as a reference design. The current resolver uses `Decl` directly because it is simpler for the prototype. If memory or library-interface size becomes a concern, replace `Decl` targets with a lighter symbol record.
 - `backend/Core/Attribute.cs` provides strongly-typed enums for dispatch, storage, linkage, and purity. Revive it when replacing string-based attribute checks, especially for `[hide]`/`[hidden]` export control.
 
-## Default includes and dialect mapping
+## Implicit standard imports and dialect mapping
 
-The current `DefaultIncludes` in `backend/Generator/StmtFormatting.cs` are split into three categories:
+Default C++ headers are no longer hardcoded in `backend/Generator/StmtFormatting.cs`. Instead, `backend/Core/StdBuiltins.cs` contains `ImplicitStdImports`, an ordered list of standard modules (e.g. `std_cmath`, `std_cstdint`, `std_memory`) that the front-end imports into every compiled module. The generator derives the matching `#include <...>` lines from those imports. This list is split into the same three categories as before:
 
 ### Essential / hard to replace
-Always included because they back built-in types or core generated constructs:
+Always imported because they back built-in types or core generated constructs:
 
-- `<cstddef>` — `std::byte`, `size_t`, `nullptr_t`
-- `<cstdint>` — `std::int8_t`, `std::uint64_t`, etc.
-- `<type_traits>` — `std::underlying_type`, `remove_const_t`, etc.
+- `std_cstddef` → `<cstddef>` — `std::byte`, `size_t`, `nullptr_t`
+- `std_cstdint` → `<cstdint>` — `std::int8_t`, `std::uint64_t`, etc.
+- `std_type_traits` → `<type_traits>` — `std::underlying_type`, `remove_const_t`, etc.
 
 ### Small / usually fine
-- `<utility>` — `std::move`, `std::pair`, `std::swap`
+- `std_utility` → `<utility>` — `std::move`, `std::pair`, `std::swap`
+- `std_initializer_list` → `<initializer_list>` — `std::initializer_list<T>`
 
 ### Heavy / mappable or opt-out via dialect
-Included by default today, but should be configurable per dialect:
+Imported by default today, but should be configurable per dialect:
 
-- `<string>` — `std::string`; could be replaced by `QString` or disabled entirely.
-- `<memory>` — smart pointers; could be replaced by a custom allocator or disabled.
-- `<cmath>` — math functions; could be disabled for projects that do not need them.
+- `std_string` → `<string>` — `std::string`; could be replaced by `QString` or disabled entirely.
+- `std_memory` → `<memory>` — smart pointers; could be replaced by a custom allocator or disabled.
+- `std_cmath` → `<cmath>` — math functions; could be disabled for projects that do not need them.
+
+Non-default headers such as `<algorithm>` are only included when the user explicitly imports the corresponding `std_*.decl.myll` module.
 
 Implementation is deferred until dialect configuration lands.
 

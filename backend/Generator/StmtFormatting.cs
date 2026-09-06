@@ -8,18 +8,7 @@ namespace Myll.Generator
 
 	internal static class StmtFormatting
 	{
-		internal static readonly Strings DefaultIncludes = new() {
-			"#pragma once",
-			"#include <cmath>",       // math
-			"#include <cstddef>",     // std::byte, size_t, nullptr_t
-			"#include <cstdint>",     // std::int8_t, std::uint64_t, etc.
-			"#include <initializer_list>", // std::initializer_list
-			"#include <memory>",      // smart pointer (expensive)
-			"#include <string>",      // std::string
-			"#include <type_traits>", // underlying_type, remove_const_t
-			"#include <utility>",     // move, pair, swap
-			//	"#include <algorithm>", // algorithms — undecided, may add later
-		};
+		internal const string PragmaOnce = "#pragma once";
 
 		//internal static readonly string IndentString = "\t";
 		internal const string IndentString = "    ";

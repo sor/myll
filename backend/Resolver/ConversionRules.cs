@@ -513,6 +513,7 @@ namespace Myll.Resolver
 				TypespecBasic b   => new TypespecBasic { kind = b.kind, size = b.size },
 				TypespecNested n  => new TypespecNested {
 					resolvedDecl = n.resolvedDecl,
+					isInitList   = n.isInitList,
 					idTpls       = n.idTpls.Select( it => new IdTplArgs { id = it.id, tplArgs = it.tplArgs } ).ToList(),
 				},
 				TypespecFunc f    => new TypespecFunc {

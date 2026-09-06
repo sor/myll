@@ -72,7 +72,7 @@ This makes retargeting impossible.
 
 - `BasicFormat` map is incomplete (`Size` type is TODO).
 - `char8_t` is noted as TODO.
-- `<string>` include is commented out in `DefaultIncludes` despite `string` mapping to `std::string`.
+- C++ header emission is now driven by implicit/explicit Myll imports via `StdBuiltins.ImplicitStdImports`, not by a hardcoded `DefaultIncludes` list.
 
 ## Future Outlook
 

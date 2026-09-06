@@ -112,11 +112,14 @@ namespace Myll.Resolver
 			foreach( ITransformer transformer in postResolveTransforms )
 				transformer.Transform( modules, diagnostics );
 
-			resolver.RejectRequiresClauses( modules );
-			resolver.ValidateTypes( modules );
-			resolver.ReportUnresolved( modules );
+		resolver.RejectRequiresClauses( modules );
+		resolver.ValidateTypes( modules );
+		resolver.ResolveSyntheticInitListTypes( modules );
+		result.Apply();
+		resolver.UpdateDependentNestedNames( modules );
+		resolver.ReportUnresolved( modules );
 
-			return new( result, diagnostics );
+		return new( result, diagnostics );
 		}
 
 		private static IReadOnlyDictionary<string, ModuleExports> BuildModuleExports(
@@ -1463,8 +1466,109 @@ namespace Myll.Resolver
 			}
 		}
 
-		private void ReportUnresolved( IReadOnlyList<CompiledModuleResult> modules )
+	private void ResolveSyntheticInitListTypes( IReadOnlyList<CompiledModuleResult> modules )
+	{
+		bool added;
+		do {
+			added = false;
+			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+				added |= RegisterSyntheticInitListTypes( module, context );
+			}
+		} while( added );
+
+		bool progress;
+		do {
+			progress = false;
+			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+				progress |= ResolveTypes( module, context );
+				progress |= ResolveMemberAccesses( module, context );
+			}
+		} while( progress );
+	}
+
+	private bool RegisterSyntheticInitListTypes( GlobalNamespace module, CompilationContext context )
+	{
+		var collector = new InitListTypeCollector();
+		collector.Collect( module );
+		foreach( (Decl local, _) in context.LocalDecls )
+			collector.Collect( local );
+
+		bool added = false;
+		foreach( TypespecNested type in collector.Types ) {
+			if( type.resolvedDecl != null )
+				continue;
+			if( result.Types.ContainsKey( type ) )
+				continue;
+			if( context.UnresolvedTypes.Any( ut => ReferenceEquals( ut.Node, type ) ) )
+				continue;
+
+			context.UnresolvedTypes.Add( new UnresolvedType( type, module.scope ) );
+			added = true;
+		}
+
+		return added;
+	}
+
+	private sealed class InitListTypeCollector
+	{
+		private readonly HashSet<TypespecNested> collected = new();
+
+		public IEnumerable<TypespecNested> Types => collected;
+
+		public void Collect( Decl decl )
 		{
+			if( decl == null )
+				return;
+
+			switch( decl ) {
+				case VarDecl vd:
+					CollectType( vd.type );
+					break;
+
+				case Func func:
+					CollectType( func.retType );
+					foreach( Param para in func.paras )
+						CollectType( para.type );
+					break;
+
+				case Structor stc:
+					foreach( Param para in stc.paras )
+						CollectType( para.type );
+					break;
+			}
+
+			if( decl is Structural s ) {
+				foreach( BaseType bt in s.basetypes )
+					CollectType( bt.type );
+			}
+
+			if( decl is Hierarchical h ) {
+				foreach( Decl child in h.children )
+					Collect( child );
+			}
+		}
+
+		private void CollectType( Typespec? type )
+		{
+			if( type is not TypespecNested nested )
+				return;
+
+			if( nested.idTpls.Count >= 2
+			 && nested.idTpls[0].id == "std"
+			 && nested.idTpls[1].id == "initializer_list" )
+				collected.Add( nested );
+
+			foreach( IdTplArgs segment in nested.idTpls ) {
+				foreach( TplArg arg in segment.tplArgs ) {
+					if( arg.typespec != null )
+						CollectType( arg.typespec );
+				}
+			}
+		}
+	}
+
+	private void ReportUnresolved( IReadOnlyList<CompiledModuleResult> modules )
+	{
 			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
 				foreach( UnresolvedId unresolved in context.UnresolvedIds ) {
 					if( result.Ids.ContainsKey( unresolved.Node ) )

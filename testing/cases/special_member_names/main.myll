@@ -1,7 +1,5 @@
 module special_member_names;
 
-import std_initializer_list;
-
 struct NamedBox {
 [pub]:
 	field { int value = 0; }

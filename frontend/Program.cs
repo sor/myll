@@ -190,6 +190,16 @@ namespace Myll
 			return new( module, context );
 		}
 
+		private static void AddImplicitImports( List<CompiledModuleResult> modules )
+		{
+			foreach( (GlobalNamespace module, _) in modules ) {
+				foreach( string imp in StdBuiltins.ImplicitStdImports ) {
+					if( module.module != imp )
+						module.imps.Add( imp );
+				}
+			}
+		}
+
 		private static IEnumerable<string> CollectExternFiles( Options opt )
 		{
 			string? repoRoot = TryGetRepoRoot();
@@ -364,6 +374,8 @@ namespace Myll
 						g,
 						g.All( p => IsPrototypeFile( p.Start.InputStream.SourceName ) ) ) )
 					.ToList();
+
+			AddImplicitImports( modules );
 
 			List<Diagnostic> visitorDiagnostics = modules
 				.SelectMany( m => m.Context.Diagnostics )

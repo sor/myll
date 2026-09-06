@@ -65,8 +65,11 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    - AST: `VarDecl`/`VarStmt` carry an explicit `isDirectConstruct` flag and store the constructor call in `init` as a `FuncCallExpr`. A new `InitListExpr` node stores the brace-init-list elements. `TypespecNested.isInitList` identifies the `initlist`/`ilist` keyword type.
    - Generator emits `type name(args);` for direct construction and `{ e1, e2 }` for initializer lists. `initlist<T>`/`ilist<T>` emit `std::initializer_list<T>`.
    - Type inference: an empty `[ ]` with `auto`/bare `initlist`/`ilist` is rejected; otherwise the element common type is computed. `var auto a = [1,2,3];`, `var initlist<int> a = [1,2,3];`, and `var ilist a = [1,2,3];` all infer `std::initializer_list<int>`.
+   - Auto-inferred `initlist` types are registered for name resolution, so member access such as `var auto a = [1,2,3]; a.size()` works.
    - Added special members `ctor initlist` and `operator initlist =`. They generate a `const std::initializer_list<E>&` parameter, default parameter name `init`, and are implicitly `[implicit]`. The element type `E` defaults to the enclosing class's first template parameter or can be written explicitly (`ctor initlist<E>`).
-   - Added `std/std_initializer_list.decl.myll` and updated `myll/dyn_array.myll` to use `ctor initlist`. The `<initializer_list>` header is now included by default.
+   - Added `std/std_initializer_list.decl.myll` and updated `myll/dyn_array.myll` to use `ctor initlist`.
+   - Added `backend/Core/StdBuiltins.cs` containing `ImplicitStdImports`, a central list of standard modules (e.g. `std_cmath`, `std_cstdint`, `std_memory`, `std_initializer_list`, etc.) that are imported into every compiled module. The front-end injects them, and the generator derives the C++ `#include <...>` lines from the imports.
+   - Removed `StmtFormatting.DefaultIncludes`; C++ header emission is now driven entirely by imports.
    - Regression cases: `testing/cases/direct_ctor/`, `testing/cases/initializer_list/`.
 
 ## Medium priority
