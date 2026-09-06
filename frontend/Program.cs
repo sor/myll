@@ -328,6 +328,24 @@ namespace Myll
 			}
 
 			opt = ParseCommandLine( args );
+			opt.OutPath = Path.GetFullPath( opt.OutPath );
+
+			{
+				int clearLevel = 0;
+				foreach( string arg in args ) {
+					if( arg == "-C" || arg == "--clear" ) {
+						clearLevel++;
+						continue;
+					}
+					if( arg.StartsWith( "-" ) && !arg.StartsWith( "--" ) ) {
+						foreach( char c in arg ) {
+							if( c == 'C' )
+								clearLevel++;
+						}
+					}
+				}
+				opt.ClearLevel = clearLevel > 0 ? clearLevel : (opt.IsClear ? 1 : 0);
+			}
 
 			start = DateTime.Now;
 
@@ -423,15 +441,30 @@ namespace Myll
 
 			Console.WriteLine( "Time elapsed after last ToArray call {0:0}ms\n", (DateTime.Now - start).TotalMilliseconds );
 
-			if( opt.IsClear && Directory.Exists( opt.OutPath ) ) {
-				bool OldFileFilter( string s ) => s.EndsWith( Path.DirectorySeparatorChar + Executable )
-				                               || s.EndsWith( ".cpp" )
-				                               || s.EndsWith( ".hpp" );
+			if( opt.ClearLevel > 0 && Directory.Exists( opt.OutPath ) ) {
+				bool clearGenerated = opt.ClearLevel >= 2;
 
-				Directory
-					.EnumerateFiles( opt.OutPath )
-					.Where( OldFileFilter )
-					.ForAll( File.Delete );
+				static bool IsArtifact( string path )
+				{
+					string name = Path.GetFileName( path );
+					return name.Equals( Executable, StringComparison.Ordinal )
+					    || name.EndsWith( ".o", StringComparison.Ordinal )
+					    || name.EndsWith( ".obj", StringComparison.Ordinal )
+					    || name.EndsWith( ".a", StringComparison.Ordinal )
+					    || name.EndsWith( ".lib", StringComparison.OrdinalIgnoreCase );
+				}
+
+				static bool IsGeneratedSource( string path )
+				{
+					string name = Path.GetFileName( path );
+					return name.EndsWith( ".cpp", StringComparison.Ordinal )
+					    || name.EndsWith( ".hpp", StringComparison.Ordinal );
+				}
+
+				foreach( string file in Directory.EnumerateFiles( opt.OutPath ) ) {
+					if( IsArtifact( file ) || (clearGenerated && IsGeneratedSource( file )) )
+						File.Delete( file );
+				}
 			}
 
 			if( !opt.IsFileOut && !opt.IsStdOut ) {
@@ -455,7 +488,10 @@ namespace Myll
 				if( opt.IsFileOut ) {
 					Directory.CreateDirectory( opt.OutPath );
 
-					output.ForAll( o => File.WriteAllLines( Path.Combine( opt.OutPath, o.Item1 ), o.Item2 ) );
+					output.ForAll( o => {
+						string target = Path.GetFullPath( Path.Combine( opt.OutPath, o.Item1 ) );
+						File.WriteAllLines( target, o.Item2 );
+					} );
 				}
 			}
 
@@ -465,14 +501,12 @@ namespace Myll
 			// compile the generated C++ code into a binary
 			if( opt.IsFileOut && opt.IsCompile ) {
 
-				Directory.SetCurrentDirectory( opt.OutPath );
-
 				if( !CppCompiler.TryFindCompiler( out _, out Diagnostic? compilerDiagnostic ) ) {
 					Console.Error.Write( DiagnosticFormatter.Format( compilerDiagnostic!, UseColorForDiagnostics() ) );
 					return -1;
 				}
 
-				string[] cppFiles = Directory.GetFiles( ".", "*.cpp" );
+				string[] cppFiles = Directory.GetFiles( opt.OutPath, "*.cpp" );
 				string envFlags = Environment.GetEnvironmentVariable( "MYLL_CXXFLAGS" )
 				               ?? Environment.GetEnvironmentVariable( "CXXFLAGS" )
 				               ?? "";
@@ -480,13 +514,18 @@ namespace Myll
 				                + (opt.OptimizationLevel > 0 ? "-O " + opt.OptimizationLevel + " " : "")
 				                + envFlags;
 
+				// NOTE: We intentionally do not pass an absolute output path here.
+				// CppCompiler quotes arguments for shell usage, but this process uses
+				// ProcessStartInfo.Arguments directly. Instead we set the compiler's
+				// working directory to the output directory and let it emit a.out there.
 				CppCompilerInvocation invocation = CppCompiler.CreateInvocation( cppFiles, cxxFlags );
 
 				using Process process = new();
 				process.StartInfo = new() {
-					WindowStyle = ProcessWindowStyle.Hidden,
-					FileName    = invocation.Compiler,
-					Arguments   = invocation.Arguments,
+					WindowStyle         = ProcessWindowStyle.Hidden,
+					FileName            = invocation.Compiler,
+					Arguments           = invocation.Arguments,
+					WorkingDirectory    = opt.OutPath,
 				};
 				process.Start();
 				process.WaitForExit();
@@ -495,9 +534,9 @@ namespace Myll
 				if( process.ExitCode == 0 && opt.IsRun ) {
 					Process process2 = new();
 					process2.StartInfo = new() {
-						//WindowStyle      = System.Diagnostics.ProcessWindowStyle.Hidden,
-						FileName  = Executable, //"cmd.exe",
-						Arguments = "",         //"/C touch Hans"
+						FileName         = Path.Combine( opt.OutPath, Executable ),
+						Arguments        = "",
+						WorkingDirectory = opt.OutPath,
 					};
 					process2.Start();
 					process2.WaitForExit();
