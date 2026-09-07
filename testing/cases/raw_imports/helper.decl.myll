@@ -1,0 +1,6 @@
+module helper;
+import "helper.hpp";
+
+namespace Helper {
+	func rawHelperValue() -> int;
+}

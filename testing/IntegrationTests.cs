@@ -113,6 +113,8 @@ namespace Myll.Tests
 					return;
 				}
 
+				CopySupportFiles( caseDir, generatedDir );
+
 				string[] cppFiles = Directory.GetFiles( generatedDir, "*.cpp" );
 				if( cppFiles.Length == 0 )
 					return;
@@ -261,6 +263,26 @@ namespace Myll.Tests
 			catch
 			{
 				// Best-effort cleanup only.
+			}
+		}
+
+		private static void CopySupportFiles( string caseDir, string generatedDir )
+		{
+			if( !Directory.Exists( caseDir ) || !Directory.Exists( generatedDir ) )
+				return;
+
+			foreach( string file in Directory.GetFiles( caseDir ) ) {
+				string extension = Path.GetExtension( file ).ToLowerInvariant();
+				if( extension is not (".hpp" or ".cpp" or ".h") )
+					continue;
+
+				string fileName = Path.GetFileName( file );
+				string dest     = Path.Combine( generatedDir, fileName );
+
+				if( File.Exists( dest ) )
+					continue; // do not overwrite generated sources
+
+				File.Copy( file, dest );
 			}
 		}
 

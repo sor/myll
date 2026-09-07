@@ -1,0 +1,18 @@
+module raw_imports;
+
+import helper;
+import <cmath>;
+
+[extern]
+func sqrt( f64 x ) -> f64;
+
+func main() -> int
+{
+	if( Helper::rawHelperValue() != 42 )
+		return 1;
+
+	if( sqrt( 4.0 ) != 2.0 )
+		return 2;
+
+	return 0;
+}
