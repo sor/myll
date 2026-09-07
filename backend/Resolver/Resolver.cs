@@ -681,6 +681,17 @@ namespace Myll.Resolver
 					continue;
 				}
 
+				// Forward/external function templates whose return type does not depend on
+				// the template parameters are left to C++ deduction. Myll's own deduction
+				// may infer iterator/function-object types that cannot be emitted as explicit
+				// template arguments (e.g. std::sort, std::reverse), so we avoid producing them.
+				if( candidate is Func fwd
+				 && ( fwd.IsForwardDeclaration || fwd.IsExternal )
+				 && !fwd.retType.IsDependentType() ) {
+					templateViable.Add( candidate );
+					continue;
+				}
+
 				if( candidate is Func func
 				 && TemplateInference.TryDeduceTemplateArgs( func, call, typeResolver, result, out List<TplArg>? deduced )
 				 && deduced != null ) {
@@ -1770,9 +1781,13 @@ namespace Myll.Resolver
 		}
 	}
 
-	private void ReportUnresolved( IReadOnlyList<CompiledModuleResult> modules )
+		private void ReportUnresolved( IReadOnlyList<CompiledModuleResult> modules )
 	{
 			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+				HashSet<Expr> callCallees = context.UnresolvedCalls
+					.Select( c => c.Callee )
+					.ToHashSet();
+
 				foreach( UnresolvedId unresolved in context.UnresolvedIds ) {
 					if( result.Ids.ContainsKey( unresolved.Node ) )
 						continue;
@@ -1781,7 +1796,8 @@ namespace Myll.Resolver
 						continue;
 
 					IdTplArgs[] segments = new[] { unresolved.Node.idTplArgs };
-					ReportUnresolvedPath( "identifier", unresolved.Node.srcPos, segments, module, unresolved.Scope );
+					bool isCallCallee = callCallees.Contains( unresolved.Node );
+					ReportUnresolvedPath( "identifier", unresolved.Node.srcPos, segments, module, unresolved.Scope, isCallCallee );
 				}
 
 				foreach( UnresolvedScoped unresolved in context.UnresolvedScopeds ) {
@@ -1791,7 +1807,8 @@ namespace Myll.Resolver
 					if( ambiguousCalls.Contains( unresolved.Node ) || noMatchingCalls.Contains( unresolved.Node ) )
 						continue;
 
-					ReportUnresolvedPath( "identifier", unresolved.Node.srcPos, unresolved.Node.idTpls, module, unresolved.Scope );
+					bool isCallCallee = callCallees.Contains( unresolved.Node );
+					ReportUnresolvedPath( "identifier", unresolved.Node.srcPos, unresolved.Node.idTpls, module, unresolved.Scope, isCallCallee );
 				}
 
 				foreach( UnresolvedType unresolved in context.UnresolvedTypes ) {
@@ -1841,7 +1858,8 @@ namespace Myll.Resolver
 			SrcPos                   srcPos,
 			IReadOnlyList<IdTplArgs> segments,
 			GlobalNamespace          module,
-			Scope                    scope )
+			Scope                    scope,
+			bool                     isCallCallee = false )
 		{
 			ResolvePath( segments, scope, module, out int unresolvedSegmentIndex, callSite: false );
 			if( unresolvedSegmentIndex < 0 )
@@ -1860,6 +1878,13 @@ namespace Myll.Resolver
 			}
 
 			if( candidates.Count > 1 && PickSingleCandidate( candidates, callSite: false ) == null ) {
+				// If the identifier is a call callee and all candidates are callable
+				// overloads, leave the ambiguity to call-level overload resolution.
+				if( kind == "identifier"
+				 && isCallCallee
+				 && candidates.All( d => d is Func or Structor ) )
+					return;
+
 				ReportAmbiguous( kind, srcPos, unresolvedName, candidates );
 				return;
 			}

@@ -422,10 +422,18 @@ namespace Myll.Core
 
 		public override string Gen( bool doBrace = false )
 		{
+			// Function templates without explicit template arguments are emitted as written.
+			// Let C++ deduce the template arguments; Myll's own deduction for external
+			// forward declarations may produce parameter names such as std::sort<Iter, Compare>.
+			bool isUninstantiatedFunctionTemplate = resolvedDecl is Func func
+				&& func.TplParams.Count > 0;
+
 			if( resolvedDecl != null
 			 && resolvedDecl.name != "<builtin>"
-			 && idTpls.TrueForAll( it => it.tplArgs.Count == 0 ) )
+			 && idTpls.TrueForAll( it => it.tplArgs.Count == 0 )
+			 && !isUninstantiatedFunctionTemplate ) {
 				return resolvedDecl.FullyQualifiedName.Brace( doBrace );
+			}
 
 			string ret = idTpls
 				.Select( s => s.Gen() )
