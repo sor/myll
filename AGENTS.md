@@ -152,6 +152,7 @@ myll/
 ## Build & Test
 
 - xUnit integration tests live under `testing/`. Run them with `dotnet test testing/`.
+- The default harness includes `UnixAppsTests.GenerateUnixApps`, which generates C++ for every utility in `frontend/apps/unix/`. The full C++ build (`bash frontend/apps/make_unix.sh`) should run in pre-submit/CI; it takes about 30 seconds from a clean state.
 - Manual testing: compile `.myll` files via the CLI and inspect generated `.cpp`/`.h` output. Also pass generated C++ code to a C++ compiler with sane warnings.
 - See `docs/analysis/06-test-coverage.md` for test inventory and earlier harness design notes.
 
@@ -161,6 +162,7 @@ A `Dockerfile` and `.dockerignore` are provided at the repository root. They tar
 
 - Build image: `podman build -t myll .`
 - Run tests: `podman run --rm myll`
+- The container currently runs `dotnet test testing/`; for a full pre-submit gate it should also run `bash frontend/apps/make_unix.sh`.
 
 Tests run with `MYLL_TEST_TEMP=1` so each test case uses an isolated temp directory under `testing/generated/`. This prevents concurrent runs from interfering and avoids relying on `/tmp`, which is often mounted `noexec`.
 

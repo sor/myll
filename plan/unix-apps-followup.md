@@ -21,11 +21,11 @@
 7. **Prefer exact matches in overload resolution** — DONE  
    `std::to_string(u64)` no longer reports ambiguous. Unresolved identifiers that are used as call callees and resolve only to callable overloads are now left to call-level overload resolution, which ranks conversions and picks the exact match.
 
-8. **Flesh out the `cxxopts` prototype**  
-   The current `cxxopts.decl.myll` covers the common pattern. Extend it as needed for positional-argument helpers and the `count()` method.
+8. **Flesh out the `cxxopts` prototype** — DONE / not needed  
+   The existing `cxxopts.decl.myll` covers the patterns used by the sample apps, so no further work is required for now.
 
-9. **Build all unix utilities as a CI gate**  
-   Once the resolver issues above are fixed, add `bash frontend/apps/make_unix.sh` to the test/CI steps so the sample apps do not regress again.
+9. **Build all unix utilities as a CI gate** — partially done  
+   The default `dotnet test testing/` harness now includes `UnixAppsTests.GenerateUnixApps`, which generates C++ for all plain and cxxopts variants. The full C++ build (`bash frontend/apps/make_unix.sh`, ~30s clean) should still run in pre-submit/CI to catch C++-side regressions.
 
 ## Current status
 The unix utilities now build end-to-end with the resolver enabled. The remaining work is item 9 (build them as a CI gate) plus the open design concern about default-sized vs fixed-width overloads.
