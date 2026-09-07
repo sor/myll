@@ -585,9 +585,6 @@ namespace Myll.Resolver
 			return basic.kind == TypespecBasic.Kind.Bool && ( type.ptrs == null || type.ptrs.Count == 0 );
 		}
 
-		private static bool IsStringType( Typespec type )
-			=> type is TypespecBasic { kind: TypespecBasic.Kind.String }
-			 && ( type.ptrs == null || type.ptrs.Count == 0 );
 
 		private void ValidateExpression( Expr expr )
 		{
@@ -727,10 +724,6 @@ namespace Myll.Resolver
 			if( leftType is not TypespecBasic || rightType is not TypespecBasic )
 				return;
 
-			// String concatenation/addition is delegated to the backing C++ class.
-			if( IsStringType( leftType ) || IsStringType( rightType ) )
-				return;
-
 			if( binOp.op is Operand.Add or Operand.Subtract
 			 && ( OperatorRules.HasPointer( leftType ) || OperatorRules.HasPointer( rightType ) ) ) {
 				AddError( binOp, "Pointer arithmetic is disabled; use indexing instead." );
@@ -858,10 +851,6 @@ namespace Myll.Resolver
 				return;
 
 			if( leftType is not TypespecBasic || rightType is not TypespecBasic )
-				return;
-
-			// String comparisons are delegated to the backing C++ class.
-			if( IsStringType( leftType ) || IsStringType( rightType ) )
 				return;
 
 			// Bit-family types only support equality; no ordering.

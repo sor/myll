@@ -21,7 +21,6 @@ namespace Myll.Resolver
 			"int",
 			"float",
 			"auto",
-			"string",
 			"byte",
 			"int", "uint",
 			"i8", "i16", "i32", "i64",
@@ -1247,14 +1246,6 @@ namespace Myll.Resolver
 			out Hierarchical baseType )
 		{
 			baseType = null!;
-
-			if( type is TypespecBasic { kind: TypespecBasic.Kind.String } ) {
-				Decl? backing = module.Context.StringBackingClass;
-				if( backing is Hierarchical h ) {
-					baseType = h;
-					return true;
-				}
-			}
 
 			if( type is TypespecNested nested ) {
 				Decl? decl = nested.resolvedDecl;

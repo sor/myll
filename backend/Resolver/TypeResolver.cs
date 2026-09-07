@@ -211,17 +211,6 @@ namespace Myll.Resolver
 			 && leftType is TypespecNested )
 				return leftType;
 
-			// The built-in `string` type is backed by a C++ class (std::string by default).
-			// String concatenation, comparison, and compound assignment are delegated to
-			// the backing class's operator overloads in the generated C++.
-			if( IsStringType( leftType ) || IsStringType( rightType ) ) {
-				if( binOp.op is Operand.Add )
-					return new TypespecBasic { kind = TypespecBasic.Kind.String, size = TypespecBasic.SizeUndetermined };
-
-				if( IsComparisonOperation( binOp.op ) )
-					return new TypespecBasic { kind = TypespecBasic.Kind.Bool, size = 1 };
-			}
-
 			if( TryResolveBitOperation( binOp.op, leftType, rightType, out Typespec? bitResult ) )
 				return bitResult;
 
@@ -623,10 +612,6 @@ namespace Myll.Resolver
 		private static bool IsArithmeticOperation( Operand op )
 			=> op is Operand.Add or Operand.Subtract or Operand.Multiply
 			|| op is Operand.FractionalDivide or Operand.Modulo;
-
-		private static bool IsStringType( Typespec? type )
-			=> type is TypespecBasic { kind: TypespecBasic.Kind.String }
-			 && ( type.ptrs == null || type.ptrs.Count == 0 );
 
 		private static bool IsComparisonOperation( Operand op )
 			=> op is Operand.Equal or Operand.NotEqual or Operand.LessThan

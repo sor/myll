@@ -241,6 +241,14 @@ namespace Myll
 		public static List<string> Visit( this Parser.IdContext[] c )
 			=> c.Select( i => i.Visit() ).ToList();
 
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static string Visit( this Parser.TypeIdContext c )
+			=> c.GetText();
+
+		[MethodImpl( MethodImplOptions.AggressiveInlining )]
+		public static List<string> Visit( this Parser.TypeIdContext[] c )
+			=> c.Select( i => i.Visit() ).ToList();
+
 		// this will become more specialized most likely, don't depend on current behavior
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static string Visit( this Parser.IdOrLitContext c )

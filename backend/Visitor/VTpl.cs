@@ -19,6 +19,15 @@ namespace Myll
 			return ret;
 		}
 
+		public new IdTplArgs VisitTypeIdTplArgs( TypeIdTplArgsContext c )
+		{
+			IdTplArgs ret = new() {
+				id      = c.typeId().Visit(),
+				tplArgs = VisitTplArgs( c.tplArgs() ),
+			};
+			return ret;
+		}
+
 		public new TplArg VisitTplArg( TplArgContext c )
 		{
 			TplArg ret;

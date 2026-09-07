@@ -344,6 +344,12 @@ namespace Myll.Resolver
 			 && IsCharPointer( target ) )
 				return true;
 
+			// String literal to the dialect's backing string class (e.g. std::string).
+			if( source is TypespecBasic { kind: TypespecBasic.Kind.String }
+			 && target is TypespecNested { resolvedDecl: Hierarchical h }
+			 && h.name == "string" )
+				return true;
+
 			// Currently all other non-exact/non-promotion conversions are rejected.
 			// This is where future safe conversions (e.g., derived-to-base pointers,
 			// char32_t ↔ int32_t if desired) would go.

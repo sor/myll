@@ -470,7 +470,7 @@ namespace Myll
 			// CnP: recheck this
 			Structural ret = new() {
 				srcPos    = c.ToSrcPos(),
-				name      = c.id().Visit(),
+				name      = c.typeId().Visit(),
 				access    = curAccess,
 				kind      = kind,
 				TplParams = VisitTplParams( c.tplParams() ),

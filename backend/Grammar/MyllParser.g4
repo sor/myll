@@ -100,7 +100,7 @@ defEnum		:	id
 baseSpec	:	attribBlk?	typespecNested ;
 baseSpecs	:	baseSpec (COMMA baseSpec)* COMMA? ;
 
-defStruct	:	id		tplParams?
+defStruct	:	typeId		tplParams?
 				(COLON		bases=baseSpecs)?
 				(REQUIRES 	reqs=typespecsNested)?	// TODO: should this rather be "expr" instead of typespecsNested?
 				(
@@ -261,14 +261,15 @@ aggrAssignOP:	v=(	'**=' | '*=' | '/=' | '%=' | '&=' |	'·=' |	'×=' |	'÷=' |
 
 lit			:	CLASS_LIT | HEX_LIT | OCT_LIT | BIN_LIT | INTEGER_LIT | FLOAT_LIT | STRING_LIT | CHAR_LIT | BOOL_LIT | NUL;
 wildId		:	AUTOINDEX | USCORE;
-// `string` is a built-in type keyword, but it is also a valid identifier so that
-// external backing classes can be declared with their real C++ name, e.g. `class string`.
-id			:	ID | STRING;
+// `string` is a type keyword: it can appear where a type identifier is expected,
+// but it is not a general-purpose identifier.
+id			:	ID;
+typeId		:	ID | STRING;
 idOrLit		:	id | lit;
 
 // +++ handled
 specialType	:	v=( AUTO | VOID | BOOL );
-charType	:	v=( CHAR | CODEPOINT | STRING );
+charType	:	v=( CHAR | CODEPOINT );
 floatingType:	v=( FLOAT | F128 | F64 | F32 | F16 ); // 80 and 96 bit?
 binaryType	:	v=( BYTE | BINT | B64 | B32 | B16 | B8 );
 signedIntType:	v=( INT  | ISIZE | I64 | I32 | I16 | I8 );
@@ -282,6 +283,7 @@ typePtr		:	qual*
 				suffix=( EM | PLUS | QM )?;
 
 idTplArgs	:	id	tplArgs?;
+typeIdTplArgs	:	typeId	tplArgs?;
 
 typespec	:	qual*
 				(	typespecBasic	typePtr*
@@ -301,8 +303,8 @@ initlistType	:	INITLIST (LT typespec GT)?;
 typespecFunc	:	funcTypeDef? (RARROW typespec)?;
 
 // TODO different order than ScopedExpr
-typespecNested	:			idTplArgs
-					(SCOPE	idTplArgs)*
+typespecNested	:			typeIdTplArgs
+					(SCOPE	typeIdTplArgs)*
 					(SCOPE	v=CTOR)?;
 typespecsNested	:	typespecNested (COMMA typespecNested)* COMMA?;
 

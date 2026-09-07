@@ -141,9 +141,6 @@ namespace Myll.Core
 
 		public override string GenType()
 		{
-			if( kind == Kind.String )
-				return Dialect.Default.StringClassName;
-
 			if( isDefaultSized ) {
 				return kind switch {
 					Kind.Integer  => "int",

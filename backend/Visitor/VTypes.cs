@@ -171,17 +171,13 @@ namespace Myll
 					CharTypeContext tc = c.charType();
 					int t = tc.v.Type;
 					switch( t ) {
-						case MyllParser.CHAR:
-							ret.kind = TypespecBasic.Kind.Char;
-							ret.size = (tc.CHAR() != null) ? 1 : 4;
-							break;
+					case MyllParser.CHAR:
+						ret.kind = TypespecBasic.Kind.Char;
+						ret.size = (tc.CHAR() != null) ? 1 : 4;
+						break;
 
-						case MyllParser.STRING:
-							ret.kind = TypespecBasic.Kind.String;
-							break;
-
-						// TODO: codepoint not supported yet
-						default: throw new Exception( "unknown typespec" );
+					// TODO: codepoint not supported yet
+					default: throw new Exception( "unknown typespec" );
 					}
 					break;
 				}
@@ -295,7 +291,7 @@ namespace Myll
 
 		public new TypespecNested VisitTypespecNested( TypespecNestedContext c )
 		{
-			IEnumerable<IdTplArgs> idTplArgs = c.idTplArgs().Select( VisitIdTplArgs );
+			IEnumerable<IdTplArgs> idTplArgs = c.typeIdTplArgs().Select( VisitTypeIdTplArgs );
 
 			if( c.v != null )
 				idTplArgs = idTplArgs.Append( new() { id = c.v.Text } );
