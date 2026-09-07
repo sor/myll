@@ -12,8 +12,8 @@
 4. **Resolve `operator*` / `operator->` on class types** — DONE  
    `(*it).path()` and `b->value()` now use the return types of the class's `operator*` and `operator->` overloads for member lookup. Only one level of `operator->` is supported; recursion is intentionally left for later.
 
-5. **Fix primitive reference binding and increment**  
-   `parseOptions(..., int & argi)` rejects the `int` argument, and `++argi` fails inside the function. Reference parameters and pre-increment should work for plain integers.
+5. **Fix primitive reference binding and increment** — DONE  
+   `parseOptions(..., int & argi)` now accepts the `int` argument, and `++argi` works inside the function. Fixed `ConversionRules.CloneTypespecBase` to preserve `isDefaultSized` and pointer structure so reference/value conversions rank correctly; updated unary `++`/`--` validation to look through scalar references.
 
 6. **Resolve member templates like `Value::as<T>()`**  
    `result["x"].as<bool>()` returns unresolved `T` even though the explicit template argument is `bool`. Wire member-template instantiation the same way free function templates are handled.

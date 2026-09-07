@@ -70,6 +70,11 @@ namespace Myll.Resolver
 			 && GetRank( source, refBase ) <= ConversionRank.Promotion )
 				return ConversionRank.Promotion;
 
+			// Reference -> value binding (e.g. assigning const path& to path, or int& to int).
+			if( TryStripReference( source, out Typespec? sourceBase )
+			 && IsExactMatch( sourceBase, target ) )
+				return ConversionRank.Exact;
+
 			// Inheritance conversions: Derived -> Base&, Derived* -> Base*, Derived*! -> Base*!, etc.
 			if( TryGetInheritanceConversionRank( source, target, out ConversionRank inheritanceRank ) )
 				return inheritanceRank;
@@ -513,10 +518,14 @@ namespace Myll.Resolver
 			return true;
 		}
 
-		private static Typespec CloneTypespecBase( Typespec source )
+		public static Typespec CloneTypespecBase( Typespec source )
 		{
 			Typespec ret = source switch {
-				TypespecBasic b   => new TypespecBasic { kind = b.kind, size = b.size },
+				TypespecBasic b   => new TypespecBasic {
+					kind           = b.kind,
+					size           = b.size,
+					isDefaultSized = b.isDefaultSized,
+				},
 				TypespecNested n  => new TypespecNested {
 					resolvedDecl = n.resolvedDecl,
 					isInitList   = n.isInitList,
@@ -531,6 +540,7 @@ namespace Myll.Resolver
 
 			ret.srcPos = source.srcPos;
 			ret.qual   = source.qual;
+			ret.ptrs   = source.ptrs?.ToList();
 			return ret;
 		}
 

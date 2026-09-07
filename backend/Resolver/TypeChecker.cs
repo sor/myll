@@ -886,10 +886,22 @@ namespace Myll.Resolver
 			if( operandType == null )
 				return;
 
-			if( operandType is not TypespecBasic )
+			// ++/-- on a reference to a scalar (e.g. an int& parameter) operate on the
+			// referenced value. Strip the reference for validation only; pointers are
+			// left alone because pointer arithmetic is disabled in Myll.
+			Typespec checkType = operandType;
+			if( checkType.ptrs is { Count: > 0 }
+			 && checkType.ptrs[checkType.ptrs.Count - 1].kind
+			    is Pointer.Kind.LVRef or Pointer.Kind.RVRef ) {
+				List<Pointer> ptrs = checkType.ptrs;
+				checkType = ConversionRules.CloneTypespecBase( checkType );
+				checkType.ptrs = ptrs.Take( ptrs.Count - 1 ).ToList();
+			}
+
+			if( checkType is not TypespecBasic )
 				return;
 
-			if( !OperatorRules.IsScalarNumber( operandType ) )
+			if( !OperatorRules.IsScalarNumber( checkType ) )
 				AddError( unOp, String.Format( "Operator '{0}' cannot be applied to type '{1}'", OperatorName( unOp.op ), FormatType( operandType ) ) );
 		}
 
