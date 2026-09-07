@@ -34,7 +34,7 @@ namespace Myll
 			GlobalNamespace global = new() {
 				name     = "", // global, no source position because it spans multiple files
 				withBody = true,
-				imps     = new HashSet<string>(),
+				imports  = new List<ImportSpec>(),
 				module   = module,
 				Context  = Context,
 			};

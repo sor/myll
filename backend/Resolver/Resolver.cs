@@ -1353,7 +1353,9 @@ namespace Myll.Resolver
 				}
 			}
 
-			foreach( string importedModule in module.imps ) {
+			foreach( string importedModule in module.imports
+				.OfType<NamedImportSpec>()
+				.Select( i => i.name ) ) {
 				if( !moduleExports.TryGetValue( importedModule, out ModuleExports? exports ) )
 					continue;
 
@@ -1387,7 +1389,9 @@ namespace Myll.Resolver
 
 			if( h is Namespace ns ) {
 				string fqn = ns.FullyQualifiedName;
-				foreach( string importedModule in module.imps ) {
+				foreach( string importedModule in module.imports
+					.OfType<NamedImportSpec>()
+					.Select( i => i.name ) ) {
 					if( !moduleExports.TryGetValue( importedModule, out ModuleExports? exports ) )
 						continue;
 

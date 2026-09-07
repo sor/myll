@@ -197,9 +197,46 @@ namespace Myll
 			foreach( (GlobalNamespace module, _) in modules ) {
 				foreach( string imp in StdBuiltins.ImplicitStdImports ) {
 					if( module.module != imp )
-						module.imps.Add( imp );
+						module.imports.Add( new NamedImportSpec { name = imp } );
 				}
 			}
+		}
+
+		private static IReadOnlyDictionary<string, IReadOnlyList<RawImport>> BuildModuleRawImports(
+			List<CompiledModuleResult> modules )
+		{
+			Dictionary<string, List<RawImport>> rawByModule = modules.ToDictionary(
+				m => m.Module.module,
+				m => m.Module.imports.OfType<RawImportSpec>().Select( s => s.raw ).ToList() );
+
+			Dictionary<string, CompiledModuleResult> moduleByName = modules.ToDictionary( m => m.Module.module );
+
+			foreach( CompiledModuleResult module in modules.Where( m => m.Context.IsPrototypeFile ) ) {
+				HashSet<string> visited = new();
+				Queue<string>   queue   = new();
+
+				foreach( NamedImportSpec named in module.Module.imports.OfType<NamedImportSpec>() )
+					queue.Enqueue( named.name );
+
+				while( queue.Count > 0 ) {
+					string importedName = queue.Dequeue();
+					if( !visited.Add( importedName ) )
+						continue;
+
+					if( rawByModule.TryGetValue( importedName, out List<RawImport>? nestedRaws ) )
+						rawByModule[module.Module.module].AddRange( nestedRaws );
+
+					if( moduleByName.TryGetValue( importedName, out CompiledModuleResult? importedModule )
+					 && importedModule.Context.IsPrototypeFile ) {
+						foreach( NamedImportSpec nested in importedModule.Module.imports.OfType<NamedImportSpec>() )
+							queue.Enqueue( nested.name );
+					}
+				}
+			}
+
+			return rawByModule.ToDictionary(
+				kv => kv.Key,
+				kv => (IReadOnlyList<RawImport>)kv.Value );
 		}
 
 		private static IEnumerable<string> CollectExternFiles( Options opt )
@@ -288,17 +325,23 @@ namespace Myll
 
 				foreach( string name in match.Groups[1].Value.Split( ',' ) ) {
 					string trimmed = name.Trim();
-					if( !String.IsNullOrEmpty( trimmed ) )
-						yield return trimmed;
+					if( String.IsNullOrEmpty( trimmed ) )
+						continue;
+					if( trimmed[0] == '<' || trimmed[0] == '"' )
+						continue;
+					yield return trimmed;
 				}
 			}
 		}
 
-		private static GeneratedFilesResult GenerateFiles( GlobalNamespace global_ns )
+		private static GeneratedFilesResult GenerateFiles(
+			GlobalNamespace                                         global_ns,
+			IReadOnlyDictionary<string, IReadOnlyList<RawImport>> moduleRawImports,
+			IReadOnlySet<string>                                    prototypeModules )
 		{
 			List<(string Path, IEnumerable<string> Lines)> ret = new();
 
-			HierarchicalGen gen = new( global_ns, -1, 0 );
+			HierarchicalGen gen = new( global_ns, -1, 0, moduleRawImports, prototypeModules );
 			// do NOT call gen.AddNamespace( ret ).
 			// Instead AddToGen() is there to call the correct virtual method on the gen
 			// TODO why is it adding itself as a child?
@@ -420,11 +463,20 @@ namespace Myll
 			result.Apply();
 		}
 
+			IReadOnlyDictionary<string, IReadOnlyList<RawImport>> moduleRawImports
+				= BuildModuleRawImports( modules );
+
+			IReadOnlySet<string> prototypeModules
+				= modules
+					.Where( m => m.Context.IsPrototypeFile )
+					.Select( m => m.Module.module )
+					.ToHashSet();
+
 			List<GeneratedFilesResult> generationResults
 				= modules
 					.Where( m => !m.Context.IsPrototypeFile )
 					.AsParallel()
-					.Select( m => GenerateFiles( m.Module ) )
+					.Select( m => GenerateFiles( m.Module, moduleRawImports, prototypeModules ) )
 					.ToList();
 
 			IEnumerable<(string, IStrings)> output = generationResults.SelectMany( r => r.Files );

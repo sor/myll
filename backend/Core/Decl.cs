@@ -341,8 +341,8 @@ namespace Myll.Core
 
 	public class GlobalNamespace : Namespace
 	{
-		public string          module = null!;
-		public HashSet<string> imps = new();
+		public string          module  = null!;
+		public List<ImportSpec> imports = new();
 
 		/// <summary>
 		/// Compilation context for this module. Stored here so the rest of the pipeline

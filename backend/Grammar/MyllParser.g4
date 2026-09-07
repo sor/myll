@@ -12,8 +12,15 @@ prog		:	module?
 				EOF;
 
 module		:	MODULE id SEMI;
+
 imports		:	IMPORT importName (COMMA importName)* COMMA? SEMI;
-importName	:	id (POINT id)*;
+importName	:	namedImport
+			|	systemImport
+			|	localImport;
+namedImport	:	id (POINT id)*;
+systemImport:	LT (~GT)+ GT;
+localImport	:	STRING_LIT;
+
 //rule		:	RULE typespecNested SEMI;
 // which DEFINEs can be passed directly from the compiler, all others will be discarded
 //defines	:	DEFINE idExprs SEMI;

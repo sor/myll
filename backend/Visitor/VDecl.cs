@@ -79,11 +79,40 @@ namespace Myll
 			GlobalNamespace global = GenerateGlobalScope( cs.Key );
 
 			foreach( ProgContext c in cs ) {
-				global.imps.UnionWith(
-					c.imports()
-						.SelectMany( i => i.importName() )
-						.Select( i => i.GetText() )
-						.ToList() );
+				foreach( ImportsContext importCtx in c.imports() ) {
+					foreach( ImportNameContext nameCtx in importCtx.importName() ) {
+						if( nameCtx.namedImport() is NamedImportContext namedCtx ) {
+							global.imports.Add( new NamedImportSpec {
+								name   = String.Join( ".", namedCtx.id().Select( id => id.GetText() ) ),
+								srcPos = namedCtx.ToSrcPos(),
+							} );
+						}
+						else if( nameCtx.systemImport() is SystemImportContext sysCtx ) {
+							string raw  = sysCtx.GetText();
+							string path = raw.Substring( 1, raw.Length - 2 );
+							global.imports.Add( new RawImportSpec {
+								raw = new RawImport {
+									kind   = RawImportKind.System,
+									path   = path,
+									srcPos = sysCtx.ToSrcPos(),
+								},
+								srcPos = sysCtx.ToSrcPos(),
+							} );
+						}
+						else if( nameCtx.localImport() is LocalImportContext localCtx ) {
+							string raw  = localCtx.STRING_LIT().GetText();
+							string path = raw.Substring( 1, raw.Length - 2 );
+							global.imports.Add( new RawImportSpec {
+								raw = new RawImport {
+									kind   = RawImportKind.Local,
+									path   = path,
+									srcPos = localCtx.ToSrcPos(),
+								},
+								srcPos = localCtx.ToSrcPos(),
+							} );
+						}
+					}
+				}
 
 				c.decl().Select( Visit ).Exec();
 

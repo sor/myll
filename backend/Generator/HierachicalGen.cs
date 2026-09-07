@@ -104,7 +104,10 @@ namespace Myll.Generator
 
 		private readonly Hierarchical hierarchical;
 
-		private readonly HashSet<string> definedNamespaces = new();
+		private readonly IReadOnlyDictionary<string, IReadOnlyList<RawImport>>? moduleRawImports;
+		private readonly IReadOnlySet<string>?                                  prototypeModules;
+
+		private readonly HashSet<string> definedNamespaces   = new();
 		private readonly HashSet<string> namespaceUsingNames = new();
 
 		public List<Diagnostic> Diagnostics { get; } = new();
@@ -117,11 +120,18 @@ namespace Myll.Generator
 		private string DeIndentDecl => IndentString.Repeat( LevelDecl - 1 );
 		private string DeIndentImpl => IndentString.Repeat( LevelImpl - 1 );
 
-		public HierarchicalGen( Hierarchical obj, int levelDecl, int levelImpl )
+		public HierarchicalGen(
+			Hierarchical                                           obj,
+			int                                                    levelDecl,
+			int                                                    levelImpl,
+			IReadOnlyDictionary<string, IReadOnlyList<RawImport>>? moduleRawImports = null,
+			IReadOnlySet<string>?                                  prototypeModules = null )
 		{
-			hierarchical = obj; // this is 'myself'
-			LevelDecl    = levelDecl;
-			LevelImpl    = levelImpl;
+			hierarchical          = obj; // this is 'myself'
+			LevelDecl             = levelDecl;
+			LevelImpl             = levelImpl;
+			this.moduleRawImports = moduleRawImports;
+			this.prototypeModules = prototypeModules;
 
 			defaultAccess = obj.defaultAccess;
 		}
@@ -135,33 +145,68 @@ namespace Myll.Generator
 			Strings includes = new();
 			HashSet<string> seen = new();
 
-			string MapImport( string imp )
-				=> imp.StartsWith( "std_" )
-					? Format( "#include <{0}>", imp.Substring( 4 ) )
-					: imp.StartsWith( "c_" )
-					? Format( "#include <c{0}>", imp.Substring( 2 ) )
-					: imp.Contains( "." )
-					? Format( "#include \"{0}\"", imp )
-					: Format( "#include \"{0}.hpp\"", imp );
+			void AddRawImport( RawImport raw )
+			{
+				string include = raw.kind == RawImportKind.System
+					? Format( "#include <{0}>", raw.path )
+					: Format( "#include \"{0}\"", raw.path );
+
+				if( seen.Add( include ) )
+					includes.Add( include );
+			}
+
+			void AddModuleRawImports( string moduleName )
+			{
+				if( moduleRawImports == null )
+					return;
+				if( !moduleRawImports.TryGetValue( moduleName, out IReadOnlyList<RawImport>? raws ) )
+					return;
+				foreach( RawImport raw in raws )
+					AddRawImport( raw );
+			}
+
+			void AddGeneratedModuleInclude( string moduleName )
+			{
+				string include = moduleName.Contains( "." )
+					? Format( "#include \"{0}\"", moduleName )
+					: Format( "#include \"{0}.hpp\"", moduleName );
+
+				if( seen.Add( include ) )
+					includes.Add( include );
+			}
+
+			void AddModuleIncludes( string moduleName )
+			{
+				if( prototypeModules != null && prototypeModules.Contains( moduleName ) )
+					AddModuleRawImports( moduleName );
+				else
+					AddGeneratedModuleInclude( moduleName );
+			}
 
 			// Implicit standard imports in a fixed, stable order.
 			foreach( string imp in StdBuiltins.ImplicitStdImports ) {
 				if( imp == globalNS.module )
 					continue;
-				if( !globalNS.imps.Contains( imp ) )
+				if( !globalNS.imports.OfType<NamedImportSpec>().Any( i => i.name == imp ) )
 					continue;
-				string include = MapImport( imp );
-				if( seen.Add( include ) )
-					includes.Add( include );
+				AddModuleIncludes( imp );
 			}
 
-			// Remaining imports in deterministic order.
-			foreach( string imp in globalNS.imps
-				.Where( i => i != globalNS.module && !implicitImports.Contains( i ) )
-				.OrderBy( i => i, StringComparer.Ordinal ) ) {
-				string include = MapImport( imp );
-				if( seen.Add( include ) )
-					includes.Add( include );
+			// User imports in source order (raw imports and generated includes for imported modules).
+			foreach( ImportSpec spec in globalNS.imports ) {
+				switch( spec ) {
+				case NamedImportSpec named:
+					if( named.name == globalNS.module )
+						continue;
+					if( implicitImports.Contains( named.name ) )
+						continue; // already emitted above
+					AddModuleIncludes( named.name );
+					break;
+
+				case RawImportSpec rawSpec:
+					AddRawImport( rawSpec.raw );
+					break;
+				}
 			}
 
 			IStrings declList = GenDecl();
