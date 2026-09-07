@@ -1,4 +1,5 @@
 module std_cmath;
+import <cmath>;
 
 namespace std {
 	func sqrt(f64 x) -> f64;

@@ -1,4 +1,5 @@
 module std_iostream;
+import <iostream>;
 
 namespace std {
 	class streambuf;

@@ -1,4 +1,5 @@
 module std_vector;
+import <vector>;
 
 namespace std {
 	// std::vector backing declaration for Myll resolution.

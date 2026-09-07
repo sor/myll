@@ -1,4 +1,5 @@
 module std_algorithm;
+import <algorithm>;
 
 namespace std {
 	// Sorting/reversal helpers. The real definitions are in <algorithm>.

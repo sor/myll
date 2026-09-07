@@ -1,4 +1,5 @@
 module std_chrono;
+import <chrono>;
 
 namespace std {
 	namespace chrono {

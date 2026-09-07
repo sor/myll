@@ -1,4 +1,5 @@
 module std_initializer_list;
+import <initializer_list>;
 
 namespace std {
 	class initializer_list<T> {

@@ -1,4 +1,5 @@
 module std_string;
+import <string>;
 
 namespace std {
 	// std::string backing class for Myll's `string` keyword.

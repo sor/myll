@@ -1,4 +1,5 @@
 module std_cstddef;
+import <cstddef>;
 
 namespace std {
 	class size_t;

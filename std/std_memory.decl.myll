@@ -1,4 +1,5 @@
 module std_memory;
+import <memory>;
 
 namespace std {
 	// Template smart pointers: forward declarations only for now.

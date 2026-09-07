@@ -1,4 +1,5 @@
 module std_exception;
+import <exception>;
 
 namespace std {
 	class exception {

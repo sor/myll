@@ -1,6 +1,6 @@
 module std_fstream;
-
 import std_iostream;
+import <fstream>;
 
 namespace std {
 	class ifstream : [pub] std::istream {

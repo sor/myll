@@ -1,6 +1,6 @@
 module std_thread;
-
 import std_chrono;
+import <thread>;
 
 namespace std {
 	class thread;

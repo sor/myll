@@ -1,6 +1,6 @@
 module cxxopts;
-
 import std_string, std_vector;
+import "cxxopts.hpp";
 
 namespace cxxopts {
 	class Options {

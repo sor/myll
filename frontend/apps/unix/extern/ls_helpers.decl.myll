@@ -1,4 +1,5 @@
 module ls_helpers;
+import "ls_helpers.hpp";
 
 namespace ls_helpers {
 	func fileTypeLetter( const string & path ) -> string;

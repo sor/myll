@@ -1,4 +1,5 @@
 module std_type_traits;
+import <type_traits>;
 
 namespace std {
 	class true_type;

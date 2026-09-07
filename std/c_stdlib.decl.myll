@@ -1,4 +1,5 @@
 module c_stdlib;
+import <cstdlib>;
 
 namespace std {
 	func getenv(char * name) -> char*;
