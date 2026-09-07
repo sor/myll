@@ -1,4 +1,6 @@
-# Unix apps follow-up todos
+# Unix apps follow-up todos — DONE
+
+This plan is complete.
 
 1. **Make `string` a real class reference**  
    Stop emitting `TypespecBasic.Kind.String`. Treat `string` as a `TypespecNested` that resolves to the dialect-configured backing class (e.g. `std::string`). This removes the special-case operator and member-access code for strings.
@@ -24,11 +26,10 @@
 8. **Flesh out the `cxxopts` prototype** — DONE / not needed  
    The existing `cxxopts.decl.myll` covers the patterns used by the sample apps, so no further work is required for now.
 
-9. **Build all unix utilities as a CI gate** — partially done  
-   The default `dotnet test testing/` harness now includes `UnixAppsTests.GenerateUnixApps`, which generates C++ for all plain and cxxopts variants. The full C++ build (`bash frontend/apps/make_unix.sh`, ~30s clean) should still run in pre-submit/CI to catch C++-side regressions.
+9. **Build all unix utilities as a CI gate** — DONE  
+   The default `dotnet test testing/` harness includes `UnixAppsTests.GenerateUnixApps`, which generates C++ for all plain and cxxopts variants. The full C++ build (`bash frontend/apps/make_unix.sh`, ~30s clean) now runs in the container build as well.
 
 ## Current status
-The unix utilities now build end-to-end with the resolver enabled. The remaining work is item 9 (build them as a CI gate) plus the open design concern about default-sized vs fixed-width overloads.
+All items are done. The unix utilities build end-to-end with the resolver enabled, their generation is exercised by the default test harness, and the full C++ build is part of the container image build.
 
-## Open design concern: default-sized vs fixed-width overloads
-Myll treats `int` (default-sized) and `i32` (explicitly 32-bit) as distinct types, with a family conversion between them. This lets overload resolution prefer `func f(int)` for an `int` argument and `func f(i32)` for an `i32` argument. In generated C++, however, `int` is typically emitted as `int` while `i32` is emitted as `std::int32_t`, which on most platforms are the same C++ type. Declaring both overloads in the same C++ scope can therefore produce a redefinition error. Possible directions: conditionally outlaw default-sized integer types as members of `class`/`struct` declarations, or conditionally outlaw default-sized parameter types in overload sets, or keep them distinct on the Myll side and leave the collision to the C++ compiler. This needs a dedicated design decision before it becomes a user-facing problem.
+The open design concern about default-sized vs fixed-width overloads has been moved to `plan/default-sized-overloads.md`.

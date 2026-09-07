@@ -41,10 +41,11 @@ ENV DOTNET_ROLL_FORWARD=LatestMajor
 # do not interfere with each other.
 ENV MYLL_TEST_TEMP=1
 
-# Build the compiler, run the full test suite once, then clean up runtime
-# sockets from /tmp before the layer is committed.
+# Build the compiler, run the full test suite, build the Unix sample apps,
+# then clean up runtime sockets from /tmp before the layer is committed.
 RUN dotnet build myll.sln -c Release \
  && dotnet test testing/ -c Release --no-build \
+ && bash frontend/apps/make_unix.sh \
  && rm -rf /tmp/*
 
 # Put the compiler wrapper on PATH. It picks the actual target-framework

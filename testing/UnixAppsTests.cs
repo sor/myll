@@ -9,7 +9,7 @@ namespace Myll.Tests
 	/// <summary>
 	/// Quick smoke test for the Unix sample apps.
 	/// The default harness only generates C++ for all utilities; the actual C++
-	/// compilation is left to a pre-submit / CI step (see plan/unix-apps-followup.md).
+	/// compilation is left to a pre-submit / CI step (see AGENTS.md).
 	/// </summary>
 	public sealed class UnixAppsTests
 	{
