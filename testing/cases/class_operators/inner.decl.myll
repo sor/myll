@@ -1,0 +1,27 @@
+module inner;
+import "inner.hpp";
+
+namespace BoxLib {
+	class Inner {
+	[pub]:
+		[pure]
+		func value() -> int;
+	};
+
+	class Box {
+	[pub]:
+		ctor();
+
+		operator *() -> Inner &;
+		operator ->() -> Inner *;
+	};
+
+	class Widget {
+	[pub]:
+		ctor();
+		ctor( int value );
+
+		[pure]
+		func readVal() -> int;
+	};
+}

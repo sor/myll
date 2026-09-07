@@ -6,11 +6,11 @@
 2. **Move `CompilationContext` out of `GlobalNamespace`**  
    Carrying the context on the AST node is a workaround. Pass `(GlobalNamespace module, CompilationContext context)` explicitly through resolver passes, or keep a `Dictionary<GlobalNamespace, CompilationContext>`. Keep AST nodes read-only so a parallel pipeline can share them safely.
 
-3. **Support function-style constructor expressions**  
-   `std::filesystem::path(input).filename()` currently fails because `path(input)` in an expression is treated as a cast, not direct construction. Allow `Class(args)` as a temporary expression so `basename`, `dirname`, `ls`, etc. compile without source rewrites.
+3. **Support function-style constructor expressions** — DONE  
+   `std::filesystem::path(input).filename()` now works. A call whose callee resolves to a class is treated as direct construction of a temporary of that class, so chained member access works.
 
-4. **Resolve `operator*` / `operator->` on class types**  
-   `(*it).path()` fails because `TypeResolver` only dereferences pointers, not class instances with `operator*()`. Make unary `*` and `->` on classes use the operator-overload return type.
+4. **Resolve `operator*` / `operator->` on class types** — DONE  
+   `(*it).path()` and `b->value()` now use the return types of the class's `operator*` and `operator->` overloads for member lookup. Only one level of `operator->` is supported; recursion is intentionally left for later.
 
 5. **Fix primitive reference binding and increment**  
    `parseOptions(..., int & argi)` rejects the `int` argument, and `++argi` fails inside the function. Reference parameters and pre-increment should work for plain integers.

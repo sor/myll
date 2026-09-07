@@ -432,10 +432,15 @@ namespace Myll.Resolver
 				if( result.Members.ContainsKey( member ) )
 					continue;
 
-				if( !TryGetMemberAccessBaseType( unresolved.Node.left, unresolved.Scope, module, out Hierarchical? baseType ) )
-					continue;
+			if( !TryGetMemberAccessBaseType(
+					unresolved.Node.left,
+					unresolved.Scope,
+					module,
+					out Hierarchical? baseType,
+					viaArrow: IsArrowMemberAccess( unresolved.Node.op ) ) )
+				continue;
 
-				Decl? resolved = LookupMember( member.idTplArgs.id, (Structural) baseType, module );
+			Decl? resolved = LookupMember( member.idTplArgs.id, (Structural) baseType!, module );
 				if( resolved != null ) {
 					result.ResolveMember( member, resolved );
 					progress = true;
@@ -506,7 +511,12 @@ namespace Myll.Resolver
 						return false;
 					}
 
-					if( !TryGetMemberAccessBaseType( binOp.left, call.Scope, module, out Hierarchical? baseType ) )
+					if( !TryGetMemberAccessBaseType(
+							binOp.left,
+							call.Scope,
+							module,
+							out Hierarchical? baseType,
+							viaArrow: IsArrowMemberAccess( binOp.op ) ) )
 						return false;
 
 					List<Decl> candidates = LookupInHierarchicalCandidates(
@@ -518,7 +528,11 @@ namespace Myll.Resolver
 						return true;
 					}
 
-					RecordOverloadFailure( outcome, call.Callee, member.idTplArgs.id );
+					// When the base type is known but the member is not declared there,
+					// do not emit a "no matching overload" diagnostic here. The missing
+					// member will be reported at the end if it remains unresolved.
+					if( candidates.Count > 0 )
+						RecordOverloadFailure( outcome, call.Callee, member.idTplArgs.id );
 					return false;
 				}
 			}
@@ -610,6 +624,11 @@ namespace Myll.Resolver
 			|| op is Operand.MemberAccessPtr
 			|| op is Operand.NCMemberAccessPtr
 			|| op is Operand.MemberPtrAccessPtr;
+
+		private static bool IsArrowMemberAccess( Operand op )
+			=> op is Operand.MemberAccessPtr
+			|| op is Operand.NCMemberAccessPtr
+			|| op is Operand.MemberPtrAccess;
 
 		private (Decl? chosen, bool ambiguous, bool noMatch) TryResolveOverload(
 			List<Decl>      candidates,
@@ -968,7 +987,8 @@ namespace Myll.Resolver
 			Expr expr,
 			Scope scope,
 			GlobalNamespace module,
-			out Hierarchical baseType )
+			out Hierarchical baseType,
+			bool viaArrow = false )
 		{
 			baseType = null!;
 			Typespec? type = null;
@@ -1015,7 +1035,16 @@ namespace Myll.Resolver
 				return TryGetMemberAccessBaseType( parenUnop.expr, scope, module, out baseType );
 			}
 			else if( expr is UnOp derefUnop && derefUnop.op == Operand.Dereference ) {
-				if( TryGetMemberAccessBaseType( derefUnop.expr, scope, module, out Hierarchical inner ) ) {
+				if( TryGetMemberAccessBaseType( derefUnop.expr, scope, module, out Hierarchical inner, viaArrow: false ) ) {
+					Typespec? operandType = typeResolver.Resolve( derefUnop.expr );
+					if( operandType != null
+					 && TryGetOperatorReturnType( operandType, "operator*", out Typespec? starReturnType )
+					 && starReturnType != null
+					 && TryGetBaseHierarchical( starReturnType, module, out Hierarchical operatorBase, viaArrow: false ) ) {
+						baseType = operatorBase;
+						return true;
+					}
+
 					baseType = inner;
 					return true;
 				}
@@ -1033,12 +1062,16 @@ namespace Myll.Resolver
 							type = f.retType;
 						else if( calleeIdDecl is Structor s && s.kind == Structor.Kind.Constructor )
 							baseType = FindEnclosingStructural( s.scope )!;
+						else if( calleeIdDecl is Structural structural )
+							type = BuildClassValueType( structural, new[] { calleeId.idTplArgs } );
 					}
 					else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( calleeScoped, out Decl? calleeScopedDecl ) ) {
 						if( calleeScopedDecl is Func f )
 							type = f.retType;
 						else if( calleeScopedDecl is Structor s && s.kind == Structor.Kind.Constructor )
 							baseType = FindEnclosingStructural( s.scope )!;
+						else if( calleeScopedDecl is Structural structural )
+							type = BuildClassValueType( structural, calleeScoped.idTpls );
 					}
 					else if( call.expr is BinOp calleeBin
 					     && calleeBin.op.In( Operand.MemberAccess, Operand.MemberPtrAccess )
@@ -1076,7 +1109,7 @@ namespace Myll.Resolver
 			if( baseType != null )
 				return true;
 
-			return type != null && TryGetBaseHierarchical( type, module, out baseType );
+			return type != null && TryGetBaseHierarchical( type, module, out baseType, viaArrow );
 		}
 
 		private bool TryGetReceiverType( Expr expr, out Typespec receiverType )
@@ -1243,7 +1276,8 @@ namespace Myll.Resolver
 		private bool TryGetBaseHierarchical(
 			Typespec type,
 			GlobalNamespace module,
-			out Hierarchical baseType )
+			out Hierarchical baseType,
+			bool viaArrow = false )
 		{
 			baseType = null!;
 
@@ -1253,6 +1287,17 @@ namespace Myll.Resolver
 					result.TryGetResolved( nested, out decl );
 				if( decl is Structural st && st.IsForwardDeclaration )
 					decl = GetDefiningStructural( st ) ?? decl;
+
+				// `a->member` where `a` is a class uses `operator->`.
+				if( viaArrow
+				 && decl is Structural arrowStruct
+				 && ( type.ptrs == null || type.ptrs.Count == 0 )
+				 && TryGetOperatorReturnType( type, "operator->", out Typespec? arrowReturnType )
+				 && arrowReturnType != null ) {
+					// Recursive `operator->` is intentionally not supported yet.
+					return TryGetBaseHierarchical( arrowReturnType, module, out baseType, viaArrow: false );
+				}
+
 				if( decl is Hierarchical h ) {
 					baseType = h;
 					return true;
@@ -1275,11 +1320,93 @@ namespace Myll.Resolver
 					if( inner.ptrs == null )
 						return false;
 				inner.ptrs.RemoveAt( inner.ptrs.Count - 1 );
-				return TryGetBaseHierarchical( inner, module, out baseType );
+				return TryGetBaseHierarchical( inner, module, out baseType, viaArrow );
 				}
 			}
 
 			return false;
+		}
+
+		private static Typespec? BuildClassValueType(
+			Structural              structural,
+			IReadOnlyList<IdTplArgs> nameSegments )
+		{
+			return new TypespecNested {
+				resolvedDecl = structural,
+				idTpls       = nameSegments
+					.Select( s => new IdTplArgs { id = s.id, tplArgs = s.tplArgs } )
+					.ToList(),
+			};
+		}
+
+		private bool TryGetOperatorReturnType(
+			Typespec receiverType,
+			string     name,
+			out Typespec? returnType )
+		{
+			returnType = null;
+
+			if( receiverType is not TypespecNested nested
+			 || nested.ptrs is { Count: > 0 }
+			 || nested.resolvedDecl is not Structural structural )
+				return false;
+
+			bool receiverIsConst = ( nested.qual & Qualifier.Const ) != 0;
+			Func? op = LookupOperatorOverload( structural, name, receiverIsConst, new HashSet<Structural>() );
+			if( op == null )
+				return false;
+
+			returnType = SubstituteMethodReturnType( op, receiverType ) ?? op.retType;
+			return returnType != null;
+		}
+
+		private Func? LookupOperatorOverload(
+			Structural          structural,
+			string              name,
+			bool                receiverIsConst,
+			HashSet<Structural> visited )
+		{
+			if( !visited.Add( structural ) )
+				return null;
+
+			Func? strict   = null;
+			Func? fallback = null;
+
+			foreach( Decl decl in structural.children ) {
+				if( decl is not Func func || func.name != name )
+					continue;
+
+				bool isConst = func.IsPure;
+				if( receiverIsConst ) {
+					if( isConst )
+						strict ??= func;
+				}
+				else {
+					if( !isConst )
+						strict ??= func;
+					fallback ??= func;
+				}
+			}
+
+			if( strict != null )
+				return strict;
+			if( fallback != null )
+				return fallback;
+
+			foreach( BaseType bt in structural.basetypes ) {
+				if( bt.type is not TypespecNested nested )
+					continue;
+
+				Decl? baseDecl = nested.resolvedDecl
+					          ?? ( result.TryGetResolved( nested, out Decl? d ) ? d : null );
+				if( baseDecl is Structural baseStruct ) {
+					Func? fromBase = LookupOperatorOverload( baseStruct, name, receiverIsConst, visited );
+					if( fromBase != null )
+						return fromBase;
+				}
+			}
+
+			return null;
 		}
 
 		private Decl? LookupMember( string name, Structural baseType, GlobalNamespace module )
@@ -1684,23 +1811,28 @@ namespace Myll.Resolver
 					if( result.Members.ContainsKey( member ) )
 						continue;
 
-				if( ambiguousCalls.Contains( unresolved.Node ) || noMatchingCalls.Contains( unresolved.Node ) )
-					continue;
+					if( ambiguousCalls.Contains( unresolved.Node ) || noMatchingCalls.Contains( unresolved.Node ) )
+						continue;
 
-				string? typeName = null;
-				if( TryGetMemberAccessBaseType( unresolved.Node.left, unresolved.Scope, module, out Hierarchical? baseType ) )
-					typeName = baseType!.FullyQualifiedName;
+					string? typeName = null;
+					if( TryGetMemberAccessBaseType(
+							unresolved.Node.left,
+							unresolved.Scope,
+							module,
+							out Hierarchical? baseType,
+							viaArrow: IsArrowMemberAccess( unresolved.Node.op ) ) )
+						typeName = baseType!.FullyQualifiedName;
 
-				diagnostics.Add( new Diagnostic(
-					member.srcPos,
-					DiagnosticKind.Error,
-					String.Format(
-						typeName != null
-							? "Unresolved member '{0}' in '{1}'"
-							: "Unresolved member '{0}'",
-						member.idTplArgs.id,
-						typeName ) ) );
-			}
+					diagnostics.Add( new Diagnostic(
+						member.srcPos,
+						DiagnosticKind.Error,
+						String.Format(
+							typeName != null
+								? "Unresolved member '{0}' in '{1}'"
+								: "Unresolved member '{0}'",
+							member.idTplArgs.id,
+							typeName ) ) );
+				}
 		}
 	}
 

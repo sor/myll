@@ -239,7 +239,8 @@ Use `tmp/` inside the project root for any temporary files or scratch tests. Do 
 - **Before big changes**: Propose a plan first, get approval, then execute.
 - **Commits**: Small, focused messages. Prefer many small commits over large batches.
 - **No pushes without explicit instruction**: Do not run `git push`. Do not ask whether to push. Only push if the user explicitly says "push".
-- **Preserve indentation**: Before constructing an `Edit`, re-check the exact leading tabs (and any spaces) from the `Read` output. Match them exactly in the replacement so the file's indentation stays intact.
+- **Preserve indentation for edits**: Before constructing an `Edit`, re-check the exact leading tabs (and any spaces) from the `Read` output and match them for the changed lines so the replacement compiles cleanly.
+- **Do not reformat whole files or run auto-formatters**: Do not run `dotnet format`, `clang-format`, or similar tools, and do not spend time manually realigning large blocks. If a file's formatting is significantly off, report it with a project-relative path (e.g. `backend/Resolver/Resolver.cs`) and let the user fix it in Rider.
 - **Testing**: Validate with `dotnet build` and `dotnet test testing/` after any backend change.
 - **ANTLR**: Grammar changes → regenerate → commit generated files with the grammar change.
 - **Wrap-up**: Before ending a workday or switching topic, check whether `AGENTS.md`, `plan/*.md`, or other docs need updates so they stay consistent with the current state.

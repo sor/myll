@@ -1,0 +1,32 @@
+module class_operators;
+
+import inner;
+
+func main() -> int
+{
+	var BoxLib::Box b;
+
+	// operator* returning a reference
+	if( (*b).value() != 7 )
+		return 1;
+
+	// Copy from reference to value
+	var BoxLib::Inner i = *b;
+	if( i.value() != 7 )
+		return 2;
+
+	// operator-> returning a pointer
+	if( b->value() != 7 )
+		return 3;
+
+	// Function-style constructor expression as a temporary
+	if( BoxLib::Widget( 5 ).readVal() != 5 )
+		return 4;
+
+	// Function-style constructor used to initialize a value
+	var BoxLib::Widget w = BoxLib::Widget( 9 );
+	if( w.readVal() != 9 )
+		return 5;
+
+	return 0;
+}
