@@ -41,6 +41,11 @@ func main() -> int {
 	var Counter c3( c2 );
 	if( c3.value != 42 ) return 3;
 
+	// multiple names with direct construction
+	var Counter c4( 10 ), c5( 20 );
+	if( c4.value != 10 ) return 8;
+	if( c5.value != 20 ) return 9;
+
 	// direct construction with multiple arguments
 	var Point p1( 1, 2 );
 	if( p1.x != 1 ) return 4;
