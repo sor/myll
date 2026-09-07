@@ -176,8 +176,13 @@ namespace Myll.Resolver
 				case Operand.PostDecr:
 					return operandType;
 
-				case Operand.Dereference:
-					return StripOutermostPointer( operandType );
+			case Operand.Dereference:
+				if( operandType != null
+				 && TryGetClassOperatorReturnType( operandType, "operator*", out Typespec? starReturnType ) )
+					return starReturnType;
+
+				return StripOutermostPointer( operandType );
+
 
 				case Operand.AddressOf:
 					return AddRawPointer( operandType );
@@ -305,6 +310,10 @@ namespace Myll.Resolver
 				// The expression's value type is the surrounding class by value.
 				if( d1 is Structor stc )
 					return StructorParentType( stc );
+
+				// Function-style constructor expression: Callee is the class itself.
+				if( d1 is Structural s1 )
+					return ClassValueType( s1, new[] { id.idTplArgs } );
 			}
 
 			if( callee is ScopedExpr scoped && result.TryGetResolved( scoped, out Decl? d2 ) ) {
@@ -312,6 +321,9 @@ namespace Myll.Resolver
 					return f2.retType;
 				if( d2 is Structor stc2 )
 					return StructorParentType( stc2 );
+
+				if( d2 is Structural s2 )
+					return ClassValueType( s2, scoped.idTpls );
 			}
 
 			if( callee is BinOp binOp
@@ -321,9 +333,22 @@ namespace Myll.Resolver
 					return f3.retType;
 				if( d3 is Structor stc3 )
 					return StructorParentType( stc3 );
+
+				if( d3 is Structural s3 )
+					return ClassValueType( s3, new[] { member.idTplArgs } );
 			}
 
 			return null;
+		}
+
+		private static Typespec? ClassValueType( Structural structural, IReadOnlyList<IdTplArgs> nameSegments )
+		{
+			return new TypespecNested {
+				resolvedDecl = structural,
+				idTpls       = nameSegments
+					.Select( s => new IdTplArgs { id = s.id, tplArgs = s.tplArgs } )
+					.ToList(),
+			};
 		}
 
 		private static Typespec? StructorParentType( Structor stc )
@@ -642,6 +667,84 @@ namespace Myll.Resolver
 					return h;
 
 				leaf = leaf.parent;
+			}
+
+			return null;
+		}
+
+		private bool TryGetClassOperatorReturnType(
+			Typespec   receiverType,
+			string     name,
+			out Typespec? returnType )
+		{
+			returnType = null;
+
+			if( receiverType is not TypespecNested nested
+			 || nested.ptrs is { Count: > 0 }
+			 || nested.resolvedDecl is not Structural structural )
+				return false;
+
+			bool receiverIsConst = ( nested.qual & Qualifier.Const ) != 0;
+			Func? op = LookupOperatorOverload( structural, name, receiverIsConst, new HashSet<Structural>() );
+			if( op == null )
+				return false;
+
+			Typespec ret = op.retType;
+			if( structural.TplParams.Count > 0 ) {
+				List<TplArg>? args = nested.idTpls.LastOrDefault()?.tplArgs;
+				if( args != null && args.Count >= structural.TplParams.Count )
+					ret = TemplateInference.SubstituteTemplateParams(
+						ret, structural.TplParams, args, result );
+			}
+
+			returnType = ret;
+			return returnType != null;
+		}
+
+		private Func? LookupOperatorOverload(
+			Structural          structural,
+			string              name,
+			bool                receiverIsConst,
+			HashSet<Structural> visited )
+		{
+			if( !visited.Add( structural ) )
+				return null;
+
+			Func? strict   = null;
+			Func? fallback = null;
+
+			foreach( Decl decl in structural.children ) {
+				if( decl is not Func func || func.name != name )
+					continue;
+
+				bool isConst = func.IsPure;
+				if( receiverIsConst ) {
+					if( isConst )
+						strict ??= func;
+				}
+				else {
+					if( !isConst )
+						strict ??= func;
+					fallback ??= func;
+				}
+			}
+
+			if( strict != null )
+				return strict;
+			if( fallback != null )
+				return fallback;
+
+			foreach( BaseType bt in structural.basetypes ) {
+				if( bt.type is not TypespecNested nested )
+					continue;
+
+				Decl? baseDecl = nested.resolvedDecl
+					          ?? ( result.TryGetResolved( nested, out Decl? d ) ? d : null );
+				if( baseDecl is Structural baseStruct ) {
+					Func? fromBase = LookupOperatorOverload( baseStruct, name, receiverIsConst, visited );
+					if( fromBase != null )
+						return fromBase;
+				}
 			}
 
 			return null;
