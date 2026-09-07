@@ -1,6 +1,6 @@
 module echo_cxxopts;
 
-import std_iostream, std_string, std_vector, cxxopts.hpp;
+import std_iostream, std_string, std_vector, cxxopts;
 
 func main( const int argc, const char *[] argv ) -> int
 {

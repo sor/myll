@@ -36,6 +36,7 @@ namespace Myll
 				withBody = true,
 				imps     = new HashSet<string>(),
 				module   = module,
+				Context  = Context,
 			};
 			Scope scope = new() {
 				decl = global,

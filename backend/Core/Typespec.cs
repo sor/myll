@@ -78,7 +78,7 @@ namespace Myll.Core
 				}
 
 				wasArray = ptr.kind == Pointer.Kind.RawArray;
-				string tpl   = Pointer.template[ptr.kind];
+				string tpl   = ptr.GetTemplate();
 				string index = ptr.expr?.Gen() ?? "";
 				if( wasArray ) {
 					rightOfName = Format( tpl, rightOfName, index );
@@ -141,6 +141,9 @@ namespace Myll.Core
 
 		public override string GenType()
 		{
+			if( kind == Kind.String )
+				return Dialect.Default.StringClassName;
+
 			if( isDefaultSized ) {
 				return kind switch {
 					Kind.Integer  => "int",
@@ -297,26 +300,8 @@ namespace Myll.Core
 			NoNeedForParens_End,
 		}
 
-		public static readonly IReadOnlyDictionary<Kind, string>
-			template = new Dictionary<Kind, string> {
-				{ Kind.RawPtr,			"{0}*" },
-				{ Kind.PtrToAry,		"{0}*" },
-				{ Kind.LVRef,			"{0}&" },
-				{ Kind.RVRef,			"{0}&&" },
-				{ Kind.RawArray,		"{0}[{1}]" },
-				{ Kind.Unique,			"std::unique_ptr<{0}>" },
-				{ Kind.UniqueArray,		"std::unique_ptr<{0}[]>" },
-				{ Kind.Shared,			"std::shared_ptr<{0}>" },
-				{ Kind.SharedArray,		"std::shared_ptr<{0}[]>" },
-				{ Kind.Weak,			"std::weak_ptr<{0}>" },
-				{ Kind.WeakArray,		"std::weak_ptr<{0}[]>" },
-				{ Kind.Array,			"std::array<{0},{1}>" },
-				{ Kind.Vector,			"std::vector<{0}>" },
-				{ Kind.Set,				"std::unordered_set<{0}>" },
-				{ Kind.OrderedSet,		"std::set<{0}>" },
-				{ Kind.MultiSet,		"std::unordered_multiset<{0}>" },
-				{ Kind.OrderedMultiSet, "std::multiset<{0}>" },
-			};
+		public string GetTemplate()
+			=> Dialect.Default.GetPointerTemplate( kind );
 
 		public Qualifier qual;
 		public Kind      kind;

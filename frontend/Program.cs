@@ -184,9 +184,11 @@ namespace Myll
 		{
 			CompilationContext context = new() {
 				IsPrototypeFile = isPrototypeFile,
+				Dialect         = Dialect.Default,
 			};
 			//Console.WriteLine( "Time elapsed after CompileModule  {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
 			GlobalNamespace module = context.DeclVisitor.VisitProgs( progContext );
+			module.Context = context;
 			return new( module, context );
 		}
 

@@ -2,6 +2,62 @@ using System;
 
 namespace Myll.Core
 {
+	/// <summary>
+	/// Per-compilation dialect options. A copy is stored in each <see cref="CompilationContext"/>
+	/// so that different modules can use different mappings in the future.
+	/// </summary>
+	public sealed record DialectOptions
+	{
+		/// <summary>
+		/// Fully-qualified Myll name of the class that backs the <c>string</c> keyword.
+		/// The class must be declared in a <c>.decl.myll</c> file (or built in).
+		/// </summary>
+		public string StringClassName { get; init; } = "std::string";
+
+		public string UniquePtrTemplate      { get; init; } = "std::unique_ptr<{0}>";
+		public string UniqueArrayPtrTemplate { get; init; } = "std::unique_ptr<{0}[]>";
+		public string SharedPtrTemplate      { get; init; } = "std::shared_ptr<{0}>";
+		public string SharedArrayPtrTemplate { get; init; } = "std::shared_ptr<{0}[]>";
+		public string WeakPtrTemplate        { get; init; } = "std::weak_ptr<{0}>";
+		public string WeakArrayPtrTemplate   { get; init; } = "std::weak_ptr<{0}[]>";
+
+		public string UniquePtrMakeTemplate      { get; init; } = "std::make_unique<{0}>({1})";
+		public string UniqueArrayPtrMakeTemplate { get; init; } = "std::make_unique<{0}[]>({1})";
+		public string SharedPtrMakeTemplate      { get; init; } = "std::make_shared<{0}>({1})";
+		public string SharedArrayPtrMakeTemplate { get; init; } = "std::make_shared<{0}[]>({1})";
+
+		public string GetPointerTemplate( Pointer.Kind kind )
+			=> kind switch {
+				Pointer.Kind.RawPtr      => "{0}*",
+				Pointer.Kind.PtrToAry    => "{0}*",
+				Pointer.Kind.LVRef       => "{0}&",
+				Pointer.Kind.RVRef       => "{0}&&",
+				Pointer.Kind.RawArray    => "{0}[{1}]",
+				Pointer.Kind.Unique      => UniquePtrTemplate,
+				Pointer.Kind.UniqueArray => UniqueArrayPtrTemplate,
+				Pointer.Kind.Shared      => SharedPtrTemplate,
+				Pointer.Kind.SharedArray => SharedArrayPtrTemplate,
+				Pointer.Kind.Weak        => WeakPtrTemplate,
+				Pointer.Kind.WeakArray   => WeakArrayPtrTemplate,
+				Pointer.Kind.Array       => "std::array<{0},{1}>",
+				Pointer.Kind.Vector      => "std::vector<{0}>",
+				Pointer.Kind.Set         => "std::unordered_set<{0}>",
+				Pointer.Kind.OrderedSet  => "std::set<{0}>",
+				Pointer.Kind.MultiSet    => "std::unordered_multiset<{0}>",
+				Pointer.Kind.OrderedMultiSet => "std::multiset<{0}>",
+				_ => throw new ArgumentOutOfRangeException( nameof( kind ), kind, null ),
+			};
+
+		public string GetPointerMakeTemplate( Pointer.Kind kind )
+			=> kind switch {
+				Pointer.Kind.Unique      => UniquePtrMakeTemplate,
+				Pointer.Kind.UniqueArray => UniqueArrayPtrMakeTemplate,
+				Pointer.Kind.Shared      => SharedPtrMakeTemplate,
+				Pointer.Kind.SharedArray => SharedArrayPtrMakeTemplate,
+				_ => throw new ArgumentOutOfRangeException( nameof( kind ), kind, null ),
+			};
+	}
+
 	// Compile-time dialect switches. In the future these may move to a config file or CLI options.
 	public enum SwitchFallthroughMode
 	{
@@ -110,6 +166,9 @@ namespace Myll.Core
 
 	public static class Dialect
 	{
+		// Default dialect options. Per-module overrides are stored in CompilationContext.Dialect.
+		public static readonly DialectOptions Default = new();
+
 		// When true, `new T` is illegal; you must write `new T*` (or another explicit pointer type).
 		// When false, `new T` gets an implicit raw pointer, matching the C++-style default.
 		public static bool StrictNew = false;

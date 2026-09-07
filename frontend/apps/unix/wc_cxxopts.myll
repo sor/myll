@@ -1,6 +1,6 @@
 module wc_cxxopts;
 
-import std_iostream, std_fstream, std_string, std_vector, cxxopts.hpp;
+import std_iostream, std_fstream, std_string, std_vector, cxxopts;
 
 func wcStream( std::istream & in ) -> void
 {

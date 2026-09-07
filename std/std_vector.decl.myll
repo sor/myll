@@ -1,6 +1,22 @@
 module std_vector;
 
 namespace std {
-	// Template container: forward declaration only for now.
-	class vector<T>;
+	// std::vector backing declaration for Myll resolution.
+	// The real definition comes from the C++ standard library <vector> header.
+	class vector<T> {
+	[pub]:
+		ctor();
+		ctor( usize count );
+
+		func push_back( const T & value ) -> void;
+		func pop_back() -> void;
+
+		func size() -> usize;
+		func empty() -> bool;
+
+		func begin() -> T*;
+		func end() -> T*;
+
+		operator []( usize index ) -> T &;
+	};
 }

@@ -1,7 +1,21 @@
 module std_fstream;
 
+import std_iostream;
+
 namespace std {
-	class ifstream;
-	class ofstream;
+	class ifstream : [pub] std::istream {
+	[pub]:
+		ctor();
+		ctor( const char * filename );
+		ctor( const string & filename );
+	};
+
+	class ofstream : [pub] std::ostream {
+	[pub]:
+		ctor();
+		ctor( const char * filename );
+		ctor( const string & filename );
+	};
+
 	class fstream;
 }

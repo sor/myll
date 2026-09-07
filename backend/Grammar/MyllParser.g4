@@ -261,7 +261,9 @@ aggrAssignOP:	v=(	'**=' | '*=' | '/=' | '%=' | '&=' |	'·=' |	'×=' |	'÷=' |
 
 lit			:	CLASS_LIT | HEX_LIT | OCT_LIT | BIN_LIT | INTEGER_LIT | FLOAT_LIT | STRING_LIT | CHAR_LIT | BOOL_LIT | NUL;
 wildId		:	AUTOINDEX | USCORE;
-id			:	ID;
+// `string` is a built-in type keyword, but it is also a valid identifier so that
+// external backing classes can be declared with their real C++ name, e.g. `class string`.
+id			:	ID | STRING;
 idOrLit		:	id | lit;
 
 // +++ handled

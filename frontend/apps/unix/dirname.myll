@@ -9,8 +9,8 @@ func main( const int argc, const char *[] argv ) -> int
 		return 1;
 	}
 
-	const string path = (string)argv[1];
-	var string dir = (string)std::filesystem::path(path).parent_path().generic_string();
+	const string input = (string)argv[1];
+	var string dir = (string)std::filesystem::path(input).parent_path().generic_string();
 
 	if( dir == "" )
 		dir = ".";

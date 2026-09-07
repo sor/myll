@@ -1,6 +1,6 @@
 module head_cxxopts;
 
-import std_iostream, std_fstream, std_string, std_vector, cxxopts.hpp;
+import std_iostream, std_fstream, std_exception, std_string, std_vector, cxxopts;
 
 func headStream( std::istream & in, const int n ) -> void
 {

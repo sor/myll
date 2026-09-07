@@ -9,8 +9,8 @@ func main( const int argc, const char *[] argv ) -> int
 		return 1;
 	}
 
-	const string path = (string)argv[1];
-	var string base = (string)std::filesystem::path(path).filename().generic_string();
+	const string input = (string)argv[1];
+	var string base = (string)std::filesystem::path(input).filename().generic_string();
 
 	if( argc == 3 ) {
 		const string suffix = (string)argv[2];

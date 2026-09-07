@@ -1,0 +1,10 @@
+module ls_helpers;
+
+namespace ls_helpers {
+	func fileTypeLetter( const string & path ) -> string;
+	func permissionString( const string & path ) -> string;
+	func hardLinkCount( const string & path ) -> u64;
+	func ownerName( const string & path ) -> string;
+	func groupName( const string & path ) -> string;
+	func formatTime( const string & path ) -> string;
+}

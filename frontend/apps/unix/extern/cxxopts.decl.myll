@@ -1,0 +1,35 @@
+module cxxopts;
+
+import std_string, std_vector;
+
+namespace cxxopts {
+	class Options {
+	[pub]:
+		ctor( const string & program, const string & help );
+
+		func parse( int argc, const char *[] argv ) -> ParseResult;
+		func add_options() -> OptionAdder;
+	};
+
+	class ParseResult {
+	[pub]:
+		func unmatched() -> std::vector<string>;
+		func count( const string & name ) -> int;
+
+		operator []( const string & name ) -> Value &;
+	};
+
+	class Value {
+	[pub]:
+		func default_value( const string & value ) -> Value &;
+		func as<T>() -> T;
+	};
+
+	class OptionAdder {
+	[pub]:
+		operator ()( const string & option, const string & desc ) -> OptionAdder &;
+		operator ()( const string & option, const string & desc, const Value * value ) -> OptionAdder &;
+	};
+
+	func value<T>() -> Value *;
+}

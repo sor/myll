@@ -1,6 +1,6 @@
 module ls_cxxopts;
 
-import std_iostream, std_filesystem, std_vector, std_string, std_algorithm, ls_helpers, cxxopts.hpp;
+import std_iostream, std_filesystem, std_vector, std_string, std_algorithm, ls_helpers, cxxopts;
 
 enum SortMode {
 	Name,
@@ -32,9 +32,9 @@ class DirEntry
 	}
 
 [pub]:
-	ctor( const std::filesystem::path & path )
+	ctor( const std::filesystem::path & entryPath )
 	{
-		_path = path;
+		_path = entryPath;
 		_isDirectory = std::filesystem::is_directory( _path );
 		try {
 			_time = std::filesystem::last_write_time( _path );

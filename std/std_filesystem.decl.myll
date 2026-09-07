@@ -2,8 +2,48 @@ module std_filesystem;
 
 namespace std {
 	namespace filesystem {
-		class path;
-		class directory_entry;
-		class directory_iterator;
+		class path {
+		[pub]:
+			ctor();
+			ctor( const char * source );
+			ctor( const string & source );
+
+			func filename() -> path;
+			func parent_path() -> path;
+			func generic_string() -> string;
+
+			operator =( const path & other ) -> path &;
+		};
+
+		class directory_entry {
+		[pub]:
+			func path() -> std::filesystem::path;
+		};
+
+		class directory_iterator {
+		[pub]:
+			ctor();
+			ctor( const std::filesystem::path & p );
+
+			operator *() -> const std::filesystem::directory_entry &;
+			operator ++() -> std::filesystem::directory_iterator &;
+
+			operator !=( const std::filesystem::directory_iterator & other ) -> bool;
+		};
+
+		class file_time_type {
+		[pub]:
+			[static]
+			func min() -> std::filesystem::file_time_type;
+
+			operator =( const file_time_type & other ) -> file_time_type &;
+		};
+
+		func exists( const path & p ) -> bool;
+		func is_directory( const path & p ) -> bool;
+		func is_regular_file( const path & p ) -> bool;
+		func file_size( const path & p ) -> u64;
+		func last_write_time( const path & p ) -> file_time_type;
+		func current_path() -> path;
 	}
 }

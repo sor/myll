@@ -22,6 +22,17 @@ namespace Myll
 
 		public bool IsPrototypeFile { get; init; }
 
+		/// <summary>
+		/// Dialect options for this module. The resolver uses this instead of the static
+		/// <see cref="Dialect"/> defaults so per-module overrides become possible later.
+		/// </summary>
+		public DialectOptions Dialect { get; init; } = Myll.Core.Dialect.Default;
+
+		/// <summary>
+		/// Resolved declaration backing the <c>string</c> keyword for this module, if any.
+		/// </summary>
+		public Decl? StringBackingClass { get; set; }
+
 		public List<Diagnostic> Diagnostics { get; } = new();
 
 		public ExprVisitor ExprVisitor { get; }

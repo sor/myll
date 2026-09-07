@@ -1,6 +1,6 @@
 module basename_cxxopts;
 
-import std_iostream, std_filesystem, std_vector, cxxopts.hpp;
+import std_iostream, std_filesystem, std_vector, cxxopts;
 
 func main( const int argc, const char *[] argv ) -> int
 {
@@ -13,8 +13,8 @@ func main( const int argc, const char *[] argv ) -> int
 		return 1;
 	}
 
-	const string path = args[0];
-	var string base = (string)std::filesystem::path( path ).filename().generic_string();
+	const string input = args[0];
+	var string base = (string)std::filesystem::path( input ).filename().generic_string();
 
 	if( args.size() == 2 ) {
 		const string suffix = args[1];

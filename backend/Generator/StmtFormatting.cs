@@ -99,10 +99,6 @@ namespace Myll.Generator
 						{ 4, "char32_t" },
 					}
 				}, {
-					TypespecBasic.Kind.String, new IntToString {
-						{ TypespecBasic.SizeUndetermined, "std::string" }
-					}
-				}, {
 					TypespecBasic.Kind.Float, new IntToString {
 						{ 2, "half" },
 						{ 4, "float" },

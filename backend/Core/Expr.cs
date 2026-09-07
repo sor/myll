@@ -602,16 +602,13 @@ namespace Myll.Core
 				ret = Format( "new {0}{1}", innerType, funcCall.Gen() );
 			}
 			else if( ptr != null && ptr.kind.Between( Pointer.Kind.SmartPtr_Begin, Pointer.Kind.SmartPtr_End ) ) {
-				string ptrFmt = ptr.kind switch {
-					Pointer.Kind.Unique      => "std::make_unique<{0}>({1})",
-					Pointer.Kind.UniqueArray => "std::make_unique<{0}[]>({1})",
-					Pointer.Kind.Shared      => "std::make_shared<{0}>({1})",
-					Pointer.Kind.SharedArray => "std::make_shared<{0}[]>({1})",
-					_                        => throw new DiagnosticException( new Diagnostic(
+				if( ptr.kind == Pointer.Kind.Weak || ptr.kind == Pointer.Kind.WeakArray )
+					throw new DiagnosticException( new Diagnostic(
 						srcPos,
 						DiagnosticKind.Error,
-						"weak_ptr can not be new'ed" ) ),
-				};
+						"weak_ptr can not be new'ed" ) );
+
+				string ptrFmt = Dialect.Default.GetPointerMakeTemplate( ptr.kind );
 
 				// remove the outermost smart pointer from the type without mutating the AST
 				type.ptrs = savedPtrs.Take( savedPtrs.Count - 1 ).ToList();

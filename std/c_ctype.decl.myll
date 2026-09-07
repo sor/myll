@@ -5,4 +5,6 @@ namespace std {
 	func isdigit(char c) -> int;
 	func isalpha(char c) -> int;
 	func isalnum(char c) -> int;
+	func tolower(char c) -> int;
+	func toupper(char c) -> int;
 }

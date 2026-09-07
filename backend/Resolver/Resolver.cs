@@ -74,6 +74,7 @@ namespace Myll.Resolver
 
 			var exports  = BuildModuleExports( modules );
 			var resolver = new NameResolver( exports, result, diagnostics );
+			resolver.ResolveDialectBackings( modules, exports );
 
 			bool progress;
 			do {
@@ -152,6 +153,70 @@ namespace Myll.Resolver
 					if( decl is Namespace ns )
 						CollectExports( ns.scope, exports );
 				}
+			}
+		}
+
+		private void ResolveDialectBackings(
+			IReadOnlyList<CompiledModuleResult> modules,
+			IReadOnlyDictionary<string, ModuleExports> exports )
+		{
+			// Build a combined view of all module exports so a class like `std::string`
+			// declared in an imported prototype module can back the `string` keyword.
+			var combinedExports = new ModuleExports();
+			foreach( (GlobalNamespace module, _) in modules ) {
+				if( exports.TryGetValue( module.module, out ModuleExports? moduleExports ) )
+					moduleExports.CopyTo( combinedExports );
+			}
+
+			Decl? ResolveName( string fqn )
+			{
+				string[] parts = fqn.Split( "::" );
+				List<Decl> candidates = new( combinedExports.LookupAll( parts[0] ) );
+				if( candidates.Count == 0 )
+					return null;
+
+				for( int i = 1; i < parts.Length; i++ ) {
+					List<Decl> next = new();
+					foreach( Decl current in candidates ) {
+						Scope? scope = current switch {
+							Namespace ns => ns.scope,
+							Structural s => s.scope,
+							_            => null,
+						};
+
+						if( scope == null )
+							continue;
+
+						if( scope.children.TryGetValue( parts[i], out List<ScopeLeaf>? leaves ) ) {
+							next.AddRange(
+								leaves
+									.Where( l => l.decl != null && !l.decl.IsHidden )
+									.Select( l => l.decl! ) );
+						}
+					}
+
+					if( next.Count == 0 )
+						return null;
+					candidates = next;
+				}
+
+				return candidates.Count == 1 ? candidates[0] : null;
+			}
+
+			foreach( (GlobalNamespace module, _) in modules ) {
+				Decl? stringDecl = ResolveName( module.Context.Dialect.StringClassName );
+				if( stringDecl is Hierarchical ) {
+					module.Context.StringBackingClass = stringDecl;
+				}
+				else if( stringDecl != null ) {
+					diagnostics.Add( new Diagnostic(
+						null,
+						DiagnosticKind.Error,
+						String.Format(
+							"Dialect setting 'StringClassName = {0}' does not name a class or struct.",
+							module.Context.Dialect.StringClassName ) ) );
+				}
+				// If it is null, unresolved member diagnostics on string will guide the user.
 			}
 		}
 
@@ -900,7 +965,11 @@ namespace Myll.Resolver
 			return current;
 		}
 
-		private bool TryGetMemberAccessBaseType( Expr expr, Scope scope, GlobalNamespace module, out Hierarchical baseType )
+		private bool TryGetMemberAccessBaseType(
+			Expr expr,
+			Scope scope,
+			GlobalNamespace module,
+			out Hierarchical baseType )
 		{
 			baseType = null!;
 			Typespec? type = null;
@@ -1008,7 +1077,7 @@ namespace Myll.Resolver
 			if( baseType != null )
 				return true;
 
-			return type != null && TryGetBaseHierarchical( type, out baseType );
+			return type != null && TryGetBaseHierarchical( type, module, out baseType );
 		}
 
 		private bool TryGetReceiverType( Expr expr, out Typespec receiverType )
@@ -1076,7 +1145,7 @@ namespace Myll.Resolver
 			if( !TryGetReceiverType( receiver, out Typespec receiverType ) )
 				return false;
 
-			if( !TryGetBaseHierarchical( receiverType, out Hierarchical? container ) )
+			if( !TryGetBaseHierarchical( receiverType, module, out Hierarchical? container ) )
 				return false;
 
 			if( container is not Structural structural )
@@ -1172,9 +1241,21 @@ namespace Myll.Resolver
 			return null;
 		}
 
-		private bool TryGetBaseHierarchical( Typespec type, out Hierarchical baseType )
+		private bool TryGetBaseHierarchical(
+			Typespec type,
+			GlobalNamespace module,
+			out Hierarchical baseType )
 		{
 			baseType = null!;
+
+			if( type is TypespecBasic { kind: TypespecBasic.Kind.String } ) {
+				Decl? backing = module.Context.StringBackingClass;
+				if( backing is Hierarchical h ) {
+					baseType = h;
+					return true;
+				}
+			}
+
 			if( type is TypespecNested nested ) {
 				Decl? decl = nested.resolvedDecl;
 				if( decl == null )
@@ -1202,8 +1283,8 @@ namespace Myll.Resolver
 					};
 					if( inner.ptrs == null )
 						return false;
-					inner.ptrs.RemoveAt( inner.ptrs.Count - 1 );
-					return TryGetBaseHierarchical( inner, out baseType );
+				inner.ptrs.RemoveAt( inner.ptrs.Count - 1 );
+				return TryGetBaseHierarchical( inner, module, out baseType );
 				}
 			}
 
@@ -1713,6 +1794,15 @@ namespace Myll.Resolver
 					}
 
 					nsList.Add( ns );
+				}
+			}
+
+			public void CopyTo( ModuleExports other )
+			{
+				foreach( (string name, List<Decl> list) in exports ) {
+					foreach( Decl decl in list ) {
+						other.Add( name, decl );
+					}
 				}
 			}
 

@@ -1,6 +1,6 @@
 module grep_cxxopts;
 
-import std_iostream, std_fstream, std_string, std_vector, c_ctype, cxxopts.hpp;
+import std_iostream, std_fstream, std_string, std_vector, c_ctype, cxxopts;
 
 struct Options
 {

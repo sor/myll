@@ -1,13 +1,39 @@
 module std_iostream;
 
 namespace std {
+	class streambuf;
+
 	class ostream {
+	[pub]:
 		func flush() -> void;
+
+		operator <<( const string & value ) -> ostream &;
+		operator <<( const char * value ) -> ostream &;
+		operator <<( char value ) -> ostream &;
+		operator <<( int value ) -> ostream &;
+		operator <<( u64 value ) -> ostream &;
+		operator <<( bool value ) -> ostream &;
+		operator <<( std::streambuf * sb ) -> ostream &;
+
+		operator !() -> bool;
 	};
-	class istream;
+
+	class istream {
+	[pub]:
+		func rdbuf() -> std::streambuf *;
+
+		operator >>( string & value ) -> istream &;
+		operator >>( int & value ) -> istream &;
+		operator >>( u64 & value ) -> istream &;
+
+		operator !() -> bool;
+	};
+
 	class ostringstream;
 
 	var ostream cout;
 	var ostream cerr;
 	var istream cin;
+
+	func getline( istream & in, string & line ) -> bool;
 }

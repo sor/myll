@@ -1,8 +1,26 @@
 module std_string;
 
 namespace std {
-	// std::string is a typedef for a template specialisation and deferred.
-	// Non-template helpers that Myll code uses can be added here.
+	// std::string backing class for Myll's `string` keyword.
+	// Declared here only for Myll-side resolution; the real definition
+	// comes from the C++ standard library <string> header.
+	class string {
+	[pub]:
+		ctor();
+		ctor( const char * str );
+
+		func length() -> usize;
+		func substr( usize pos, usize len ) -> string;
+		func compare( usize pos, usize len, const string & str ) -> int;
+
+		operator []( usize index ) -> char &;
+		operator +=( const string & other ) -> string &;
+	};
+
+	operator +( const string & a, const string & b ) -> string;
+	operator <( const string & a, const string & b ) -> bool;
+	operator ==( const string & a, const string & b ) -> bool;
+	operator !=( const string & a, const string & b ) -> bool;
 
 	// Numeric conversions from <string>.
 	func to_string( int value ) -> string;
@@ -10,4 +28,6 @@ namespace std {
 	func to_string( u64 value ) -> string;
 	func to_string( f32 value ) -> string;
 	func to_string( f64 value ) -> string;
+
+	func stoi( const string & str ) -> int;
 }

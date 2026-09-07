@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Myll;
 using Myll.Generator;
 
 namespace Myll.Core
@@ -342,6 +343,12 @@ namespace Myll.Core
 	{
 		public string          module = null!;
 		public HashSet<string> imps = new();
+
+		/// <summary>
+		/// Compilation context for this module. Stored here so the rest of the pipeline
+		/// does not need to carry a separate tuple everywhere.
+		/// </summary>
+		public CompilationContext Context = null!;
 	}
 
 	public class BaseType

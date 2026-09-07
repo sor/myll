@@ -1,0 +1,8 @@
+module std_exception;
+
+namespace std {
+	class exception {
+	[pub]:
+		func what() -> const char *;
+	};
+}

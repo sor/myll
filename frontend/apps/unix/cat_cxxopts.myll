@@ -1,6 +1,6 @@
 module cat_cxxopts;
 
-import std_iostream, std_fstream, std_vector, cxxopts.hpp;
+import std_iostream, std_fstream, std_vector, cxxopts;
 
 func copyStream( std::istream & in ) -> void
 {
