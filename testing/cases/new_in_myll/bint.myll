@@ -2,19 +2,25 @@ module new_in_myll;
 
 func check_bint() -> int
 {
-	var b8 a = 0x0F;
-	var b8 b = 0x33;
+	var b8 a = 0x0F; // 0b00001111
+	var b8 b = 0x33; // 0b00110011
 
-	if( ( a + b ) != 0x3F ) return 1;
-	if( ( a * b ) != 0x03 ) return 2;
-	if( ( a - b ) != 0x0C ) return 3;
-	if( ( a / b ) != 0xF3 ) return 4;
-	if( ( a ^ b ) != 0x3C ) return 5;
-	if( ( a | b ) != 0x3F ) return 6;
-	if( ( a & b ) != 0x03 ) return 7;
+	if( ( a +  b ) != 0x3F ) return 1;  // bitwise addition is same as bitwise or
+	if( ( a *  b ) != 0x03 ) return 2;  // bitwise multiplication is same as bitwise and
+	if( ( a -  b ) != 0x0C ) return 3;  // bitwise diff, select b?
+	if( ( a /  b ) != 0xF3 ) return 4;  // bitwise implikation a -> b, or this?: a <= b
+	if( ( a ^  b ) != 0x3C ) return 5;  // bitwise exor, i <!> j, i != j
+	if( ( a |  b ) != 0x3F ) return 6;  // bitwise or, merge, to avoid confusion keep the original behaviour
+	if( ( a &  b ) != 0x03 ) return 7;  // bitwise and, mask, to avoid confusion keep the original behaviour
 	if( ( a << 1 ) != 0x1E ) return 8;
 	if( ( a >> 1 ) != 0x07 ) return 9;
-	if( ( ~a ) != 0xF0 ) return 10;
+	if( ( ~a ) != 0xF0 ) return 10;     // negate all individual bits
+
+	/* TODO: These are undecided what they do, if they return bint or bool
+	var bint r = +i; // maybe the same as `any`
+	var bint s = -i; // usually is ~i+1
+	var bint t = !i;
+	*/
 
 	var bint m = 0xFFFFFFFF;
 	var bint n = 0;

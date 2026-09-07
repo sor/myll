@@ -1,0 +1,20 @@
+func test50(){
+	// Evaluating the contents of the
+	// Ideas from Regex
+	// i.?  0 to N ones but not all
+	// i.*  0 to all ones (not interesting for this)
+	// i.+  1 to all ones
+
+	// Readable text Idea (ADL like does not need bitset::all )
+	// i is all     OR i has all     OR all of i  // i has all bits set
+	// i is any     OR i has any     OR any of i  // i has at least 1 bit set
+	// i is some    OR i has some    OR some of i // i has some bits set but not all and not none, opposite of `allSame`
+	// i is allSame OR i has allSame OR some of i // i has all or none bits set, opposite of `some`
+	// i is none    OR i has none    OR none of i // i has no bits set
+	// all, some and none are non-overlapping, any equals all or some
+	// everything can be negated
+	// i is not all  OR i has not all  OR not all of i  // i has not all bits set
+	// i is not any  OR i has not any  OR not any of i  // `i has none` is the easier alternative
+	// i is not some OR i has not some OR not some of i // i has either all or none bits set (e.g. all bits are `votes` and we have `consent`)
+	// i is not none OR i has not none OR not none of i // `i has any` is the easier alternative
+}
