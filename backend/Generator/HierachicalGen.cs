@@ -167,9 +167,7 @@ namespace Myll.Generator
 
 			void AddGeneratedModuleInclude( string moduleName )
 			{
-				string include = moduleName.Contains( "." )
-					? Format( "#include \"{0}\"", moduleName )
-					: Format( "#include \"{0}.hpp\"", moduleName );
+				string include = Format( "#include \"{0}.hpp\"", moduleName );
 
 				if( seen.Add( include ) )
 					includes.Add( include );
