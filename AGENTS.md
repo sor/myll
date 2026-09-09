@@ -105,9 +105,9 @@ myll/
 ## ANTLR
 
 - Grammar files: `backend/Grammar/MyllLexer.g4`, `backend/Grammar/MyllParser.g4`
-- Generated output: `backend/Grammar/Generated/Myll/`
+- Generated output: `backend/Grammar/Generated/Myll/` (created automatically during build, not committed)
 - Rider ANTLR config: `.idea/.idea.myll/.idea/misc.xml` (committed to git)
-- Grammar changes: The `Antlr4BuildTasks` NuGet package regenerates the C# parser/lexer automatically during `dotnet build`. Commit the updated `backend/Grammar/Generated/` files together with the `.g4` change.
+- Grammar changes: The `Antlr4BuildTasks` NuGet package regenerates the C# parser/lexer automatically during `dotnet build`. Do not commit the generated files in `backend/Grammar/Generated/`.
 
 ## Code Conventions
 
@@ -244,7 +244,7 @@ Use `tmp/` inside the project root for any temporary files or scratch tests. Do 
 - **Preserve indentation for edits**: Before constructing an `Edit`, re-check the exact leading tabs (and any spaces) from the `Read` output and match them for the changed lines so the replacement compiles cleanly.
 - **Do not reformat whole files or run auto-formatters**: Do not run `dotnet format`, `clang-format`, or similar tools, and do not spend time manually realigning large blocks. If a file's formatting is significantly off, report it with a project-relative path (e.g. `backend/Resolver/Resolver.cs`) and let the user fix it in Rider.
 - **Testing**: Validate with `dotnet build` and `dotnet test testing/` after any backend change.
-- **ANTLR**: Grammar changes → regenerate → commit generated files with the grammar change.
+- **ANTLR**: Grammar changes → regenerate during `dotnet build` → do not commit generated files.
 - **Wrap-up**: Before ending a workday or switching topic, check whether `AGENTS.md`, `plan/*.md`, or other docs need updates so they stay consistent with the current state.
 
 ## Planned Work

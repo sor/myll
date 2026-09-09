@@ -101,7 +101,7 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 
 9. **CI/CD**
    - Set up a CI workflow for automated builds and tests.
-   - Decide whether to commit the generated ANTLR files or always regenerate during build.
+   - Generate ANTLR output during build; do not commit the generated files.
 
 10. **Open language design questions**
    - Should `return _` mean "return default"?

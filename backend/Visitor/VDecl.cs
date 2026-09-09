@@ -83,7 +83,7 @@ namespace Myll
 					foreach( ImportNameContext nameCtx in importCtx.importName() ) {
 						if( nameCtx.namedImport() is NamedImportContext namedCtx ) {
 							global.imports.Add( new NamedImportSpec {
-								name   = String.Join( ".", namedCtx.id().Select( id => id.GetText() ) ),
+								name   = namedCtx.id().GetText(),
 								srcPos = namedCtx.ToSrcPos(),
 							} );
 						}

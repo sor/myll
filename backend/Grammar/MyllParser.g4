@@ -17,7 +17,7 @@ imports		:	IMPORT importName (COMMA importName)* COMMA? SEMI;
 importName	:	namedImport
 			|	systemImport
 			|	localImport;
-namedImport	:	id (POINT id)*;
+namedImport	: id;
 systemImport:	LT (~GT)+ GT;
 localImport	:	STRING_LIT;
 
