@@ -32,12 +32,12 @@ namespace Myll.Resolver
 			IReadOnlyList<CompiledModuleResult> modules,
 			List<Diagnostic> diagnostics )
 		{
-			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
 				TransformDecl( module, context );
 			}
 		}
 
-		private void TransformDecl( Decl decl, CompilationContext context )
+		private void TransformDecl( Decl decl, ModuleContext context )
 		{
 			switch( decl ) {
 				case Func func:
@@ -57,7 +57,7 @@ namespace Myll.Resolver
 			}
 		}
 
-		private void TransformBlock( MultiStmt block, CompilationContext context )
+		private void TransformBlock( MultiStmt block, ModuleContext context )
 		{
 			List<Stmt> stmts = block.stmts;
 			int        i     = 0;
@@ -80,7 +80,7 @@ namespace Myll.Resolver
 			}
 		}
 
-		private Stmt TransformTopLevelStmt( Stmt stmt, List<Stmt> preStmts, CompilationContext context )
+		private Stmt TransformTopLevelStmt( Stmt stmt, List<Stmt> preStmts, ModuleContext context )
 		{
 			switch( stmt ) {
 				case MultiStmt multi:
@@ -220,7 +220,7 @@ namespace Myll.Resolver
 			}
 		}
 
-		private MultiStmt ProcessNestedBlockStmt( Stmt stmt, CompilationContext context )
+		private MultiStmt ProcessNestedBlockStmt( Stmt stmt, ModuleContext context )
 		{
 			if( stmt is MultiStmt multi ) {
 				TransformBlock( multi, context );
@@ -237,7 +237,7 @@ namespace Myll.Resolver
 		}
 
 		private Stmt TransformMultiAssign(
-			MultiAssign multiAssign, List<Stmt> preStmts, CompilationContext context )
+			MultiAssign multiAssign, List<Stmt> preStmts, ModuleContext context )
 		{
 			// _ = expr  =>  static_cast<void>( expr );
 			if( multiAssign.exprs.Count == 2 && multiAssign.exprs[0] is Discard ) {
@@ -265,7 +265,7 @@ namespace Myll.Resolver
 			return multiAssign;
 		}
 
-		private void TransformExpr( Expr expr, List<Stmt> preStmts, CompilationContext context )
+		private void TransformExpr( Expr expr, List<Stmt> preStmts, ModuleContext context )
 		{
 			switch( expr ) {
 				case FuncCallExpr callExpr:
@@ -329,7 +329,7 @@ namespace Myll.Resolver
 		}
 
 		private void TransformFuncCallExpr(
-			FuncCallExpr callExpr, List<Stmt> preStmts, CompilationContext context )
+			FuncCallExpr callExpr, List<Stmt> preStmts, ModuleContext context )
 		{
 			Decl? calleeDecl = ResolveCallCallee( callExpr, context );
 			List<Param> parameters = calleeDecl switch {
@@ -366,7 +366,7 @@ namespace Myll.Resolver
 			TransformExpr( callExpr.expr, preStmts, context );
 		}
 
-		private Decl? ResolveCallCallee( FuncCallExpr callExpr, CompilationContext context )
+		private Decl? ResolveCallCallee( FuncCallExpr callExpr, ModuleContext context )
 		{
 			UnresolvedCall? unresolved = context.UnresolvedCalls
 				.FirstOrDefault( uc => uc.Call == callExpr.funcCall );
@@ -389,7 +389,7 @@ namespace Myll.Resolver
 		}
 
 		private Expr ReplaceDiscardArg(
-			Typespec paramType, SrcPos srcPos, List<Stmt> preStmts, CompilationContext context )
+			Typespec paramType, SrcPos srcPos, List<Stmt> preStmts, ModuleContext context )
 		{
 			List<Pointer>? ptrs = paramType.ptrs;
 

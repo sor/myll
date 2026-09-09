@@ -37,6 +37,7 @@ namespace Myll.Resolver
 		};
 
 		private readonly IReadOnlyDictionary<string, ModuleExports> moduleExports;
+		private readonly IReadOnlyDictionary<GlobalNamespace, ModuleContext> moduleContexts;
 		private readonly ResolutionResult result;
 		private readonly List<Diagnostic> diagnostics;
 		private readonly TypeResolver typeResolver;
@@ -46,14 +47,19 @@ namespace Myll.Resolver
 
 		private NameResolver(
 			IReadOnlyDictionary<string, ModuleExports> moduleExports,
+			IReadOnlyDictionary<GlobalNamespace, ModuleContext> moduleContexts,
 			ResolutionResult result,
 			List<Diagnostic> diagnostics )
 		{
 			this.moduleExports = moduleExports;
+			this.moduleContexts = moduleContexts;
 			this.result        = result;
 			this.diagnostics   = diagnostics;
 			this.typeResolver  = new TypeResolver( result );
 		}
+
+		private ModuleContext GetContext( GlobalNamespace module )
+			=> moduleContexts[module];
 
 		public static ResolveResult Resolve( IReadOnlyList<CompiledModuleResult> modules )
 		{
@@ -72,13 +78,14 @@ namespace Myll.Resolver
 				transformer.Transform( modules, diagnostics );
 
 			var exports  = BuildModuleExports( modules );
-			var resolver = new NameResolver( exports, result, diagnostics );
+			var contexts = modules.ToDictionary( m => m.Module, m => m.Context );
+			var resolver = new NameResolver( exports, contexts, result, diagnostics );
 			resolver.ResolveDialectBackings( modules, exports );
 
 			bool progress;
 			do {
 				progress = false;
-				foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+				foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
 					progress |= resolver.ResolveUsings( module, context );
 					progress |= resolver.ResolveAliases( module, context );
 					progress |= resolver.ResolveIds( module, context );
@@ -202,10 +209,10 @@ namespace Myll.Resolver
 				return candidates.Count == 1 ? candidates[0] : null;
 			}
 
-			foreach( (GlobalNamespace module, _) in modules ) {
-				Decl? stringDecl = ResolveName( module.Context.Dialect.StringClassName );
+			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
+				Decl? stringDecl = ResolveName( context.Dialect.StringClassName );
 				if( stringDecl is Hierarchical ) {
-					module.Context.StringBackingClass = stringDecl;
+					context.StringBackingClass = stringDecl;
 				}
 				else if( stringDecl != null ) {
 					diagnostics.Add( new Diagnostic(
@@ -213,13 +220,13 @@ namespace Myll.Resolver
 						DiagnosticKind.Error,
 						String.Format(
 							"Dialect setting 'StringClassName = {0}' does not name a class or struct.",
-							module.Context.Dialect.StringClassName ) ) );
+							context.Dialect.StringClassName ) ) );
 				}
 				// If it is null, unresolved member diagnostics on string will guide the user.
 			}
 		}
 
-		private bool ResolveIds( GlobalNamespace module, CompilationContext context )
+		private bool ResolveIds( GlobalNamespace module, ModuleContext context )
 		{
 			bool progress = false;
 			foreach( UnresolvedId unresolved in context.UnresolvedIds ) {
@@ -238,7 +245,7 @@ namespace Myll.Resolver
 			return progress;
 		}
 
-		private bool ResolveScopeds( GlobalNamespace module, CompilationContext context )
+		private bool ResolveScopeds( GlobalNamespace module, ModuleContext context )
 		{
 			bool progress = false;
 			foreach( UnresolvedScoped unresolved in context.UnresolvedScopeds ) {
@@ -256,7 +263,7 @@ namespace Myll.Resolver
 			return progress;
 		}
 
-		private bool ResolveTypes( GlobalNamespace module, CompilationContext context )
+		private bool ResolveTypes( GlobalNamespace module, ModuleContext context )
 		{
 			bool progress = false;
 			foreach( UnresolvedType unresolved in context.UnresolvedTypes ) {
@@ -312,7 +319,7 @@ namespace Myll.Resolver
 		/// </summary>
 		private void UpdateDependentNestedNames( IReadOnlyList<CompiledModuleResult> modules )
 		{
-			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
 				foreach( UnresolvedType unresolved in context.UnresolvedTypes ) {
 					IsDependentNestedName( unresolved.Node, unresolved.Scope, module );
 				}
@@ -321,7 +328,7 @@ namespace Myll.Resolver
 
 		private void ValidateGlobalUsings( IReadOnlyList<CompiledModuleResult> modules )
 		{
-			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
 				Dialect dialect = context.Dialect;
 				if( dialect.GlobalUsingNS == GlobalUsingNSMode.Leaky )
 					continue;
@@ -423,7 +430,7 @@ namespace Myll.Resolver
 			return false;
 		}
 
-		private bool ResolveMemberAccesses( GlobalNamespace module, CompilationContext context )
+		private bool ResolveMemberAccesses( GlobalNamespace module, ModuleContext context )
 		{
 			bool progress = false;
 			foreach( UnresolvedMemberAccess unresolved in context.UnresolvedMemberAccesses ) {
@@ -451,7 +458,7 @@ namespace Myll.Resolver
 			return progress;
 		}
 
-		private bool ResolveCalls( GlobalNamespace module, CompilationContext context )
+		private bool ResolveCalls( GlobalNamespace module, ModuleContext context )
 		{
 			bool progress = false;
 			foreach( UnresolvedCall call in context.UnresolvedCalls ) {
@@ -871,7 +878,7 @@ namespace Myll.Resolver
 				_              => -1,
 			};
 
-		private bool ResolveUsings( GlobalNamespace module, CompilationContext context )
+		private bool ResolveUsings( GlobalNamespace module, ModuleContext context )
 		{
 			bool progress = false;
 			foreach( UnresolvedUsing unresolved in context.UnresolvedUsings ) {
@@ -910,7 +917,7 @@ namespace Myll.Resolver
 			return progress;
 		}
 
-		private bool ResolveAliases( GlobalNamespace module, CompilationContext context )
+		private bool ResolveAliases( GlobalNamespace module, ModuleContext context )
 		{
 			bool progress = false;
 			foreach( UnresolvedAlias unresolved in context.UnresolvedAliases ) {
@@ -1478,9 +1485,9 @@ namespace Myll.Resolver
 		// If no visible declaration was found in the enclosing scopes, consider
 		// configured class aliases and names exported by imported modules.
 		// This mirrors C++ behavior: inner-scope names hide imported ones.
-		if( result.Count == 0 ) {
-			if( FindEnclosingStructural( scope ) is Structural structural ) {
-				Dialect dialect = module.Context.Dialect;
+			if( result.Count == 0 ) {
+				if( FindEnclosingStructural( scope ) is Structural structural ) {
+					Dialect dialect = GetContext( module ).Dialect;
 				if( !String.IsNullOrEmpty( dialect.BaseClassAliasName )
 				 && name == dialect.BaseClassAliasName ) {
 					Structural? baseClass = GetFirstBaseStructural( structural );
@@ -1637,7 +1644,7 @@ namespace Myll.Resolver
 
 		private void ValidateTypes( IReadOnlyList<CompiledModuleResult> modules )
 		{
-			foreach( (_, CompilationContext context) in modules ) {
+			foreach( (_, ModuleContext context) in modules ) {
 				if( (context.Dialect.DefaultFloat & DefaultTypeMode.Forbidden) != 0 ) {
 					foreach( SrcPos srcPos in context.FloatKeywordUsages ) {
 						diagnostics.Add( new Diagnostic(
@@ -1687,7 +1694,7 @@ namespace Myll.Resolver
 		bool added;
 		do {
 			added = false;
-			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
 				added |= RegisterSyntheticInitListTypes( module, context );
 			}
 		} while( added );
@@ -1695,14 +1702,14 @@ namespace Myll.Resolver
 		bool progress;
 		do {
 			progress = false;
-			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
 				progress |= ResolveTypes( module, context );
 				progress |= ResolveMemberAccesses( module, context );
 			}
 		} while( progress );
 	}
 
-	private bool RegisterSyntheticInitListTypes( GlobalNamespace module, CompilationContext context )
+	private bool RegisterSyntheticInitListTypes( GlobalNamespace module, ModuleContext context )
 	{
 		var collector = new InitListTypeCollector();
 		collector.Collect( module );
@@ -1785,7 +1792,7 @@ namespace Myll.Resolver
 
 		private void ReportUnresolved( IReadOnlyList<CompiledModuleResult> modules )
 	{
-			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
 				HashSet<Expr> callCallees = context.UnresolvedCalls
 					.Select( c => c.Callee )
 					.ToHashSet();

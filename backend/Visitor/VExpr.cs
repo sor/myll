@@ -20,7 +20,7 @@ namespace Myll
 	{
 		public ExprVisitor( Stack<Scope> scopeStack ) : base( scopeStack ) {}
 
-		public ExprVisitor( CompilationContext context ) : base( context ) {}
+		public ExprVisitor( ModuleContext context ) : base( context ) {}
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public override Expr Visit( IParseTree c )
@@ -276,9 +276,9 @@ namespace Myll
 		{
 			private readonly List<Expr>          exprs   = new( 4 );
 			private readonly List<Operand>       ops     = new( 4 );
-			private readonly CompilationContext  context;
+			private readonly ModuleContext  context;
 
-			public FlattenRelational( IRelEqExprContext c, CompilationContext context )
+			public FlattenRelational( IRelEqExprContext c, ModuleContext context )
 			{
 				this.context = context;
 				Descent( c );

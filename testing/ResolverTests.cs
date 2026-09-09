@@ -22,13 +22,14 @@ namespace Myll.Tests
 			MyllParser        parser      = new( tokenStream );
 			MyllParser.ProgContext prog = parser.prog();
 
-			CompilationContext context = new() { Dialect = dialect ?? Myll.Core.Dialect.Default };
+			ModuleContext context = new() { Dialect = dialect ?? Myll.Core.Dialect.Default };
 			IGrouping<string, MyllParser.ProgContext> group = new[] { prog }
 				.GroupBy( _ => moduleName )
 				.First();
 
 			GlobalNamespace module = context.DeclVisitor.VisitProgs( group );
-			return new( module, context );
+			context.Module = module;
+			return new( context );
 		}
 
 		private static ResolveResult Resolve( params CompiledModuleResult[] modules )

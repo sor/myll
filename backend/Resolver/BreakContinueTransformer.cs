@@ -26,7 +26,7 @@ namespace Myll.Resolver
 		}
 
 		private static BreakableContext NewBreakableContext(
-			CompilationContext context,
+			ModuleContext context,
 			bool               isLoop )
 			=> new() {
 				IsLoop       = isLoop,
@@ -38,7 +38,7 @@ namespace Myll.Resolver
 			IReadOnlyList<CompiledModuleResult> modules,
 			List<Diagnostic> diagnostics )
 		{
-			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
 				if( context.IsPrototypeFile )
 					continue;
 
@@ -48,7 +48,7 @@ namespace Myll.Resolver
 
 		private static void TransformDecl(
 			Decl decl,
-			CompilationContext context,
+			ModuleContext context,
 			List<Diagnostic> diagnostics )
 		{
 			switch( decl ) {
@@ -71,7 +71,7 @@ namespace Myll.Resolver
 
 		private static MultiStmt TransformBlock(
 			MultiStmt block,
-			CompilationContext context,
+			ModuleContext context,
 			List<BreakableContext> breakables,
 			List<Diagnostic> diagnostics )
 		{
@@ -190,7 +190,7 @@ namespace Myll.Resolver
 
 		private static Stmt TransformStmt(
 			Stmt stmt,
-			CompilationContext context,
+			ModuleContext context,
 			List<BreakableContext> breakables,
 			List<Diagnostic> diagnostics )
 		{
@@ -235,7 +235,7 @@ namespace Myll.Resolver
 
 		private static Stmt TransformLoop(
 			Stmt loop,
-			CompilationContext context,
+			ModuleContext context,
 			List<BreakableContext> breakables,
 			List<Diagnostic> diagnostics )
 		{
@@ -259,7 +259,7 @@ namespace Myll.Resolver
 
 		private static Stmt TransformSwitch(
 			SwitchStmt sw,
-			CompilationContext context,
+			ModuleContext context,
 			List<BreakableContext> breakables,
 			List<Diagnostic> diagnostics )
 		{
@@ -279,7 +279,7 @@ namespace Myll.Resolver
 
 		private static Stmt TransformBody(
 			Stmt body,
-			CompilationContext context,
+			ModuleContext context,
 			List<BreakableContext> breakables,
 			List<Diagnostic> diagnostics )
 		{

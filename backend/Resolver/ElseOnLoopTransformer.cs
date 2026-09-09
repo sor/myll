@@ -18,7 +18,7 @@ namespace Myll.Resolver
 			IReadOnlyList<CompiledModuleResult> modules,
 			List<Diagnostic> diagnostics )
 		{
-			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
 				if( context.IsPrototypeFile )
 					continue;
 
@@ -26,7 +26,7 @@ namespace Myll.Resolver
 			}
 		}
 
-		private static void TransformDecl( Decl decl, CompilationContext context )
+		private static void TransformDecl( Decl decl, ModuleContext context )
 		{
 			switch( decl ) {
 				case Func func:
@@ -46,7 +46,7 @@ namespace Myll.Resolver
 			}
 		}
 
-		private static MultiStmt TransformBlock( MultiStmt block, CompilationContext context )
+		private static MultiStmt TransformBlock( MultiStmt block, ModuleContext context )
 		{
 			block.stmts = block.stmts
 				.Select( s => TransformStmt( s, context ) )
@@ -54,7 +54,7 @@ namespace Myll.Resolver
 			return block;
 		}
 
-		private static Stmt TransformStmt( Stmt stmt, CompilationContext context )
+		private static Stmt TransformStmt( Stmt stmt, ModuleContext context )
 		{
 			switch( stmt ) {
 				case ForStmt fs:
@@ -109,7 +109,7 @@ namespace Myll.Resolver
 			}
 		}
 
-		private static MultiStmt TransformForOrWhile( ForStmt loop, CompilationContext context )
+		private static MultiStmt TransformForOrWhile( ForStmt loop, ModuleContext context )
 		{
 			string flagName = context.NextTempName();
 
@@ -125,7 +125,7 @@ namespace Myll.Resolver
 			return BuildElseScope( loop, elseBody, flagName, context );
 		}
 
-		private static MultiStmt TransformForOrWhile( WhileStmt loop, CompilationContext context )
+		private static MultiStmt TransformForOrWhile( WhileStmt loop, ModuleContext context )
 		{
 			string flagName = context.NextTempName();
 
@@ -151,7 +151,7 @@ namespace Myll.Resolver
 			Stmt loop,
 			Stmt elseBody,
 			string flagName,
-			CompilationContext context )
+			ModuleContext context )
 		{
 			Stmt transformedElse = TransformStmt( elseBody, context );
 

@@ -110,6 +110,9 @@ namespace Myll.Generator
 		private readonly HashSet<string> definedNamespaces   = new();
 		private readonly HashSet<string> namespaceUsingNames = new();
 
+		private readonly ModuleContext? context;
+		private Dialect Dialect => context?.Dialect ?? Dialect.Default;
+
 		public List<Diagnostic> Diagnostics { get; } = new();
 
 		private int LevelDecl { get; }
@@ -125,13 +128,15 @@ namespace Myll.Generator
 			int                                                    levelDecl,
 			int                                                    levelImpl,
 			IReadOnlyDictionary<string, IReadOnlyList<RawImport>>? moduleRawImports = null,
-			IReadOnlySet<string>?                                  prototypeModules = null )
+			IReadOnlySet<string>?                                  prototypeModules = null,
+			ModuleContext?                                         context = null )
 		{
 			hierarchical          = obj; // this is 'myself'
 			LevelDecl             = levelDecl;
 			LevelImpl             = levelImpl;
 			this.moduleRawImports = moduleRawImports;
 			this.prototypeModules = prototypeModules;
+			this.context          = context;
 
 			defaultAccess = obj.defaultAccess;
 		}
@@ -223,7 +228,7 @@ namespace Myll.Generator
 
 			Strings ret = new();
 
-			if( Dialect.Default.GlobalUsingNS == GlobalUsingNSMode.Leaky
+			if( Dialect.GlobalUsingNS == GlobalUsingNSMode.Leaky
 			 && namespaceUsingNames.Count > 0 ) {
 				foreach( string ns in namespaceUsingNames
 					.Where( n => definedNamespaces.Contains( n ) )
@@ -656,7 +661,7 @@ namespace Myll.Generator
 				throw new ArgumentOutOfRangeException( nameof( obj ), true, "Hierarchicals can not be static" );
 
 			// this is a sub-gen for the child-hierarchical obj
-			HierarchicalGen gen = new( obj, LevelDecl + 1, LevelImpl );
+			HierarchicalGen gen = new( obj, LevelDecl + 1, LevelImpl, context: context );
 
 			// this happens inside the children, each knows which method to call
 			// e.g.: g.AddAccessor( ... );
@@ -768,23 +773,23 @@ namespace Myll.Generator
 
 			if( gen.hierarchical is Structural objStruct ) {
 			if( objStruct.basetypes.Count >= 1
-			 && !String.IsNullOrEmpty( Dialect.Default.BaseClassAliasName )
-			 && !objStruct.children.Any( c => c.name == Dialect.Default.BaseClassAliasName ) ) {
+			 && !String.IsNullOrEmpty( Dialect.BaseClassAliasName )
+			 && !objStruct.children.Any( c => c.name == Dialect.BaseClassAliasName ) ) {
 				targetDecl.Add(
 					Format(
 						AliasFormat[0],
 						gen.IndentDecl,
-						Dialect.Default.BaseClassAliasName,
+						Dialect.BaseClassAliasName,
 						objStruct.basetypes[0].type.GenType() ) );
 			}
 
-			if( !String.IsNullOrEmpty( Dialect.Default.OwnClassAliasName )
-			 && !objStruct.children.Any( c => c.name == Dialect.Default.OwnClassAliasName ) ) {
+			if( !String.IsNullOrEmpty( Dialect.OwnClassAliasName )
+			 && !objStruct.children.Any( c => c.name == Dialect.OwnClassAliasName ) ) {
 				targetDecl.Add(
 					Format(
 						AliasFormat[0],
 						gen.IndentDecl,
-						Dialect.Default.OwnClassAliasName,
+						Dialect.OwnClassAliasName,
 						objStruct.name ) );
 			}
 			}
@@ -826,7 +831,7 @@ namespace Myll.Generator
 				if( baseMethods.Count == 0 )
 					continue;
 
-				bool autoUnhide = ShouldAutoUnhide( derived, structural );
+				bool autoUnhide = ShouldAutoUnhide( derived, structural, gen.Dialect );
 
 				if( baseMethods.Select( m => m.Method ).Distinct( ReferenceEqualityComparer.Instance ).Count() > 1 ) {
 					if( autoUnhide ) {
@@ -868,7 +873,7 @@ namespace Myll.Generator
 			}
 		}
 
-		private static bool ShouldAutoUnhide( Func derived, Structural structural )
+		private static bool ShouldAutoUnhide( Func derived, Structural structural, Dialect dialect )
 		{
 			if( derived.IsUnshadow )
 				return true;
@@ -878,7 +883,7 @@ namespace Myll.Generator
 				return true;
 			if( structural.IsShadow )
 				return false;
-			return Dialect.Default.AutoUnhideBaseMethods;
+			return dialect.AutoUnhideBaseMethods;
 		}
 
 		private static bool IsUnhidableSpecialMember( Func func )

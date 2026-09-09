@@ -21,13 +21,14 @@ namespace Myll.Tests
 			MyllParser        parser      = new( tokenStream );
 			MyllParser.ProgContext prog = parser.prog();
 
-			CompilationContext context = new();
+			ModuleContext context = new();
 			IGrouping<string, MyllParser.ProgContext> group = new[] { prog }
 				.GroupBy( _ => moduleName )
 				.First();
 
 			GlobalNamespace module = context.DeclVisitor.VisitProgs( group );
-			return new( module, context );
+			context.Module = module;
+			return new( context );
 		}
 
 		private static Func FindFunc( GlobalNamespace module, string name )

@@ -182,14 +182,14 @@ namespace Myll
 			ModuleGroup progContext,
 			bool        isPrototypeFile )
 		{
-			CompilationContext context = new() {
+			ModuleContext context = new() {
 				IsPrototypeFile = isPrototypeFile,
 				Dialect         = Dialect.Default,
 			};
 			//Console.WriteLine( "Time elapsed after CompileModule  {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
 			GlobalNamespace module = context.DeclVisitor.VisitProgs( progContext );
-			module.Context = context;
-			return new( module, context );
+			context.Module = module;
+			return new( context );
 		}
 
 		private static void AddImplicitImports( List<CompiledModuleResult> modules )
@@ -291,6 +291,52 @@ namespace Myll
 			|| path.EndsWith( ".decl.myll", StringComparison.OrdinalIgnoreCase )
 			|| path.EndsWith( ".extern.myll", StringComparison.OrdinalIgnoreCase );
 
+		private static bool IsArtifact( string path )
+		{
+			string name = Path.GetFileName( path );
+			return name.Equals( Executable, StringComparison.Ordinal )
+			    || name.EndsWith( ".o", StringComparison.Ordinal )
+			    || name.EndsWith( ".obj", StringComparison.Ordinal )
+			    || name.EndsWith( ".a", StringComparison.Ordinal )
+			    || name.EndsWith( ".lib", StringComparison.OrdinalIgnoreCase );
+		}
+
+		private static bool IsGeneratedSource( string path )
+		{
+			string name = Path.GetFileName( path );
+			return name.EndsWith( ".cpp", StringComparison.Ordinal )
+			    || name.EndsWith( ".hpp", StringComparison.Ordinal );
+		}
+
+		private static void PrintDiagnosticsAndBail( IEnumerable<Diagnostic> diagnostics )
+		{
+			List<Diagnostic> list = diagnostics.ToList();
+			if( list.Count == 0 )
+				return;
+
+			Console.Error.Write( DiagnosticFormatter.Format( list, UseColorForDiagnostics() ) );
+
+			if( !opt.IsKeepGoing )
+				Environment.Exit( -99 );
+		}
+
+		private static void PrintDiagnosticsAndBailOnErrors( IEnumerable<Diagnostic> diagnostics )
+		{
+			List<Diagnostic> list = diagnostics.ToList();
+			if( list.Count == 0 )
+				return;
+
+			Console.Error.Write( DiagnosticFormatter.Format( list, UseColorForDiagnostics() ) );
+
+			if( !opt.IsKeepGoing && list.Any( d => d.Kind == DiagnosticKind.Error ) )
+				Environment.Exit( -99 );
+		}
+
+		private static void PrintDiagnosticsAndBailOnErrors<T>(
+			IEnumerable<T> items,
+			Func<T, IEnumerable<Diagnostic>> selector )
+			=> PrintDiagnosticsAndBailOnErrors( items.SelectMany( selector ) );
+
 		private static IEnumerable<string> CollectMyllLibraryFiles( IEnumerable<string> importedModules )
 		{
 			string? repoRoot = TryGetRepoRoot();
@@ -334,14 +380,15 @@ namespace Myll
 			}
 		}
 
-		private static GeneratedFilesResult GenerateFiles(
-			GlobalNamespace                                         global_ns,
+		private static GeneratedModuleFilesResult GenerateModuleFiles(
+			ModuleContext                                           context,
 			IReadOnlyDictionary<string, IReadOnlyList<RawImport>> moduleRawImports,
 			IReadOnlySet<string>                                    prototypeModules )
 		{
+			GlobalNamespace global_ns = context.Module!;
 			List<(string Path, IEnumerable<string> Lines)> ret = new();
 
-			HierarchicalGen gen = new( global_ns, -1, 0, moduleRawImports, prototypeModules );
+			HierarchicalGen gen = new( global_ns, -1, 0, moduleRawImports, prototypeModules, context );
 			// do NOT call gen.AddNamespace( ret ).
 			// Instead AddToGen() is there to call the correct virtual method on the gen
 			// TODO why is it adding itself as a child?
@@ -357,7 +404,7 @@ namespace Myll
 				gen.Diagnostics.Add( ex.Diagnostic );
 			}
 
-			//Console.WriteLine( "Time elapsed after GenerateFiles  {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
+			//Console.WriteLine( "Time elapsed after GenerateModuleFiles  {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
 			return new( ret, gen.Diagnostics );
 		}
 
@@ -416,16 +463,7 @@ namespace Myll
 					.AsSequential()
 					.ToList();
 
-			List<Diagnostic> syntaxDiagnostics = parseResults
-				.SelectMany( r => r.Diagnostics )
-				.ToList();
-
-			if( syntaxDiagnostics.Count > 0 ) {
-				Console.Error.Write( DiagnosticFormatter.Format( syntaxDiagnostics, UseColorForDiagnostics() ) );
-
-				if( !opt.IsKeepGoing )
-					Environment.Exit( -99 );
-			}
+			PrintDiagnosticsAndBail( parseResults.SelectMany( r => r.Diagnostics ) );
 
 			List<CompiledModuleResult> modules
 				= parseResults
@@ -440,25 +478,11 @@ namespace Myll
 
 			AddImplicitImports( modules );
 
-			List<Diagnostic> visitorDiagnostics = modules
-				.SelectMany( m => m.Context.Diagnostics )
-				.ToList();
-
-			if( visitorDiagnostics.Count > 0 ) {
-				Console.Error.Write( DiagnosticFormatter.Format( visitorDiagnostics, UseColorForDiagnostics() ) );
-
-				if( !opt.IsKeepGoing )
-					Environment.Exit( -99 );
-			}
+			PrintDiagnosticsAndBail( modules.SelectMany( m => m.Context.Diagnostics ) );
 
 		if( opt.IsResolve ) {
 			var (result, diagnostics) = NameResolver.Resolve( modules );
-			if( diagnostics.Count > 0 ) {
-				Console.Error.Write( DiagnosticFormatter.Format( diagnostics, UseColorForDiagnostics() ) );
-
-				if( !opt.IsKeepGoing && diagnostics.Any( d => d.Kind == DiagnosticKind.Error ) )
-					Environment.Exit( -99 );
-			}
+			PrintDiagnosticsAndBailOnErrors( diagnostics );
 
 			result.Apply();
 		}
@@ -472,54 +496,27 @@ namespace Myll
 					.Select( m => m.Module.module )
 					.ToHashSet();
 
-			List<GeneratedFilesResult> generationResults
+			List<GeneratedModuleFilesResult> generationResults
 				= modules
 					.Where( m => !m.Context.IsPrototypeFile )
 					.AsParallel()
-					.Select( m => GenerateFiles( m.Module, moduleRawImports, prototypeModules ) )
+					.Select( m => GenerateModuleFiles( m.Context, moduleRawImports, prototypeModules ) )
 					.ToList();
 
 			IEnumerable<(string, IStrings)> output = generationResults.SelectMany( r => r.Files );
 
-			List<Diagnostic> generationDiagnostics = generationResults
-				.SelectMany( r => r.Diagnostics )
-				.ToList();
-
-			if( generationDiagnostics.Count > 0 ) {
-				Console.Error.Write( DiagnosticFormatter.Format( generationDiagnostics, UseColorForDiagnostics() ) );
-
-				if( !opt.IsKeepGoing
-				 && generationDiagnostics.Any( d => d.Kind == DiagnosticKind.Error ) )
-					Environment.Exit( -99 );
-			}
+			PrintDiagnosticsAndBailOnErrors( generationResults, r => r.Diagnostics );
 
 			Console.WriteLine( "Time elapsed after last ToArray call {0:0}ms\n", (DateTime.Now - start).TotalMilliseconds );
 
-			if( opt.ClearLevel > 0 && Directory.Exists( opt.OutPath ) ) {
-				bool clearGenerated = opt.ClearLevel >= 2;
+		if( opt.ClearLevel > 0 && Directory.Exists( opt.OutPath ) ) {
+			bool clearGenerated = opt.ClearLevel >= 2;
 
-				static bool IsArtifact( string path )
-				{
-					string name = Path.GetFileName( path );
-					return name.Equals( Executable, StringComparison.Ordinal )
-					    || name.EndsWith( ".o", StringComparison.Ordinal )
-					    || name.EndsWith( ".obj", StringComparison.Ordinal )
-					    || name.EndsWith( ".a", StringComparison.Ordinal )
-					    || name.EndsWith( ".lib", StringComparison.OrdinalIgnoreCase );
-				}
-
-				static bool IsGeneratedSource( string path )
-				{
-					string name = Path.GetFileName( path );
-					return name.EndsWith( ".cpp", StringComparison.Ordinal )
-					    || name.EndsWith( ".hpp", StringComparison.Ordinal );
-				}
-
-				foreach( string file in Directory.EnumerateFiles( opt.OutPath ) ) {
-					if( IsArtifact( file ) || (clearGenerated && IsGeneratedSource( file )) )
-						File.Delete( file );
-				}
+			foreach( string file in Directory.EnumerateFiles( opt.OutPath ) ) {
+				if( IsArtifact( file ) || (clearGenerated && IsGeneratedSource( file )) )
+					File.Delete( file );
 			}
+		}
 
 			if( !opt.IsFileOut && !opt.IsStdOut ) {
 				Console.WriteLine( "\nNO OUTPUT wanted, just burning CPU time while calculating the output!\n" );

@@ -11,23 +11,23 @@ namespace Myll
 	{
 		protected readonly Stack<Scope> scopeStack;
 
-		// Temporary bridge; see CompilationContext for details.
-		protected readonly CompilationContext? context;
+		// Temporary bridge; see ModuleContext for details.
+		protected readonly ModuleContext? context;
 
 		public ExtendedVisitor( Stack<Scope> scopeStack )
 		{
 			this.scopeStack = scopeStack;
 		}
 
-		public ExtendedVisitor( CompilationContext context )
+		public ExtendedVisitor( ModuleContext context )
 			: this( context.ScopeStack )
 		{
 			this.context = context;
 		}
 
-		protected CompilationContext Context
+		protected ModuleContext Context
 			=> context ?? throw new InvalidOperationException(
-				"No CompilationContext is available for this visitor." );
+				"No ModuleContext is available for this visitor." );
 
 		public GlobalNamespace GenerateGlobalScope( string module )
 		{
@@ -36,7 +36,6 @@ namespace Myll
 				withBody = true,
 				imports  = new List<ImportSpec>(),
 				module   = module,
-				Context  = Context,
 			};
 			Scope scope = new() {
 				decl = global,

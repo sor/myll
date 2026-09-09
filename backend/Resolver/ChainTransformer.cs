@@ -16,7 +16,7 @@ namespace Myll.Resolver
 			IReadOnlyList<CompiledModuleResult> modules,
 			List<Diagnostic> diagnostics )
 		{
-			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
 				if( context.IsPrototypeFile )
 					continue;
 

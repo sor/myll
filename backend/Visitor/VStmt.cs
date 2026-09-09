@@ -22,7 +22,7 @@ namespace Myll
 	{
 		public StmtVisitor( Stack<Scope> scopeStack ) : base( scopeStack ) {}
 
-		public StmtVisitor( CompilationContext context ) : base( context ) {}
+		public StmtVisitor( ModuleContext context ) : base( context ) {}
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
 		public Stmt Visit( ParserRuleContext c )

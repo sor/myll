@@ -26,7 +26,7 @@ namespace Myll.Resolver
 
 		public void Validate( IReadOnlyList<CompiledModuleResult> modules )
 		{
-			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
 				currentDialect = context.Dialect;
 				ValidateCalls( context );
 				ValidateShadowing( context );
@@ -34,7 +34,7 @@ namespace Myll.Resolver
 			}
 		}
 
-		private void ValidateCalls( CompilationContext context )
+		private void ValidateCalls( ModuleContext context )
 		{
 			foreach( UnresolvedCall call in context.UnresolvedCalls ) {
 				Decl? calleeDecl = ResolveCalleeDecl( call.Callee );
@@ -1150,7 +1150,7 @@ namespace Myll.Resolver
 			diagnostics.Add( new Diagnostic( srcPos, DiagnosticKind.Warning, message ) );
 		}
 
-		private void ValidateShadowing( CompilationContext context )
+		private void ValidateShadowing( ModuleContext context )
 		{
 			Dialect dialect = context.Dialect;
 			if( dialect.Shadowing == ShadowingMode.None )
@@ -1182,7 +1182,7 @@ namespace Myll.Resolver
 			}
 		}
 
-		private void CheckOuterScopeShadowing( Decl local, Scope scope, CompilationContext context, Dialect dialect )
+		private void CheckOuterScopeShadowing( Decl local, Scope scope, ModuleContext context, Dialect dialect )
 		{
 			foreach( (Decl other, Scope otherScope) in context.LocalDecls ) {
 				if( other == local )

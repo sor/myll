@@ -21,7 +21,7 @@ namespace Myll
 		public DeclVisitor( Stack<Scope> scopeStack )
 			: base( scopeStack ) {}
 
-		public DeclVisitor( CompilationContext context )
+		public DeclVisitor( ModuleContext context )
 			: base( context ) {}
 
 		public string ProbeModule( ProgContext c )

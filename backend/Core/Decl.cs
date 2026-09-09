@@ -343,12 +343,6 @@ namespace Myll.Core
 	{
 		public string          module  = null!;
 		public List<ImportSpec> imports = new();
-
-		/// <summary>
-		/// Compilation context for this module. Stored here so the rest of the pipeline
-		/// does not need to carry a separate tuple everywhere.
-		/// </summary>
-		public CompilationContext Context = null!;
 	}
 
 	public class BaseType

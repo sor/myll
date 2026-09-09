@@ -15,7 +15,7 @@ namespace Myll.Resolver
 			IReadOnlyList<CompiledModuleResult> modules,
 			List<Diagnostic> diagnostics )
 		{
-			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
 				TransformDecl( module, context );
 			}
 		}
@@ -23,7 +23,7 @@ namespace Myll.Resolver
 		public void Transform( IReadOnlyList<CompiledModuleResult> modules )
 			=> Transform( modules, new List<Diagnostic>() );
 
-		private static void TransformDecl( Decl decl, CompilationContext context )
+		private static void TransformDecl( Decl decl, ModuleContext context )
 		{
 			switch( decl ) {
 				case Func func when func.TplParams.Count >= 1 && func.funcScope != null:
@@ -44,7 +44,7 @@ namespace Myll.Resolver
 		private static void InjectParameters(
 			Scope scope,
 			IReadOnlyList<TplParam> parameters,
-			CompilationContext context )
+			ModuleContext context )
 		{
 			foreach( TplParam parameter in parameters ) {
 				if( scope.children.ContainsKey( parameter.name ) )

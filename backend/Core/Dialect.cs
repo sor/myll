@@ -3,14 +3,14 @@ using System;
 namespace Myll.Core
 {
 	/// <summary>
-	/// Per-compilation dialect options. A copy is stored in each <see cref="CompilationContext"/>
+	/// Per-compilation dialect options. A copy is stored in each <see cref="ModuleContext"/>
 	/// so that different modules can use different mappings in the future.
 	/// </summary>
 	public sealed record Dialect
 	{
 		/// <summary>
 		/// Default dialect settings. Individual compilations can override by creating a new
-		/// <see cref="Dialect"/> instance and assigning it to <see cref="CompilationContext.Dialect"/>.
+		/// <see cref="Dialect"/> instance and assigning it to <see cref="ModuleContext.Dialect"/>.
 		/// </summary>
 		public static readonly Dialect Default = new();
 

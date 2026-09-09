@@ -5,20 +5,35 @@ using Myll.Resolver;
 namespace Myll
 {
 	/// <summary>
-	/// Owns the visitor instances and scope stack for one module compilation.
-	/// This replaces the static visitor state that used to live in VisitorExtensions.
+	/// Owns the AST, visitor instances, and scope stack for one module compilation.
+	/// This replaces the static visitor state that used to live in VisitorExtensions
+	/// and serves as the primary object for the per-module pipeline.
 	/// </summary>
-	public sealed record CompiledModuleResult(
-		GlobalNamespace Module,
-		CompilationContext Context )
+	public sealed record CompiledModuleResult( ModuleContext Context )
 	{
-		public static implicit operator CompiledModuleResult( ( GlobalNamespace module, CompilationContext context ) value )
-			=> new( value.module, value.context );
+		public GlobalNamespace Module => Context.Module!;
+
+		public static implicit operator CompiledModuleResult( ( GlobalNamespace module, ModuleContext context ) value )
+		{
+			value.context.Module = value.module;
+			return new( value.context );
+		}
+
+		public void Deconstruct( out GlobalNamespace module, out ModuleContext context )
+		{
+			module  = Module;
+			context = Context;
+		}
 	}
 
-	public sealed class CompilationContext
+	public sealed class ModuleContext
 	{
 		public Stack<Scope> ScopeStack { get; } = new();
+
+		/// <summary>
+		/// The module AST owned by this context. Set after parsing/visiting.
+		/// </summary>
+		public GlobalNamespace? Module { get; set; }
 
 		public bool IsPrototypeFile { get; init; }
 
@@ -84,7 +99,7 @@ namespace Myll
 		public string NextTempName()
 			=> "myll_tmp_" + tempNameCounter++;
 
-		public CompilationContext()
+		public ModuleContext()
 		{
 			ExprVisitor = new ExprVisitor( this );
 			StmtVisitor = new StmtVisitor( this );

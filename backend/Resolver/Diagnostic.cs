@@ -28,7 +28,7 @@ namespace Myll.Resolver
 		ResolutionResult Result,
 		IReadOnlyList<Diagnostic> Diagnostics );
 
-	public sealed record GeneratedFilesResult(
+	public sealed record GeneratedModuleFilesResult(
 		List<(string Path, IEnumerable<string> Lines)> Files,
 		List<Diagnostic> Diagnostics );
 }

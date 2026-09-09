@@ -10,7 +10,7 @@ namespace Myll.Resolver
 	/// method parameter, local variable, or catch parameter.
 	///
 	/// The transform walks the resolved scope tree via
-	/// <see cref="CompilationContext.LocalDecls"/>, so locals inside loops are
+	/// <see cref="ModuleContext.LocalDecls"/>, so locals inside loops are
 	/// correctly checked.
 	/// </summary>
 	public sealed class ConfiguredAliasShadowingTransformer : ITransformer
@@ -29,7 +29,7 @@ namespace Myll.Resolver
 			IReadOnlyList<CompiledModuleResult> modules,
 			List<Diagnostic> diagnostics )
 		{
-			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
 				if( context.IsPrototypeFile )
 					continue;
 
@@ -41,7 +41,7 @@ namespace Myll.Resolver
 		/// Returns true when the function has a parameter, local variable, or catch
 		/// parameter whose name matches the configured auto-return variable name.
 		/// </summary>
-		public bool HasAutoReturnConflict( Func func, CompilationContext context )
+		public bool HasAutoReturnConflict( Func func, ModuleContext context )
 		{
 			string alias = context.Dialect.AutoReturnName;
 			if( String.IsNullOrEmpty( alias ) )
@@ -71,7 +71,7 @@ namespace Myll.Resolver
 
 		private static void VisitHierarchical(
 			Hierarchical hierarchical,
-			CompilationContext context,
+			ModuleContext context,
 			List<Diagnostic> diagnostics )
 		{
 			foreach( Decl child in hierarchical.children ) {
@@ -85,7 +85,7 @@ namespace Myll.Resolver
 
 		private static void VisitStructural(
 			Structural structural,
-			CompilationContext context,
+			ModuleContext context,
 			List<Diagnostic> diagnostics )
 		{
 			CheckAlias( structural, context.Dialect.BaseClassAliasName, "base-class alias",
@@ -99,7 +99,7 @@ namespace Myll.Resolver
 			string alias,
 			string aliasKind,
 			bool applies,
-			CompilationContext context,
+			ModuleContext context,
 			List<Diagnostic> diagnostics )
 		{
 			if( String.IsNullOrEmpty( alias ) || !applies )
@@ -128,7 +128,7 @@ namespace Myll.Resolver
 			Structural structural,
 			string alias,
 			string aliasKind,
-			CompilationContext context,
+			ModuleContext context,
 			List<Diagnostic> diagnostics )
 		{
 			foreach( Param p in func.paras ) {

@@ -259,7 +259,7 @@ namespace Myll
 			=> c.Select( i => i.Visit() ).ToList();
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static Expr Visit( this Parser.ExprContext c, CompilationContext context )
+		public static Expr Visit( this Parser.ExprContext c, ModuleContext context )
 		{
 			if( c == null )
 				throw new ArgumentNullException();
@@ -268,11 +268,11 @@ namespace Myll
 		}
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static Expr Visit( this Parser.LitContext c, CompilationContext context )
+		public static Expr Visit( this Parser.LitContext c, ModuleContext context )
 			=> context.ExprVisitor.VisitLit( c );
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
-		public static Stmt Visit( this Parser.StmtContext c, CompilationContext context )
+		public static Stmt Visit( this Parser.StmtContext c, ModuleContext context )
 		{
 			if( c == null )
 				throw new ArgumentNullException();
@@ -282,7 +282,7 @@ namespace Myll
 
 		// TODO those null tolerant methods need to be removed
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
-		public static MultiStmt Visit( this Parser.FuncBodyContext c, CompilationContext context )
+		public static MultiStmt Visit( this Parser.FuncBodyContext c, ModuleContext context )
 			=> c == null
 				? throw new ArgumentNullException( "arg can not be null" )
 				: context.StmtVisitor.VisitFuncBody( c );
@@ -292,7 +292,7 @@ namespace Myll
 		//	=> context.StmtVisitor.VisitBlockify( c );
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization )]
-		public static Decl Visit( this Parser.DeclContext c, CompilationContext context )
+		public static Decl Visit( this Parser.DeclContext c, ModuleContext context )
 		{
 			if( c == null )
 				throw new ArgumentNullException();
@@ -306,7 +306,7 @@ namespace Myll
 
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static Accessor Visit( this Parser.AccessorDefContext c, CompilationContext context )
+		public static Accessor Visit( this Parser.AccessorDefContext c, ModuleContext context )
 			=> new() {
 				body = c.funcBody().Visit( context ),
 				qual = c.qual().Visit(),
@@ -314,7 +314,7 @@ namespace Myll
 			};
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static List<Accessor> Visit( this Parser.AccessorDefContext[] c, CompilationContext context )
+		public static List<Accessor> Visit( this Parser.AccessorDefContext[] c, ModuleContext context )
 			=> c.Select( ac => ac.Visit( context ) ).ToList();
 
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
