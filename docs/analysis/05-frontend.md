@@ -71,7 +71,7 @@ This is arbitrary. PLINQ typically manages its own thread pool.
 
 ### Static ScopeStack
 
-`backend/Visitor/VExt.cs` uses a single static `Stack<Scope>` shared by all visitors. This breaks parallel module compilation and test isolation. The fix is to make visitors instance-based and give each module its own `CompilationContext`. See `plan/semantic-analysis.md` and `docs/analysis/01-architecture.md`.
+`backend/Visitor/VExt.cs` uses a single static `Stack<Scope>` shared by all visitors. This breaks parallel module compilation and test isolation. The fix is to make visitors instance-based and give each module its own `ModuleContext`. See `plan/semantic-analysis.md` and `docs/analysis/01-architecture.md`.
 
 ## CLI Options
 

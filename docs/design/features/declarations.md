@@ -262,7 +262,7 @@ Control the behavior with attributes and dialect options:
 - `[shadow]` on a `class` or `struct` suppresses auto-unhiding for every method declared directly in that type.
 - `[unshadow]` on a `class` or `struct` forces auto-unhiding for every method declared directly in that type.
 
-Method-level attributes take precedence over type-level attributes. The default is `Dialect.Default.AutoUnhideBaseMethods`; create a custom `Dialect` instance and assign it to `CompilationContext.Dialect` to override it per module, or expose it through a CLI dialect switch later.
+Method-level attributes take precedence over type-level attributes. The default is `Dialect.Default.AutoUnhideBaseMethods`; create a custom `Dialect` instance and assign it to `ModuleContext.Dialect` to override it per module, or expose it through a CLI dialect switch later.
 
 If a method name appears in multiple unrelated base classes, auto-unhiding is ambiguous. Myll skips the `using` declaration and emits a warning.
 

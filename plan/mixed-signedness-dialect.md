@@ -52,7 +52,7 @@ This matches the intuition "keep the result signed whenever the signed type is l
 
 - Default stays `CStyle` so existing tests and C++-idiomatic code do not change unexpectedly.
 - Existing tests that exercise mixed arithmetic should be updated or duplicated once the flag is added.
-- The flag can be set per compilation by creating a new `Dialect` instance and assigning it to `CompilationContext.Dialect`, or exposed through the CLI later.
+- The flag can be set per compilation by creating a new `Dialect` instance and assigning it to `ModuleContext.Dialect`, or exposed through the CLI later.
 
 ## Future
 

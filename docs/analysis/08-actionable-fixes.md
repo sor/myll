@@ -134,7 +134,7 @@ public override IEnumerable<Stmt> EnumerateDF {
 
 **File:** `backend/Visitor/VExt.cs`
 **Impact:** Enables parallel parsing and testing isolation.
-**Status:** Fixed. `CompilationContext` per module owns visitor instances and the scope stack; all parser-context extension methods take an explicit `CompilationContext`.
+**Status:** Fixed. `ModuleContext` per module owns visitor instances and the scope stack; all parser-context extension methods take an explicit `ModuleContext`.
 
 ### 10. Extract C++ Standard Library Names
 

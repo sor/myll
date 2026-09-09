@@ -67,7 +67,7 @@ Lowered output:
 ## Implementation
 
 `backend/Resolver/BreakContinueTransformer.cs` keeps a stack of `BreakableContext` objects.
-Each context receives two flag names eagerly from `CompilationContext.NextTempName()`.
+Each context receives two flag names eagerly from `ModuleContext.NextTempName()`.
 
 When transforming a block, a guard is appended after every statement for every active flag:
 
@@ -81,7 +81,7 @@ Guards are suppressed after statements that end with an unconditional `break`, `
 
 ## Flags and Naming
 
-Use `CompilationContext.NextTempName()` for flag names.
+Use `ModuleContext.NextTempName()` for flag names.
 Names are allocated eagerly per construct because guards are generated before the transformer knows which flags will be used.
 
 ## Interaction with loop `else`

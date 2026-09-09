@@ -82,7 +82,7 @@ These are intentionally out of scope for the first prototype-file pass.
 ## Implementation checklist
 
 - [x] Update `Program.CollectExternFiles` to discover `.d.myll` and `.decl.myll` (keep `.extern.myll` as legacy).
-- [x] Add `CompilationContext.IsPrototypeFile` and pass it from input file extension.
+- [x] Add `ModuleContext.IsPrototypeFile` and pass it from input file extension.
 - [x] Skip `GenerateFiles` for prototype modules.
 - [x] Extend `[extern]` propagation from namespaces to `Structural` (class/struct/union).
 - [x] Remove `Namespace.AddToGen` early return on `IsExternal` so inline extern namespaces emit member forward declarations.

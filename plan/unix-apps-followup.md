@@ -5,8 +5,8 @@ This plan is complete.
 1. **Make `string` a real class reference**  
    Stop emitting `TypespecBasic.Kind.String`. Treat `string` as a `TypespecNested` that resolves to the dialect-configured backing class (e.g. `std::string`). This removes the special-case operator and member-access code for strings.
 
-2. **Move `CompilationContext` out of `GlobalNamespace`**  
-   Carrying the context on the AST node is a workaround. Pass `(GlobalNamespace module, CompilationContext context)` explicitly through resolver passes, or keep a `Dictionary<GlobalNamespace, CompilationContext>`. Keep AST nodes read-only so a parallel pipeline can share them safely.
+2. **Move `ModuleContext` out of `GlobalNamespace`** — DONE  
+   `GlobalNamespace.Context` was removed. `ModuleContext` now owns the module AST via `ModuleContext.Module`. `CompiledModuleResult` wraps the context, and `NameResolver` keeps a dictionary from `GlobalNamespace` to `ModuleContext` for resolver-internal lookups.
 
 3. **Support function-style constructor expressions** — DONE  
    `std::filesystem::path(input).filename()` now works. A call whose callee resolves to a class is treated as direct construction of a temporary of that class, so chained member access works.

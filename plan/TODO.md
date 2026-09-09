@@ -123,7 +123,7 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 - Per-base inheritance access specifiers (`[pub]`, `[priv]`, `[prot]`) and `[virtual]` bases; new `bases` integration test case.
 - Value-initialization by default for `var`/`field`/`const`/`let` declarations without an initializer; `[noinit]`/`[uninit]` opt-out; new `default_init` integration test case.
 - Fixed `EnumerateDF` for `ForStmt`, `WhileStmt`, `DoWhileStmt`, and `TimesStmt` and added unit tests in `testing/LoopEnumerationTests.cs`.
-- Instance-based `CompilationContext` per module; removed static visitor state.
+- Instance-based `ModuleContext` per module; removed static visitor state.
 - Name resolver skeleton with single-segment, cross-module, cyclic-import, and qualified-path resolution.
 - `-R` / `--resolve` flag and `--extern-dir` for opt-in semantic checks.
 - Function parameters, local `var`s, lambdas, catch variables, and `times` indices are now added to the scope tree.

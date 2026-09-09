@@ -6,7 +6,7 @@ This plan describes the long-term goal of turning Myll from a syntax-to-C++ tran
 
 - `backend/Core/Scope.cs` defines `Scope`, `ScopeLeaf`, and a tree of `children`. It is built during visiting.
 - `backend/Visitor/VMain.cs` has push/pop helpers and builds a scope tree per module.
-- `backend/CompilationContext.cs` owns visitor instances and the scope stack for one module. The static `ScopeStack` in `VisitorExtensions` has been removed.
+- `backend/ModuleContext.cs` owns visitor instances and the scope stack for one module. The static `ScopeStack` in `VisitorExtensions` has been removed.
 - `backend/Resolver/` contains `Diagnostic`, `ResolutionResult`, `UnresolvedId`, `UnresolvedType`, and `NameResolver`.
 - The resolver can resolve single-segment identifiers and type names within a module and across direct imports, including cyclic imports, qualified paths (`A::B::C`), and `using namespace` / `using Name` directives.
 - Cross-module namespace merging is supported: the same namespace declared in multiple imported modules resolves to one logical namespace.
@@ -69,7 +69,7 @@ Each file is tokenized and parsed independently by ANTLR.
 Files with the same `module` declaration belong together. A file without an explicit module declaration uses its filename.
 
 ### Stage 3: Build per-module AST + local scope tree
-Each module gets its own `CompilationContext` that owns the scope stack and visitor instances. All files of the module are visited into a single AST + scope tree. This stage is sequential within a module but parallel across modules.
+Each module gets its own `ModuleContext` that owns the scope stack and visitor instances. All files of the module are visited into a single AST + scope tree. This stage is sequential within a module but parallel across modules.
 
 ### Stage 4: Barrier
 All module scope trees and import lists are available.
@@ -102,7 +102,7 @@ A sequential fixed-point resolver is the first target. The same input/output sha
 ## First implementation milestone
 
 1. **Instance-based visitors** ✅  
-   `CompilationContext` per module replaced the static `ScopeStack` and static visitor instances. All parser-context extension methods now take an explicit `CompilationContext`.
+   `ModuleContext` per module replaced the static `ScopeStack` and static visitor instances. All parser-context extension methods now take an explicit `ModuleContext`.
 
 2. **Per-module scope-tree building** ✅  
    Each module builds its own AST + scope tree. Unresolved `IdExpr` and `TypespecNested` references are recorded in the context as they are created.
