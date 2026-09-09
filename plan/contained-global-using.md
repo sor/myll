@@ -2,7 +2,7 @@
 
 ## Goal
 
-With `Dialect.GlobalUsingNS = GlobalUsingNSMode.Contained`, a module-scope `using NS;` of a namespace must not emit `using namespace NS;` in the generated header. It should be emitted only in the implementation (`.cpp`) file, and all names resolved through that `using` in the header must be emitted fully qualified.
+With `new Dialect { GlobalUsingNS = GlobalUsingNSMode.Contained }` as the compilation dialect, a module-scope `using NS;` of a namespace must not emit `using namespace NS;` in the generated header. It should be emitted only in the implementation (`.cpp`) file, and all names resolved through that `using` in the header must be emitted fully qualified.
 
 ## Current state
 
@@ -19,7 +19,7 @@ In the resolver, when a `UsingDecl` is resolved to a namespace and its scope is 
 
 ### 2. Do not emit the `using namespace` in the header for Contained mode
 
-In `HierachicalGen.AddUsing`, when `Dialect.GlobalUsingNS == GlobalUsingNSMode.Contained` and the `UsingDecl` is a namespace-using at module scope:
+In `HierachicalGen.AddUsing`, when the module's dialect uses `GlobalUsingNSMode.Contained` and the `UsingDecl` is a namespace-using at module scope:
 
 - Do not add `using namespace NS;` to `protoEarly`.
 - Instead add it to a new cpp-only list (e.g. `cppOnlyUsings`).
@@ -49,7 +49,7 @@ Options:
 
 ### 5. Test plan
 
-Add a test case that runs with `Dialect.GlobalUsingNS = GlobalUsingNSMode.Contained`:
+Add a test case that runs with `new Dialect { GlobalUsingNS = GlobalUsingNSMode.Contained }` as the compilation dialect:
 
 ```myll
 module contained_using_test;

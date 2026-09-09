@@ -187,7 +187,7 @@ namespace Myll
 					ret.kind = TypespecBasic.Kind.Float;
 
 					if( t == MyllParser.FLOAT ) {
-						ret.size           = Dialect.DefaultFloatSize();
+						ret.size           = Context.Dialect.DefaultFloatSize();
 						ret.isDefaultSized = true;
 						Context.FloatKeywordUsages.Add( ret.srcPos );
 					}

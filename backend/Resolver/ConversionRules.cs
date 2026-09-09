@@ -304,7 +304,7 @@ namespace Myll.Resolver
 				// The default float type for an unannotated literal is configured by the
 				// dialect (falls back to f32). Any other concrete float size is accepted
 				// via promotion.
-				int defaultSize = Dialect.DefaultFloatSize();
+				int defaultSize = Dialect.Default.DefaultFloatSize();
 				if( tgtBasic.kind == TypespecBasic.Kind.Float && tgtBasic.size == defaultSize )
 					return ConversionRank.Exact;
 

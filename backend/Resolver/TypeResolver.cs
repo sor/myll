@@ -134,7 +134,7 @@ namespace Myll.Resolver
 				if( basic.kind == TypespecBasic.Kind.UntypedInteger )
 					return new TypespecBasic { kind = TypespecBasic.Kind.Integer, size = 4 };
 				if( basic.kind == TypespecBasic.Kind.UntypedFloat )
-					return new TypespecBasic { kind = TypespecBasic.Kind.Float, size = Dialect.DefaultFloatSize() };
+					return new TypespecBasic { kind = TypespecBasic.Kind.Float, size = Dialect.Default.DefaultFloatSize() };
 			}
 			return type;
 		}
@@ -428,7 +428,7 @@ namespace Myll.Resolver
 
 		private static Typespec? MixedIntegerResult( TypespecBasic signedType, TypespecBasic unsignedType )
 		{
-			return Dialect.MixedSignedness switch {
+			return Dialect.Default.MixedSignedness switch {
 				MixedSignednessMode.SignedPreferred
 					=> SignedPreferredIntegerResult( signedType, unsignedType ),
 				_ => CStyleIntegerResult( signedType, unsignedType ),

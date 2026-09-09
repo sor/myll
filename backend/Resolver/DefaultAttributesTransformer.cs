@@ -6,7 +6,7 @@ namespace Myll.Resolver
 	using Attribs = Dictionary<string, List<string>>;
 
 	/// <summary>
-	/// Applies per-kind default attributes from <see cref="Dialect"/> to class, struct,
+	/// Applies per-kind default attributes from <see cref="Dialect.Default"/> to class, struct,
 	/// union, and enum declarations that do not already specify the corresponding attribute.
 	/// Runs before other attribute-consuming transforms so that defaults participate in
 	/// rule-of-N checks, flags handling, etc.
@@ -17,31 +17,31 @@ namespace Myll.Resolver
 			IReadOnlyList<CompiledModuleResult> modules,
 			List<Diagnostic> diagnostics )
 		{
-			foreach( CompiledModuleResult result in modules ) {
-				foreach( Decl decl in result.Module.children )
-					ApplyDefaults( decl );
+			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+				foreach( Decl decl in module.children )
+					ApplyDefaults( decl, context.Dialect );
 			}
 		}
 
-		private static void ApplyDefaults( Decl decl )
+		private static void ApplyDefaults( Decl decl, Dialect dialect )
 		{
-			Attribs defaults = GetDefaultAttributes( decl );
+			Attribs defaults = GetDefaultAttributes( decl, dialect );
 			if( defaults.Count > 0 )
 				decl.MergeAttribs( defaults );
 
 			if( decl is Hierarchical h ) {
 				foreach( Decl child in h.children )
-					ApplyDefaults( child );
+					ApplyDefaults( child, dialect );
 			}
 		}
 
-		private static Attribs GetDefaultAttributes( Decl decl )
+		private static Attribs GetDefaultAttributes( Decl decl, Dialect dialect )
 		{
 			string? source = decl switch {
-				Structural s when s.kind == Structural.Kind.Class  => Dialect.DefaultAttributesClass,
-				Structural s when s.kind == Structural.Kind.Struct => Dialect.DefaultAttributesStruct,
-				Structural s when s.kind == Structural.Kind.Union  => Dialect.DefaultAttributesUnion,
-				Enumeration                                        => Dialect.DefaultAttributesEnum,
+				Structural s when s.kind == Structural.Kind.Class  => dialect.DefaultAttributesClass,
+				Structural s when s.kind == Structural.Kind.Struct => dialect.DefaultAttributesStruct,
+				Structural s when s.kind == Structural.Kind.Union  => dialect.DefaultAttributesUnion,
+				Enumeration                                        => dialect.DefaultAttributesEnum,
 				_                                                  => null,
 			};
 

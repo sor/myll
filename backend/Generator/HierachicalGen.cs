@@ -223,7 +223,7 @@ namespace Myll.Generator
 
 			Strings ret = new();
 
-			if( Dialect.GlobalUsingNS == GlobalUsingNSMode.Leaky
+			if( Dialect.Default.GlobalUsingNS == GlobalUsingNSMode.Leaky
 			 && namespaceUsingNames.Count > 0 ) {
 				foreach( string ns in namespaceUsingNames
 					.Where( n => definedNamespaces.Contains( n ) )
@@ -767,26 +767,26 @@ namespace Myll.Generator
 				targetDecl.Add( Format( CurlyOpen, indent ) );
 
 			if( gen.hierarchical is Structural objStruct ) {
-				if( objStruct.basetypes.Count >= 1
-				 && !String.IsNullOrEmpty( Dialect.BaseClassAliasName )
-				 && !objStruct.children.Any( c => c.name == Dialect.BaseClassAliasName ) ) {
-					targetDecl.Add(
-						Format(
-							AliasFormat[0],
-							gen.IndentDecl,
-							Dialect.BaseClassAliasName,
-							objStruct.basetypes[0].type.GenType() ) );
-				}
+			if( objStruct.basetypes.Count >= 1
+			 && !String.IsNullOrEmpty( Dialect.Default.BaseClassAliasName )
+			 && !objStruct.children.Any( c => c.name == Dialect.Default.BaseClassAliasName ) ) {
+				targetDecl.Add(
+					Format(
+						AliasFormat[0],
+						gen.IndentDecl,
+						Dialect.Default.BaseClassAliasName,
+						objStruct.basetypes[0].type.GenType() ) );
+			}
 
-				if( !String.IsNullOrEmpty( Dialect.OwnClassAliasName )
-				 && !objStruct.children.Any( c => c.name == Dialect.OwnClassAliasName ) ) {
-					targetDecl.Add(
-						Format(
-							AliasFormat[0],
-							gen.IndentDecl,
-							Dialect.OwnClassAliasName,
-							objStruct.name ) );
-				}
+			if( !String.IsNullOrEmpty( Dialect.Default.OwnClassAliasName )
+			 && !objStruct.children.Any( c => c.name == Dialect.Default.OwnClassAliasName ) ) {
+				targetDecl.Add(
+					Format(
+						AliasFormat[0],
+						gen.IndentDecl,
+						Dialect.Default.OwnClassAliasName,
+						objStruct.name ) );
+			}
 			}
 			}
 
@@ -878,7 +878,7 @@ namespace Myll.Generator
 				return true;
 			if( structural.IsShadow )
 				return false;
-			return Dialect.AutoUnhideBaseMethods;
+			return Dialect.Default.AutoUnhideBaseMethods;
 		}
 
 		private static bool IsUnhidableSpecialMember( Func func )

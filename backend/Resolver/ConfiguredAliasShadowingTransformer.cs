@@ -43,7 +43,7 @@ namespace Myll.Resolver
 		/// </summary>
 		public bool HasAutoReturnConflict( Func func, CompilationContext context )
 		{
-			string alias = Dialect.AutoReturnName;
+			string alias = context.Dialect.AutoReturnName;
 			if( String.IsNullOrEmpty( alias ) )
 				return false;
 
@@ -88,9 +88,9 @@ namespace Myll.Resolver
 			CompilationContext context,
 			List<Diagnostic> diagnostics )
 		{
-			CheckAlias( structural, Dialect.BaseClassAliasName, "base-class alias",
+			CheckAlias( structural, context.Dialect.BaseClassAliasName, "base-class alias",
 				structural.basetypes.Count >= 1, context, diagnostics );
-			CheckAlias( structural, Dialect.OwnClassAliasName, "own-class alias",
+			CheckAlias( structural, context.Dialect.OwnClassAliasName, "own-class alias",
 				true, context, diagnostics );
 		}
 

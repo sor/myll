@@ -65,7 +65,7 @@ When a derived class redeclares a base method name with a different signature, M
 - `[shadow]` on a `class` or `struct` applies to every method declared directly in that type.
 - `[unshadow]` on a `class` or `struct` applies to every method declared directly in that type.
 - Method-level attributes take precedence over type-level attributes.
-- The default is `Dialect.AutoUnhideBaseMethods` (true).
+- The default is `Dialect.Default.AutoUnhideBaseMethods` (true). Create a custom `Dialect` instance and assign it to `CompilationContext.Dialect` to override per module.
 - A class-level attribute affects only that class and is not inherited by later derived classes.
 
 ## Special function bodies

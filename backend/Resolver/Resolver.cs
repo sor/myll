@@ -321,10 +321,11 @@ namespace Myll.Resolver
 
 		private void ValidateGlobalUsings( IReadOnlyList<CompiledModuleResult> modules )
 		{
-			if( Dialect.GlobalUsingNS == GlobalUsingNSMode.Leaky )
-				return;
-
 			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+				Dialect dialect = context.Dialect;
+				if( dialect.GlobalUsingNS == GlobalUsingNSMode.Leaky )
+					continue;
+
 				foreach( UnresolvedUsing unresolved in context.UnresolvedUsings ) {
 					UsingDecl usingDecl = unresolved.Node;
 
@@ -338,7 +339,7 @@ namespace Myll.Resolver
 					diagnostics.Add( new Diagnostic(
 						usingDecl.srcPos,
 						DiagnosticKind.Error,
-						Dialect.GlobalUsingNS == GlobalUsingNSMode.Disabled
+						dialect.GlobalUsingNS == GlobalUsingNSMode.Disabled
 							? "Global `using` of a namespace is disabled in this dialect."
 							: "`Dialect.GlobalUsingNSMode.Contained` is not implemented yet."
 					) );
@@ -1479,14 +1480,15 @@ namespace Myll.Resolver
 		// This mirrors C++ behavior: inner-scope names hide imported ones.
 		if( result.Count == 0 ) {
 			if( FindEnclosingStructural( scope ) is Structural structural ) {
-				if( !String.IsNullOrEmpty( Dialect.BaseClassAliasName )
-				 && name == Dialect.BaseClassAliasName ) {
+				Dialect dialect = module.Context.Dialect;
+				if( !String.IsNullOrEmpty( dialect.BaseClassAliasName )
+				 && name == dialect.BaseClassAliasName ) {
 					Structural? baseClass = GetFirstBaseStructural( structural );
 					if( baseClass != null )
 						result.Add( baseClass );
 				}
-				else if( !String.IsNullOrEmpty( Dialect.OwnClassAliasName )
-				      && name == Dialect.OwnClassAliasName ) {
+				else if( !String.IsNullOrEmpty( dialect.OwnClassAliasName )
+				      && name == dialect.OwnClassAliasName ) {
 					result.Add( structural );
 				}
 			}
@@ -1635,8 +1637,8 @@ namespace Myll.Resolver
 
 		private void ValidateTypes( IReadOnlyList<CompiledModuleResult> modules )
 		{
-			if( (Dialect.DefaultFloat & DefaultTypeMode.Forbidden) != 0 ) {
-				foreach( (_, CompilationContext context) in modules ) {
+			foreach( (_, CompilationContext context) in modules ) {
+				if( (context.Dialect.DefaultFloat & DefaultTypeMode.Forbidden) != 0 ) {
 					foreach( SrcPos srcPos in context.FloatKeywordUsages ) {
 						diagnostics.Add( new Diagnostic(
 							srcPos,

@@ -13,7 +13,8 @@ namespace Myll.Tests
 	{
 		private static CompiledModuleResult CompileModule(
 			string source,
-			string moduleName = "test" )
+			string moduleName = "test",
+			Dialect? dialect = null )
 		{
 			AntlrInputStream inputStream = new( source ) { name = moduleName + ".myll" };
 			MyllLexer        lexer       = new( inputStream );
@@ -21,7 +22,7 @@ namespace Myll.Tests
 			MyllParser        parser      = new( tokenStream );
 			MyllParser.ProgContext prog = parser.prog();
 
-			CompilationContext context = new();
+			CompilationContext context = new() { Dialect = dialect ?? Myll.Core.Dialect.Default };
 			IGrouping<string, MyllParser.ProgContext> group = new[] { prog }
 				.GroupBy( _ => moduleName )
 				.First();
@@ -596,26 +597,21 @@ func main() -> int { return 0; }
 		[Fact]
 		public void StrictNew_BareNew_ProducesDiagnostic()
 		{
-			bool previous = Dialect.StrictNew;
-			Dialect.StrictNew = true;
-			try {
-				var (module, context) = CompileModule( @"
+			var (module, context) = CompileModule(
+				@"
 module test;
 func main() -> int {
 	var int * p = new int;
 	return 0;
 }
-" );
+",
+				dialect: new Dialect { StrictNew = true } );
 
-				var (result, diagnostics) = Resolve( (module, context) );
+			var (result, diagnostics) = Resolve( (module, context) );
 
-				Assert.Single( diagnostics );
-				Assert.Equal( DiagnosticKind.Error, diagnostics[0].Kind );
-				Assert.Contains( "StrictNew", diagnostics[0].Message );
-			}
-			finally {
-				Dialect.StrictNew = previous;
-			}
+			Assert.Single( diagnostics );
+			Assert.Equal( DiagnosticKind.Error, diagnostics[0].Kind );
+			Assert.Contains( "StrictNew", diagnostics[0].Message );
 		}
 	}
 }

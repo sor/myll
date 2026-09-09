@@ -15,6 +15,8 @@ namespace Myll.Resolver
 		private readonly TypeResolver typeResolver;
 		private readonly List<Diagnostic> diagnostics;
 
+		private Dialect currentDialect = Dialect.Default;
+
 		public TypeChecker( ResolutionResult result, List<Diagnostic> diagnostics )
 		{
 			this.result        = result;
@@ -25,6 +27,7 @@ namespace Myll.Resolver
 		public void Validate( IReadOnlyList<CompiledModuleResult> modules )
 		{
 			foreach( (GlobalNamespace module, CompilationContext context) in modules ) {
+				currentDialect = context.Dialect;
 				ValidateCalls( context );
 				ValidateShadowing( context );
 				ValidateDecl( module );
@@ -644,10 +647,10 @@ namespace Myll.Resolver
 					break;
 				}
 
-				case NewExpr newExpr: {
-					if( Dialect.StrictNew
-					 && ( newExpr.type.ptrs == null || newExpr.type.ptrs.Count == 0 ) )
-						AddError( newExpr, "StrictNew is enabled: bare `new T` is not allowed; use an explicit pointer type such as `new T*` or `new T*!`." );
+			case NewExpr newExpr: {
+				if( currentDialect.StrictNew
+				 && ( newExpr.type.ptrs == null || newExpr.type.ptrs.Count == 0 ) )
+					AddError( newExpr, "StrictNew is enabled: bare `new T` is not allowed; use an explicit pointer type such as `new T*` or `new T*!`." );
 
 					break;
 				}
@@ -950,7 +953,7 @@ namespace Myll.Resolver
 			};
 		}
 
-		private static Typespec? InferAutoType( Typespec? initType )
+		private Typespec? InferAutoType( Typespec? initType )
 		{
 			if( initType == null )
 				return null;
@@ -958,8 +961,8 @@ namespace Myll.Resolver
 			return initType switch {
 				TypespecBasic basic when basic.kind == TypespecBasic.Kind.UntypedInteger
 					=> new TypespecBasic { kind = TypespecBasic.Kind.Integer, size = 4 },
-				TypespecBasic basic when basic.kind == TypespecBasic.Kind.UntypedFloat
-					=> new TypespecBasic { kind = TypespecBasic.Kind.Float, size = Dialect.DefaultFloatSize() },
+			TypespecBasic basic when basic.kind == TypespecBasic.Kind.UntypedFloat
+				=> new TypespecBasic { kind = TypespecBasic.Kind.Float, size = currentDialect.DefaultFloatSize() },
 				_ => initType,
 			};
 		}
@@ -1041,10 +1044,10 @@ namespace Myll.Resolver
 				return;
 
 			DefaultTypeMode mode = basic.kind switch {
-				TypespecBasic.Kind.Integer => Dialect.DefaultInt,
-				TypespecBasic.Kind.Unsigned => Dialect.DefaultUInt,
-				TypespecBasic.Kind.Float   => Dialect.DefaultFloat,
-				TypespecBasic.Kind.Bitwise     => Dialect.DefaultBint,
+				TypespecBasic.Kind.Integer => currentDialect.DefaultInt,
+				TypespecBasic.Kind.Unsigned => currentDialect.DefaultUInt,
+				TypespecBasic.Kind.Float   => currentDialect.DefaultFloat,
+				TypespecBasic.Kind.Bitwise     => currentDialect.DefaultBint,
 				_                          => DefaultTypeMode.SizeIndeterminate,
 			};
 
@@ -1149,7 +1152,8 @@ namespace Myll.Resolver
 
 		private void ValidateShadowing( CompilationContext context )
 		{
-			if( Dialect.Shadowing == ShadowingMode.None )
+			Dialect dialect = context.Dialect;
+			if( dialect.Shadowing == ShadowingMode.None )
 				return;
 
 			// Detect duplicate declarations in the same scope first.
@@ -1167,17 +1171,18 @@ namespace Myll.Resolver
 						local,
 						local,
 						"local variable or parameter",
-						"local variable or parameter" );
+						"local variable or parameter",
+						dialect );
 				}
 			}
 
 			foreach( (Decl local, Scope scope) in context.LocalDecls ) {
-				CheckOuterScopeShadowing( local, scope, context );
-				CheckMemberCollisions( local, scope );
+				CheckOuterScopeShadowing( local, scope, context, dialect );
+				CheckMemberCollisions( local, scope, dialect );
 			}
 		}
 
-		private void CheckOuterScopeShadowing( Decl local, Scope scope, CompilationContext context )
+		private void CheckOuterScopeShadowing( Decl local, Scope scope, CompilationContext context, Dialect dialect )
 		{
 			foreach( (Decl other, Scope otherScope) in context.LocalDecls ) {
 				if( other == local )
@@ -1191,7 +1196,8 @@ namespace Myll.Resolver
 					local,
 					other,
 					"local variable or parameter",
-					"outer local variable or parameter" );
+					"outer local variable or parameter",
+					dialect );
 				return; // one report per local is enough
 			}
 		}
@@ -1207,9 +1213,9 @@ namespace Myll.Resolver
 			return false;
 		}
 
-		private void CheckMemberCollisions( Decl local, Scope scope )
+		private void CheckMemberCollisions( Decl local, Scope scope, Dialect dialect )
 		{
-			if( (Dialect.Shadowing & (ShadowingMode.WarnLocalMemberCollision | ShadowingMode.ErrorLocalMemberCollision)) == 0 )
+			if( (dialect.Shadowing & (ShadowingMode.WarnLocalMemberCollision | ShadowingMode.ErrorLocalMemberCollision)) == 0 )
 				return;
 
 			for( Scope? outer = scope.parent; outer != null; outer = outer.parent ) {
@@ -1225,17 +1231,17 @@ namespace Myll.Resolver
 						continue;
 
 					if( member.IsInStruct && !member.IsStatic ) {
-						ReportLocalMemberCollision( local, member );
+						ReportLocalMemberCollision( local, member, dialect );
 						return; // one report per local is enough
 					}
 				}
 			}
 		}
 
-		private void ReportLocalShadowing( Decl decl, Decl shadowed, string declKind, string shadowedKind )
+		private void ReportLocalShadowing( Decl decl, Decl shadowed, string declKind, string shadowedKind, Dialect dialect )
 		{
-			bool asError = (Dialect.Shadowing & ShadowingMode.ErrorLocalShadowing) != 0;
-			bool asWarn  = (Dialect.Shadowing & ShadowingMode.WarnLocalShadowing) != 0;
+			bool asError = (dialect.Shadowing & ShadowingMode.ErrorLocalShadowing) != 0;
+			bool asWarn  = (dialect.Shadowing & ShadowingMode.WarnLocalShadowing) != 0;
 
 			if( !asError && !asWarn )
 				return;
@@ -1250,10 +1256,10 @@ namespace Myll.Resolver
 				AddWarning( decl.srcPos, message );
 		}
 
-		private void ReportLocalMemberCollision( Decl local, Decl member )
+		private void ReportLocalMemberCollision( Decl local, Decl member, Dialect dialect )
 		{
-			bool asError = (Dialect.Shadowing & ShadowingMode.ErrorLocalMemberCollision) != 0;
-			bool asWarn  = (Dialect.Shadowing & ShadowingMode.WarnLocalMemberCollision) != 0;
+			bool asError = (dialect.Shadowing & ShadowingMode.ErrorLocalMemberCollision) != 0;
+			bool asWarn  = (dialect.Shadowing & ShadowingMode.WarnLocalMemberCollision) != 0;
 
 			if( !asError && !asWarn )
 				return;

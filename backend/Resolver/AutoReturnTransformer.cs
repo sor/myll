@@ -67,19 +67,19 @@ namespace Myll.Resolver
 				return;
 
 			if( func.retType is TypespecBasic { kind: TypespecBasic.Kind.ExplicitAuto or TypespecBasic.Kind.ImplicitAuto } ) {
-				if( UsesAutoReturnName( func.body, Dialect.AutoReturnName ) ) {
+				if( UsesAutoReturnName( func.body, context.Dialect.AutoReturnName ) ) {
 					diagnostics.Add( new Diagnostic(
 						func.srcPos,
 						DiagnosticKind.Warning,
 						String.Format(
 							"Auto-return variable '{0}' cannot be used when the return type is inferred; declare a concrete return type or use explicit return statements.",
-							Dialect.AutoReturnName ) ) );
+							context.Dialect.AutoReturnName ) ) );
 				}
 
 				return;
 			}
 
-			string alias = Dialect.AutoReturnName;
+			string alias = context.Dialect.AutoReturnName;
 			if( String.IsNullOrEmpty( alias ) )
 				return;
 

@@ -41,15 +41,15 @@ These have grammar, AST nodes, or visitor entry points already; they mainly need
   - `IsNamespaceAlias` and generator hook exist; parser produces only type aliases.
 
 - **Contained module-scope `using NS`**
-  - Files: `backend/Core/Dialect.cs:58–76`, `backend/Resolver/Resolver.cs:260–279`
+  - Files: `backend/Core/Dialect.cs:57–60, 218–220`, `backend/Resolver/Resolver.cs:322–348`
   - Only `Leaky` and `Disabled` modes work.
 
 - **`switch` fallthrough modes**
-  - Files: `backend/Core/Dialect.cs:6–12, 124–125`, `backend/Visitor/VStmt.cs:386–387`
+  - Files: `backend/Core/Dialect.cs:48, 166–171`, `backend/Visitor/VStmt.cs:386–387`
   - `SwitchFallthroughMode` defined; generator always inserts `break`.
 
 - **`DefaultTypeMode` concrete-size flags**
-  - Files: `backend/Core/Dialect.cs:83–94`
+  - Files: `backend/Core/Dialect.cs:98–117`
   - Only `SizeIndeterminate` is honored; `Size8`–`SizeFast` are reserved.
 
 - **Range-based `for` loops (`for (a : b)`)**

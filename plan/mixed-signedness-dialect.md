@@ -15,13 +15,15 @@ public enum MixedSignednessMode
     SignedPreferred // signed wins if its size is >= the unsigned size, else unsigned
 }
 
-public static class Dialect
+public sealed record Dialect
 {
-    public static MixedSignednessMode MixedSignedness = MixedSignednessMode.CStyle;
+    public MixedSignednessMode MixedSignedness { get; init; } = MixedSignednessMode.CStyle;
+
+    public static readonly Dialect Default = new();
 }
 ```
 
-2. In `TypeResolver.UsualArithmeticConversions`, switch on `Dialect.MixedSignedness` for the mixed signed/unsigned case.
+2. In `TypeResolver.UsualArithmeticConversions`, switch on `dialect.MixedSignedness` for the mixed signed/unsigned case.
 
 ### `CStyle` (default)
 
@@ -50,8 +52,8 @@ This matches the intuition "keep the result signed whenever the signed type is l
 
 - Default stays `CStyle` so existing tests and C++-idiomatic code do not change unexpectedly.
 - Existing tests that exercise mixed arithmetic should be updated or duplicated once the flag is added.
-- The flag can be set in unit tests via `Dialect.MixedSignedness = ...` with a `try/finally`, or exposed through the CLI later.
+- The flag can be set per compilation by creating a new `Dialect` instance and assigning it to `CompilationContext.Dialect`, or exposed through the CLI later.
 
 ## Future
 
-A richer design could allow per-expression annotations or per-module defaults, but a global dialect switch is the right first step.
+Per-expression annotations are a possible extension, but per-module configuration is the current scope.

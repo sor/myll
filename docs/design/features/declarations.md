@@ -262,7 +262,7 @@ Control the behavior with attributes and dialect options:
 - `[shadow]` on a `class` or `struct` suppresses auto-unhiding for every method declared directly in that type.
 - `[unshadow]` on a `class` or `struct` forces auto-unhiding for every method declared directly in that type.
 
-Method-level attributes take precedence over type-level attributes. The global default can be changed with `Dialect.AutoUnhideBaseMethods` or a dialect switch.
+Method-level attributes take precedence over type-level attributes. The default is `Dialect.Default.AutoUnhideBaseMethods`; create a custom `Dialect` instance and assign it to `CompilationContext.Dialect` to override it per module, or expose it through a CLI dialect switch later.
 
 If a method name appears in multiple unrelated base classes, auto-unhiding is ambiguous. Myll skips the `using` declaration and emits a warning.
 
@@ -270,7 +270,7 @@ If a method name appears in multiple unrelated base classes, auto-unhiding is am
 
 Inside any class/struct, `self` refers to the current object as a reference (`(*this)`). Use `self.field` and `self.method()` when you want a reference.
 
-`base` and `super` are not lexer keywords. `Dialect.BaseClassAliasName` (default `"base"`) makes the configured identifier behave as a private type alias for the first base class inside any class/struct that inherits. A setting of `null` or `""` disables the alias. If a member, parameter, or local variable uses the same name, Myll emits a shadowing warning and omits the alias from the generated C++ class to avoid duplicate members.
+`base` and `super` are not lexer keywords. `Dialect.Default.BaseClassAliasName` (default `"base"`) makes the configured identifier behave as a private type alias for the first base class inside any class/struct that inherits. A value of `null` or `""` on the active `Dialect` instance disables the alias. If a member, parameter, or local variable uses the same name, Myll emits a shadowing warning and omits the alias from the generated C++ class to avoid duplicate members.
 
 ## Attributes on Declarations
 

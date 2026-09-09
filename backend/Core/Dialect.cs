@@ -6,8 +6,14 @@ namespace Myll.Core
 	/// Per-compilation dialect options. A copy is stored in each <see cref="CompilationContext"/>
 	/// so that different modules can use different mappings in the future.
 	/// </summary>
-	public sealed record DialectOptions
+	public sealed record Dialect
 	{
+		/// <summary>
+		/// Default dialect settings. Individual compilations can override by creating a new
+		/// <see cref="Dialect"/> instance and assigning it to <see cref="CompilationContext.Dialect"/>.
+		/// </summary>
+		public static readonly Dialect Default = new();
+
 		/// <summary>
 		/// Fully-qualified Myll name of the class that backs the <c>string</c> keyword.
 		/// The class must be declared in a <c>.decl.myll</c> file (or built in).
@@ -25,6 +31,89 @@ namespace Myll.Core
 		public string UniqueArrayPtrMakeTemplate { get; init; } = "std::make_unique<{0}[]>({1})";
 		public string SharedPtrMakeTemplate      { get; init; } = "std::make_shared<{0}>({1})";
 		public string SharedArrayPtrMakeTemplate { get; init; } = "std::make_shared<{0}[]>({1})";
+
+		// When true, `new T` is illegal; you must write `new T*` (or another explicit pointer type).
+		// When false, `new T` gets an implicit raw pointer, matching the C++-style default.
+		public bool StrictNew { get; init; } = false;
+
+		/// <summary>
+		/// Controls which shadowing situations produce warnings or errors.
+		/// Defaults to warnings for local-local and local-instance collisions.
+		/// </summary>
+		public ShadowingMode Shadowing { get; init; }
+			= ShadowingMode.WarnLocalShadowing
+			| ShadowingMode.WarnLocalMemberCollision;
+
+		// Controls the default behavior of `switch` cases.
+		public SwitchFallthroughMode SwitchFallthrough { get; init; } = SwitchFallthroughMode.ImplicitBreak;
+
+		// When true, a derived class that reintroduces a base method name with a different
+		// signature automatically emits C++ `using Base::name;` so overload resolution sees both.
+		// Can be overridden per class/method with [shadow] and [unshadow].
+		public bool AutoUnhideBaseMethods { get; init; } = true;
+
+		/// <summary>
+		/// Controls whether and where module-scope `using NS;` of a namespace is
+		/// emitted. Defaults to <see cref="GlobalUsingNSMode.Leaky"/> for backward
+		/// compatibility.
+		/// </summary>
+		public GlobalUsingNSMode GlobalUsingNS { get; init; } = GlobalUsingNSMode.Leaky;
+
+		// Name of the implicit alias for the first base class inside a class/struct.
+		// If empty or null, no alias is created and the name is treated as an ordinary identifier.
+		public string BaseClassAliasName { get; init; } = "base";
+
+		// Name of the implicit alias for the enclosing class/struct itself.
+		// If empty or null, no alias is created.
+		public string OwnClassAliasName { get; init; } = "";
+
+		// Name of the implicit return variable inside a non-void function.
+		// If empty or null, no implicit variable is created.
+		public string AutoReturnName { get; init; } = "ret";
+
+		// Default attributes applied to class, struct, union, and enum declarations that do not
+		// already specify the corresponding attribute. Use the same syntax as source attributes,
+		// e.g. "rule_of_n=5" or "[rule_of_n=3, pub]". Brackets are optional.
+		public string DefaultAttributesClass  { get; init; } = "";
+		public string DefaultAttributesStruct { get; init; } = "";
+		public string DefaultAttributesUnion  { get; init; } = "";
+		public string DefaultAttributesEnum   { get; init; } = "";
+
+		/// <summary>
+		/// Controls which concrete size the `float` keyword refers to. `Unspecified` means the
+		/// keyword has no binding; the active dialect decides whether it may still be used.
+		/// </summary>
+		public FloatKeywordMode FloatKeyword { get; init; } = FloatKeywordMode.Unspecified;
+
+		/// <summary>
+		/// Controls the result type of mixed signed/unsigned arithmetic.
+		/// Defaults to C-style "unsigned wins at equal rank".
+		/// </summary>
+		public MixedSignednessMode MixedSignedness { get; init; } = MixedSignednessMode.CStyle;
+
+		/// <summary>
+		/// Controls how <c>int</c> is treated by the type system. Defaults to
+		/// <see cref="DefaultTypeMode.SizeIndeterminate"/>.
+		/// </summary>
+		public DefaultTypeMode DefaultInt { get; init; } = DefaultTypeMode.SizeIndeterminate;
+
+		/// <summary>
+		/// Controls how <c>uint</c> is treated by the type system. Defaults to
+		/// <see cref="DefaultTypeMode.SizeIndeterminate"/>.
+		/// </summary>
+		public DefaultTypeMode DefaultUInt { get; init; } = DefaultTypeMode.SizeIndeterminate;
+
+		/// <summary>
+		/// Controls how <c>float</c> is treated by the type system. Defaults to
+		/// <see cref="DefaultTypeMode.SizeIndeterminate"/>.
+		/// </summary>
+		public DefaultTypeMode DefaultFloat { get; init; } = DefaultTypeMode.SizeIndeterminate;
+
+		/// <summary>
+		/// Controls how <c>bint</c> is treated by the type system. Defaults to
+		/// <see cref="DefaultTypeMode.SizeIndeterminate"/>.
+		/// </summary>
+		public DefaultTypeMode DefaultBint { get; init; } = DefaultTypeMode.SizeIndeterminate;
 
 		public string GetPointerTemplate( Pointer.Kind kind )
 			=> kind switch {
@@ -56,6 +145,21 @@ namespace Myll.Core
 				Pointer.Kind.SharedArray => SharedArrayPtrMakeTemplate,
 				_ => throw new ArgumentOutOfRangeException( nameof( kind ), kind, null ),
 			};
+
+		/// <summary>
+		/// Returns the concrete float size (in bytes) used for untyped float literals and for
+		/// the `float` keyword when <see cref="FloatKeyword"/> is <see cref="FloatKeywordMode.Unspecified"/>.
+		/// </summary>
+		public int DefaultFloatSize()
+		{
+			return FloatKeyword switch {
+				FloatKeywordMode.F16 => 2,
+				FloatKeywordMode.F32 => 4,
+				FloatKeywordMode.F64 => 8,
+				FloatKeywordMode.F128 => 16,
+				_                   => 4, // Unspecified fallback: f32
+			};
+		}
 	}
 
 	// Compile-time dialect switches. In the future these may move to a config file or CLI options.
@@ -162,108 +266,5 @@ namespace Myll.Core
 		ErrorLocalShadowing           = 1 << 1,
 		WarnLocalMemberCollision      = 1 << 2,
 		ErrorLocalMemberCollision     = 1 << 3,
-	}
-
-	public static class Dialect
-	{
-		// Default dialect options. Per-module overrides are stored in CompilationContext.Dialect.
-		public static readonly DialectOptions Default = new();
-
-		// When true, `new T` is illegal; you must write `new T*` (or another explicit pointer type).
-		// When false, `new T` gets an implicit raw pointer, matching the C++-style default.
-		public static bool StrictNew = false;
-
-		/// <summary>
-		/// Controls which shadowing situations produce warnings or errors.
-		/// Defaults to warnings for local-local and local-instance collisions.
-		/// </summary>
-		public static ShadowingMode Shadowing = ShadowingMode.WarnLocalShadowing
-		                                    | ShadowingMode.WarnLocalMemberCollision;
-
-		// Controls the default behavior of `switch` cases.
-		public static SwitchFallthroughMode SwitchFallthrough = SwitchFallthroughMode.ImplicitBreak;
-
-		// When true, a derived class that reintroduces a base method name with a different
-		// signature automatically emits C++ `using Base::name;` so overload resolution sees both.
-		// Can be overridden per class/method with [shadow] and [unshadow].
-		public static bool AutoUnhideBaseMethods = true;
-
-		/// <summary>
-		/// Controls whether and where module-scope `using NS;` of a namespace is
-		/// emitted. Defaults to <see cref="GlobalUsingNSMode.Leaky"/> for backward
-		/// compatibility.
-		/// </summary>
-		public static GlobalUsingNSMode GlobalUsingNS = GlobalUsingNSMode.Leaky;
-
-		// Name of the implicit alias for the first base class inside a class/struct.
-		// If empty or null, no alias is created and the name is treated as an ordinary identifier.
-		public static string BaseClassAliasName = "base";
-
-		// Name of the implicit alias for the enclosing class/struct itself.
-		// If empty or null, no alias is created.
-		public static string OwnClassAliasName = "";
-
-		// Name of the implicit return variable inside a non-void function.
-		// If empty or null, no implicit variable is created.
-		public static string AutoReturnName = "ret";
-
-		// Default attributes applied to class, struct, union, and enum declarations that do not
-		// already specify the corresponding attribute. Use the same syntax as source attributes,
-		// e.g. "rule_of_n=5" or "[rule_of_n=3, pub]". Brackets are optional.
-		public static string DefaultAttributesClass  = "";
-		public static string DefaultAttributesStruct = "";
-		public static string DefaultAttributesUnion  = "";
-		public static string DefaultAttributesEnum   = "";
-
-		/// <summary>
-		/// Controls which concrete size the `float` keyword refers to. `Unspecified` means the
-		/// keyword has no binding; the active dialect decides whether it may still be used.
-		/// </summary>
-		public static FloatKeywordMode FloatKeyword = FloatKeywordMode.Unspecified;
-
-		/// <summary>
-		/// Controls the result type of mixed signed/unsigned arithmetic.
-		/// Defaults to C-style "unsigned wins at equal rank".
-		/// </summary>
-		public static MixedSignednessMode MixedSignedness = MixedSignednessMode.CStyle;
-
-		/// <summary>
-		/// Controls how <c>int</c> is treated by the type system. Defaults to
-		/// <see cref="DefaultTypeMode.SizeIndeterminate"/>.
-		/// </summary>
-		public static DefaultTypeMode DefaultInt = DefaultTypeMode.SizeIndeterminate;
-
-		/// <summary>
-		/// Controls how <c>uint</c> is treated by the type system. Defaults to
-		/// <see cref="DefaultTypeMode.SizeIndeterminate"/>.
-		/// </summary>
-		public static DefaultTypeMode DefaultUInt = DefaultTypeMode.SizeIndeterminate;
-
-		/// <summary>
-		/// Controls how <c>float</c> is treated by the type system. Defaults to
-		/// <see cref="DefaultTypeMode.SizeIndeterminate"/>.
-		/// </summary>
-		public static DefaultTypeMode DefaultFloat = DefaultTypeMode.SizeIndeterminate;
-
-		/// <summary>
-		/// Controls how <c>bint</c> is treated by the type system. Defaults to
-		/// <see cref="DefaultTypeMode.SizeIndeterminate"/>.
-		/// </summary>
-		public static DefaultTypeMode DefaultBint = DefaultTypeMode.SizeIndeterminate;
-
-		/// <summary>
-		/// Returns the concrete float size (in bytes) used for untyped float literals and for
-		/// the `float` keyword when <see cref="FloatKeyword"/> is <see cref="FloatKeywordMode.Unspecified"/>.
-		/// </summary>
-		public static int DefaultFloatSize()
-		{
-			return FloatKeyword switch {
-				FloatKeywordMode.F16 => 2,
-				FloatKeywordMode.F32 => 4,
-				FloatKeywordMode.F64 => 8,
-				FloatKeywordMode.F128 => 16,
-				_                   => 4, // Unspecified fallback: f32
-			};
-		}
 	}
 }

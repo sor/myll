@@ -13,7 +13,8 @@ namespace Myll.Tests
 	{
 		private static CompiledModuleResult CompileModule(
 			string source,
-			string moduleName = "test" )
+			string moduleName = "test",
+			Dialect? dialect = null )
 		{
 			AntlrInputStream inputStream = new( source ) { name = moduleName + ".myll" };
 			MyllLexer        lexer       = new( inputStream );
@@ -21,7 +22,7 @@ namespace Myll.Tests
 			MyllParser        parser      = new( tokenStream );
 			MyllParser.ProgContext prog = parser.prog();
 
-			CompilationContext context = new();
+			CompilationContext context = new() { Dialect = dialect ?? Myll.Core.Dialect.Default };
 			IGrouping<string, MyllParser.ProgContext> group = new[] { prog }
 				.GroupBy( _ => moduleName )
 				.First();
@@ -31,30 +32,22 @@ namespace Myll.Tests
 		}
 
 		private static List<Diagnostic> RunTypeChecker(
-			ShadowingMode mode,
 			params CompiledModuleResult[] modules )
 		{
-			ShadowingMode previous = Dialect.Shadowing;
-			try {
-				Dialect.Shadowing = mode;
+			var (result, resolveDiagnostics) = NameResolver.Resolve( modules );
+			List<Diagnostic> diagnostics = new( resolveDiagnostics );
 
-				var (result, resolveDiagnostics) = NameResolver.Resolve( modules );
-				List<Diagnostic> diagnostics = new( resolveDiagnostics );
+			TypeChecker checker = new( result, diagnostics );
+			checker.Validate( modules.ToList() );
 
-				TypeChecker checker = new( result, diagnostics );
-				checker.Validate( modules.ToList() );
-
-				return diagnostics;
-			}
-			finally {
-				Dialect.Shadowing = previous;
-			}
+			return diagnostics;
 		}
 
 		[Fact]
 		public void LocalShadowsOuterLocal_Warns()
 		{
-			var (module, context) = CompileModule( @"
+			var (module, context) = CompileModule(
+				@"
 module test;
 func main() -> int
 {
@@ -64,11 +57,10 @@ func main() -> int
 	}
 	return 0;
 }
-" );
+",
+				dialect: new Dialect { Shadowing = ShadowingMode.WarnLocalShadowing } );
 
-			List<Diagnostic> diagnostics = RunTypeChecker(
-				ShadowingMode.WarnLocalShadowing,
-				(module, context) );
+			List<Diagnostic> diagnostics = RunTypeChecker( (module, context) );
 
 			Assert.Contains( diagnostics, d
 				=> d.Kind == DiagnosticKind.Warning
@@ -79,7 +71,8 @@ func main() -> int
 		[Fact]
 		public void LocalShadowsOuterLocal_ErrorsWhenConfigured()
 		{
-			var (module, context) = CompileModule( @"
+			var (module, context) = CompileModule(
+				@"
 module test;
 func main() -> int
 {
@@ -89,11 +82,10 @@ func main() -> int
 	}
 	return 0;
 }
-" );
+",
+				dialect: new Dialect { Shadowing = ShadowingMode.ErrorLocalShadowing } );
 
-			List<Diagnostic> diagnostics = RunTypeChecker(
-				ShadowingMode.ErrorLocalShadowing,
-				(module, context) );
+			List<Diagnostic> diagnostics = RunTypeChecker( (module, context) );
 
 			Assert.Contains( diagnostics, d
 				=> d.Kind == DiagnosticKind.Error
@@ -104,7 +96,8 @@ func main() -> int
 		[Fact]
 		public void LocalCollidesWithInstanceMember_Warns()
 		{
-			var (module, context) = CompileModule( @"
+			var (module, context) = CompileModule(
+				@"
 module test;
 class Foo
 {
@@ -116,11 +109,10 @@ class Foo
 		return value;
 	}
 }
-" );
+",
+				dialect: new Dialect { Shadowing = ShadowingMode.WarnLocalMemberCollision } );
 
-			List<Diagnostic> diagnostics = RunTypeChecker(
-				ShadowingMode.WarnLocalMemberCollision,
-				(module, context) );
+			List<Diagnostic> diagnostics = RunTypeChecker( (module, context) );
 
 			Assert.Contains( diagnostics, d
 				=> d.Kind == DiagnosticKind.Warning
@@ -131,7 +123,8 @@ class Foo
 		[Fact]
 		public void ParameterCollidesWithInstanceMethod_Warns()
 		{
-			var (module, context) = CompileModule( @"
+			var (module, context) = CompileModule(
+				@"
 module test;
 class Foo
 {
@@ -142,11 +135,10 @@ class Foo
 		return helper;
 	}
 }
-" );
+",
+				dialect: new Dialect { Shadowing = ShadowingMode.WarnLocalMemberCollision } );
 
-			List<Diagnostic> diagnostics = RunTypeChecker(
-				ShadowingMode.WarnLocalMemberCollision,
-				(module, context) );
+			List<Diagnostic> diagnostics = RunTypeChecker( (module, context) );
 
 			Assert.Contains( diagnostics, d
 				=> d.Kind == DiagnosticKind.Warning
@@ -157,7 +149,8 @@ class Foo
 		[Fact]
 		public void NoCollision_Allows()
 		{
-			var (module, context) = CompileModule( @"
+			var (module, context) = CompileModule(
+				@"
 module test;
 func main() -> int
 {
@@ -165,11 +158,10 @@ func main() -> int
 	var int y = 2;
 	return x + y;
 }
-" );
+",
+				dialect: new Dialect { Shadowing = ShadowingMode.WarnLocalShadowing | ShadowingMode.WarnLocalMemberCollision } );
 
-			List<Diagnostic> diagnostics = RunTypeChecker(
-				ShadowingMode.WarnLocalShadowing | ShadowingMode.WarnLocalMemberCollision,
-				(module, context) );
+			List<Diagnostic> diagnostics = RunTypeChecker( (module, context) );
 
 			Assert.DoesNotContain( diagnostics, d
 				=> d.Kind == DiagnosticKind.Warning

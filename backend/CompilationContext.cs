@@ -24,9 +24,9 @@ namespace Myll
 
 		/// <summary>
 		/// Dialect options for this module. The resolver uses this instead of the static
-		/// <see cref="Dialect"/> defaults so per-module overrides become possible later.
+		/// <see cref="Dialect.Default"/> defaults so per-module overrides become possible later.
 		/// </summary>
-		public DialectOptions Dialect { get; init; } = Myll.Core.Dialect.Default;
+		public Dialect Dialect { get; init; } = Myll.Core.Dialect.Default;
 
 		/// <summary>
 		/// Resolved declaration backing the <c>string</c> keyword for this module, if any.
