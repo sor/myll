@@ -227,6 +227,10 @@ namespace Myll.Transform
 					|| ContainsAutoReturnName( fs.iter, alias )
 					|| ( fs.body != null && ContainsAutoReturnName( fs.body, alias ) )
 					|| ( fs.els != null && ContainsAutoReturnName( fs.els, alias ) ),
+				RangeForStmt rfs
+					=> ContainsAutoReturnName( rfs.range, alias )
+					|| ( rfs.body != null && ContainsAutoReturnName( rfs.body, alias ) )
+					|| ( rfs.els != null && ContainsAutoReturnName( rfs.els, alias ) ),
 				WhileStmt ws
 					=> ContainsAutoReturnName( ws.cond, alias )
 					|| ContainsAutoReturnName( ws.body, alias )

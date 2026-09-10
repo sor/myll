@@ -169,6 +169,7 @@ defStmt		:	declUsing
 			|	stmtSwitch
 			|	stmtLoop
 			|	stmtFor
+			|	stmtRangeFor
 			|	stmtWhile
 			|	stmtDoWhile
 			|	stmtTimes
@@ -193,11 +194,13 @@ stmtSwitch	:	SWITCH	LPAREN	cond=expr	RPAREN
 
 stmtLoop	:	LOOP			body=stmt;
 stmtFor		:	FOR		LPAREN	init=stmt	// TODO: add syntax for( a : b )
-								cond=expr?	SEMI
-								iter=expr?	RPAREN	body=stmt	// assignment???
-				(ELSE			els=stmt)?;
+							cond=expr?	SEMI
+							iter=expr?	RPAREN	body=stmt	// assignment???
+				(ELSE		els=stmt)?;
+stmtRangeFor:	FOR		LPAREN	varKind=kindOfVar?	varType=typespec	varName=id	COLON	range=expr	RPAREN	body=stmt
+				(ELSE		els=stmt)?;
 stmtWhile	:	WHILE	LPAREN	cond=expr	RPAREN	body=stmt
-				(ELSE			els=stmt)?;
+				(ELSE		els=stmt)?;
 stmtDoWhile	:	DO				body=stmt
 				WHILE	LPAREN	cond=expr	RPAREN;
 stmtTimes	:	DO? 			count=expr	TIMES

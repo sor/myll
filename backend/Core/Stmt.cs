@@ -362,6 +362,26 @@ namespace Myll.Core
 	}
 
 	// +0-1 scope
+	public class RangeForStmt : Stmt
+	{
+		public VarStmt varDecl = null!;
+		public Expr    range   = null!;
+		public Stmt?   body;
+		public Stmt?   els;
+
+		public override Strings Gen( int level )
+		{
+			Strings ret    = new();
+			string  indent = IndentString.Repeat( level );
+			string  decl   = varDecl.type.Gen( varDecl.name );
+			ret.Add( Format( RangeForFormat[0], indent, decl, range.Gen() ) );
+			ret.AddRange( body?.GenWithoutCurly( level + 1 ) ?? Enumerable.Empty<string>() );
+			ret.Add( Format( CurlyClose, indent ) );
+			return ret;
+		}
+	}
+
+	// +0-1 scope
 	public class WhileStmt : Stmt
 	{
 		public Stmt  body = null!;

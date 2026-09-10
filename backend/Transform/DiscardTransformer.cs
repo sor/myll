@@ -166,6 +166,17 @@ namespace Myll.Transform
 
 					return forStmt;
 
+				case RangeForStmt rangeForStmt:
+					TransformExpr( rangeForStmt.range, preStmts, context );
+
+					if( rangeForStmt.body != null )
+						rangeForStmt.body = ProcessNestedBlockStmt( rangeForStmt.body, context );
+
+					if( rangeForStmt.els != null )
+						rangeForStmt.els = ProcessNestedBlockStmt( rangeForStmt.els, context );
+
+					return rangeForStmt;
+
 				case WhileStmt whileStmt:
 					TransformExpr( whileStmt.cond, preStmts, context );
 					whileStmt.body = ProcessNestedBlockStmt( whileStmt.body, context );

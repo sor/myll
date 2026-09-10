@@ -50,12 +50,17 @@ namespace Myll.Transform
 		private static Stmt TransformStmt( Stmt stmt, ModuleContext context )
 		{
 			switch( stmt ) {
-				case ForStmt fs:
-					return fs.els != null
-						? TransformForOrWhile( fs, context )
-						: fs;
+			case ForStmt fs:
+				return fs.els != null
+					? TransformForOrWhile( fs, context )
+					: fs;
 
-				case WhileStmt ws:
+			case RangeForStmt rfs:
+				return rfs.els != null
+					? TransformForOrWhile( rfs, context )
+					: rfs;
+
+			case WhileStmt ws:
 					return ws.els != null
 						? TransformForOrWhile( ws, context )
 						: ws;
@@ -123,6 +128,22 @@ namespace Myll.Transform
 			string flagName = context.NextTempName();
 
 			loop.body = TransformStmt( loop.body, context );
+
+			Stmt elseBody = loop.els!;
+			loop.els     = null;
+
+			loop.body = WrapWithEntryFlag( loop.body, flagName );
+
+			return BuildElseScope( loop, elseBody, flagName, context );
+		}
+
+		private static MultiStmt TransformForOrWhile( RangeForStmt loop, ModuleContext context )
+		{
+			string flagName = context.NextTempName();
+
+			loop.body = loop.body != null
+				? TransformStmt( loop.body, context )
+				: null;
 
 			Stmt elseBody = loop.els!;
 			loop.els     = null;

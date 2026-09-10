@@ -189,6 +189,7 @@ namespace Myll.Transform
 		{
 			switch( stmt ) {
 				case ForStmt fs:
+				case RangeForStmt rfs:
 				case WhileStmt ws:
 				case DoWhileStmt dws:
 				case LoopStmt ls:
@@ -242,6 +243,8 @@ namespace Myll.Transform
 
 			if( loop is ForStmt fs && fs.els != null )
 				fs.els = TransformStmt( fs.els, context, breakables, diagnostics );
+			else if( loop is RangeForStmt rfs && rfs.els != null )
+				rfs.els = TransformStmt( rfs.els, context, breakables, diagnostics );
 			else if( loop is WhileStmt ws && ws.els != null )
 				ws.els = TransformStmt( ws.els, context, breakables, diagnostics );
 
@@ -285,6 +288,7 @@ namespace Myll.Transform
 		private static Stmt? GetLoopBody( Stmt loop )
 			=> loop switch {
 				ForStmt fs      => fs.body,
+				RangeForStmt rfs=> rfs.body,
 				WhileStmt ws    => ws.body,
 				DoWhileStmt dws => dws.body,
 				LoopStmt ls     => ls.body,
@@ -296,6 +300,7 @@ namespace Myll.Transform
 		{
 			switch( loop ) {
 				case ForStmt fs:      fs.body = body; break;
+				case RangeForStmt rfs:rfs.body = body; break;
 				case WhileStmt ws:    ws.body = body; break;
 				case DoWhileStmt dws: dws.body = body; break;
 				case LoopStmt ls:     ls.body = body; break;

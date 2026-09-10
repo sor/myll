@@ -78,6 +78,7 @@ namespace Myll.Resolver
 				new ElseOnLoopTransformer(),
 				new BreakContinueTransformer(),
 				new ConfiguredAliasShadowingTransformer(),
+				new RangeForAutoTypeTransformer(),
 			};
 
 			foreach( CompiledModuleResult module in modules )

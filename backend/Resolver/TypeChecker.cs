@@ -193,18 +193,28 @@ namespace Myll.Resolver
 						ValidateStmt( ifStmt.els, currentFunction );
 					break;
 
-				case ForStmt forStmt:
-					if( forStmt.init != null )
-						ValidateStmt( forStmt.init, currentFunction );
-					if( forStmt.cond != null )
-						ValidateCondition( forStmt.cond, forStmt.cond.srcPos, "for" );
-					if( forStmt.body != null )
-						ValidateStmt( forStmt.body, currentFunction );
-					if( forStmt.els != null )
-						ValidateStmt( forStmt.els, currentFunction );
-					break;
+			case ForStmt forStmt:
+				if( forStmt.init != null )
+					ValidateStmt( forStmt.init, currentFunction );
+				if( forStmt.cond != null )
+					ValidateCondition( forStmt.cond, forStmt.cond.srcPos, "for" );
+				if( forStmt.body != null )
+					ValidateStmt( forStmt.body, currentFunction );
+				if( forStmt.els != null )
+					ValidateStmt( forStmt.els, currentFunction );
+				break;
 
-				case WhileStmt whileStmt:
+			case RangeForStmt rangeForStmt:
+				ValidateExpression( rangeForStmt.range );
+				if( rangeForStmt.varDecl != null )
+					ValidateStmt( rangeForStmt.varDecl, currentFunction );
+				if( rangeForStmt.body != null )
+					ValidateStmt( rangeForStmt.body, currentFunction );
+				if( rangeForStmt.els != null )
+					ValidateStmt( rangeForStmt.els, currentFunction );
+				break;
+
+			case WhileStmt whileStmt:
 					ValidateCondition( whileStmt.cond, whileStmt.cond.srcPos, "while" );
 					ValidateStmt( whileStmt.body, currentFunction );
 					if( whileStmt.els != null )

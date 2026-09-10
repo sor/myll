@@ -470,6 +470,49 @@ namespace Myll
 			return ret;
 		}
 
+		public override RangeForStmt VisitStmtRangeFor( StmtRangeForContext c )
+		{
+			VarDecl.Kind kind = c.varKind != null
+				? c.varKind.Visit()
+				: VarDecl.Kind.Var;
+
+			Typespec type = VisitTypespec( c.varType );
+			if( kind.ToQualifier() == Qualifier.Const )
+				type.qual |= Qualifier.Const;
+
+			VarStmt stmt = new() {
+				srcPos            = c.ToSrcPos(),
+				name              = c.varName.GetText(),
+				kind              = kind,
+				type              = type,
+				init              = null,
+				isDirectConstruct = false,
+			};
+
+			PushScope();
+
+			VarDecl vd = new() {
+				name   = stmt.name,
+				type   = stmt.type,
+				kind   = stmt.kind,
+				access = Access.Public,
+			};
+			AddScopeOnly( vd );
+			stmt.decl = vd;
+
+			MultiStmt body = VisitBlockify( c.body );
+
+			PopScope();
+
+			RangeForStmt ret = new() {
+				varDecl = stmt,
+				range   = c.range.Visit( Context ),
+				body    = body,
+				els     = c.els?.Visit( Context ),
+			};
+			return ret;
+		}
+
 		public override WhileStmt VisitStmtWhile( StmtWhileContext c )
 		{
 			WhileStmt ret = new() {
