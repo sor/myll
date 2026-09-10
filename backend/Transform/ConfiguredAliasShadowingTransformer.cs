@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Myll.Core;
 
-namespace Myll.Resolver
+namespace Myll.Transform
 {
 	/// <summary>
 	/// Warns when a configured alias name is shadowed by a class/struct member,
@@ -13,28 +13,11 @@ namespace Myll.Resolver
 	/// <see cref="ModuleContext.LocalDecls"/>, so locals inside loops are
 	/// correctly checked.
 	/// </summary>
-	public sealed class ConfiguredAliasShadowingTransformer : ITransformer
+	public sealed class ConfiguredAliasShadowingTransformer : Transformer
 	{
-		private readonly List<Diagnostic> diagnostics = new();
-
-		public IReadOnlyList<Diagnostic> Diagnostics => diagnostics;
-
-		public void Transform( IReadOnlyList<CompiledModuleResult> modules )
+		protected override void PostTransform( TransformContext ctx )
 		{
-			diagnostics.Clear();
-			Transform( modules, diagnostics );
-		}
-
-		public void Transform(
-			IReadOnlyList<CompiledModuleResult> modules,
-			List<Diagnostic> diagnostics )
-		{
-			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
-				if( context.IsPrototypeFile )
-					continue;
-
-				VisitHierarchical( module, context, diagnostics );
-			}
+			VisitHierarchical( ctx.Module.Module, ctx.Module.Context, Diagnostics );
 		}
 
 		/// <summary>

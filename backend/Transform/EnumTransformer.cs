@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Myll.Core;
 
-namespace Myll.Resolver
+namespace Myll.Transform
 {
 	/// <summary>
 	/// Pre-resolution transform for enumeration attributes.
@@ -12,7 +12,7 @@ namespace Myll.Resolver
 	/// - <c>[operators(bitwise)]</c>: synthesize <c>operator&amp;|~^</c> and compound
 	///   assignment operators in the nearest enclosing namespace.
 	/// </summary>
-	public sealed class EnumTransformer : ITransformer
+	public sealed class EnumTransformer : Transformer
 	{
 		private static readonly (string, Operand)[] BitwiseOps = {
 			("operator&", Operand.BitAnd),
@@ -26,12 +26,9 @@ namespace Myll.Resolver
 			("operator^=", Operand.BitXor),
 		};
 
-		public void Transform(
-			IReadOnlyList<CompiledModuleResult> modules,
-			List<Diagnostic> diagnostics )
+		protected override void PreTransform( TransformContext ctx )
 		{
-			foreach( (GlobalNamespace module, _) in modules )
-				TransformDecl( module, diagnostics );
+			TransformDecl( ctx.Module.Module, Diagnostics );
 		}
 
 		private static void TransformDecl( Decl decl, List<Diagnostic> diagnostics )

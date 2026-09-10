@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using Myll.Core;
+using Myll.Resolver;
 
-namespace Myll.Resolver
+namespace Myll.Transform
 {
 	using Attribs = Dictionary<string, List<string>>;
 
@@ -11,16 +12,12 @@ namespace Myll.Resolver
 	/// Runs before other attribute-consuming transforms so that defaults participate in
 	/// rule-of-N checks, flags handling, etc.
 	/// </summary>
-	public sealed class DefaultAttributesTransformer : ITransformer
+	public sealed class DefaultAttributesTransformer : Transformer
 	{
-		public void Transform(
-			IReadOnlyList<CompiledModuleResult> modules,
-			List<Diagnostic> diagnostics )
+		protected override void PreTransform( TransformContext ctx )
 		{
-			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
-				foreach( Decl decl in module.children )
-					ApplyDefaults( decl, context.Dialect );
-			}
+			foreach( Decl decl in ctx.Module.Module.children )
+				ApplyDefaults( decl, ctx.Module.Context.Dialect );
 		}
 
 		private static void ApplyDefaults( Decl decl, Dialect dialect )

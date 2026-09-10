@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Myll.Core;
 
-namespace Myll.Resolver
+namespace Myll.Transform
 {
 	/// <summary>
 	/// Lowers multi-level <c>break N;</c> and <c>continue N;</c> to hidden flags.
@@ -14,7 +14,7 @@ namespace Myll.Resolver
 	/// A plain <c>break</c> inside a switch still exits that switch. A plain
 	/// <c>continue</c> inside a loop still continues that loop.
 	/// </summary>
-	public sealed class BreakContinueTransformer : ITransformer
+	public sealed class BreakContinueTransformer : Transformer
 	{
 		private sealed class BreakableContext
 		{
@@ -34,16 +34,9 @@ namespace Myll.Resolver
 				ContinueFlag = context.NextTempName(),
 			};
 
-		public void Transform(
-			IReadOnlyList<CompiledModuleResult> modules,
-			List<Diagnostic> diagnostics )
+		protected override void PostTransform( TransformContext ctx )
 		{
-			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
-				if( context.IsPrototypeFile )
-					continue;
-
-				TransformDecl( module, context, diagnostics );
-			}
+			TransformDecl( ctx.Module.Module, ctx.Module.Context, Diagnostics );
 		}
 
 		private static void TransformDecl(

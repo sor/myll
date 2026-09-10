@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Myll.Core;
+using Myll.Transform;
 
 namespace Myll.Resolver
 {
@@ -66,16 +67,22 @@ namespace Myll.Resolver
 			var result      = new ResolutionResult();
 			var diagnostics = new List<Diagnostic>();
 
-			var preResolveTransforms = new List<ITransformer> {
+			var transformers = new List<Transformer> {
 				new DefaultAttributesTransformer(),
 				new EnumTransformer(),
 				new AutoReturnTransformer(),
 				new TemplateParamTransformer(),
 				new ChainTransformer(),
+				new DiscardTransformer(),
+				new RuleOfTransformer(),
+				new ElseOnLoopTransformer(),
+				new BreakContinueTransformer(),
+				new ConfiguredAliasShadowingTransformer(),
 			};
 
-			foreach( ITransformer transformer in preResolveTransforms )
-				transformer.Transform( modules, diagnostics );
+			foreach( CompiledModuleResult module in modules )
+				foreach( Transformer t in transformers )
+					diagnostics.AddRange( t.DoPreTransform( new TransformContext( module, null ) ) );
 
 			var exports  = BuildModuleExports( modules );
 			var contexts = modules.ToDictionary( m => m.Module, m => m.Context );
@@ -108,25 +115,18 @@ namespace Myll.Resolver
 
 			resolver.ValidateGlobalUsings( modules );
 
-			var postResolveTransforms = new List<ITransformer> {
-				new DiscardTransformer( result, diagnostics ),
-				new RuleOfTransformer(),
-				new ElseOnLoopTransformer(),
-				new BreakContinueTransformer(),
-				new ConfiguredAliasShadowingTransformer(),
-			};
+			foreach( CompiledModuleResult module in modules )
+				foreach( Transformer t in transformers )
+					diagnostics.AddRange( t.DoPostTransform( new TransformContext( module, result ) ) );
 
-			foreach( ITransformer transformer in postResolveTransforms )
-				transformer.Transform( modules, diagnostics );
+			resolver.RejectRequiresClauses( modules );
+			resolver.ValidateTypes( modules );
+			resolver.ResolveSyntheticInitListTypes( modules );
+			result.Apply();
+			resolver.UpdateDependentNestedNames( modules );
+			resolver.ReportUnresolved( modules );
 
-		resolver.RejectRequiresClauses( modules );
-		resolver.ValidateTypes( modules );
-		resolver.ResolveSyntheticInitListTypes( modules );
-		result.Apply();
-		resolver.UpdateDependentNestedNames( modules );
-		resolver.ReportUnresolved( modules );
-
-		return new( result, diagnostics );
+			return new( result, diagnostics );
 		}
 
 		private static IReadOnlyDictionary<string, ModuleExports> BuildModuleExports(

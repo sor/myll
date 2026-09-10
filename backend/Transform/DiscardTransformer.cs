@@ -2,8 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Myll.Core;
+using Myll.Resolver;
 
-namespace Myll.Resolver
+namespace Myll.Transform
 {
 	/// <summary>
 	/// Lowers Myll discard expressions (<c>_</c>) into valid C++ after name and overload
@@ -17,24 +18,14 @@ namespace Myll.Resolver
 	/// </list>
 	/// All other uses of <c>_</c> produce a diagnostic error.
 	/// </summary>
-	public sealed class DiscardTransformer : ITransformer
+	public sealed class DiscardTransformer : Transformer
 	{
-		private readonly ResolutionResult result;
-		private readonly List<Diagnostic> diagnostics;
+		private ResolutionResult? _resolutionResult;
 
-		public DiscardTransformer( ResolutionResult result, List<Diagnostic> diagnostics )
+		protected override void PostTransform( TransformContext ctx )
 		{
-			this.result      = result;
-			this.diagnostics = diagnostics;
-		}
-
-		public void Transform(
-			IReadOnlyList<CompiledModuleResult> modules,
-			List<Diagnostic> diagnostics )
-		{
-			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
-				TransformDecl( module, context );
-			}
+			_resolutionResult = ctx.ResolutionResult;
+			TransformDecl( ctx.Module.Module, ctx.Module.Context );
 		}
 
 		private void TransformDecl( Decl decl, ModuleContext context )
@@ -380,11 +371,14 @@ namespace Myll.Resolver
 		private Decl? ResolveCalleeDecl( Expr callee )
 		{
 			return callee switch {
-				IdExpr id when result.TryGetResolved( id, out Decl? d )     => d,
-				ScopedExpr scoped when result.TryGetResolved( scoped, out Decl? d ) => d,
+				IdExpr id when _resolutionResult != null && _resolutionResult.TryGetResolved( id, out Decl? d )
+					=> d,
+				ScopedExpr scoped when _resolutionResult != null && _resolutionResult.TryGetResolved( scoped, out Decl? d )
+					=> d,
 				BinOp binOp when binOp.right is IdExpr m
-				             && result.TryGetResolvedMember( m, out Decl? d )       => d,
-				_                                                           => null,
+					&& _resolutionResult != null && _resolutionResult.TryGetResolvedMember( m, out Decl? d )
+					=> d,
+				_ => null,
 			};
 		}
 
@@ -500,7 +494,7 @@ namespace Myll.Resolver
 
 		private void Error( SrcPos? srcPos, string message )
 		{
-			diagnostics.Add( new Diagnostic(
+			Diagnostics.Add( new Diagnostic(
 				srcPos ?? new SrcPos { file = "<unknown>" },
 				DiagnosticKind.Error,
 				message ) );

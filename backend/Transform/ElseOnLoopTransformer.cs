@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Myll.Core;
 
-namespace Myll.Resolver
+namespace Myll.Transform
 {
 	/// <summary>
 	/// Lowers Myll loop <c>else</c> clauses to plain C++.
@@ -12,18 +12,11 @@ namespace Myll.Resolver
 	/// the <c>else</c> body runs ONLY if the loop condition is false on the
 	/// first check and the loop body never executes.
 	/// </summary>
-	public sealed class ElseOnLoopTransformer : ITransformer
+	public sealed class ElseOnLoopTransformer : Transformer
 	{
-		public void Transform(
-			IReadOnlyList<CompiledModuleResult> modules,
-			List<Diagnostic> diagnostics )
+		protected override void PostTransform( TransformContext ctx )
 		{
-			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
-				if( context.IsPrototypeFile )
-					continue;
-
-				TransformDecl( module, context );
-			}
+			TransformDecl( ctx.Module.Module, ctx.Module.Context );
 		}
 
 		private static void TransformDecl( Decl decl, ModuleContext context )

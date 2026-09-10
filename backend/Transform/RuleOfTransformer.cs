@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Myll.Core;
 
-namespace Myll.Resolver
+namespace Myll.Transform
 {
 	/// <summary>
 	/// Validates that classes/structs annotated with a rule-of-N attribute satisfy at
@@ -16,16 +16,12 @@ namespace Myll.Resolver
 	/// Rule of 5: destructor, copy/move constructors, and copy/move assignments are
 	///            all user-defined.
 	/// </summary>
-	public sealed class RuleOfTransformer : ITransformer
+	public sealed class RuleOfTransformer : Transformer
 	{
-		public void Transform(
-			IReadOnlyList<CompiledModuleResult> modules,
-			List<Diagnostic> diagnostics )
+		protected override void PostTransform( TransformContext ctx )
 		{
-			foreach( CompiledModuleResult result in modules ) {
-				foreach( Decl decl in result.Module.children )
-					CheckDecl( decl, diagnostics );
-			}
+			foreach( Decl decl in ctx.Module.Module.children )
+				CheckDecl( decl, Diagnostics );
 		}
 
 		private static void CheckDecl( Decl decl, List<Diagnostic> diagnostics )

@@ -2,26 +2,21 @@ using System.Collections.Generic;
 using System.Linq;
 using Myll.Core;
 
-namespace Myll.Resolver
+namespace Myll.Transform
 {
 	/// <summary>
 	/// Injects hidden <see cref="TplParamDecl"/> symbols into the scopes that own
 	/// template parameters so that uses of those parameters inside the template body
 	/// are accepted by name resolution and generated as the raw parameter name.
 	/// </summary>
-	public sealed class TemplateParamTransformer : ITransformer
+	public sealed class TemplateParamTransformer : Transformer
 	{
-		public void Transform(
-			IReadOnlyList<CompiledModuleResult> modules,
-			List<Diagnostic> diagnostics )
-		{
-			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
-				TransformDecl( module, context );
-			}
-		}
+		protected override bool RunInPrototypeFiles => true;
 
-		public void Transform( IReadOnlyList<CompiledModuleResult> modules )
-			=> Transform( modules, new List<Diagnostic>() );
+		protected override void PreTransform( TransformContext ctx )
+		{
+			TransformDecl( ctx.Module.Module, ctx.Module.Context );
+		}
 
 		private static void TransformDecl( Decl decl, ModuleContext context )
 		{

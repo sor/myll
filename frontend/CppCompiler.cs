@@ -83,15 +83,15 @@ namespace Myll
 			}
 		}
 
-		public static bool TryFindCompiler( out string compiler, out Myll.Resolver.Diagnostic? diagnostic )
+		public static bool TryFindCompiler( out string compiler, out Myll.Diagnostic? diagnostic )
 		{
 			string? envCompiler = Environment.GetEnvironmentVariable( "MYLL_CXX" );
 			if( !string.IsNullOrWhiteSpace( envCompiler ) ) {
 				if( !Exists( envCompiler ) ) {
 					compiler  = envCompiler;
-					diagnostic = new Myll.Resolver.Diagnostic(
+					diagnostic = new Myll.Diagnostic(
 						null,
-						Myll.Resolver.DiagnosticKind.Error,
+						DiagnosticKind.Error,
 						string.Format( "C++ compiler '{0}' specified by MYLL_CXX was not found.", envCompiler ) );
 					return false;
 				}
@@ -114,16 +114,16 @@ namespace Myll
 			}
 
 			compiler  = "";
-			diagnostic = new Myll.Resolver.Diagnostic(
+			diagnostic = new Diagnostic(
 				null,
-				Myll.Resolver.DiagnosticKind.Error,
+				DiagnosticKind.Error,
 				"No C++ compiler found. Tried: " + string.Join( ", ", compilers ) );
 			return false;
 		}
 
 		private static string FindCompiler()
 		{
-			if( !TryFindCompiler( out string compiler, out Myll.Resolver.Diagnostic? diagnostic ) )
+			if( !TryFindCompiler( out string compiler, out Diagnostic? diagnostic ) )
 				throw new InvalidOperationException( diagnostic!.Message );
 			return compiler;
 		}

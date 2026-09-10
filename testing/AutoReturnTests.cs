@@ -5,6 +5,7 @@ using Antlr4.Runtime;
 using Myll;
 using Myll.Core;
 using Myll.Resolver;
+using Myll.Transform;
 using Xunit;
 
 namespace Myll.Tests
@@ -33,11 +34,9 @@ namespace Myll.Tests
 
 		private static List<Diagnostic> Transform( CompiledModuleResult module )
 		{
-			var diagnostics = new List<Diagnostic>();
-			new AutoReturnTransformer().Transform(
-				new[] { module },
-				diagnostics );
-			return diagnostics;
+			AutoReturnTransformer transformer = new();
+			transformer.DoPreTransform( new TransformContext( module, null ) );
+			return transformer.Diagnostics;
 		}
 
 		private static Func? FindFunc( GlobalNamespace module, string name )

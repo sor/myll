@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using Myll;
 using Myll.Core;
+using Myll.Resolver;
 
-namespace Myll.Resolver
+namespace Myll
 {
 	public enum DiagnosticKind
 	{

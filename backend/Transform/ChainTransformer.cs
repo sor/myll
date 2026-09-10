@@ -3,29 +3,19 @@ using System.Collections.Generic;
 using System.Linq;
 using Myll.Core;
 
-namespace Myll.Resolver
+namespace Myll.Transform
 {
 	/// <summary>
 	/// Lowers <c>[chain]</c> methods and operators before name resolution.
 	/// A chained method returns a reference to the enclosing class/struct;
 	/// if the method is <c>[pure]</c>, the reference is <c>const</c>.
 	/// </summary>
-	public sealed class ChainTransformer : ITransformer
+	public sealed class ChainTransformer : Transformer
 	{
-		public void Transform(
-			IReadOnlyList<CompiledModuleResult> modules,
-			List<Diagnostic> diagnostics )
+		protected override void PreTransform( TransformContext ctx )
 		{
-			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
-				if( context.IsPrototypeFile )
-					continue;
-
-				TransformDecl( module, diagnostics );
-			}
+			TransformDecl( ctx.Module.Module, Diagnostics );
 		}
-
-		public void Transform( IReadOnlyList<CompiledModuleResult> modules )
-			=> Transform( modules, new List<Diagnostic>() );
 
 		private static bool HasTrailingReturnSelf( Stmt stmt )
 		{

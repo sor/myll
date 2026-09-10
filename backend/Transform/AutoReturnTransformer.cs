@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Myll.Core;
 
-namespace Myll.Resolver
+namespace Myll.Transform
 {
 	/// <summary>
 	/// Lowers the configured implicit return variable (default <c>ret</c>) to an explicit
@@ -20,24 +20,16 @@ namespace Myll.Resolver
 	/// <item><c>ret</c> is never used in the body.</item>
 	/// </list>
 	/// </summary>
-	public sealed class AutoReturnTransformer : ITransformer
+	public sealed class AutoReturnTransformer : Transformer
 	{
 		private static readonly ConfiguredAliasShadowingTransformer conflictChecker = new();
 
-		public void Transform(
-			IReadOnlyList<CompiledModuleResult> modules,
-			List<Diagnostic> diagnostics )
+		protected override void PreTransform( TransformContext ctx )
 		{
-			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
-				if( context.IsPrototypeFile )
-					continue;
-
-				TransformDecl( module, module, context, diagnostics );
-			}
+			GlobalNamespace module  = ctx.Module.Module;
+			ModuleContext   context = ctx.Module.Context;
+			TransformDecl( module, module, context, Diagnostics );
 		}
-
-		public void Transform( IReadOnlyList<CompiledModuleResult> modules )
-			=> Transform( modules, new List<Diagnostic>() );
 
 		private static void TransformDecl(
 			Decl decl,
