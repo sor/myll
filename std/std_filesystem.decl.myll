@@ -43,6 +43,7 @@ namespace std {
 		func exists( const path & p ) -> bool;
 		func is_directory( const path & p ) -> bool;
 		func is_regular_file( const path & p ) -> bool;
+		func is_symlink( const path & p ) -> bool;
 		func file_size( const path & p ) -> u64;
 		func last_write_time( const path & p ) -> file_time_type;
 		func current_path() -> path;

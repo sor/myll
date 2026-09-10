@@ -1,0 +1,9 @@
+module glob;
+import "glob.hpp";
+import std_filesystem;
+import std_vector;
+
+namespace glob {
+	func glob( const string & pathname ) -> std::vector<std::filesystem::path>;
+	func rglob( const string & pathname ) -> std::vector<std::filesystem::path>;
+}

@@ -3,6 +3,7 @@ import <algorithm>;
 
 namespace std {
 	// Sorting/reversal helpers. The real definitions are in <algorithm>.
+	func sort<Iter>( Iter first, Iter last ) -> void;
 	func sort<Iter, Compare>( Iter first, Iter last, Compare comp ) -> void;
 	func reverse<Iter>( Iter first, Iter last ) -> void;
 }

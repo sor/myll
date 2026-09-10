@@ -4,11 +4,13 @@
 #   make
 #   make clean
 
+MAKEFLAGS += -j4
+
 MYLL_ROOT ?= ../../..
 MYLL      := dotnet run --project $(MYLL_ROOT)/frontend -- -i '*.myll' -o gen
 
 CXX      ?= g++
-CXXFLAGS ?= -std=c++20 -Ithird_party -DCXXOPTS_NO_REGEX -O1 -Wall -Wextra -Wsuggest-override
+CXXFLAGS ?= -std=c++23 -Ithird_party -DCXXOPTS_NO_REGEX -O1 -Wall -Wextra -Wsuggest-override
 
 RELEASE_FLAGS ?= -O2 -s
 DEBUG_FLAGS   ?= -Og -g

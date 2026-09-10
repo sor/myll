@@ -1,0 +1,11 @@
+module std_print;
+import <print>;
+import std_string;
+
+namespace std {
+	func print( const string & fmt ) -> void;
+	func print<T>( const string & fmt, const T & arg ) -> void;
+
+	func println( const string & fmt ) -> void;
+	func println<T>( const string & fmt, const T & arg ) -> void;
+}

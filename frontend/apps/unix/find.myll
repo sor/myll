@@ -1,0 +1,203 @@
+module find;
+
+import std_iostream, std_filesystem, std_vector, std_string, std_algorithm, cxxopts, glob, std_print;
+
+using JanSordid;
+using std::filesystem;
+
+func main( int argc, const char *[] argv ) -> int
+{
+	var cxxopts::Options options( argv[0], "find files" );
+	options.add_options()
+		( "t,type",     "file type (f|d|l)",       cxxopts::value<string>()->default_value( "" ) )
+		( "n,name",     "name glob pattern",       cxxopts::value<string>()->default_value( "" ) )
+		( "d,maxdepth", "maximum recursion depth", cxxopts::value<int>()->default_value( "-1" ) )
+		( "s,size",     "size [+-]n[c|k|m|g]",     cxxopts::value<string>()->default_value( "" ) )
+		( "h,help",     "show help" );
+
+	var cxxopts::ParseResult result = options.parse( argc, argv );
+
+	var Options opts;
+	opts.help = result.count( "help" ) != 0;
+	if( opts.help ) {
+		usage( argv[0] );
+		return 0;
+	}
+
+	var string typeStr = result["type"].as<string>();
+	if( typeStr.length() > 0 )
+		opts.type = typeStr[0];
+
+	opts.namePattern = result["name"].as<string>();
+	opts.maxDepth    = result["maxdepth"].as<int>();
+
+	var string sizeSpec = result["size"].as<string>();
+	if( sizeSpec.length() > 0 ) {
+		opts.hasSize = true;
+		if( !parseSize( sizeSpec, opts.sizeValue, opts.sizeCmp ) ) {
+			std::cerr << "invalid size specification: " << sizeSpec << "\n";
+			return 1;
+		}
+	}
+
+	opts.paths = result.unmatched();
+	if( opts.paths.empty() )
+		opts.paths.push_back( "." );
+
+	var std::vector<path> results;
+	for( auto startStr : opts.paths ) {
+		var path start( startStr );
+		find( start, 0, opts, results );
+	}
+
+	var std::vector<string> output;
+	for( auto p : results )
+		output.push_back( p.generic_string() );
+
+	std::sort( output.begin(), output.end() );
+	for( auto line : output )
+		std::println( "{}", line );
+
+	return 0;
+}
+
+namespace JanSordid:
+
+alias fs = std::filesystem;
+
+struct Options
+{
+	field {
+		std::vector<string> paths;
+		int                 maxDepth    = -1;
+		char                type        = '\0';
+		string              namePattern = "";
+		u64                 sizeValue   = 0;
+		int                 sizeCmp     = 0; // -1 <, 0 ==, 1 >
+		bool                hasSize     = false;
+		bool                help        = false;
+	}
+}
+
+func usage( const string & program ) -> void
+{
+	std::println( "usage: {0} [options] [path...]", program );
+	std::println( "options:" );
+	std::println( "  -t, --type f|d|l    match only file/directory/symlink" );
+	std::println( "  -n, --name PATTERN  base-name glob match" );
+	std::println( "  -d, --maxdepth N    limit recursion depth" );
+	std::println( "  -s, --size SPEC     [+-]n[c|k|m|g] size filter" );
+	std::println( "  -h, --help          show this help" );
+}
+
+func parseSize( const string & spec, u64 & value, int & cmp ) -> bool
+{
+	if( spec.length() == 0 )
+		return false;
+
+	var usize i = 0;
+	cmp = 0;
+	if( spec[0] == '+' ) {
+		cmp = 1;
+		i   = 1;
+	}
+	else if( spec[0] == '-' ) {
+		cmp = -1;
+		i   = 1;
+	}
+
+	value = 0;
+	while( i < spec.length() && spec[i] >= '0' && spec[i] <= '9' ) {
+		value = value * 10 + (u64)( spec[i] - '0' );
+		++i;
+	}
+
+	if( i < spec.length() ) {
+		var char unit = spec[i];
+		if( unit == 'k' || unit == 'K' )
+			value *= (u64)1024;
+		else if( unit == 'm' || unit == 'M' )
+			value *= (u64)1024 * 1024;
+		else if( unit == 'g' || unit == 'G' )
+			value *= (u64)1024 * 1024 * 1024;
+	}
+
+	return true;
+}
+
+func matchesType( const fs::path & p, char type ) -> bool
+{
+	if( type == '\0' )
+		return true;
+	if( type == 'f' )
+		return fs::is_regular_file( p );
+	if( type == 'd' )
+		return fs::is_directory( p );
+	if( type == 'l' )
+		return fs::is_symlink( p );
+	return true;
+}
+
+func matchesSize( const fs::path & p, u64 value, int cmp, bool hasSize ) -> bool
+{
+	if( !hasSize )
+		return true;
+	if( !fs::is_regular_file( p ) )
+		return false;
+
+	var u64 size = 0;
+	try {
+		size = fs::file_size( p );
+	}
+	catch() {
+		return false;
+	}
+
+	if( cmp == 0 )
+		return size == value;
+	if( cmp > 0 )
+		return size > value;
+	return size < value;
+}
+
+func find( const fs::path & root, int depth,
+	const Options & opts, std::vector<fs::path> & results ) -> void
+{
+	var bool canRecurse = opts.maxDepth < 0 || depth < opts.maxDepth;
+
+	try {
+		if( opts.namePattern.length() > 0 ) {
+			var string patternPath = root.generic_string() + "/" + opts.namePattern;
+			var std::vector<fs::path> matches = glob::glob( patternPath );
+			for( auto p : matches ) {
+				if( matchesType( p, opts.type )
+				 && matchesSize( p, opts.sizeValue, opts.sizeCmp, opts.hasSize ) )
+					results.push_back( p );
+			}
+		}
+		else {
+			for( auto entry : fs::directory_iterator( root ) ) {
+				var fs::path p = entry.path();
+				if( matchesType( p, opts.type )
+				 && matchesSize( p, opts.sizeValue, opts.sizeCmp, opts.hasSize ) )
+					results.push_back( p );
+			}
+		}
+	}
+	catch() {
+		// ignore unreadable directories
+	}
+
+	if( !canRecurse )
+		return;
+
+	try {
+		for( auto entry : fs::directory_iterator( root ) ) {
+			if( fs::is_directory( entry.path() ) )
+				find( entry.path(), depth + 1, opts, results );
+		}
+	}
+	catch() {
+		// ignore unreadable directories
+	}
+}
