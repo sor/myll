@@ -1,0 +1,3 @@
+module test;
+
+[default] func foo() -> void;

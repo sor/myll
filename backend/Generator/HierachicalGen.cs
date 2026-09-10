@@ -523,6 +523,16 @@ namespace Myll.Generator
 			                   : "";
 			bool isSpecial = specialTail != "";
 
+			if( isDefault && !isInsideStruct ) {
+				Diagnostics.Add( new Diagnostic(
+					obj.srcPos,
+					DiagnosticKind.Error,
+					String.Format(
+						"[default] is only valid on special member functions; '{0}' is a free function",
+						obj.FullyQualifiedName ) ) );
+				return;
+			}
+
 			string prefix = (obj.IsCompileTime ? "constexpr " : "")
 		              + (isStatic          ? "static "    : "")
 		              + (isExternal        ? "extern "    : "")
@@ -566,8 +576,6 @@ namespace Myll.Generator
 				tplImpl = string.Empty;
 			}
 
-			// TODO: [default] on free functions is invalid C++ unless it is a special member;
-			// we currently emit it and let the C++ compiler complain. Add a Myll-side error later.
 			if( isSpecial ) {
 				if( obj.body != null ) {
 					Diagnostics.Add( new Diagnostic(

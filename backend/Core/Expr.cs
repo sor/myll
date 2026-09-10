@@ -196,7 +196,10 @@ namespace Myll.Core
 
 		public override string Gen( bool doBrace = false )
 		{
-			throw new NotImplementedException();
+			// Discard should always be lowered by DiscardTransformer before generation.
+			// If one escapes, emit a stub that produces a readable C++ compile error
+			// instead of crashing the compiler.
+			return "static_cast<void>(0) /* Myll: discard reached generator */";
 		}
 	}
 

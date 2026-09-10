@@ -383,18 +383,24 @@ namespace Myll
 
 			bool hasNoStmt = body.stmts.IsEmpty();
 			bool isFall    = c.FALL() != null;
-			// The current behavior is ImplicitBreak (see Dialect.SwitchFallthroughMode).
-			// TODO: honor Dialect.SwitchFallthrough instead of always inserting a break.
-			//       In Explicit mode every non-empty case must end with break, return, or fallthrough.
-			//       In ImplicitFallthrough mode do not insert a break at all.
+			SwitchFallthroughMode mode = Context.Dialect.SwitchFallthrough;
+
 			if( hasNoStmt ) {
 				// OK, consecutive case stmt, silent fallthrough
 			}
 			else if( isFall ) {
 				body.stmts.Add( new FreetextStmt( "[[fallthrough]];" ) );
 			}
-			else if( body.stmts.Last() is not BreakStmt and not ReturnStmt ) {
+			else if( mode == SwitchFallthroughMode.ImplicitBreak
+			      && body.stmts.Last() is not BreakStmt and not ReturnStmt ) {
 				body.stmts.Add( new BreakStmt() );
+			}
+			else if( mode == SwitchFallthroughMode.Explicit
+			      && body.stmts.Last() is not BreakStmt and not ReturnStmt ) {
+				Context.Diagnostics.Add( new Diagnostic(
+					body.srcPos,
+					DiagnosticKind.Error,
+					"case block must end with break, return, or fallthrough" ) );
 			}
 
 			SwitchStmt.CaseBlock ret = new(
@@ -413,6 +419,24 @@ namespace Myll
 
 			MultiStmt ret = new( c.stmt().Select( Visit ), isScope );
 			ret.srcPos = c.ToSrcPos();
+
+			bool hasNoStmt = ret.stmts.IsEmpty();
+			SwitchFallthroughMode mode = Context.Dialect.SwitchFallthrough;
+
+			if( !hasNoStmt
+			 && mode == SwitchFallthroughMode.ImplicitBreak
+			 && ret.stmts.LastOrDefault() is not BreakStmt and not ReturnStmt ) {
+				ret.stmts.Add( new BreakStmt() );
+			}
+			else if( !hasNoStmt
+			      && mode == SwitchFallthroughMode.Explicit
+			      && ret.stmts.LastOrDefault() is not BreakStmt and not ReturnStmt ) {
+				Context.Diagnostics.Add( new Diagnostic(
+					ret.srcPos,
+					DiagnosticKind.Error,
+					"default block must end with break, return, or fallthrough" ) );
+			}
+
 			return ret;
 		}
 
