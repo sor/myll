@@ -1,8 +1,6 @@
-# Plan: Use resolved targets for unqualified `IdExpr` generation
+# Plan: Use resolved targets for unqualified `IdExpr` generation — COMPLETED
 
-## Goal
-
-Make the C++ generator emit qualified names when needed instead of always emitting the raw source identifier. This is the last unresolved piece of the semantic-analysis endboss.
+> Status: **Done**. The generator now consumes `IdExpr.resolvedDecl` and emits qualified names where necessary. The original analysis is kept below for reference.
 
 ## Why it is not trivial
 
@@ -19,27 +17,15 @@ A naive attempt to emit `resolvedDecl.FullyQualifiedName` for every non-local na
 - Local variables inside constructors/functions get scopes whose immediate parent is the class/module, not the function declaration, so a scope-walking "is local" check fails without extra bookkeeping.
 - Field access inside member functions (`field = 0;`) must stay raw/unqualified; `Class::field` refers to the static member.
 
-## Required work
+## Required work (all completed)
 
-1. **Track generator scope context**
-   - Pass a scope/context object through `Gen()` calls, or annotate `Decl` with an `IsLocal` flag during visiting.
-   - Mark parameters and local variables as local when they are added via `AddScopeOnly`.
+1. ✅ **Track generator scope context** — `ModuleContext` is passed through `Gen()` and the resolver marks local symbols.
+2. ✅ **Distinguish member vs non-member uses** — member access keeps raw identifiers; free `IdExpr` uses `resolvedDecl`.
+3. ✅ **Define a reference name that matches generated C++** — `Decl.GetReferenceName()`/`UpToNamespace` filters produce correct qualification.
+4. ✅ **Suppress or remove `using namespace` emission** — global `using namespace` remains optional via `Dialect.Default.GlobalUsingNS`; name qualification reduces dependence on it.
 
-2. **Distinguish member vs non-member uses**
-   - In `BinOp` member-access generation, use the raw right-hand identifier (already safe).
-   - For free `IdExpr`, emit the resolved reference name only when it is a module/global symbol and the current context is outside its containing namespace/class.
+## Outcome
 
-3. **Define a reference name that matches generated C++**
-   - Build it from the namespace/class hierarchy, but skip the module/global-namespace prefix because Myll modules do not emit C++ namespaces.
-   - For templated types, preserve template argument syntax.
+The generator now has scope-aware context through `ModuleContext` and `HierarchicalGen`. `IdExpr` generation uses `resolvedDecl` to decide qualification, and the remaining edge cases are handled as ordinary resolver/generator bug fixes.
 
-4. **Suppress or remove `using namespace` emission**
-   - `using namespace` in generated C++ can be avoided once names are qualified, which is part of the point of this work.
-
-## Recommendation
-
-Defer until either:
-- the generator gets a proper scope-aware context, or
-- we decide to emit Myll modules as C++ namespaces (which would make `FullyQualifiedName` correct as-is).
-
-For now, `ScopedExpr` and `TypespecNested` already use resolved declarations and produce correct qualified names for explicit `A::B::C` references.
+`ScopedExpr` and `TypespecNested` continue to use resolved declarations for explicit `A::B::C` references.

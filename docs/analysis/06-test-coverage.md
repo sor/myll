@@ -38,11 +38,11 @@ Status: Very shallow — expressions discarded, no assertions.
 
 Status: Best integration tests. Validation only covers `stack` and `main`.
 
-### `/frontend/tests/gol/` — 2 tests, no validation
+### `/testing/cases/gol/` — 2 tests, xUnit harness
 - `game_of_life.myll` — Real-world algorithm: 2D arrays, nested loops, generics
 - `main.myll` — Driver with game loop
 
-Status: Solid integration demo. No reference output.
+Status: Solid integration demo. Covered by the xUnit harness.
 
 ### `/frontend/tests/thesis/` — 3 tests, no validation
 - `main.myll` — 350-line feature showcase, many commented-out features
@@ -70,7 +70,7 @@ Status: Essential for understanding language scope. Reads as development scratch
 | **Syntax showcase** | `tests/mixed/testcase.myll` | Many features, much commented out |
 | **SDL presentation** | `tests/mixed/sheet*.myll` | Inheritance, override, arrays |
 | **Math functions** | `tests/mixed/plasma.myll` | `f32`, `sin`, `cos`, `sqrt` |
-| **Game of Life** | `tests/gol/game_of_life.myll`, `main.myll` | 2D arrays, nested loops, generics; blocked on member access in resolver |
+| **Game of Life** | `testing/cases/gol/game_of_life.myll`, `main.myll` | 2D arrays, nested loops, generics; covered by xUnit harness |
 | **Using namespaces** | `testing/cases/using_ns/` | Cross-module namespace merging and `using NS;` end-to-end |
 | **Access modifiers** | `testing/cases/access_mods/` (planned) | 20+ member class mixing section and per-decl access |
 | **Thesis showcase** | `tests/thesis/main.myll` | 350-line comprehensive feature catalog |
@@ -83,12 +83,10 @@ Many test files contain **alternative syntax explorations** not documented elsew
 
 | Gap | Severity |
 |-----|----------|
-| **No automated test runner** | Critical |
 | **xUnit harness exists but only covers ported cases** | High |
-| **No validation for 80% of tests** | High |
-| **No negative/error tests** | High |
-| **No behavioral tests** (run generated code) | High |
-| **No tests for**: unions, `requires` clauses, lambda execution, `defer`, properties, operators | Medium |
+| **No validation for legacy `frontend/tests/***` | High |
+| **Few negative/error tests** | High |
+| **No tests for**: unions, `requires` clauses, lambda execution, `defer`, properties | Medium |
 | **Handwritten validation will drift** | Medium |
 
 ## What Exists in `bin/Debug/`
@@ -135,7 +133,7 @@ Create a test runner that:
 
 Priority order:
 1. `enum/*.myll` — validate generated enum C++.
-2. `gol/*.myll` — compile and run, verify it produces a game of life grid. Blocked on member access resolution.
+2. `testing/cases/gol/*.myll` — compile and run, verify it produces a game of life grid. Member access resolution is implemented.
 3. `mixed/enum.myll` — validate flags enum generation.
 4. `int/*.myll` — validate integer type mapping.
 5. `alias/*.myll` — validate type and namespace alias generation.

@@ -17,8 +17,8 @@ This plan describes the long-term goal of turning Myll from a syntax-to-C++ tran
 
 ## What is missing
 
-- Broader conversion ranks beyond exact + promotion (e.g., derived-to-base pointers).
-- Using resolved targets for unqualified `IdExpr` generation.
+- Broader conversion ranks beyond exact + promotion (e.g., derived-to-base pointers) — partially implemented for pointers, references, and smart pointers; see `testing/cases/inheritance/`.
+- Remaining normal bug fixing and edge-case handling in overload resolution and type checking.
 
 ## Module model
 
@@ -58,8 +58,12 @@ files
         └── group by module
               └── per-module AST + scope tree (parallel across modules)
                     └── barrier: all module scope trees + import lists ready
-                          └── global resolution
-                                └── C++ generation
+                          └── NameResolver.Resolve
+                                ├── pre-resolution transforms
+                                ├── fixed-point global resolution
+                                └── post-resolution transforms
+                          └── raw-import map + prototype filter
+                                └── C++ generation (parallel across modules)
 ```
 
 ### Stage 1: Parse files in parallel
@@ -74,11 +78,18 @@ Each module gets its own `ModuleContext` that owns the scope stack and visitor i
 ### Stage 4: Barrier
 All module scope trees and import lists are available.
 
-### Stage 5: Global resolution
-Resolve identifiers, types, and function calls. Because declarations are collected before uses, the resolver can answer most lookups immediately. Cyclic imports are handled by a fixed-point loop that publishes newly resolved facts until no module makes progress.
+### Stage 5: Global resolution and transforms
+`NameResolver.Resolve` runs three sub-phases:
 
-### Stage 6: C++ generation
-Generate `.h` and `.cpp` files from the fully resolved AST.
+1. **Pre-resolution transforms** — `DefaultAttributesTransformer`, `EnumTransformer`, `AutoReturnTransformer`, `TemplateParamTransformer`, `ChainTransformer`.
+2. **Fixed-point resolution** — resolve identifiers, types, and function calls across modules, including cyclic imports. The resolver publishes newly resolved facts in rounds until no module makes progress.
+3. **Post-resolution transforms** — `DiscardTransformer`, `RuleOfTransformer`, `ElseOnLoopTransformer`, `BreakContinueTransformer`, `ConfiguredAliasShadowingTransformer`.
+
+### Stage 6: Raw-import map and prototype filter
+`BuildModuleRawImports` collects the raw `#include` metadata and `prototypeModules` identifies modules that contain only prototypes, which generation skips.
+
+### Stage 7: C++ generation
+Generate `.h` and `.cpp` files from the fully resolved AST, parallel across non-prototype modules.
 
 ## Resolution data structures
 
@@ -128,8 +139,8 @@ A sequential fixed-point resolver is the first target. The same input/output sha
 9. **Ambiguity diagnostics** ✅  
    Implemented. `PickSingle` now reports ambiguous names instead of silently dropping them.
 
-10. **C++ generation uses resolved AST**  
-   Partially done. The generator consumes resolved declarations for `TypespecNested` and `ScopedExpr`; unqualified `IdExpr` still emits raw text. Resolver results are now passed through the default frontend pipeline.
+10. **C++ generation uses resolved AST** ✅  
+    The generator consumes resolved declarations for `TypespecNested`, `ScopedExpr`, and unqualified `IdExpr`. Resolver results are passed through the default frontend pipeline.
 
 ## Relationship to existing stubs
 

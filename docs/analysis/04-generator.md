@@ -4,7 +4,7 @@
 
 | File | Purpose | Lines |
 |------|---------|-------|
-| `HierachicalGen.cs` | Main C++ generator for declarations | ~559 |
+| `HierachicalGen.cs` | Main C++ generator for declarations; receives `ModuleContext` and `moduleRawImports` | ~559 |
 | `ExprFormatting.cs` | Operator-to-C++ format strings | ~82 |
 | `StmtFormatting.cs` | Statement/type format strings | ~125 |
 
@@ -65,8 +65,8 @@ This is brittle and hard to modify.
 
 This makes retargeting impossible.
 
-### Resource Leaks
-`StreamReader` in `frontend/Program.cs` is never disposed.
+### Resource Leaks — FIXED
+`frontend/Program.cs` no longer leaves a `StreamReader` undisposed.
 
 ## Formatting Gaps
 

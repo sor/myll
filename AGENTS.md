@@ -30,7 +30,7 @@ Myll is an experimental programming language that compiles to C++. It aims to pr
 dotnet run --project frontend -- -i frontend/tests/thesis/*.myll -o frontend/tests/thesis/generated -cr
 
 # Game of Life
-dotnet run --project frontend -- -i frontend/tests/gol/*.myll -o frontend/tests/gol/generated -cr
+dotnet run --project frontend -- -i testing/cases/gol/*.myll -o testing/cases/gol/generated -cr
 
 # Mixed
 dotnet run --project frontend -- -i frontend/tests/mixed/*.myll -o frontend/tests/mixed/generated -cr
@@ -251,8 +251,9 @@ Use `tmp/` inside the project root for any temporary files or scratch tests. Do 
 ## Planned Work
 
 1. **Finish ScopeStack / semantic analysis (endboss)** — DONE. The C++ generator uses resolved declarations for unqualified `IdExpr` generation. Shadowing diagnostics are implemented with a flag-based `ShadowingMode`. Remaining semantic-analysis work is normal bug fixing and edge-case handling. See `plan/semantic-analysis.md`, `plan/resolved-idexpr-generation.md`, `backend/Resolver/Resolver.cs`, `backend/Resolver/TypeChecker.cs`.
-2. Testing + CI/CD — xUnit harness is in place under `testing/`; remaining work is CI/CD.
-3. Implement reachable NotImplementedException features:
+2. **Dialect/ModuleContext refactor and parallel CompileModule** — DONE. `DialectOptions` was collapsed into `Dialect` with a static `Dialect.Default` instance; `CompilationContext` was renamed to `ModuleContext`, owns the module AST, and removed the old `GlobalNamespace.Context` back-reference; all visitors are instance-based per module. Parallel module AST construction is enabled; `CompileModule` was benchmarked with `.AsParallel()` (~2.4% faster in Release direct DLL) and the change is currently uncommitted in `frontend/Program.cs`.
+3. Testing + CI/CD — xUnit harness is in place under `testing/`; remaining work is CI/CD.
+4. Implement reachable NotImplementedException features:
    - Unix `ls` cxxopts variant — DONE. `frontend/apps/unix/ls_cxxopts.myll` mirrors `ls.myll` and uses `cxxopts.hpp` for option parsing.
    - discard — DONE. `_ = expr` lowers to `static_cast<void>(expr)`; `_` as a raw-pointer argument becomes `static_cast<T*>(nullptr)`; `_` as a value/reference argument introduces a hidden `myll_tmp_` local; `var`/`let T a = _` omits the initializer. See `backend/Resolver/DiscardTransformer.cs`, `testing/cases/discard/`.
    - abstract/default/delete function bodies — DONE. `[abstract]` emits `= 0` and auto-virtual; `[default]` emits `= default`; `[delete]`/`[disallow]` emit `= delete`. See `testing/cases/abstract_default_delete/` and `frontend/apps/unix/ls.myll`.
@@ -272,8 +273,8 @@ Use `tmp/` inside the project root for any temporary files or scratch tests. Do 
    - named args, null coalescing call, copy-cast, else-on-loop
    - **NOT** aspect, concept, defer, convert — see `REASONS.md` (2026-06-10)
    - Note: the `myll_tmp_` name prefix is reserved for the compiler; add it to the list of user-unusable identifiers in the lexer/grammar.
-4. Cleanup — `oldParser`/`oldCodeGen` removal, TODO triage, HACK resolution.
-5. `.idea/` misc.xml shared ANTLR config added to `.gitignore` exception.
+5. Cleanup — `oldParser`/`oldCodeGen` removal, TODO triage, HACK resolution.
+6. `.idea/` misc.xml shared ANTLR config added to `.gitignore` exception.
 
 ## Documentation Index
 
