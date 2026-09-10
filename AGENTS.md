@@ -138,6 +138,15 @@ myll/
   - Use tabs for indentation and for the continuation of broken-down statements.
   - Use spaces for alignment.
   - This matches the formatter setup: indentation/continuation are tab-based, but `AlignConsecutive*` options align with spaces.
+- **Local declaration types**: Prefer an explicit type on the left with target-typed `new()` instead of `var`. Right-align short inline comments when they describe a group of members.
+  ```csharp
+  List<Diagnostic> diagnostics = new();                         // preferred
+  var diagnostics = new List<Diagnostic>();                     // avoid
+  
+  public CompiledModuleResult Module { get; }                   // read-only: per-module input
+  public ResolutionResult? ResolutionResult { get; }             // read-only; null pre-resolution
+  public bool IsPrototype => Module.Context.IsPrototypeFile;    // read-only convenience
+  ```
 - **Myll indirection declarator spacing**: Put spaces on both sides of the reference/pointer block. Examples: `std::istream & in`, `T * ptr`, `const char *[] argv`, `Formatter *! fmt`. Exception: pure array brackets stay tight, e.g. `var int[4] myArray;`. In `new` expressions keep the pointer block tight: `new T*!`, `new T*`.
 - **Myll class layout**: Group fields in a `field { ... }` block at the top; fields are private by default. Outdent access-section specifiers (`[pub]:`, `[priv]:`, `[prot]:`) one level so they line up with the class keyword. Keep per-declaration attributes (`[pure]`, `[override]`, `[static]`) indented with their declaration.
 - **Myll method bodies**: Use the arrow form for simple expression-bodied getters: `func size() -> u64 => _size;`.
