@@ -4,37 +4,12 @@ This document consolidates fixes across all layers, ranked by impact on future d
 
 ## Recently Fixed / Documented Bugs
 
-### Compiler crash on `_ = expr;`
+### Compiler crash on `_ = expr;` (fixed)
 
-**Status:** open bug  
-**Files:** `backend/Core/Expr.cs`, `backend/Resolver/DiscardTransformer.cs`  
-**Impact:** Using `_ = expr;` to intentionally discard a value causes an unhandled `NotImplementedException` during code generation.
+**Status:** fixed  
+**Files:** `backend/Core/Expr.cs`, `backend/Transform/DiscardTransformer.cs`  
 
-**Repro:** In any function body write
-
-```myll
-func foo( const DirEntry & e ) -> string {
-    _ = e;
-    return "";
-}
-```
-
-The compiler crashes with:
-
-```
-System.NotImplementedException at Myll.Core.Discard.Gen(Boolean doBrace)
-   in backend/Core/Expr.cs
-```
-
-**Workaround:** Reference the value in a harmless way instead of discarding it, or give the parameter no name if your goal is only to silence an unused-parameter warning:
-
-```myll
-func format( const DirEntry & ) -> string => "";
-```
-
-**Root cause:** `Discard.Gen()` is stubbed with `throw new NotImplementedException()`. `DiscardTransformer` is supposed to remove every `Discard` node before generation, but `_ = expr;` apparently reaches the transformer as an `ExprStmt`/`AggrAssign` path that is not lowered, so the raw `Discard` survives.
-
-**Possible fix:** Make `DiscardTransformer` handle `_ = expr` in all statement shapes, or implement a safe fallback in `Discard.Gen()`.
+`Discard.Gen()` no longer throws `NotImplementedException`. If a discard node escapes lowering, it now emits a stub C++ expression with a comment so the C++ compiler reports a readable error instead of crashing the compiler. Regression coverage is in `testing/cases/discard/`.
 
 ### Multi-level `break`/`continue` flag persistence (fixed)
 

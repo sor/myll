@@ -3,15 +3,15 @@
 This file consolidates the remaining work items that came out of the visitor audit, the Unix-app porting work, and the `AGENTS.md` planned list.
 The endboss architecture is described in `plan/semantic-analysis.md`.
 
-## Endboss — semantic analysis / ScopeStack
+## Semantic analysis / ScopeStack — DONE
 
-This is the overarching long-term goal that blocks many smaller features. Finish the scope-stack based semantic-analysis pass so the compiler can resolve names to declarations, type-check expressions, and disambiguate language constructs that currently rely on string matching or syntactic guesswork.
+The scope-stack based semantic-analysis pass is implemented. Name resolution, type checking, and overload resolution now run before code generation.
 
 - `backend/Core/Scope.cs` holds the tree (`Scope`, `ScopeLeaf`, `children`, `importedScopes`).
 - `backend/Visitor/VMain.cs` pushes/pops scopes during visiting and records unresolved identifiers, types, and member accesses.
 - `backend/Resolver/Resolver.cs` runs a fixed-point resolver across imported modules and produces diagnostics for unresolved or ambiguous names.
-- The C++ generator consumes `ResolutionResult` for `TypespecNested`, `ScopedExpr`, and member access; `IdExpr` resolution is recorded but not yet used for unqualified identifiers.
-- `backend/Core/Symbol.cs` and `backend/Core/Attribute.cs` remain disconnected stubs for a future stable design.
+- The C++ generator consumes `ResolutionResult` for `TypespecNested`, `ScopedExpr`, member access, and unqualified `IdExpr`.
+- `backend/Core/Symbol.cs` is an unused future stub; `backend/Core/Attribute.cs` enums are also unused and marked obsolete.
 
 What finishing this would unlock:
 - Type checking and overload resolution (implemented for core cases).
@@ -46,7 +46,7 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    - Named function arguments (`Arg.Gen` in `backend/Core/Mixed.cs`).
    - Null-coalescing function calls (`FuncCall.Gen` in `backend/Core/Mixed.cs`).
    - Copy-cast (`VisitPreExpr` in `backend/Visitor/VExpr.cs`).
-   - Discard expression (`Discard.Gen` in `backend/Core/Expr.cs`).
+   - Discard expression (`Discard.Gen` in `backend/Core/Expr.cs`) — DONE.
 
 4. **Improve compiler diagnostics**
    - Replace empty `throw new NotImplementedException()` calls with messages that include the construct and source location.

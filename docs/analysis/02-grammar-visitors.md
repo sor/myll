@@ -47,25 +47,22 @@
 | `VMain.cs` | Scope stack management, bodyless namespace cleanup |
 | `VDecl.cs` | All major declarations except `aspect`, `concept`, `convert` |
 | `VExpr.cs` | Full expression tree including casts, lambdas, member access |
-| `VStmt.cs` | Most statements except `try/catch`, `defer`, `continue`, `return-if` |
+| `VStmt.cs` | Most statements except `defer` |
 | `VTpl.cs` | Template arguments and parameters |
 | `VTypes.cs` | All type specifications |
 | `VExt.cs` | Operator mappings, visitor extensions, glue code |
 
-### Missing Visitor Overrides
+### Missing or Incomplete Visitor Overrides
 
 | Parser Rule | Status | Impact |
 |-------------|--------|--------|
-| `stmtTryCatch` | No override | try/catch blocks not built into AST |
 | `stmtDefer` | No override | defer not built into AST |
-| `stmtContinue` / `stmtContinue2` | No override | continue not built into AST |
-| `stmtReturnIf` | No override | conditional return not built into AST |
 | `defAspect` | Calls base | aspect declarations ignored |
 | `defConcept` | Calls base | concept declarations ignored |
 | `defConvert` | Calls base / incomplete | conversion functions ignored |
-| `RangeExpr` | No override | range expressions not built |
-| `ThreeWayConditionalExpr` | No override | `??` operator not fully handled |
-| `ThrowExpr` | No override | throw as expression not fully handled |
+| `RangeExpr` | Throws | range expressions not built |
+| `ThreeWayConditionalExpr` | Throws | `??` operator not fully handled |
+| `ThrowExpr` | Throws | throw as expression not fully handled |
 
 ### Code Quality Issues in Visitors
 
@@ -78,17 +75,14 @@
 ## Future Outlook
 
 ### Short-Term (Quick Wins)
-1. Wire `stmtTryCatch` visitor — grammar exists, just needs AST building.
-2. Wire `stmtDefer` visitor.
-3. Remove duplicate `VisitLit` / `VisitLiteralExpr`.
-4. Consolidate `VisitDefVar` logic.
+1. Wire `stmtDefer` visitor.
+2. Remove duplicate `VisitLit` / `VisitLiteralExpr`.
+3. Consolidate `VisitDefVar` logic.
 
 ### Medium-Term
-5. Implement `continue` and `return-if` visitors.
-6. Implement `RangeExpr` visitor.
-7. Implement `ThreeWayConditionalExpr` and `ThrowExpr` visitors.
-8. Replace mutable `curAccess` with scope-stack tracking.
+4. Implement `RangeExpr` visitor.
+5. Implement `ThreeWayConditionalExpr` and `ThrowExpr` visitors.
+6. Replace mutable `curAccess` with per-`ModuleContext` tracking.
 
 ### Long-Term
-9. Implement `aspect` and `concept` visitors when those features are designed.
-10. Make visitors instance-based (eliminate static state).
+7. Implement `aspect` and `concept` visitors when those features are designed.
