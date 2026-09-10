@@ -470,7 +470,7 @@ namespace Myll
 					.Select( r => r.Prog )
 					.GroupBy( ClassifyModule )
 					.ToImmutableArray()
-					// TODO .AsParallel() causes errors, as CompileModule changes globals
+					.AsParallel()
 					.Select( g => CompileModule(
 						g,
 						g.All( p => IsPrototypeFile( p.Start.InputStream.SourceName ) ) ) )
