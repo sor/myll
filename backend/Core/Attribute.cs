@@ -1,3 +1,5 @@
+using System;
+
 namespace Myll.Core
 {
 	public class Attribute
@@ -48,6 +50,7 @@ namespace Myll.Core
 
 		// TODO merge all of them into one enum?
 		// or split the category parts off?
+		[Obsolete( "Inspirational / not wired into the current attribute system yet" )]
 		public enum Dispatch : byte {
 			Auto,
 
@@ -72,6 +75,7 @@ namespace Myll.Core
 			Dynamic_End,
 		}
 
+		[Obsolete( "Inspirational / not wired into the current attribute system yet" )]
 		public enum Implementation : byte {
 			Auto,
 			Provided, // {...}
@@ -81,6 +85,7 @@ namespace Myll.Core
 		}
 
 		// static storage duration and internal linkage
+		[Obsolete( "Inspirational / not wired into the current attribute system yet" )]
 		public enum Storage : byte {
 			Auto,
 
@@ -97,6 +102,7 @@ namespace Myll.Core
 			Thread,   // thread(+static) = internal, thread+extern = external
 		}
 
+		[Obsolete( "Inspirational / not wired into the current attribute system yet" )]
 		public enum Linkage : byte {
 			Auto,
 			None,     // visible only in its scope
@@ -105,6 +111,7 @@ namespace Myll.Core
 			Module,   // visible inside the same module, same as Internal for merged compilation
 		}
 
+		[Obsolete( "Inspirational / not wired into the current attribute system yet" )]
 		public enum Purity : byte {
 			Auto,
 			Impure,
