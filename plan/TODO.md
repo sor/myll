@@ -30,6 +30,10 @@ Completed endboss pieces:
 
 See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` inheritance) and `docs/analysis/07-future-stubs.md` for related context.
 
+## Critical / next
+
+1. **Function-scope `using` resolution** — `using JanSordid;` inside a function body does not make names from that namespace available for local declarations and expressions. It should behave like a C++ block-scope `using namespace` directive. Workaround: place the `using` at module scope, which emits a global `using namespace`. See `frontend/apps/unix/find.myll`.
+
 ## High priority
 
 1. **Per-declaration access modifiers** — done

@@ -15,6 +15,7 @@ New features are intentionally out of scope until these are addressed.
 
 The most urgent remaining items are places where user code can crash the compiler or produce invalid C++.
 
+- Compound untyped-integer expressions (e.g. `1024 * 1024 * 1024`) lose their `literalText` in `TypeResolver.CommonArithmeticType`, so `ConversionRules.GetUntypedLiteralRank` cannot verify they fit and rejects them when assigned to `u64`/etc. The intended behavior is that an untyped integer constant fits into any numeric type that can hold it. Workaround: add an explicit cast such as `(u64)1024 * 1024 * 1024`. See `backend/Resolver/TypeResolver.cs` (`CommonArithmeticType`) and `backend/Resolver/ConversionRules.cs` (`GetUntypedLiteralRank`).
 - Reachable `NotImplementedException` throws that users can already hit: named arguments, null-coalescing calls, `(copy)` cast, range expressions, throw expressions, three-way conditional, `continue case/default/else`, `defer`.
   These are technically features, but leaving them as unhandled throws is a bug-level risk.
 
