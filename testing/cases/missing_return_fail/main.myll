@@ -1,0 +1,8 @@
+module missing_return_fail;
+
+func no_return() -> int { } // EXPECTED: function has no return or throw
+
+func main() -> int
+{
+	return 0;
+}

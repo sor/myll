@@ -27,6 +27,8 @@ namespace Myll.Resolver
 		public void Validate( IReadOnlyList<CompiledModuleResult> modules )
 		{
 			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
+				if( context.IsPrototypeFile )
+					continue;
 				currentDialect = context.Dialect;
 				ValidateCalls( context );
 				ValidateShadowing( context );
@@ -91,8 +93,10 @@ namespace Myll.Resolver
 			case Func func:
 				if( IsAutoKind( func.retType ) )
 					InferReturnType( func );
-				if( func.body != null )
+				if( func.body != null ) {
 					ValidateStmt( func.body, func );
+					CheckReturnExists( func );
+				}
 				break;
 
 				case Structor stc:
@@ -300,6 +304,62 @@ namespace Myll.Resolver
 			else {
 				ret.expr = BindToBitType( ret.expr, expected );
 			}
+		}
+
+		private void CheckReturnExists( Func func )
+		{
+			Typespec retType = func.retType;
+			if( retType is TypespecBasic { kind: TypespecBasic.Kind.Void }
+			 && ( retType.ptrs == null || retType.ptrs.Count == 0 ) )
+				return;
+
+			if( IsAutoKind( retType ) )
+				return;
+
+			if( func.IsAbstract || func.IsDefault || func.IsDisabled
+			 || func.IsForwardDeclaration || func.IsExternal )
+				return;
+
+			if( ContainsReturnOrThrow( func.body! ) )
+				return;
+
+			diagnostics.Add( new Diagnostic(
+				func.srcPos,
+				DiagnosticKind.Error,
+				String.Format(
+					"Function '{0}' declares return type '{1}' but has no return or throw statement",
+					func.name,
+					FormatType( retType ) ) ) );
+		}
+
+		private static bool ContainsReturnOrThrow( Stmt stmt )
+		{
+			return stmt switch {
+				ReturnStmt or ThrowStmt => true,
+				MultiStmt ms => ms.stmts.Any( ContainsReturnOrThrow ),
+				IfStmt ifs
+					=> ifs.ifThens.Any( ct => ContainsReturnOrThrow( ct.then ) )
+					|| ( ifs.els != null && ContainsReturnOrThrow( ifs.els ) ),
+				SwitchStmt sw
+					=> sw.cases.Any( cb => ContainsReturnOrThrow( cb.then ) )
+					|| ( sw.els != null && ContainsReturnOrThrow( sw.els ) ),
+				ForStmt fs
+					=> ( fs.body != null && ContainsReturnOrThrow( fs.body ) )
+					|| ( fs.els != null && ContainsReturnOrThrow( fs.els ) ),
+				RangeForStmt rfs
+					=> ( rfs.body != null && ContainsReturnOrThrow( rfs.body ) )
+					|| ( rfs.els != null && ContainsReturnOrThrow( rfs.els ) ),
+				WhileStmt ws
+					=> ( ws.body != null && ContainsReturnOrThrow( ws.body ) )
+					|| ( ws.els != null && ContainsReturnOrThrow( ws.els ) ),
+				DoWhileStmt dws => dws.body != null && ContainsReturnOrThrow( dws.body ),
+				LoopStmt ls => ls.body != null && ContainsReturnOrThrow( ls.body ),
+				TimesStmt ts => ts.body != null && ContainsReturnOrThrow( ts.body ),
+				TryCatchStmt tcs
+					=> ContainsReturnOrThrow( tcs.tryBody )
+					|| tcs.catches.Any( cc => ContainsReturnOrThrow( cc.body ) ),
+				_ => false,
+			};
 		}
 
 		private void InferReturnType( Func func )
