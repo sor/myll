@@ -34,10 +34,11 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 
 1. **Overload resolution maturity** — fill the remaining gaps in a deliberate order, adding regression tests at each step:
    1. **Simple types**: exact match, promotions, safe conversions — regression locked in `testing/cases/overload_simple/`.
-   2. **Pointers and references**: `T*`/`T&` conversions, derived-to-base pointer/reference,
-      `null` to pointer, and CV-qualified pointer/reference overload ranking —
-      regression locked in `testing/cases/overload_pointer/`,
-      `testing/cases/overload_inheritance_ptr/` / `overload_inheritance_ref/`,
+   2. **Pointers and references**: `T*`/`T&` conversions, derived-to-base pointer/reference
+      (including when only a base overload exists), `null` to pointer, and CV-qualified
+      pointer/reference overload ranking — regression locked in
+      `testing/cases/overload_pointer/`, `testing/cases/overload_inheritance_ptr/`,
+      `testing/cases/overload_inheritance_conversion/`, `testing/cases/overload_inheritance_ref/`,
       `testing/cases/overload_const_ptr/`, and `testing/cases/overload_const_ref/`.
       Also fixed `CloneTypespecBase` losing `isDefaultSized` on pointer-wrapped basic types.
    3. **Smart pointers**: `T*!`/`T*+`/`T*?` conversions and overload preference — regression locked in
@@ -52,16 +53,25 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 
 ## Blocked / needs dependency
 
-1. **Remove lone-candidate overload shortcut** (`backend/Resolver/Resolver.cs`) — attempted but rolled back.
-   The shortcut currently defers derived-to-base pointer/reference conversions and some
-   cross-scope class-type matches to the C++ compiler. When Myll validates lone candidates,
-   these conversions report "No matching overload" because `ConversionRules.IsDerivedFrom`
-   does not resolve base-class `TypespecNested`s that lack a populated `resolvedDecl`.
-   Need to fix class-hierarchy resolution before re-enabling the check.
+1. **Remove lone-candidate overload shortcut** (`backend/Resolver/Resolver.cs`) — the class-hierarchy
+   resolution dependency is now fixed (`result.Apply()` before `ResolveCalls`, plus `ConversionRules`
+   `ResolutionResult` fallback). Removing the shortcut was attempted again but still fails for the
+   Unix app suite because sibling modules expose same-named helper functions (e.g., `copyStream` in
+   `cat` and `cat_cxxopts`), causing unexpected multi-candidate overload sets. It also makes the
+   reference-overload test `overload_inheritance_ref` ambiguous for `Derived` value arguments until
+   reference-category ranking (`T&` vs `const T&` vs `T&&`) is implemented (tier 2/3).
 
 ## Recently completed
 
-1. **CV-qualified overload ranking** — exact matching now includes type and pointer-block
+1. **Class-hierarchy resolution for overload ranking** — resolved declarations are now committed to
+   the AST (`result.Apply()`) before overload resolution, and `ConversionRules.IsDerivedFrom` falls
+   back to the `ResolutionResult` map for base-class `TypespecNested`s. This makes `Derived*` ->
+   `Base*` and `Derived&` -> `Base&` conversions visible to Myll. Files:
+   `backend/Resolver/Resolver.cs`, `backend/Resolver/ConversionRules.cs`,
+   `backend/Resolver/TypeChecker.cs`. Tests: `testing/cases/overload_inheritance_conversion/`,
+   adjusted `testing/cases/overload_inheritance_ref/`.
+
+2. **CV-qualified overload ranking** — exact matching now includes type and pointer-block
    qualifiers; qualifier conversions are allowed for value types (top-level qualifiers can
    be added/removed) and for adding pointee qualifiers on pointers/references
    (e.g., `int* -> const int*`). Reference-to-value binding now also permits qualifier
