@@ -10,11 +10,12 @@ func main() -> int
 {
 	var Derived d;
 
-	if( handle( d ) != 2 )
+	var Derived & dr = d;
+	if( handle( dr ) != 2 )
 		return 1;
 
-	var Base & b = d;
-	if( handle( b ) != 1 )
+	var Base & br = d;
+	if( handle( br ) != 1 )
 		return 2;
 
 	return 0;

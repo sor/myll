@@ -101,9 +101,16 @@ namespace Myll.Resolver
 					progress |= resolver.ResolveAliases( module, context );
 					progress |= resolver.ResolveIds( module, context );
 					progress |= resolver.ResolveScopeds( module, context );
-					progress |= resolver.ResolveTypes( module, context );
-					progress |= resolver.ResolveMemberAccesses( module, context );
-					progress |= resolver.ResolveCalls( module, context );
+				progress |= resolver.ResolveTypes( module, context );
+				progress |= resolver.ResolveMemberAccesses( module, context );
+
+				// Commit resolved declarations after type/member resolution and before
+				// overload resolution so that conversion checks (e.g., derived-to-base
+				// pointer/reference) see populated resolvedDecl fields. Any resolutions
+				// made later will be committed again in the final Apply() below.
+				result.Apply();
+
+				progress |= resolver.ResolveCalls( module, context );
 				}
 			} while( progress );
 
@@ -882,7 +889,7 @@ namespace Myll.Resolver
 					? TemplateInference.SubstituteTemplateParams( paras[i].type, func.TplParams, candidateArgs, result )
 					: paras[i].type;
 
-				ConversionRank rank = ConversionRules.GetRank( argTypes[i]!, paramType );
+				ConversionRank rank = ConversionRules.GetRank( argTypes[i]!, paramType, result );
 				rankDetails += String.Format( " [{0}] {1}->{2}={3}",
 					i, FormatTypeForDebug( argTypes[i] ), FormatTypeForDebug( paramType ), rank );
 				if( rank == ConversionRank.None ) {

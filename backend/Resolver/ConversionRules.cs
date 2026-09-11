@@ -30,7 +30,10 @@ namespace Myll.Resolver
 		/// No narrowing, and no implicit typed integer/float or signed/unsigned conversions.
 		/// Some of these defaults (e.g., int/float cross-conversion) may later become dialect flags.
 		/// </summary>
-		public static ConversionRank GetRank( Typespec? source, Typespec? target )
+		public static ConversionRank GetRank(
+			Typespec?         source,
+			Typespec?         target,
+			ResolutionResult? result = null )
 		{
 			if( source == null || target == null )
 				return ConversionRank.None;
@@ -76,16 +79,16 @@ namespace Myll.Resolver
 			// Value -> reference parameter binding (e.g. passing std::ostream to std::ostream&
 			// or a string literal to const char*&).
 			if( TryStripReference( target, out Typespec? refBase )
-			 && GetRank( source, refBase ) <= ConversionRank.Conversion )
+			 && GetRank( source, refBase, result ) <= ConversionRank.Conversion )
 				return ConversionRank.Conversion;
 
 			// Reference -> value binding (e.g. assigning const path& to path, or int& to int).
 			if( TryStripReference( source, out Typespec? sourceBase )
-			 && GetRank( sourceBase, target ) <= ConversionRank.Conversion )
+			 && GetRank( sourceBase, target, result ) <= ConversionRank.Conversion )
 				return ConversionRank.Conversion;
 
 			// Inheritance conversions: Derived -> Base&, Derived* -> Base*, Derived*! -> Base*!, etc.
-			if( TryGetInheritanceConversionRank( source, target, out ConversionRank inheritanceRank ) )
+			if( TryGetInheritanceConversionRank( source, target, result, out ConversionRank inheritanceRank ) )
 				return inheritanceRank;
 
 			// String literal to C-style string pointer.
@@ -102,9 +105,26 @@ namespace Myll.Resolver
 			return ConversionRank.None;
 		}
 
-		public static bool IsImplicitlyConvertible( Typespec? source, Typespec? target ) {
-			ConversionRank rank = GetRank( source, target );
+		public static bool IsImplicitlyConvertible(
+			Typespec?         source,
+			Typespec?         target,
+			ResolutionResult? result = null )
+		{
+			ConversionRank rank = GetRank( source, target, result );
 			return rank <= ConversionRank.Conversion || rank == ConversionRank.TemplateParameter;
+		}
+
+		/// <summary>
+		/// Resolves a nested type through the AST field if already applied, otherwise falls back
+		/// to the identity-based map held by the current resolution pass.
+		/// </summary>
+		private static Decl? GetResolvedDecl( TypespecNested nested, ResolutionResult? result )
+		{
+			if( nested.resolvedDecl != null )
+				return nested.resolvedDecl;
+			if( result != null && result.TryGetResolved( nested, out Decl? decl ) )
+				return decl;
+			return null;
 		}
 
 		/// <summary>
@@ -112,17 +132,30 @@ namespace Myll.Resolver
 		/// <paramref name="target"/>, considering the full base chain.
 		/// </summary>
 		public static bool IsDerivedFrom( TypespecNested source, TypespecNested target )
+			=> IsDerivedFrom( source, target, null );
+
+		private static bool IsDerivedFrom(
+			TypespecNested    source,
+			TypespecNested    target,
+			ResolutionResult? result )
 		{
-			if( source.resolvedDecl == null || target.resolvedDecl == null )
+			Decl? sourceDecl = GetResolvedDecl( source, result );
+			Decl? targetDecl = GetResolvedDecl( target, result );
+
+			if( sourceDecl == null || targetDecl == null )
 				return false;
 
-			if( source.resolvedDecl == target.resolvedDecl )
+			if( sourceDecl == targetDecl )
 				return false;
 
-			return IsDerivedFrom( source.resolvedDecl, target.resolvedDecl, new HashSet<Decl>() );
+			return IsDerivedFrom( sourceDecl, targetDecl, new HashSet<Decl>(), result );
 		}
 
-		private static bool IsDerivedFrom( Decl derived, Decl target, HashSet<Decl> visited )
+		private static bool IsDerivedFrom(
+			Decl              derived,
+			Decl              target,
+			HashSet<Decl>     visited,
+			ResolutionResult? result )
 		{
 			if( derived == target )
 				return true;
@@ -134,14 +167,16 @@ namespace Myll.Resolver
 				return false;
 
 			foreach( BaseType bt in structural.basetypes ) {
-				Decl? baseDecl = bt.type is TypespecNested nested ? nested.resolvedDecl : null;
+				Decl? baseDecl = bt.type is TypespecNested nested
+					? GetResolvedDecl( nested, result )
+					: null;
 				if( baseDecl == null )
 					continue;
 
 				if( baseDecl == target )
 					return true;
 
-				if( IsDerivedFrom( baseDecl, target, visited ) )
+				if( IsDerivedFrom( baseDecl, target, visited, result ) )
 					return true;
 			}
 
@@ -152,7 +187,10 @@ namespace Myll.Resolver
 		/// True when a value of a derived class type is being used where a base class value
 		/// is expected. Myll treats this as object slicing and rejects it.
 		/// </summary>
-		public static bool IsSlicingAttempt( Typespec source, Typespec target )
+		public static bool IsSlicingAttempt(
+			Typespec          source,
+			Typespec          target,
+			ResolutionResult? result = null )
 		{
 			if( source.ptrs is { Count: > 0 } )
 				return false;
@@ -163,12 +201,13 @@ namespace Myll.Resolver
 			if( source is not TypespecNested srcNest || target is not TypespecNested tgtNest )
 				return false;
 
-			return IsDerivedFrom( srcNest, tgtNest );
+			return IsDerivedFrom( srcNest, tgtNest, result );
 		}
 
 		private static bool TryGetInheritanceConversionRank(
 			Typespec           source,
 			Typespec           target,
+			ResolutionResult?  result,
 			out ConversionRank rank )
 		{
 			rank = ConversionRank.None;
@@ -178,7 +217,7 @@ namespace Myll.Resolver
 			 && TryStripReference( target, out Typespec? refBase )
 			 && refBase is TypespecNested refBaseNest
 			 && source is TypespecNested srcNest
-			 && IsDerivedFrom( srcNest, refBaseNest ) ) {
+			 && IsDerivedFrom( srcNest, refBaseNest, result ) ) {
 				rank = ConversionRank.Conversion;
 				return true;
 			}
@@ -201,9 +240,11 @@ namespace Myll.Resolver
 			Typespec targetInner = CloneTypespecBase( target );
 			targetInner.ptrs = new();
 
-			if( sourceInner is TypespecNested sourceNested
-			 && targetInner is TypespecNested targetNested
-			 && IsDerivedFrom( sourceNested, targetNested ) ) {
+			TypespecNested? sourceNested = sourceInner as TypespecNested;
+			TypespecNested? targetNested = targetInner as TypespecNested;
+			if( sourceNested != null
+			 && targetNested != null
+			 && IsDerivedFrom( sourceNested, targetNested, result ) ) {
 				rank = ConversionRank.Conversion;
 				return true;
 			}

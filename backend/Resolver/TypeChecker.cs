@@ -59,7 +59,7 @@ namespace Myll.Resolver
 					if( argType == null )
 						continue; // cannot determine argument type yet
 
-				if( !ConversionRules.IsImplicitlyConvertible( argType, paras[i].type ) ) {
+				if( !ConversionRules.IsImplicitlyConvertible( argType, paras[i].type, result ) ) {
 					ReportTypeConversionError(
 						call.Call.args[i].expr.srcPos,
 						argType,
@@ -290,7 +290,7 @@ namespace Myll.Resolver
 			if( actual == null )
 				return;
 
-			if( !ConversionRules.IsImplicitlyConvertible( actual, expected ) ) {
+			if( !ConversionRules.IsImplicitlyConvertible( actual, expected, result ) ) {
 				ReportTypeConversionError(
 					ret.expr.srcPos,
 					actual,
@@ -586,7 +586,7 @@ namespace Myll.Resolver
 			if( leftType == null || rightType == null )
 				return;
 
-			if( !ConversionRules.IsImplicitlyConvertible( rightType, leftType ) ) {
+			if( !ConversionRules.IsImplicitlyConvertible( rightType, leftType, result ) ) {
 				ReportTypeConversionError(
 					srcPos,
 					rightType,
@@ -612,7 +612,7 @@ namespace Myll.Resolver
 			if( rightType == null )
 				return;
 
-			if( !ConversionRules.IsImplicitlyConvertible( rightType, leftType ) ) {
+			if( !ConversionRules.IsImplicitlyConvertible( rightType, leftType, result ) ) {
 				ReportTypeConversionError(
 					srcPos,
 					rightType,
@@ -737,8 +737,8 @@ namespace Myll.Resolver
 
 				case CastExpr cast: {
 					Typespec? sourceType = typeResolver.Resolve( cast.expr );
-					if( sourceType != null
-					 && ConversionRules.IsSlicingAttempt( sourceType, cast.type ) )
+				if( sourceType != null
+				 && ConversionRules.IsSlicingAttempt( sourceType, cast.type, result ) )
 						diagnostics.Add( new Diagnostic(
 							cast.srcPos,
 							DiagnosticKind.Warning,
@@ -1201,7 +1201,7 @@ namespace Myll.Resolver
 			Typespec   targetType,
 			string     genericMessage )
 		{
-			if( ConversionRules.IsSlicingAttempt( sourceType, targetType ) ) {
+			if( ConversionRules.IsSlicingAttempt( sourceType, targetType, result ) ) {
 				diagnostics.Add( new Diagnostic(
 					srcPos,
 					DiagnosticKind.Error,
