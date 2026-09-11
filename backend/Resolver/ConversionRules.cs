@@ -68,6 +68,11 @@ namespace Myll.Resolver
 			if( IsPromotion( source, target ) )
 				return ConversionRank.Promotion;
 
+			// Qualifier conversion: e.g., int* -> const int*, int& -> const int&,
+			// int -> const int. Only adding qualifiers is allowed; removing them is invalid.
+			if( TryGetQualifierConversionRank( source, target, out ConversionRank qualifierRank ) )
+				return qualifierRank;
+
 			// Value -> reference parameter binding (e.g. passing std::ostream to std::ostream&
 			// or a string literal to const char*&).
 			if( TryStripReference( target, out Typespec? refBase )
@@ -76,8 +81,8 @@ namespace Myll.Resolver
 
 			// Reference -> value binding (e.g. assigning const path& to path, or int& to int).
 			if( TryStripReference( source, out Typespec? sourceBase )
-			 && IsExactMatch( sourceBase, target ) )
-				return ConversionRank.Exact;
+			 && GetRank( sourceBase, target ) <= ConversionRank.Conversion )
+				return ConversionRank.Conversion;
 
 			// Inheritance conversions: Derived -> Base&, Derived* -> Base*, Derived*! -> Base*!, etc.
 			if( TryGetInheritanceConversionRank( source, target, out ConversionRank inheritanceRank ) )
@@ -241,9 +246,11 @@ namespace Myll.Resolver
 			if( source.GetType() != target.GetType() )
 				return false;
 
-			// Qualifiers are intentionally not required to match here. A value can be
-			// bound to a more-qualified target (e.g., assigned to a const variable).
-			// Pointer/reference structure must still match exactly.
+			if( source.qual != target.qual )
+				return false;
+
+			// Pointer/reference structure must match exactly, including the qualifier on
+			// each pointer block. A qualifier mismatch is handled as a separate conversion.
 			if( !HaveSamePointers( source.ptrs, target.ptrs ) )
 				return false;
 
@@ -569,8 +576,64 @@ namespace Myll.Resolver
 			for( int i = 0; i < a.Count; i++ ) {
 				if( a[i].kind != b[i].kind )
 					return false;
+				if( a[i].qual != b[i].qual )
+					return false;
 			}
 
+			return true;
+		}
+
+		/// <summary>
+		/// Returns true when the two types have the same base type ignoring any qualifiers
+		/// on the base type or on pointer/reference blocks. Used by qualifier conversion.
+		/// </summary>
+		private static bool BaseTypesEqual( Typespec a, Typespec b )
+		{
+			if( a.GetType() != b.GetType() )
+				return false;
+
+			return a switch {
+				TypespecBasic ab => b is TypespecBasic bb
+				                 && ab.kind == bb.kind
+				                 && ab.size == bb.size
+				                 && ab.isDefaultSized == bb.isDefaultSized,
+				TypespecNested an => b is TypespecNested bn
+				                  && NestedTypesEqual( an, bn ),
+				_ => false,
+			};
+		}
+
+		/// <summary>
+		/// Qualifier conversion is allowed when the base type and pointer structure are the
+		/// same. For value types (no pointers), top-level const/mutable/volatile can be
+		/// added or removed because the value is copied. For pointer/reference types, only
+		/// adding qualifiers on the pointee is allowed (e.g., int* -> const int*);
+		/// removing them (const int* -> int*) is rejected.
+		/// </summary>
+		private static bool TryGetQualifierConversionRank(
+			Typespec           source,
+			Typespec           target,
+			out ConversionRank rank )
+		{
+			rank = ConversionRank.None;
+
+			if( !HaveSamePointers( source.ptrs, target.ptrs ) )
+				return false;
+			if( !BaseTypesEqual( source, target ) )
+				return false;
+			if( source.qual == target.qual )
+				return false;
+
+			bool isValueType = source.ptrs == null || source.ptrs.Count == 0;
+			if( isValueType ) {
+				rank = ConversionRank.Conversion;
+				return true;
+			}
+
+			if( ( source.qual & ~target.qual ) != 0 )
+				return false;
+
+			rank = ConversionRank.Conversion;
 			return true;
 		}
 

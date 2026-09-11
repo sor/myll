@@ -1,0 +1,19 @@
+module overload_const_ptr;
+
+func pick( int * p ) -> int { return 1; }
+func pick( const int * p ) -> int { return 2; }
+
+func main() -> int
+{
+	var int x = 0;
+
+	var int * mutP = &x;
+	if( pick( mutP ) != 1 )
+		return 1;
+
+	var const int * constP = &x;
+	if( pick( constP ) != 2 )
+		return 2;
+
+	return 0;
+}
