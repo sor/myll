@@ -664,145 +664,179 @@ namespace Myll.Resolver
 		if( callable.Count == 0 )
 			return (null, false, true);
 
-			// Prefer an arity match first; if only one candidate has the right arity, pick it.
-			List<Decl> sameArity = callable
-				.Where( d => GetParamCount( d ) == call.args.Count )
-				.ToList();
+		// Prefer an arity match first; if only one candidate has the right arity, pick it.
+		List<Decl> sameArity = callable
+			.Where( d => GetParamCount( d ) == call.args.Count )
+			.ToList();
 
-			if( sameArity.Count == 0 )
-				return (null, false, true);
+		if( sameArity.Count == 0 )
+			return (null, false, true);
 
-			IReadOnlyList<TplArg>? explicitTemplateArgs = TemplateInference.GetExplicitTemplateArgs( callee );
-			Dictionary<Decl, List<TplArg>> deducedArgsByCandidate = new();
-			bool templateArityMismatch = false;
+		IReadOnlyList<TplArg>? explicitTemplateArgs = TemplateInference.GetExplicitTemplateArgs( callee );
+		Dictionary<Decl, List<TplArg>> deducedArgsByCandidate = new();
+		bool templateArityMismatch = false;
 
-			// Filter candidates by template-argument availability and, when no explicit
-			// arguments are supplied, try to deduce them from the call arguments.
-			List<Decl> templateViable = new();
-			foreach( Decl candidate in sameArity ) {
-				if( explicitTemplateArgs is { Count: > 0 } ) {
-					if( TemplateInference.HasTemplateArityMismatch( candidate, explicitTemplateArgs ) ) {
-						templateArityMismatch = true;
-						continue;
-					}
+		// Filter candidates by template-argument availability and, when no explicit
+		// arguments are supplied, try to deduce them from the call arguments.
+		List<Decl> templateViable = new();
+		foreach( Decl candidate in sameArity ) {
+			if( explicitTemplateArgs is { Count: > 0 } ) {
+				if( TemplateInference.HasTemplateArityMismatch( candidate, explicitTemplateArgs ) ) {
+					templateArityMismatch = true;
+					continue;
+				}
 
+				templateViable.Add( candidate );
+				continue;
+			}
+
+			// Forward/external functions whose return type does not depend on template
+			// parameters are usually left to the C++ compiler. Non-template externals
+			// are always accepted; external templates are accepted without Myll
+			// deduction when they are the only arity match. When there are other
+			// same-arity candidates we must still try to deduce the external template
+			// so it can compete in ranking, but we do not apply the deduced arguments
+			// to the callee expression.
+			if( candidate is Func fwd
+			 && ( fwd.IsForwardDeclaration || fwd.IsExternal )
+			 && !fwd.retType.IsDependentType() ) {
+				if( fwd.TplParams.Count == 0 ) {
 					templateViable.Add( candidate );
 					continue;
 				}
 
-				// Forward/external function templates whose return type does not depend on
-				// the template parameters are left to C++ deduction. Myll's own deduction
-				// may infer iterator/function-object types that cannot be emitted as explicit
-				// template arguments (e.g. std::sort, std::reverse), so we avoid producing them.
-				if( candidate is Func fwd
-				 && ( fwd.IsForwardDeclaration || fwd.IsExternal )
-				 && !fwd.retType.IsDependentType() ) {
+				if( sameArity.Count > 1
+				 && TemplateInference.TryDeduceTemplateArgs( fwd, call, typeResolver, result, out List<TplArg>? externalDeduced )
+				 && externalDeduced != null ) {
+					deducedArgsByCandidate[candidate] = externalDeduced;
 					templateViable.Add( candidate );
-					continue;
 				}
-
-				if( candidate is Func func
-				 && TemplateInference.TryDeduceTemplateArgs( func, call, typeResolver, result, out List<TplArg>? deduced )
-				 && deduced != null ) {
-					deducedArgsByCandidate[candidate] = deduced;
+				else if( sameArity.Count == 1 ) {
 					templateViable.Add( candidate );
-					continue;
 				}
 
-				if( TemplateInference.GetTemplateParamCount( candidate ) == 0 )
-					templateViable.Add( candidate );
+				continue;
 			}
 
-			if( templateViable.Count == 0 ) {
-				if( templateArityMismatch && sameArity.Count == 1 )
-					ReportTemplateArityMismatch( sameArity[0], explicitTemplateArgs!, callee );
-				else if( templateArityMismatch )
-					ReportTemplateArityMismatch( sameArity, explicitTemplateArgs!, callee );
-
-				return (null, false, true);
+			if( candidate is Func func
+			 && TemplateInference.TryDeduceTemplateArgs( func, call, typeResolver, result, out List<TplArg>? deduced )
+			 && deduced != null ) {
+				deducedArgsByCandidate[candidate] = deduced;
+				templateViable.Add( candidate );
+				continue;
 			}
 
-			// A lone non-template candidate (or a template candidate without explicit/deduced
-			// arguments) is accepted without a conversion check. This preserves the old
-			// resolver behaviour for class-template methods and other dependent calls where
-			// the concrete type-checking is delegated to the C++ compiler.
-			if( templateViable.Count == 1
-			 && explicitTemplateArgs?.Count == 0
-			 && !deducedArgsByCandidate.ContainsKey( templateViable[0] ) ) {
-				return (templateViable[0], false, false);
-			}
+			if( TemplateInference.GetTemplateParamCount( candidate ) == 0 )
+				templateViable.Add( candidate );
+		}
 
-			// Resolve argument types and rank every remaining viable candidate by the worst
-			// conversion required. This rejects explicit template instantiations with
-			// incompatible arguments (e.g. identity<int>("hi")) and keeps deduction honest.
-			List<Typespec?> argTypes = call.args
-				.Select( a => typeResolver.Resolve( a.expr ) )
-				.ToList();
-
-			// If any argument type is still unknown, we cannot decide yet. Do not emit
-			// a diagnostic; a later resolver pass may provide the missing type.
-			if( argTypes.Any( t => t == null ) )
-				return (null, false, false);
-
-			List<(Decl Candidate, ConversionRank WorstRank)> viable = new();
-			ConversionRank bestWorst = ConversionRank.None;
-
-			foreach( Decl candidate in templateViable ) {
-				ConversionRank worst = ConversionRank.Exact;
-				bool ok = true;
-
-				List<Param> paras = candidate switch {
-					Func func    => func.paras,
-					Structor stc => stc.paras,
-					_            => new List<Param>(),
-				};
-
-				List<TplArg>? candidateArgs = explicitTemplateArgs is { Count: > 0 }
-					? explicitTemplateArgs as List<TplArg>
-					: deducedArgsByCandidate.TryGetValue( candidate, out List<TplArg>? deduced )
-						? deduced
-						: null;
-
-				for( int i = 0; i < paras.Count; i++ ) {
-					Typespec paramType = candidate is Func func && candidateArgs != null
-						? TemplateInference.SubstituteTemplateParams( paras[i].type, func.TplParams, candidateArgs, result )
-						: paras[i].type;
-
-					ConversionRank rank = ConversionRules.GetRank( argTypes[i]!, paramType );
-					if( rank == ConversionRank.None ) {
-						ok = false;
-						break;
-					}
-
-					if( rank > worst )
-						worst = rank;
-				}
-
-				if( !ok )
-					continue;
-
-				if( worst < bestWorst ) {
-					viable.Clear();
-					viable.Add( (candidate, worst) );
-					bestWorst = worst;
-				}
-				else if( worst == bestWorst ) {
-					viable.Add( (candidate, worst) );
-				}
-			}
-
-			if( viable.Count == 1 ) {
-				Decl chosen = viable[0].Candidate;
-				if( deducedArgsByCandidate.TryGetValue( chosen, out List<TplArg>? deduced ) )
-					TemplateInference.ApplyTemplateArgs( callee, deduced );
-				return (chosen, false, false);
-			}
-
-			if( viable.Count > 1 )
-				return (null, true, false);
+		if( templateViable.Count == 0 ) {
+			if( templateArityMismatch && sameArity.Count == 1 )
+				ReportTemplateArityMismatch( sameArity[0], explicitTemplateArgs!, callee );
+			else if( templateArityMismatch )
+				ReportTemplateArityMismatch( sameArity, explicitTemplateArgs!, callee );
 
 			return (null, false, true);
 		}
+
+		// A lone non-template candidate (or a template candidate without explicit/deduced
+		// arguments) is accepted without a conversion check. This preserves the old
+		// resolver behaviour for class-template methods and other dependent calls where
+		// the concrete type-checking is delegated to the C++ compiler.
+		if( templateViable.Count == 1
+		 && explicitTemplateArgs?.Count == 0
+		 && !deducedArgsByCandidate.ContainsKey( templateViable[0] ) ) {
+			return (templateViable[0], false, false);
+		}
+
+		// Resolve argument types and rank every remaining viable candidate by the worst
+		// conversion required. This rejects explicit template instantiations with
+		// incompatible arguments (e.g. identity<int>("hi")) and keeps deduction honest.
+		List<Typespec?> argTypes = call.args
+			.Select( a => typeResolver.Resolve( a.expr ) )
+			.ToList();
+
+		// If any argument type is still unknown, we cannot decide yet. Do not emit
+		// a diagnostic; a later resolver pass may provide the missing type.
+		if( argTypes.Any( t => t == null ) )
+			return (null, false, false);
+
+		List<(Decl Candidate, ConversionRank WorstRank)> viable = new();
+		ConversionRank bestWorst = ConversionRank.None;
+
+		foreach( Decl candidate in templateViable ) {
+			ConversionRank worst = ConversionRank.Exact;
+			bool ok = true;
+
+			List<Param> paras = candidate switch {
+				Func func    => func.paras,
+				Structor stc => stc.paras,
+				_            => new List<Param>(),
+			};
+
+			List<TplArg>? candidateArgs = explicitTemplateArgs is { Count: > 0 }
+				? explicitTemplateArgs as List<TplArg>
+				: deducedArgsByCandidate.TryGetValue( candidate, out List<TplArg>? deduced )
+					? deduced
+					: null;
+
+			for( int i = 0; i < paras.Count; i++ ) {
+				Typespec paramType = candidate is Func func && candidateArgs != null
+					? TemplateInference.SubstituteTemplateParams( paras[i].type, func.TplParams, candidateArgs, result )
+					: paras[i].type;
+
+				ConversionRank rank = ConversionRules.GetRank( argTypes[i]!, paramType );
+				if( rank == ConversionRank.None ) {
+					ok = false;
+					break;
+				}
+
+				if( rank > worst )
+					worst = rank;
+			}
+
+			if( !ok )
+				continue;
+
+			if( worst < bestWorst ) {
+				viable.Clear();
+				viable.Add( (candidate, worst) );
+				bestWorst = worst;
+			}
+			else if( worst == bestWorst ) {
+				viable.Add( (candidate, worst) );
+			}
+		}
+
+		// C++ tie-breaker: when several candidates require the same conversion,
+		// prefer a non-template over a template (or a less-specialized template).
+		if( viable.Count > 1 ) {
+			List<(Decl Candidate, ConversionRank WorstRank)> nonTemplates = viable
+				.Where( v => TemplateInference.GetTemplateParamCount( v.Candidate ) == 0 )
+				.ToList();
+
+			if( nonTemplates.Count > 0 )
+				viable = nonTemplates;
+		}
+
+		if( viable.Count == 1 ) {
+			Decl chosen = viable[0].Candidate;
+			// External/forward templates are ranked with Myll deduction, but the C++
+			// compiler is still responsible for the real deduction; do not emit
+			// explicit template arguments for them.
+			bool shouldApplyDeduced = chosen is Func chosenFunc
+			                       && !( chosenFunc.IsForwardDeclaration || chosenFunc.IsExternal );
+			if( shouldApplyDeduced
+			 && deducedArgsByCandidate.TryGetValue( chosen, out List<TplArg>? deduced ) )
+				TemplateInference.ApplyTemplateArgs( callee, deduced );
+			return (chosen, false, false);
+		}
+
+		if( viable.Count > 1 )
+			return (null, true, false);
+
+		return (null, false, true);
+	}
 
 		private void ReportTemplateArityMismatch( Decl candidate, IReadOnlyList<TplArg> args, Expr callee )
 		{

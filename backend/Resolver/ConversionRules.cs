@@ -65,10 +65,11 @@ namespace Myll.Resolver
 			if( IsPromotion( source, target ) )
 				return ConversionRank.Promotion;
 
-			// Value -> reference parameter binding (e.g. passing std::ostream to std::ostream&).
+			// Value -> reference parameter binding (e.g. passing std::ostream to std::ostream&
+			// or a string literal to const char*&).
 			if( TryStripReference( target, out Typespec? refBase )
-			 && GetRank( source, refBase ) <= ConversionRank.Promotion )
-				return ConversionRank.Promotion;
+			 && GetRank( source, refBase ) <= ConversionRank.Conversion )
+				return ConversionRank.Conversion;
 
 			// Reference -> value binding (e.g. assigning const path& to path, or int& to int).
 			if( TryStripReference( source, out Typespec? sourceBase )

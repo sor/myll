@@ -1296,6 +1296,8 @@ namespace Myll.Resolver
 				                       => "untyped integer",
 				TypespecBasic basic when basic.kind == TypespecBasic.Kind.UntypedFloat
 				                       => "untyped float",
+				TypespecBasic basic when basic.kind == TypespecBasic.Kind.String
+				                       => "string literal",
 				_                      => type.GenType(),
 			};
 		}

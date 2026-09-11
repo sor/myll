@@ -147,10 +147,10 @@ namespace Myll.Resolver
 
 			if( resolved is TplParamDecl tpl
 			 && substitution.TryGetValue( tpl.name, out Typespec? replacement ) ) {
-				Typespec ret = Substitute( replacement, substitution, result ) ?? replacement; // expand nested args
+				Typespec ret = Substitute( replacement, substitution, result )
+				            ?? CloneTypespec( replacement );
 				ret.qual = CombineQualifiers( ret.qual, type.qual );
 				if( type.ptrs != null && type.ptrs.Count > 0 ) {
-					ret = CloneTypespecBase( ret );
 					ret.ptrs = (ret.ptrs ?? new List<Pointer>())
 						.Concat( type.ptrs.Select( p => new Pointer { kind = p.kind, qual = p.qual, expr = p.expr } ) )
 						.ToList();
@@ -236,48 +236,64 @@ namespace Myll.Resolver
 				? GetResolvedDecl( nested, result )
 				: null;
 
-			if( parameterDecl is not TplParamDecl tpl )
-				return true; // no template parameter to bind; let overload resolution decide
+		if( parameterDecl is not TplParamDecl tpl )
+			return true; // no template parameter to bind; let overload resolution decide
 
-			Typespec strippedArgument = argumentType;
+		Typespec strippedArgument = argumentType;
+		bool wrappersMatched = false;
 
-			// Strip matching outer pointer/reference/smart-pointer wrappers.
-			if( parameterType.ptrs is { Count: > 0 } pPtrs
-			 && argumentType.ptrs is { Count: > 0 } aPtrs
-			 && pPtrs.Count == aPtrs.Count ) {
-				for( int i = 0; i < pPtrs.Count; i++ ) {
-					if( pPtrs[i].kind != aPtrs[i].kind || pPtrs[i].qual != aPtrs[i].qual )
-						return true;
+		// Strip matching outer pointer/reference/smart-pointer wrappers.
+		if( parameterType.ptrs is { Count: > 0 } pPtrs
+		 && argumentType.ptrs is { Count: > 0 } aPtrs
+		 && pPtrs.Count == aPtrs.Count ) {
+			wrappersMatched = true;
+			for( int i = 0; i < pPtrs.Count; i++ ) {
+				if( pPtrs[i].kind != aPtrs[i].kind || pPtrs[i].qual != aPtrs[i].qual ) {
+					wrappersMatched = false;
+					break;
 				}
+			}
 
+			if( wrappersMatched )
 				strippedArgument = StripOutermostPointers( argumentType, aPtrs.Count );
-			}
-			else if( parameterType.ptrs is { Count: > 0 } ) {
-				return true; // wrappers differ; can't bind, let overload resolution decide
-			}
-
-			if( bindings.TryGetValue( tpl.name, out Typespec? existing ) ) {
-				if( IsUntypedLiteral( strippedArgument ) )
-					return true;
-
-				if( IsUntypedLiteral( existing ) ) {
-					bindings[tpl.name] = strippedArgument;
-					return true;
-				}
-
-				return IsSameType( existing, strippedArgument );
-			}
-
-			bindings[tpl.name] = strippedArgument;
-			return true;
 		}
 
-		private static bool IsUntypedLiteral( Typespec type )
-			=> type is TypespecBasic b
-			 && ( b.kind == TypespecBasic.Kind.UntypedInteger
-			   || b.kind == TypespecBasic.Kind.UntypedFloat );
+		if( !wrappersMatched && parameterType.ptrs is { Count: > 0 } ) {
+			// A reference wrapper around the template parameter can bind to an
+			// argument with different or no outer wrappers; in that case T is
+			// the argument type itself and the C++ compiler decides whether the
+			// reference can be formed (e.g. const T& to a temporary is fine).
+			if( parameterType.ptrs.Count == 1 && IsReferenceKind( parameterType.ptrs[0].kind ) )
+				strippedArgument = argumentType;
+			else
+				return true; // wrappers differ; can't bind, let overload resolution decide
+		}
 
-		private static Typespec NormalizeDeducedType( Typespec type )
+		if( bindings.TryGetValue( tpl.name, out Typespec? existing ) ) {
+			if( IsUntypedLiteral( strippedArgument ) )
+				return true;
+
+			if( IsUntypedLiteral( existing ) ) {
+				bindings[tpl.name] = strippedArgument;
+				return true;
+			}
+
+			return IsSameType( existing, strippedArgument );
+		}
+
+		bindings[tpl.name] = strippedArgument;
+		return true;
+	}
+
+	private static bool IsReferenceKind( Pointer.Kind kind )
+		=> kind is Pointer.Kind.LVRef or Pointer.Kind.RVRef;
+
+	private static bool IsUntypedLiteral( Typespec type )
+		=> type is TypespecBasic b
+		 && ( b.kind == TypespecBasic.Kind.UntypedInteger
+		   || b.kind == TypespecBasic.Kind.UntypedFloat );
+
+	private static Typespec NormalizeDeducedType( Typespec type )
 		{
 			if( type is not TypespecBasic basic )
 				return type;
@@ -287,6 +303,15 @@ namespace Myll.Resolver
 
 			if( basic.kind == TypespecBasic.Kind.UntypedFloat )
 				return new TypespecBasic { kind = TypespecBasic.Kind.Float, isDefaultSized = true, srcPos = basic.srcPos };
+
+			if( basic.kind == TypespecBasic.Kind.String )
+				return new TypespecBasic {
+					kind = TypespecBasic.Kind.Char,
+					size = 1,
+					qual = Qualifier.Const,
+					ptrs = new List<Pointer> { new() { kind = Pointer.Kind.RawPtr } },
+					srcPos = basic.srcPos,
+				};
 
 			return type;
 		}
