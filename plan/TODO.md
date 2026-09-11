@@ -35,8 +35,10 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 1. **Overload resolution maturity** — fill the remaining gaps in a deliberate order, adding regression tests at each step:
    1. **Simple types**: exact match, promotions, safe conversions — regression locked in `testing/cases/overload_simple/`.
    2. **Pointers and references**: `T*`/`T&` conversions, derived-to-base pointer/reference,
-      `null` to pointer — regression locked in `testing/cases/overload_pointer/` and
-      `testing/cases/overload_inheritance_ptr/` / `overload_inheritance_ref/`.
+      `null` to pointer, and CV-qualified pointer/reference overload ranking —
+      regression locked in `testing/cases/overload_pointer/`,
+      `testing/cases/overload_inheritance_ptr/` / `overload_inheritance_ref/`,
+      `testing/cases/overload_const_ptr/`, and `testing/cases/overload_const_ref/`.
       Also fixed `CloneTypespecBase` losing `isDefaultSized` on pointer-wrapped basic types.
    3. **Smart pointers**: `T*!`/`T*+`/`T*?` conversions and overload preference — regression locked in
       `testing/cases/overload_smart_ptr/` and `testing/cases/overload_smart_inheritance/`.
@@ -46,11 +48,28 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
       `testing/cases/overload_template_ranking/`.
       Remaining: pointer wrappers, initializer lists, non-type template parameters, explicit template arguments.
    5. **Edge cases**: member-access overloads, constructor overloads, forwarding/reference collapsing,
-      overload sets with mixed value/pointer/smart-pointer parameters.
+       overload sets with mixed value/pointer/smart-pointer parameters.
+
+## Blocked / needs dependency
+
+1. **Remove lone-candidate overload shortcut** (`backend/Resolver/Resolver.cs`) — attempted but rolled back.
+   The shortcut currently defers derived-to-base pointer/reference conversions and some
+   cross-scope class-type matches to the C++ compiler. When Myll validates lone candidates,
+   these conversions report "No matching overload" because `ConversionRules.IsDerivedFrom`
+   does not resolve base-class `TypespecNested`s that lack a populated `resolvedDecl`.
+   Need to fix class-hierarchy resolution before re-enabling the check.
 
 ## Recently completed
 
-1. **Function-scope `using` resolution** — `using Namespace;` inside a function body now resolves names from that namespace for the rest of the block. Implemented by registering `UsingStmt`s as `UnresolvedUsingStmt`, resolving them alongside `UnresolvedUsing`, and generating the appropriate `using namespace` / `using Name;` C++ form. Added regression test `testing/cases/using_function_scope/` and moved the workaround in `frontend/apps/unix/find.myll` into `main()`.
+1. **CV-qualified overload ranking** — exact matching now includes type and pointer-block
+   qualifiers; qualifier conversions are allowed for value types (top-level qualifiers can
+   be added/removed) and for adding pointee qualifiers on pointers/references
+   (e.g., `int* -> const int*`). Reference-to-value binding now also permits qualifier
+   changes (e.g., `const std::filesystem::path& -> std::filesystem::path`).
+   Files: `backend/Resolver/ConversionRules.cs`.
+   Tests: `testing/cases/overload_const_ptr/`, `testing/cases/overload_const_ref/`.
+
+2. **Function-scope `using` resolution** — `using Namespace;` inside a function body now resolves names from that namespace for the rest of the block. Implemented by registering `UsingStmt`s as `UnresolvedUsingStmt`, resolving them alongside `UnresolvedUsing`, and generating the appropriate `using namespace` / `using Name;` C++ form. Added regression test `testing/cases/using_function_scope/` and moved the workaround in `frontend/apps/unix/find.myll` into `main()`.
 
 ## High priority
 
