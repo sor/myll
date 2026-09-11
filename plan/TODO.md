@@ -55,7 +55,6 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 
 4. **Improve compiler diagnostics**
    - Replace empty `throw new NotImplementedException()` calls with messages that include the construct and source location.
-   - Emit a clear error when `alias` is used on a namespace until namespace aliases are supported.
 
 5. **Direct constructor syntax and initializer-list literals** — done
    - Variables can be declared with `var T name(args);` (and `const`/`let`/`field` variants) instead of `var T name = T(args);`.
