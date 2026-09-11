@@ -1117,6 +1117,11 @@ namespace Myll.Resolver
 					progress = true;
 				}
 
+				if( isNamespaceTarget && !scope.importedScopes.Contains( ( (Namespace)resolved ).scope ) ) {
+					scope.importedScopes.Add( ( (Namespace)resolved ).scope );
+					progress = true;
+				}
+
 				progress |= AddImportedName( scope, unresolved.Node.name, resolved );
 			}
 

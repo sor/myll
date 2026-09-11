@@ -1,9 +1,20 @@
 module synthetic_sugar;
 
-alias O = std;
+namespace LocalNs {
+	func localValue() -> int { return 7; }
+}
+
+alias O = LocalNs;
 alias MyInt = int;
 
 func check_alias() -> int
 {
+	var MyInt x = 0;
+	if( x != 0 )
+		return 1;
+
+	if( O::localValue() != 7 )
+		return 2;
+
 	return 0;
 }

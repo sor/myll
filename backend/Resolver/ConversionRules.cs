@@ -35,6 +35,9 @@ namespace Myll.Resolver
 			if( source == null || target == null )
 				return ConversionRank.None;
 
+			source = UnwrapAlias( source );
+			target = UnwrapAlias( target );
+
 			// Template parameters are opaque type variables. A value of a template
 			// parameter type can bind to any target and vice versa, but this is weaker
 			// than exact/conversion matches between concrete types so that concrete
@@ -589,6 +592,13 @@ namespace Myll.Resolver
 			}
 
 			return true;
+		}
+
+		private static Typespec UnwrapAlias( Typespec type )
+		{
+			return type is TypespecNested { resolvedDecl: AliasDecl alias }
+				? UnwrapAlias( alias.type )
+				: type;
 		}
 	}
 }

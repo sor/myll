@@ -107,8 +107,9 @@ namespace Myll.Generator
 		private readonly IReadOnlyDictionary<string, IReadOnlyList<RawImport>>? moduleRawImports;
 		private readonly IReadOnlySet<string>?                                  prototypeModules;
 
-		private readonly HashSet<string> definedNamespaces   = new();
-		private readonly HashSet<string> namespaceUsingNames = new();
+		private readonly HashSet<string> definedNamespaces         = new();
+		private readonly HashSet<string> namespaceUsingNames       = new();
+		private readonly HashSet<string> namespaceAliasTargetNames = new();
 
 		private readonly ModuleContext? context;
 		private Dialect Dialect => context?.Dialect ?? Dialect.Default;
@@ -228,6 +229,12 @@ namespace Myll.Generator
 
 			Strings ret = new();
 
+			foreach( string ns in namespaceAliasTargetNames
+				.Where( n => definedNamespaces.Contains( n ) )
+				.OrderBy( n => n ) ) {
+				ret.Add( Format( "{0}namespace {1} {{}}", IndentDecl, ns ) );
+			}
+
 			if( Dialect.GlobalUsingNS == GlobalUsingNSMode.Leaky
 			 && namespaceUsingNames.Count > 0 ) {
 				foreach( string ns in namespaceUsingNames
@@ -342,11 +349,20 @@ namespace Myll.Generator
 		{
 			string indent = IndentDecl;
 
+			string targetName;
+			if( obj.IsNamespaceAlias ) {
+				targetName = obj.type.Gen();
+				namespaceAliasTargetNames.Add( targetName );
+			}
+			else {
+				targetName = obj.type.Gen();
+			}
+
 			string ret = Format(
 				AliasFormat[obj.IsNamespaceAlias ? 1 : 0],
 				indent,
 				obj.name,
-				obj.type.Gen() );
+				targetName );
 
 			protoEarly.Target( obj.access ).Add( ret );
 		}
