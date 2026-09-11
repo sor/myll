@@ -1,0 +1,30 @@
+module synthetic_sugar;
+
+func main() -> int
+{
+	var int r = check_alias();
+	if( r != 0 ) return r;
+
+	r = check_auto_return();
+	if( r != 0 ) return r;
+
+	r = check_break_if();
+	if( r != 0 ) return r;
+
+	r = check_continue_if();
+	if( r != 0 ) return r;
+
+	r = check_else_on_loop();
+	if( r != 0 ) return r;
+
+	r = check_return_if();
+	if( r != 0 ) return r;
+
+	r = check_throw_if();
+	if( r != 0 ) return r;
+
+	r = check_using();
+	if( r != 0 ) return r;
+
+	return 0;
+}

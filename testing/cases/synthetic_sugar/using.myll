@@ -1,6 +1,6 @@
-module new_in_myll;
+module synthetic_sugar;
 
-import using_ns_helper;
+import using_helper;
 
 namespace SameFileLib {
 	func sameFileValue() -> int { return 21; }
@@ -17,7 +17,7 @@ namespace InnerScopeTest {
 	}
 }
 
-func check_using_ns() -> int
+func check_using() -> int
 {
 	var int imported   = answer() + also();
 	var int sameFile   = sameFileValue() * 2;

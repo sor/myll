@@ -1,4 +1,4 @@
-module using_ns_helper;
+module using_helper;
 
 namespace Lib {
 	func answer() -> int { return 21; }

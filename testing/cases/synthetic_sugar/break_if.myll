@@ -1,0 +1,27 @@
+module synthetic_sugar;
+
+func check_break_if() -> int
+{
+	var int count = 0;
+	var int a = 0;
+	for( a = 0; a < 100; ++a ) {
+		do break if( a == 5 );
+		count = count + 1;
+	}
+	if( count != 5 )
+		return 1;
+
+	var int outerHits = 0;
+	var int b = 0;
+	for( b = 0; b < 3; ++b ) {
+		var int c = 0;
+		for( c = 0; c < 3; ++c ) {
+			do break 2 if( c == 1 );
+			outerHits = outerHits + 1;
+		}
+	}
+	if( outerHits != 1 )
+		return 2;
+
+	return 0;
+}

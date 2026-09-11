@@ -1,0 +1,54 @@
+module synthetic_sugar;
+
+func throwIfValue( bool shouldThrow ) -> int
+{
+	do throw 1 if( shouldThrow );
+	return 0;
+}
+
+func rethrowIfFlag( bool rethrow ) -> int
+{
+	try {
+		throwIfValue( true );
+	}
+	catch( int e ) {
+		do throw if( rethrow );
+		return e;
+	}
+	return -1;
+}
+
+func check_throw_if() -> int
+{
+	var int caught = 0;
+	try {
+		throwIfValue( true );
+	}
+	catch( int e ) {
+		caught = e;
+	}
+	if( caught != 1 )
+		return 1;
+
+	try {
+		throwIfValue( false );
+	}
+	catch( int e ) {
+		return 2;
+	}
+
+	if( rethrowIfFlag( false ) != 1 )
+		return 3;
+
+	var int rethrown = 0;
+	try {
+		rethrowIfFlag( true );
+	}
+	catch( int e ) {
+		rethrown = e;
+	}
+	if( rethrown != 1 )
+		return 4;
+
+	return 0;
+}

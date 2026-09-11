@@ -1,8 +1,6 @@
-module new_in_myll;
+module synthetic_sugar;
 
-import std_iostream;
-
-alias s = std;
+alias O = std;
 alias MyInt = int;
 
 func check_alias() -> int

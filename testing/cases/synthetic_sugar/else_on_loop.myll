@@ -1,4 +1,4 @@
-module new_in_myll;
+module synthetic_sugar;
 
 func check_else_on_loop() -> int
 {

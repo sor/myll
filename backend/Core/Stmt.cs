@@ -127,10 +127,12 @@ namespace Myll.Core
 
 	public class ThrowStmt : Stmt
 	{
-		public Expr expr = null!;
+		public Expr? expr;
 
 		public override Strings Gen( int level )
-			=> Format( "throw {0};", expr.Gen() ).IndentAll( level );
+			=> expr != null
+				? Format( "throw {0};", expr.Gen() ).IndentAll( level )
+				: "throw;".IndentAll( level );
 	}
 
 	public class BreakStmt : Stmt

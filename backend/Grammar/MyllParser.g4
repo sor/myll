@@ -174,9 +174,9 @@ defStmt		:	declUsing
 			|	stmtDoWhile
 			|	stmtTimes
 			|	stmtTryCatch
-			|	stmtReturn
-			|	stmtReturnIf
-			|	stmtThrow
+			| stmtReturn
+			| stmtFlowIf
+			| stmtThrow
 			|	stmtBreak
 			|	stmtContinue
 			|	stmtAssign
@@ -209,8 +209,11 @@ stmtTimes	:	DO? 			count=expr	TIMES
 stmtTryCatch:	TRY                     	stmt	catchClause+;
 catchClause	:	CATCH	LPAREN	param?	RPAREN	stmt;
 
-stmtReturn	:	RETURN		expr?							SEMI;
-stmtReturnIf:	DO RETURN	expr?	IF LPAREN expr RPAREN	SEMI; // same for throw and break, or make this a general contruct? replace "if" with "when"?
+stmtReturn	: RETURN		expr?							SEMI;
+stmtFlowIf	: DO RETURN	expr?	IF LPAREN expr RPAREN	SEMI
+			| DO BREAK	INTEGER_LIT?	IF LPAREN expr RPAREN	SEMI
+			| DO CONTINUE	INTEGER_LIT?	IF LPAREN expr RPAREN	SEMI
+			| DO THROW	expr?	IF LPAREN expr RPAREN	SEMI;
 stmtThrow	:	THROW		expr							SEMI;
 stmtBreak	:	BREAK		INTEGER_LIT?					SEMI;
 stmtContinue:	CONTINUE	INTEGER_LIT?					SEMI;

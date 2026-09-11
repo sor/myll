@@ -302,24 +302,47 @@ namespace Myll
 		public override Stmt VisitStmtDefer( StmtDeferContext c )
 			=> throw new NotImplementedException( "defer is not implemented yet" );
 
-		public override Stmt VisitStmtReturnIf( StmtReturnIfContext c )
+		public override Stmt VisitStmtFlowIf( StmtFlowIfContext c )
 		{
 			ExprContext[] exprs = c.expr();
 
-			// `do return <expr>? if( <cond> );` — the first expr is optional, the second is
-			// the condition. If only one expr is present, it is the condition.
-			Expr? returnExpr = exprs.Length > 1 ? exprs[0].Visit( Context ) : null;
-			Expr  condition  = exprs.Length > 1 ? exprs[1].Visit( Context ) : exprs[0].Visit( Context );
+			// The condition is always the last expr (inside the if parens).
+			Expr condition = exprs[exprs.Length - 1].Visit( Context );
+			Stmt thenStmt;
+
+			if( c.RETURN() != null ) {
+				Expr? returnExpr = exprs.Length > 1 ? exprs[0].Visit( Context ) : null;
+				thenStmt = new ReturnStmt {
+					srcPos = returnExpr?.srcPos ?? c.ToSrcPos(),
+					expr   = returnExpr,
+				};
+			}
+			else if( c.BREAK() != null ) {
+				int depth = c.INTEGER_LIT() != null ? int.Parse( c.INTEGER_LIT().GetText() ) : 1;
+				thenStmt = new BreakStmt {
+					srcPos = c.ToSrcPos(),
+					depth  = depth,
+				};
+			}
+			else if( c.CONTINUE() != null ) {
+				int depth = c.INTEGER_LIT() != null ? int.Parse( c.INTEGER_LIT().GetText() ) : 1;
+				thenStmt = new ContinueStmt {
+					srcPos = c.ToSrcPos(),
+					depth  = depth,
+				};
+			}
+			else {
+				Expr? throwExpr = exprs.Length > 1 ? exprs[0].Visit( Context ) : null;
+				thenStmt = new ThrowStmt {
+					srcPos = throwExpr?.srcPos ?? c.ToSrcPos(),
+					expr   = throwExpr,
+				};
+			}
 
 			return new IfStmt {
-				srcPos   = c.ToSrcPos(),
-				ifThens  = new() {
-					new IfStmt.CondThen(
-						condition,
-						new ReturnStmt {
-							srcPos = returnExpr?.srcPos ?? c.ToSrcPos(),
-							expr   = returnExpr,
-						} ),
+				srcPos  = c.ToSrcPos(),
+				ifThens = new() {
+					new IfStmt.CondThen( condition, thenStmt ),
 				},
 			};
 		}
