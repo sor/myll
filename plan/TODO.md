@@ -32,7 +32,15 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 
 ## Critical / next
 
-(none)
+1. **Overload resolution maturity** — fill the remaining gaps in a deliberate order, adding regression tests at each step:
+   1. **Simple types**: exact match, promotions, safe conversions (already mostly works; needs regression lock-in).
+   2. **Pointers and references**: `T*`/`T&` conversions, `null` to pointer, derived-to-base pointer/reference,
+      const/non-const pointer conversions.
+   3. **Smart pointers**: `T*!`/`T*+`/`T*?`/`T[]!` etc. conversions and overload preference vs raw pointers.
+   4. **Templates**: deduction for `T`, `T*`, `T&`, pointer wrappers, initializer lists, and non-type template parameters;
+      overload ranking between template and non-template candidates; explicit template arguments.
+   5. **Edge cases**: member-access overloads, constructor overloads, forwarding/reference collapsing,
+      overload sets with mixed value/pointer/smart-pointer parameters.
 
 ## Recently completed
 

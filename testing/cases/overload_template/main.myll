@@ -1,0 +1,20 @@
+module overload_template;
+
+func identity<T>( T value ) -> T { return value; }
+func identity( int value ) -> int { return value + 1000; }
+
+func scale<T>( T x ) -> T { return x; }
+
+func main() -> int
+{
+	if( identity( 5 ) != 1005 )
+		return 1;
+
+	if( identity( 3.0 ) <= 2.9 || identity( 3.0 ) >= 3.1 )
+		return 2;
+
+	if( scale<int>( 7 ) != 7 )
+		return 3;
+
+	return 0;
+}
