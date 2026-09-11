@@ -37,6 +37,9 @@ namespace Myll.Resolver
 			kind   = VarDecl.Kind.Const,
 		};
 
+		private static readonly bool DebugOverloadResolution =
+			Environment.GetEnvironmentVariable( "MYLL_DEBUG_OVERLOAD" ) == "1";
+
 		private readonly IReadOnlyDictionary<string, ModuleExports> moduleExports;
 		private readonly IReadOnlyDictionary<GlobalNamespace, ModuleContext> moduleContexts;
 		private readonly ResolutionResult result;
@@ -639,6 +642,52 @@ namespace Myll.Resolver
 			|| op is Operand.NCMemberAccessPtr
 			|| op is Operand.MemberPtrAccess;
 
+		private static void LogOverloadResolution( string message, params object[] args )
+		{
+			if( !DebugOverloadResolution )
+				return;
+			Console.Error.WriteLine( "[Myll overload] " + String.Format( message, args ) );
+		}
+
+		private static string FormatParamsForDebug( Decl decl )
+		{
+			List<Param> paras = decl switch {
+				Func func    => func.paras,
+				Structor stc => stc.paras,
+				_            => new List<Param>(),
+			};
+			return "(" + String.Join( ", ", paras.Select( p => FormatTypeForDebug( p.type ) ) ) + ")";
+		}
+
+		private static string FormatTypeForDebug( Typespec? type )
+		{
+			if( type == null )
+				return "<?>";
+			string suffix = "";
+			if( type.ptrs is { Count: > 0 } )
+				suffix = " " + String.Join( "", type.ptrs.Select( p => p.kind switch {
+					Pointer.Kind.RawPtr    => "*",
+					Pointer.Kind.LVRef     => "&",
+					Pointer.Kind.RVRef     => "&&",
+					Pointer.Kind.Unique     => "*!",
+					Pointer.Kind.Shared     => "*@",
+					Pointer.Kind.Weak       => "*?",
+					Pointer.Kind.UniqueArray => "*![]",
+					Pointer.Kind.SharedArray => "*@[]",
+					Pointer.Kind.WeakArray   => "*?[]",
+					Pointer.Kind.PtrToAry    => "[]",
+					_                        => "?",
+				} ) );
+			string prefix = type.qual == Qualifier.Const ? "const " : "";
+			string name = type switch {
+				TypespecBasic b         => b.kind.ToString(),
+				TypespecNested n        => String.Join( "::", n.idTpls.Select( it => it.id ) ),
+				TypespecFunc f          => "<func>",
+				_                       => "<?>",
+			};
+			return prefix + name + suffix;
+		}
+
 		private (Decl? chosen, bool ambiguous, bool noMatch) TryResolveOverload(
 			List<Decl>      candidates,
 			FuncCall        call,
@@ -664,10 +713,26 @@ namespace Myll.Resolver
 		if( callable.Count == 0 )
 			return (null, false, true);
 
+		string calleeName = callee switch {
+			IdExpr id                                => id.idTplArgs.id,
+			ScopedExpr scoped                        => scoped.idTpls.Count > 0 ? scoped.idTpls.Last().id : "?",
+			BinOp binOp when binOp.right is IdExpr m => m.idTplArgs.id,
+			_                                        => "?",
+		};
+		LogOverloadResolution( "Resolving '{0}' with {1} arg(s) among {2} candidate(s)",
+			calleeName, call.args.Count, callable.Count );
+		for( int i = 0; i < callable.Count; i++ ) {
+			Decl c = callable[i];
+			LogOverloadResolution( "  candidate[{0}]: {1}{2} arity={3} templateParams={4}",
+				i, c.name, FormatParamsForDebug( c ), GetParamCount( c ), TemplateInference.GetTemplateParamCount( c ) );
+		}
+
 		// Prefer an arity match first; if only one candidate has the right arity, pick it.
 		List<Decl> sameArity = callable
 			.Where( d => GetParamCount( d ) == call.args.Count )
 			.ToList();
+
+		LogOverloadResolution( "  {0} candidate(s) match arity {1}", sameArity.Count, call.args.Count );
 
 		if( sameArity.Count == 0 )
 			return (null, false, true);
@@ -682,10 +747,12 @@ namespace Myll.Resolver
 		foreach( Decl candidate in sameArity ) {
 			if( explicitTemplateArgs is { Count: > 0 } ) {
 				if( TemplateInference.HasTemplateArityMismatch( candidate, explicitTemplateArgs ) ) {
+					LogOverloadResolution( "    candidate {0}: template arity mismatch", candidate.name );
 					templateArityMismatch = true;
 					continue;
 				}
 
+				LogOverloadResolution( "    candidate {0}: explicit template args, accepted", candidate.name );
 				templateViable.Add( candidate );
 				continue;
 			}
@@ -701,18 +768,27 @@ namespace Myll.Resolver
 			 && ( fwd.IsForwardDeclaration || fwd.IsExternal )
 			 && !fwd.retType.IsDependentType() ) {
 				if( fwd.TplParams.Count == 0 ) {
+					LogOverloadResolution( "    candidate {0}: external non-template, accepted", candidate.name );
 					templateViable.Add( candidate );
 					continue;
 				}
 
-				if( sameArity.Count > 1
-				 && TemplateInference.TryDeduceTemplateArgs( fwd, call, typeResolver, result, out List<TplArg>? externalDeduced )
-				 && externalDeduced != null ) {
-					deducedArgsByCandidate[candidate] = externalDeduced;
+				List<TplArg>? externalDeduced = null;
+				bool externalDeducedOk = sameArity.Count > 1
+					&& TemplateInference.TryDeduceTemplateArgs( fwd, call, typeResolver, result, out externalDeduced )
+					&& externalDeduced != null;
+				if( externalDeducedOk ) {
+					LogOverloadResolution( "    candidate {0}: external template deduced ({1}), accepted",
+						candidate.name, String.Join( ", ", externalDeduced!.Select( a => FormatTypeForDebug( a.typespec ) ) ) );
+					deducedArgsByCandidate[candidate] = externalDeduced!;
 					templateViable.Add( candidate );
 				}
 				else if( sameArity.Count == 1 ) {
+					LogOverloadResolution( "    candidate {0}: external template alone, accepted", candidate.name );
 					templateViable.Add( candidate );
+				}
+				else {
+					LogOverloadResolution( "    candidate {0}: external template deduction failed", candidate.name );
 				}
 
 				continue;
@@ -721,14 +797,25 @@ namespace Myll.Resolver
 			if( candidate is Func func
 			 && TemplateInference.TryDeduceTemplateArgs( func, call, typeResolver, result, out List<TplArg>? deduced )
 			 && deduced != null ) {
+				LogOverloadResolution( "    candidate {0}: internal template deduced ({1}), accepted",
+					candidate.name, String.Join( ", ", deduced.Select( a => FormatTypeForDebug( a.typespec ) ) ) );
 				deducedArgsByCandidate[candidate] = deduced;
 				templateViable.Add( candidate );
 				continue;
 			}
 
-			if( TemplateInference.GetTemplateParamCount( candidate ) == 0 )
+			if( TemplateInference.GetTemplateParamCount( candidate ) == 0 ) {
+				LogOverloadResolution( "    candidate {0}: non-template, accepted", candidate.name );
 				templateViable.Add( candidate );
+			}
+			else {
+				LogOverloadResolution( "    candidate {0}: template deduction failed", candidate.name );
+			}
 		}
+
+		LogOverloadResolution( "  {0} candidate(s) survived template viability" , templateViable.Count );
+		foreach( Decl c in templateViable )
+			LogOverloadResolution( "    viable: {0}{1}", c.name, FormatParamsForDebug( c ) );
 
 		if( templateViable.Count == 0 ) {
 			if( templateArityMismatch && sameArity.Count == 1 )
@@ -743,9 +830,15 @@ namespace Myll.Resolver
 		// arguments) is accepted without a conversion check. This preserves the old
 		// resolver behaviour for class-template methods and other dependent calls where
 		// the concrete type-checking is delegated to the C++ compiler.
+		// Only do this when it is the *only* same-arity candidate. If other same-arity
+		// candidates were filtered out (e.g. a template whose deduction failed because an
+		// argument type is not known yet), we must run the conversion check or wait for
+		// another resolver pass instead of blindly picking the remaining candidate.
 		if( templateViable.Count == 1
+		 && sameArity.Count == 1
 		 && explicitTemplateArgs?.Count == 0
 		 && !deducedArgsByCandidate.ContainsKey( templateViable[0] ) ) {
+			LogOverloadResolution( "  lone candidate {0}, skipping conversion check", templateViable[0].name );
 			return (templateViable[0], false, false);
 		}
 
@@ -760,6 +853,9 @@ namespace Myll.Resolver
 		// a diagnostic; a later resolver pass may provide the missing type.
 		if( argTypes.Any( t => t == null ) )
 			return (null, false, false);
+
+		LogOverloadResolution( "  argument types: {0}",
+			String.Join( ", ", argTypes.Select( t => FormatTypeForDebug( t ) ) ) );
 
 		List<(Decl Candidate, ConversionRank WorstRank)> viable = new();
 		ConversionRank bestWorst = ConversionRank.None;
@@ -780,12 +876,15 @@ namespace Myll.Resolver
 					? deduced
 					: null;
 
+			string rankDetails = "";
 			for( int i = 0; i < paras.Count; i++ ) {
 				Typespec paramType = candidate is Func func && candidateArgs != null
 					? TemplateInference.SubstituteTemplateParams( paras[i].type, func.TplParams, candidateArgs, result )
 					: paras[i].type;
 
 				ConversionRank rank = ConversionRules.GetRank( argTypes[i]!, paramType );
+				rankDetails += String.Format( " [{0}] {1}->{2}={3}",
+					i, FormatTypeForDebug( argTypes[i] ), FormatTypeForDebug( paramType ), rank );
 				if( rank == ConversionRank.None ) {
 					ok = false;
 					break;
@@ -794,6 +893,9 @@ namespace Myll.Resolver
 				if( rank > worst )
 					worst = rank;
 			}
+
+			LogOverloadResolution( "    ranking {0}{1} -> {2}{3}",
+				candidate.name, FormatParamsForDebug( candidate ), ok ? "" : " REJECTED", rankDetails );
 
 			if( !ok )
 				continue;
@@ -808,6 +910,11 @@ namespace Myll.Resolver
 			}
 		}
 
+		LogOverloadResolution( "  {0} candidate(s) with best worst-rank {1}", viable.Count, bestWorst );
+		foreach( var v in viable )
+			LogOverloadResolution( "    best: {0}{1} rank={2} templateParams={3}",
+				v.Candidate.name, FormatParamsForDebug( v.Candidate ), v.WorstRank, TemplateInference.GetTemplateParamCount( v.Candidate ) );
+
 		// C++ tie-breaker: when several candidates require the same conversion,
 		// prefer a non-template over a template (or a less-specialized template).
 		if( viable.Count > 1 ) {
@@ -815,12 +922,15 @@ namespace Myll.Resolver
 				.Where( v => TemplateInference.GetTemplateParamCount( v.Candidate ) == 0 )
 				.ToList();
 
-			if( nonTemplates.Count > 0 )
+			if( nonTemplates.Count > 0 ) {
+				LogOverloadResolution( "  tie-breaker: preferring {0} non-template candidate(s)", nonTemplates.Count );
 				viable = nonTemplates;
+			}
 		}
 
 		if( viable.Count == 1 ) {
 			Decl chosen = viable[0].Candidate;
+			LogOverloadResolution( "  chosen: {0}{1}", chosen.name, FormatParamsForDebug( chosen ) );
 			// External/forward templates are ranked with Myll deduction, but the C++
 			// compiler is still responsible for the real deduction; do not emit
 			// explicit template arguments for them.
@@ -832,9 +942,12 @@ namespace Myll.Resolver
 			return (chosen, false, false);
 		}
 
-		if( viable.Count > 1 )
+		if( viable.Count > 1 ) {
+			LogOverloadResolution( "  ambiguous" );
 			return (null, true, false);
+		}
 
+		LogOverloadResolution( "  no viable candidate" );
 		return (null, false, true);
 	}
 

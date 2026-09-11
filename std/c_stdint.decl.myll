@@ -1,4 +1,4 @@
-module std_cstdint;
+module c_stdint;
 import <cstdint>;
 
 namespace std {

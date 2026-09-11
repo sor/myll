@@ -1,4 +1,4 @@
-module std_cstddef;
+module c_stddef;
 import <cstddef>;
 
 namespace std {

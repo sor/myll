@@ -1,0 +1,8 @@
+module c_stdio;
+import <cstdio>;
+
+struct FILE;
+
+var FILE * stdin;
+var FILE * stdout;
+var FILE * stderr;

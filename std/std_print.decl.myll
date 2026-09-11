@@ -1,11 +1,14 @@
 module std_print;
 import <print>;
 import std_string;
+import c_stdio;
 
 namespace std {
 	func print( const string & fmt ) -> void;
 	func print<T>( const string & fmt, const T & arg ) -> void;
+	func print<T>( FILE * stream, const string & fmt, const T & arg ) -> void;
 
 	func println( const string & fmt ) -> void;
 	func println<T>( const string & fmt, const T & arg ) -> void;
+	func println<T>( FILE * stream, const string & fmt, const T & arg ) -> void;
 }

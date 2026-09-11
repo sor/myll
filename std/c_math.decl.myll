@@ -1,4 +1,4 @@
-module std_cmath;
+module c_math;
 import <cmath>;
 
 namespace std {

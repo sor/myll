@@ -352,9 +352,18 @@ namespace Myll.Resolver
 
 			// String literal to the dialect's backing string class (e.g. std::string).
 			if( source is TypespecBasic { kind: TypespecBasic.Kind.String }
-			 && target is TypespecNested { resolvedDecl: Hierarchical h }
-			 && h.name == "string" )
-				return true;
+			 && target is TypespecNested targetNest ) {
+				if( targetNest.resolvedDecl is Hierarchical h && h.name == "string" )
+					return true;
+
+				// Declarations in prototype modules (e.g. .decl.myll) may not have their
+				// parameter types fully resolved, but the textual name is still enough to
+				// recognise the backing string type.
+				if( targetNest.resolvedDecl == null
+				 && targetNest.idTpls.Count > 0
+				 && targetNest.idTpls[targetNest.idTpls.Count - 1].id == "string" )
+					return true;
+			}
 
 			// Currently all other non-exact/non-promotion conversions are rejected.
 			// This is where future safe conversions (e.g., derived-to-base pointers,
