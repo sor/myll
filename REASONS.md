@@ -8,7 +8,7 @@ Decision log for Myll. Captures the "why" behind choices so we don't repeat deba
 `[1,2,3]` is a first-class Myll expression with type `std::initializer_list<T>`, but member access such as `a.size()` failed because the synthetic `std::initializer_list` type had no resolved Myll declaration. At the same time, the hardcoded `StmtFormatting.DefaultIncludes` were disconnected from Myll's import system.
 
 ### What Changed
-- Added `backend/Core/StdBuiltins.ImplicitStdImports`, an ordered list of standard modules (e.g. `std_cmath`, `std_cstdint`, `std_memory`, `std_initializer_list`) that are imported implicitly into every compiled module.
+- Added `backend/Core/StdBuiltins.ImplicitStdImports`, an ordered list of standard modules (e.g. `c_math`, `c_stdint`, `std_memory`, `std_initializer_list`) that are imported implicitly into every compiled module.
 - The front-end injects these imports automatically.
 - The generator derives all C++ `#include <...>` lines from module imports, so the C++ headers exactly match the Myll-side knowledge.
 - Removed `backend/Generator/StmtFormatting.DefaultIncludes`.

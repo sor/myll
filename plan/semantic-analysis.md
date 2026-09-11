@@ -149,13 +149,13 @@ A sequential fixed-point resolver is the first target. The same input/output sha
 
 ## Implicit standard imports and dialect mapping
 
-Default C++ headers are no longer hardcoded in `backend/Generator/StmtFormatting.cs`. Instead, `backend/Core/StdBuiltins.cs` contains `ImplicitStdImports`, an ordered list of standard modules (e.g. `std_cmath`, `std_cstdint`, `std_memory`) that the front-end imports into every compiled module. The generator derives the matching `#include <...>` lines from those imports. This list is split into the same three categories as before:
+Default C++ headers are no longer hardcoded in `backend/Generator/StmtFormatting.cs`. Instead, `backend/Core/StdBuiltins.cs` contains `ImplicitStdImports`, an ordered list of standard modules (e.g. `c_math`, `c_stdint`, `std_memory`) that the front-end imports into every compiled module. The generator derives the matching `#include <...>` lines from those imports. This list is split into the same three categories as before:
 
 ### Essential / hard to replace
 Always imported because they back built-in types or core generated constructs:
 
-- `std_cstddef` → `<cstddef>` — `std::byte`, `size_t`, `nullptr_t`
-- `std_cstdint` → `<cstdint>` — `std::int8_t`, `std::uint64_t`, etc.
+- `c_stddef` → `<cstddef>` — `std::byte`, `size_t`, `nullptr_t`
+- `c_stdint` → `<cstdint>` — `std::int8_t`, `std::uint64_t`, etc.
 - `std_type_traits` → `<type_traits>` — `std::underlying_type`, `remove_const_t`, etc.
 
 ### Small / usually fine
@@ -167,7 +167,7 @@ Imported by default today, but should be configurable per dialect:
 
 - `std_string` → `<string>` — `std::string`; could be replaced by `QString` or disabled entirely.
 - `std_memory` → `<memory>` — smart pointers; could be replaced by a custom allocator or disabled.
-- `std_cmath` → `<cmath>` — math functions; could be disabled for projects that do not need them.
+- `c_math` → `<cmath>` — math functions; could be disabled for projects that do not need them.
 
 Non-default headers such as `<algorithm>` are only included when the user explicitly imports the corresponding `std_*.decl.myll` module.
 

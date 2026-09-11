@@ -15,9 +15,9 @@ namespace Myll.Core
 		/// standard-library header that the generator emits as an include.
 		/// </summary>
 		public static readonly IReadOnlyList<string> ImplicitStdImports = new List<string> {
-			"std_cmath",
-			"std_cstddef",
-			"std_cstdint",
+			"c_math",
+			"c_stddef",
+			"c_stdint",
 			"std_initializer_list",
 			"std_memory",
 			"std_string",

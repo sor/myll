@@ -1,6 +1,6 @@
 module find;
 
-import std_iostream, std_filesystem, std_vector, std_string, std_algorithm, cxxopts, glob, std_print;
+import std_filesystem, std_vector, std_string, std_algorithm, cxxopts, glob, std_print, c_stdio;
 
 using JanSordid;
 using std::filesystem;
@@ -35,7 +35,7 @@ func main( int argc, const char *[] argv ) -> int
 	if( sizeSpec.length() > 0 ) {
 		opts.hasSize = true;
 		if( !parseSize( sizeSpec, opts.sizeValue, opts.sizeCmp ) ) {
-			std::cerr << "invalid size specification: " << sizeSpec << "\n";
+			std::println(stderr, "invalid size specification: {}", sizeSpec);
 			return 1;
 		}
 	}
@@ -55,7 +55,7 @@ func main( int argc, const char *[] argv ) -> int
 		output.push_back( p.generic_string() );
 
 	std::sort( output.begin(), output.end() );
-	for( auto line : output )
+	for( string line : output )
 		std::println( "{}", line );
 
 	return 0;
@@ -107,10 +107,14 @@ func parseSize( const string & spec, u64 & value, int & cmp ) -> bool
 	}
 
 	value = 0;
+	var usize digitStart = i;
 	while( i < spec.length() && spec[i] >= '0' && spec[i] <= '9' ) {
 		value = value * 10 + (u64)( spec[i] - '0' );
 		++i;
 	}
+
+	if( i == digitStart )
+		return false;
 
 	if( i < spec.length() ) {
 		var char unit = spec[i];
