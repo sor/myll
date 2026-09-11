@@ -522,7 +522,13 @@ namespace Myll.Resolver
 		private static Typespec CloneTypespecBase( Typespec source )
 		{
 			Typespec ret = source switch {
-				TypespecBasic b   => new TypespecBasic { kind = b.kind, size = b.size },
+				TypespecBasic b   => new TypespecBasic {
+					kind           = b.kind,
+					size           = b.size,
+					align          = b.align,
+					literalText    = b.literalText,
+					isDefaultSized = b.isDefaultSized,
+				},
 				TypespecNested n  => new TypespecNested {
 					resolvedDecl = n.resolvedDecl,
 					idTpls       = n.idTpls.Select( it => new IdTplArgs { id = it.id, tplArgs = it.tplArgs } ).ToList(),
