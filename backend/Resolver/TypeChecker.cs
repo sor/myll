@@ -388,6 +388,16 @@ namespace Myll.Resolver
 			List<ReturnStmt> returns = CollectReturns( func.body );
 
 			if( returns.TrueForAll( r => r.expr == null ) ) {
+				if( func.retType is TypespecBasic { kind: TypespecBasic.Kind.ExplicitAuto } ) {
+					diagnostics.Add( new Diagnostic(
+						func.srcPos,
+						DiagnosticKind.Error,
+						String.Format(
+							"Function '{0}' uses explicit '-> auto' but has no value-returning statement",
+							func.name ) ) );
+					return;
+				}
+
 				func.retType = new TypespecBasic {
 					kind = TypespecBasic.Kind.Void,
 					size = TypespecBasic.SizeInvalid,

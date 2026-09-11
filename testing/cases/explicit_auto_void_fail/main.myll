@@ -1,0 +1,8 @@
+module explicit_auto_void_fail;
+
+func returns_auto_void() -> auto { } // EXPECTED: explicit auto with no value-returning statement
+
+func main() -> int
+{
+	return 0;
+}
