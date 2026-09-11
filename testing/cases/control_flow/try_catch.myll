@@ -1,4 +1,6 @@
 module control_flow;
+import std_exception;
+import std_string;
 
 func check_try_catch() -> int
 {
@@ -26,6 +28,18 @@ func check_try_catch() -> int
 	catch( int y ) {
 		if( y != 123 )
 			return 2;
+	}
+
+	// multiple catch clauses: most-derived first
+	try {
+		throw std::exception();
+	}
+	catch( const std::exception & e ) {
+		if( e.what() == null )
+			return 3;
+	}
+	catch() {
+		return 4;
 	}
 
 	return 0;
