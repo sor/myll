@@ -1,0 +1,32 @@
+module control_flow;
+
+func check_try_catch() -> int
+{
+	// catch a typed exception
+	try {
+		throw 42;
+	}
+	catch( int x ) {
+		if( x != 42 )
+			return 1;
+	}
+
+	// catch-all
+	try {
+		throw 7;
+	}
+	catch() {
+		// expected
+	}
+
+	// catch with reference-like parameter
+	try {
+		throw 123;
+	}
+	catch( int y ) {
+		if( y != 123 )
+			return 2;
+	}
+
+	return 0;
+}

@@ -329,23 +329,15 @@ namespace Myll
 				PushScope();
 
 				CatchClause clause = new();
-				if( cc.funcTypeDef() != null ) {
-					List<Param> paras = VisitFuncTypeDef( cc.funcTypeDef() ).ToList();
-					clause.param = paras.Count switch {
-						0 => null,
-						1 => paras[0],
-						_ => throw new NotImplementedException(
-							"catch clause must have exactly one parameter or none" ),
-					};
+				if( cc.param() != null ) {
+					clause.param = VisitParam( cc.param() );
 
-					if( clause.param != null ) {
-						AddScopeOnly( new VarDecl {
-							name   = clause.param.name ?? "",
-							type   = clause.param.type,
-							access = Access.Public,
-							kind   = VarDecl.Kind.Var,
-						} );
-					}
+					AddScopeOnly( new VarDecl {
+						name   = clause.param.name ?? "",
+						type   = clause.param.type,
+						access = Access.Public,
+						kind   = VarDecl.Kind.Var,
+					} );
 				}
 
 				clause.body = Visit( cc.stmt() );

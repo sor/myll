@@ -42,9 +42,10 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    - End-to-end test: `testing/cases/access_mods/`.
    - Enforced: access attributes are only valid inside class/struct/union declarations.
 
-2. **Repair the `try/catch` grammar**
-   - Change `catchClause` from `CATCH funcTypeDef? stmt` to `CATCH LPAREN param? RPAREN stmt`.
-   - Update `VStmt.VisitStmtTryCatch` and any generator formatting that depends on the catch clause.
+2. **Repair the `try/catch` grammar** — done
+   - Changed `catchClause` from `CATCH funcTypeDef? stmt` to `CATCH LPAREN param? RPAREN stmt`.
+   - Updated `VStmt.VisitStmtTryCatch` to read the optional `param`.
+   - Added regression coverage in `testing/cases/control_flow/try_catch.myll`.
 
 3. **Implement reachable missing expression/statement features**
    - Named function arguments (`Arg.Gen` in `backend/Core/Mixed.cs`).

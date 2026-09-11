@@ -11,5 +11,8 @@ func main() -> int
 	r = check_break_continue_switch();
 	if( r != 0 ) return r;
 
+	r = check_try_catch();
+	if( r != 0 ) return r;
+
 	return 0;
 }
