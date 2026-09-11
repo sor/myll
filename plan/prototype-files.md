@@ -88,6 +88,6 @@ These are intentionally out of scope for the first prototype-file pass.
 - [x] Remove `Namespace.AddToGen` early return on `IsExternal` so inline extern namespaces emit member forward declarations.
 - [x] Make `Structural.AddToGen` emit a forward declaration when `IsExternal`.
 - [x] Add a `GenerateOnly` integration-harness flag and an end-to-end golden test for inline `[extern]` class/namespace.
-- [ ] Add grammar/visitor/generator support for forward declarations in prototype and `[extern]` contexts.
-- [ ] Convert the `std/` shims to use forward-declaration syntax.
-- [ ] Rename test extern files to `.decl.myll` and add tests for `.decl.myll` prototype files.
+- [x] Add grammar/visitor/generator support for forward declarations in prototype and `[extern]` contexts.
+- [x] Convert the `std/` shims to use forward-declaration syntax.
+- [x] Rename test extern files to `.decl.myll` and add tests for `.decl.myll` prototype files.

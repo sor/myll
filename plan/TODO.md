@@ -56,14 +56,7 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    - Replace empty `throw new NotImplementedException()` calls with messages that include the construct and source location.
    - Emit a clear error when `alias` is used on a namespace until namespace aliases are supported.
 
-5. **Prototype declaration files**
-   - Adopt `.d.myll` and `.decl.myll` as the extensions for silent resolver-only prototypes.
-   - Inline `[extern]` in normal `.myll` files should emit C++ forward declarations.
-   - Extend `[extern]` propagation to classes/structs so members resolve but are not emitted.
-   - Add grammar/visitor/generator support for forward declarations in prototype files.
-   - See `plan/prototype-files.md`.
-
-6. **Direct constructor syntax and initializer-list literals** — done
+5. **Direct constructor syntax and initializer-list literals** — done
    - Variables can be declared with `var T name(args);` (and `const`/`let`/`field` variants) instead of `var T name = T(args);`.
    - Grammar: `idAccessor` accepts an optional `funcCall` in addition to `= expr`; `expr` accepts `LBRACK args? RBRACK` as `InitListExpr`; `typespec` accepts `initlistType`; `kindOfPassing` accepts `INITLIST`.
    - AST: `VarDecl`/`VarStmt` carry an explicit `isDirectConstruct` flag and store the constructor call in `init` as a `FuncCallExpr`. A new `InitListExpr` node stores the brace-init-list elements. `TypespecNested.isInitList` identifies the `initlist`/`ilist` keyword type.
