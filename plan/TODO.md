@@ -33,12 +33,18 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 ## Critical / next
 
 1. **Overload resolution maturity** — fill the remaining gaps in a deliberate order, adding regression tests at each step:
-   1. **Simple types**: exact match, promotions, safe conversions (already mostly works; needs regression lock-in).
-   2. **Pointers and references**: `T*`/`T&` conversions, `null` to pointer, derived-to-base pointer/reference,
-      const/non-const pointer conversions.
-   3. **Smart pointers**: `T*!`/`T*+`/`T*?`/`T[]!` etc. conversions and overload preference vs raw pointers.
-   4. **Templates**: deduction for `T`, `T*`, `T&`, pointer wrappers, initializer lists, and non-type template parameters;
-      overload ranking between template and non-template candidates; explicit template arguments.
+   1. **Simple types**: exact match, promotions, safe conversions — regression locked in `testing/cases/overload_simple/`.
+   2. **Pointers and references**: `T*`/`T&` conversions, derived-to-base pointer/reference,
+      `null` to pointer — regression locked in `testing/cases/overload_pointer/` and
+      `testing/cases/overload_inheritance_ptr/` / `overload_inheritance_ref/`.
+      Also fixed `CloneTypespecBase` losing `isDefaultSized` on pointer-wrapped basic types.
+   3. **Smart pointers**: `T*!`/`T*+`/`T*?` conversions and overload preference — regression locked in
+      `testing/cases/overload_smart_ptr/` and `testing/cases/overload_smart_inheritance/`.
+      (Value parameters of unique pointer require `(move)`; this matches C++ ownership transfer.)
+   4. **Templates**: deduction for `T`, `T*`, `T&` and overload ranking between template and non-template
+      candidates — regression locked in `testing/cases/overload_template/` and
+      `testing/cases/overload_template_ranking/`.
+      Remaining: pointer wrappers, initializer lists, non-type template parameters, explicit template arguments.
    5. **Edge cases**: member-access overloads, constructor overloads, forwarding/reference collapsing,
       overload sets with mixed value/pointer/smart-pointer parameters.
 
