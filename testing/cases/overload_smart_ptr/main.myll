@@ -1,0 +1,24 @@
+module overload_smart_ptr;
+
+func take( int * value ) -> int { return 1; }
+func take( int *! value ) -> int { return 2; }
+func take( int *+ value ) -> int { return 3; }
+
+func main() -> int
+{
+	var int x = 0;
+
+	var int* raw = &x;
+	if( take( raw ) != 1 )
+		return 1;
+
+	var int*! uniq = new int*!;
+	if( take( (move)uniq ) != 2 )
+		return 2;
+
+	var int*+ shared = new int*+;
+	if( take( shared ) != 3 )
+		return 3;
+
+	return 0;
+}
