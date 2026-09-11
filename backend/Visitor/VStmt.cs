@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Tree;
 using Myll.Core;
+using Myll.Resolver;
 
 namespace Myll
 {
@@ -136,15 +137,19 @@ namespace Myll
 		public override MultiStmt VisitDefUsing( DefUsingContext c )
 		{
 			SrcPos srcPos = c.ToSrcPos();
+			Scope  scope  = scopeStack.Peek();
 			MultiStmt ret = VisitTypespecsNested( c.typespecsNested() )
 				.Select(
-					typespec => new UsingStmt() {
-						srcPos = srcPos,
-						type   = typespec
+					typespec => {
+						UsingStmt stmt = new() {
+							srcPos = srcPos,
+							type   = typespec
+						};
+						Context.UnresolvedUsingsStmt.Add(
+							new UnresolvedUsingStmt( stmt, scope ) );
+						return stmt;
 					} )
 				.ToMulti();
-			// TODO: local scope
-			//AddChildren( ret.decls );
 			return ret;
 		}
 

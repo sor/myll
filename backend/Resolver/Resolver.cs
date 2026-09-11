@@ -1029,7 +1029,41 @@ namespace Myll.Resolver
 		private bool ResolveUsings( GlobalNamespace module, ModuleContext context )
 		{
 			bool progress = false;
+
 			foreach( UnresolvedUsing unresolved in context.UnresolvedUsings ) {
+				if( unresolved.Node.type is not TypespecNested path )
+					continue;
+
+				Decl? resolved = ResolvePath( path.idTpls, unresolved.Scope, module, out _, callSite: false );
+				if( resolved == null )
+					continue;
+
+				Scope scope = unresolved.Scope;
+				if( resolved is Namespace ns ) {
+					if( !unresolved.Node.IsNamespaceUsing ) {
+						unresolved.Node.IsNamespaceUsing = true;
+						progress = true;
+					}
+					if( !scope.importedScopes.Contains( ns.scope ) ) {
+						scope.importedScopes.Add( ns.scope );
+						progress = true;
+					}
+				}
+				else {
+					string importedName = path.idTpls.Last().id;
+					if( !scope.importedNames.TryGetValue( importedName, out List<Decl>? list ) ) {
+						list = new List<Decl>( 1 );
+						scope.importedNames.Add( importedName, list );
+					}
+
+					if( !list.Contains( resolved ) ) {
+						list.Add( resolved );
+						progress = true;
+					}
+				}
+			}
+
+			foreach( UnresolvedUsingStmt unresolved in context.UnresolvedUsingsStmt ) {
 				if( unresolved.Node.type is not TypespecNested path )
 					continue;
 

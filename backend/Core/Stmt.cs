@@ -82,12 +82,15 @@ namespace Myll.Core
 		public Typespec type = null!;
 		public string?  name;
 
+		// Set by the resolver when this using statement targets a namespace.
+		public bool IsNamespaceUsing { get; set; }
+
 		// in locations where C++ does not support "using namespace" this must not be printed
 		// but instead the unqualified types need to be changed to qualified ones
 		public override Strings Gen( int level )
 		{
 			string ret = Format(
-				UsingFormat[name == null ? 1 : 0],
+				UsingFormat[IsNamespaceUsing ? 1 : 0],
 				"",
 				type.Gen() );
 			return ret.IndentAll( level );

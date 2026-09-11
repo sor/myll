@@ -2,11 +2,12 @@ module find;
 
 import std_filesystem, std_vector, std_string, std_algorithm, cxxopts, glob, std_print, c_stdio;
 
-using JanSordid;
 using std::filesystem;
 
 func main( int argc, const char *[] argv ) -> int
 {
+	using JanSordid;
+
 	var cxxopts::Options options( argv[0], "find files" );
 	options.add_options()
 		( "t,type",     "file type (f|d|l)",       cxxopts::value<string>()->default_value( "" ) )

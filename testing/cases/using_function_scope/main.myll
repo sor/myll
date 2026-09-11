@@ -1,0 +1,11 @@
+func main() -> int
+{
+    using Lib;
+    if( answer() != 42 )
+        return 1;
+    return 0;
+}
+
+namespace Lib {
+    func answer() -> int { return 42; }
+}

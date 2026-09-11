@@ -32,7 +32,11 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 
 ## Critical / next
 
-1. **Function-scope `using` resolution** — `using JanSordid;` inside a function body does not make names from that namespace available for local declarations and expressions. It should behave like a C++ block-scope `using namespace` directive. Workaround: place the `using` at module scope, which emits a global `using namespace`. See `frontend/apps/unix/find.myll`.
+(none)
+
+## Recently completed
+
+1. **Function-scope `using` resolution** — `using Namespace;` inside a function body now resolves names from that namespace for the rest of the block. Implemented by registering `UsingStmt`s as `UnresolvedUsingStmt`, resolving them alongside `UnresolvedUsing`, and generating the appropriate `using namespace` / `using Name;` C++ form. Added regression test `testing/cases/using_function_scope/` and moved the workaround in `frontend/apps/unix/find.myll` into `main()`.
 
 ## High priority
 

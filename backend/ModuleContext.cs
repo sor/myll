@@ -60,6 +60,7 @@ namespace Myll
 		public List<UnresolvedType>           UnresolvedTypes           { get; } = new();
 		public List<UnresolvedScoped>         UnresolvedScopeds         { get; } = new();
 		public List<UnresolvedUsing>          UnresolvedUsings          { get; } = new();
+		public List<UnresolvedUsingStmt>      UnresolvedUsingsStmt      { get; } = new();
 		public List<UnresolvedAlias>          UnresolvedAliases         { get; } = new();
 		public List<UnresolvedMemberAccess>   UnresolvedMemberAccesses  { get; } = new();
 
