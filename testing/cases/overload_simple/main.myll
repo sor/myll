@@ -1,0 +1,24 @@
+module overload_simple;
+
+func rank( int value ) -> int { return 1; }
+func rank( u32 value ) -> int { return 2; }
+func rank( f32 value ) -> int { return 3; }
+func rank( bool value ) -> int { return 4; }
+func rank( char value ) -> int { return 5; }
+
+func main() -> int
+{
+	var int i = 0;
+	var u32 u = (u32)0;
+	var f32 f = (f32)0.0;
+	var bool b = false;
+	var char c = 'a';
+
+	if( rank( i ) != 1 ) return 1;
+	if( rank( u ) != 2 ) return 2;
+	if( rank( f ) != 3 ) return 3;
+	if( rank( b ) != 4 ) return 4;
+	if( rank( c ) != 5 ) return 5;
+
+	return 0;
+}

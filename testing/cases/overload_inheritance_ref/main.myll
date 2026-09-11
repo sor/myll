@@ -1,0 +1,21 @@
+module overload_inheritance_ref;
+
+class Base {}
+class Derived : Base {}
+
+func handle( Base & b ) -> int { return 1; }
+func handle( Derived & d ) -> int { return 2; }
+
+func main() -> int
+{
+	var Derived d;
+
+	if( handle( d ) != 2 )
+		return 1;
+
+	var Base & b = d;
+	if( handle( b ) != 1 )
+		return 2;
+
+	return 0;
+}
