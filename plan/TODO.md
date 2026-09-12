@@ -85,7 +85,10 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
     - premature "no match" diagnostics emitted before type identities converged, now deferred
       with `TypeMightResolveLater`;
     - `auto` loop variables whose type was inferred too late, fixed by running
-      `RangeForAutoTypeTransformer` inside the fixed-point resolver loop.
+      `RangeForAutoTypeTransformer` inside the fixed-point resolver loop;
+    - `auto` loop variables over initializer-list literals, fixed by teaching
+      `RangeForAutoTypeTransformer.InferRangeElementType` to read the element type from
+      synthesized `std::initializer_list<T>` types that do not have `resolvedDecl` set yet.
     The flag `UseLoneCandidateShortcut` in `backend/Resolver/Resolver.cs` remains as an escape
     hatch. See `plan/lone-candidate-investigation.md` for full analysis and reproducers.
 

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Myll.Core;
@@ -101,11 +102,19 @@ namespace Myll.Transform
 					rangeType = StripFirstPointer( rangeType );
 			}
 
-			if( rangeType is not TypespecNested nested
-			 || nested.resolvedDecl is not Structural structural )
+			if( rangeType is not TypespecNested nested )
 				return null;
 
 			IdTplArgs? lastSegment = nested.idTpls.LastOrDefault();
+
+			// Synthesized initializer_list<T> literals do not have resolvedDecl set,
+			// but the element type is available as the first template argument.
+			if( nested.isInitList && lastSegment != null && lastSegment.tplArgs.Count > 0 )
+				return lastSegment.tplArgs[0].typespec;
+
+			if( nested.resolvedDecl is not Structural structural )
+				return null;
+
 			if( lastSegment != null && lastSegment.tplArgs.Count > 0 )
 				return lastSegment.tplArgs[0].typespec;
 

@@ -136,3 +136,33 @@ variable gets a concrete type before `ResolveCalls` processes the body. The
 post-resolution invocation is kept as a no-op safety net.
 
 Regression test added: `testing/cases/range_for_auto/`.
+
+## Additional complex scenarios checked after the fix
+
+These reproducers live under `tmp/lone_repros/repro_complex_*.myll`.
+
+| Scenario | Result |
+|---|---|
+| `std::vector<int>` method calls through a `T*!` smart pointer (`c->put(...)`) | passes |
+| range-based `for( auto & i : v )` over `std::vector<int>` | passes |
+| constructor overloads with direct construction `T name(args)` | passes |
+| explicit class-template instantiation `Pair<int,string>(...)` | passes |
+| external function template with explicit args `std::sort<int>(...)` | passes |
+| smart-pointer derived-to-base conversion `unique_ptr<Derived>` -> `unique_ptr<Base>` | passes |
+| `auto` variable initialized from `v[0]` with member access | passes |
+| overloaded methods `assign(const T&)` and `assign(T&&)` called with an lvalue | **ambiguous** (reference-category ranking not implemented) |
+| unqualified base method call inside a derived method | **fails** (known limitation, see AGENTS.md) |
+| range-based `for( auto i : [1,2,3] )` over an initializer list | passes (fixed by handling unresolved `std::initializer_list<T>` in `RangeForAutoTypeTransformer`) |
+
+The one remaining real failure is unrelated to the lone-candidate shortcut:
+
+- **Reference-category ranking** (`lvalue` vs `rvalue`, `T&` vs `const T&`) is
+  needed for sensible overload preference when both `const T&` and `T&&`
+  overloads exist and an lvalue argument is passed.
+
+Another failure shown by the repros is the already-known limitation that
+unqualified base method calls from inside a derived method are not supported
+(`baseValue(v)` must be written as `Base<T>::baseValue(v)` or similar).
+
+Regression tests added: `testing/cases/range_for_auto/` and
+`testing/cases/range_for_initlist_auto/`.
