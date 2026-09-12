@@ -1,0 +1,36 @@
+module main;
+
+var int mutableResult = 0;
+var int constResult = 0;
+var int rvalueResult = 0;
+
+// Prefer mutable lvalue-ref for mutable lvalues.
+func put( int & x ) { mutableResult = 1; }
+func put( const int & x ) { constResult = 1; }
+
+// Reject rvalue-ref overloads for lvalues; prefer const lvalue-ref there.
+func assign( const int & value ) { constResult += 10; }
+func assign( int && value ) { rvalueResult += 10; }
+
+func main() -> int
+{
+	var int x = 5;
+	put( x );
+	if( mutableResult != 1 || constResult != 0 )
+		return 1;
+
+	const int c = 5;
+	put( c );
+	if( constResult != 1 )
+		return 2;
+
+	assign( x );
+	if( constResult != 11 || rvalueResult != 0 )
+		return 3;
+
+	assign( 5 );
+	if( rvalueResult != 10 )
+		return 4;
+
+	return 0;
+}

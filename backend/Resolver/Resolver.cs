@@ -920,7 +920,11 @@ namespace Myll.Resolver
 					? TemplateInference.SubstituteTemplateParams( paras[i].type, func.TplParams, candidateArgs, result )
 					: paras[i].type;
 
-				ConversionRank rank = ConversionRules.GetRank( argTypes[i]!, paramType, result );
+				ConversionRank rank = ConversionRules.GetRank(
+					argTypes[i]!,
+					paramType,
+					result,
+					ConversionRules.IsLValue( call.args[i].expr ) );
 				rankDetails += String.Format( " [{0}] {1}->{2}={3}",
 					i, FormatTypeForDebug( argTypes[i] ), FormatTypeForDebug( paramType ), rank );
 				if( rank == ConversionRank.None ) {

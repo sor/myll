@@ -51,7 +51,21 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
     5. **Edge cases**: member-access overloads, constructor overloads, forwarding/reference collapsing,
         overload sets with mixed value/pointer/smart-pointer parameters.
 
-6. **Pointer/smart-pointer equality with `null`** — `p != null`, `null == p`, and the reverse
+6. **Reference-category ranking** — non-template overloads now distinguish `T&` / `const T&` /
+   `T&&` binding according to the argument's lvalue/rvalue category. This removes ambiguity
+   for `f(int&)` vs `f(const int&)` and `f(const int&)` vs `f(int&&)`. Implementation:
+   - `ConversionRules.GetRank` accepts an optional `sourceIsLValue` flag and applies reference
+     binding rules before falling back to inheritance conversion.
+   - `Resolver.TryResolveOverload` classifies each argument expression with a lightweight
+     `IsLValue` heuristic.
+   Files: `backend/Resolver/ConversionRules.cs`, `backend/Resolver/Resolver.cs`.
+   Test: `testing/cases/ref_category/`.
+   Remaining: class-template methods whose reference parameters wrap the class's own template
+   parameter (`Box<T>::assign(const T&)` vs `Box<T>::assign(T&&)`) still collapse to the same
+   `TemplateParameter` rank because the owning class template parameters are not substituted
+   before ranking. This needs the owning template params to be passed into template inference.
+
+7. **Pointer/smart-pointer equality with `null`** — `p != null`, `null == p`, and the reverse
    now compile. This required a small special case in `ValidateComparisonOperator` because
    `null` is represented as `ExplicitAuto` and was not accepted by the scalar-comparison checks.
    Also fixes the diagnostic formatter to include pointer decorations so `int*` is shown as `int*`

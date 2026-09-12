@@ -28,12 +28,13 @@ namespace Myll.Resolver
 		///   - untyped integer literals to any fitting integer or float type,
 		///   - untyped float literals to any float type,
 		/// No narrowing, and no implicit typed integer/float or signed/unsigned conversions.
-		/// Some of these defaults (e.g., int/float cross-conversion) may later become dialect flags.
+		/// Some of these defaults (e.g. int/float cross-conversion) may later become dialect flags.
 		/// </summary>
 		public static ConversionRank GetRank(
 			Typespec?         source,
 			Typespec?         target,
-			ResolutionResult? result = null )
+			ResolutionResult? result = null,
+			bool              sourceIsLValue = false )
 		{
 			if( source == null || target == null )
 				return ConversionRank.None;
@@ -78,9 +79,26 @@ namespace Myll.Resolver
 
 			// Value -> reference parameter binding (e.g. passing std::ostream to std::ostream&
 			// or a string literal to const char*&).
-			if( TryStripReference( target, out Typespec? refBase )
-			 && GetRank( source, refBase, result ) <= ConversionRank.Conversion )
-				return ConversionRank.Conversion;
+			if( TryStripReference( target, out Typespec? refBase ) ) {
+				Pointer.Kind refKind = target.ptrs![target.ptrs.Count - 1].kind;
+
+				// lvalues cannot bind to rvalue references (without an explicit move/forward).
+				if( refKind == Pointer.Kind.RVRef && sourceIsLValue )
+					return ConversionRank.None;
+
+				ConversionRank innerRank = GetRank( source, refBase, result, sourceIsLValue );
+				if( innerRank <= ConversionRank.Conversion ) {
+					// Direct reference binding (lvalue -> lvalue-ref, rvalue -> rvalue-ref)
+					// does not add cost beyond the inner conversion. Indirect binding (e.g.
+					// rvalue -> const T&) always counts as Conversion.
+					bool directBinding = ( sourceIsLValue && refKind == Pointer.Kind.LVRef )
+					                  || ( !sourceIsLValue && refKind == Pointer.Kind.RVRef );
+					return directBinding ? innerRank : ConversionRank.Conversion;
+				}
+
+				// Fall through: reference binding may still be possible via an inheritance
+				// conversion handled later in this method.
+			}
 
 			// Reference -> value binding (e.g. assigning const path& to path, or int& to int).
 			if( TryStripReference( source, out Typespec? sourceBase )
@@ -112,6 +130,40 @@ namespace Myll.Resolver
 		{
 			ConversionRank rank = GetRank( source, target, result );
 			return rank <= ConversionRank.Conversion || rank == ConversionRank.TemplateParameter;
+		}
+
+		/// <summary>
+		/// Lightweight, heuristic lvalue classification for overload ranking. This is an
+		/// approximation: it treats typical addressable expressions (variables, dereferences,
+		/// indexing, member access, string literals, `self`, and functions/methods that return
+		/// a reference) as lvalues, and everything else as an rvalue. It will be replaced by
+		/// a proper value-category field on <see cref="Expr"/> if/when full value-category
+		/// tracking is implemented.
+		/// </summary>
+		public static bool IsLValue( Expr? expr )
+		{
+			while( expr is UnOp parens && parens.op == Operand.Parens )
+				expr = parens.expr;
+
+			return expr switch {
+				IdExpr id       => id.idTplArgs.id is not ("null" or "true" or "false" or "this"),
+				SelfExpr        => true,
+				Literal lit     => lit.text.Length > 0 && lit.text[0] == '"',
+				FuncCallExpr fc => fc.Type?.ptrs is { Count: > 0 }
+			                    && fc.Type.ptrs[fc.Type.ptrs.Count - 1].kind == Pointer.Kind.LVRef,
+				UnOp u          => u.op == Operand.Dereference
+			                    || u.op == Operand.PreIncr
+			                    || u.op == Operand.PreDecr,
+				BinOp b         => b.op is Operand.MemberAccess
+			                    or Operand.NCMemberAccess
+			                    or Operand.MemberPtrAccess
+			                    or Operand.MemberAccessPtr
+			                    or Operand.NCMemberAccessPtr
+			                    or Operand.MemberPtrAccessPtr
+			                    or Operand.IndexCall
+			                    or Operand.NCIndexCall,
+				_               => false,
+			};
 		}
 
 		/// <summary>
