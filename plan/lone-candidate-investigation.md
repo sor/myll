@@ -150,6 +150,7 @@ These reproducers live under `tmp/lone_repros/repro_complex_*.myll`.
 | external function template with explicit args `std::sort<int>(...)` | passes |
 | smart-pointer derived-to-base conversion `unique_ptr<Derived>` -> `unique_ptr<Base>` | passes |
 | `auto` variable initialized from `v[0]` with member access | passes |
+| pointer/smart-pointer equality with `null` (`p != null`, `null == p`) | passes (fixed by allowing `ExplicitAuto`/`null` in `ValidateComparisonOperator`) |
 | overloaded methods `assign(const T&)` and `assign(T&&)` called with an lvalue | **ambiguous** (reference-category ranking not implemented) |
 | unqualified base method call inside a derived method | **fails** (known limitation, see AGENTS.md) |
 | range-based `for( auto i : [1,2,3] )` over an initializer list | passes (fixed by handling unresolved `std::initializer_list<T>` in `RangeForAutoTypeTransformer`) |

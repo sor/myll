@@ -48,8 +48,15 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
       candidates — regression locked in `testing/cases/overload_template/` and
       `testing/cases/overload_template_ranking/`.
       Remaining: pointer wrappers, initializer lists, non-type template parameters, explicit template arguments.
-   5. **Edge cases**: member-access overloads, constructor overloads, forwarding/reference collapsing,
-       overload sets with mixed value/pointer/smart-pointer parameters.
+    5. **Edge cases**: member-access overloads, constructor overloads, forwarding/reference collapsing,
+        overload sets with mixed value/pointer/smart-pointer parameters.
+
+6. **Pointer/smart-pointer equality with `null`** — `p != null`, `null == p`, and the reverse
+   now compile. This required a small special case in `ValidateComparisonOperator` because
+   `null` is represented as `ExplicitAuto` and was not accepted by the scalar-comparison checks.
+   Also fixes the diagnostic formatter to include pointer decorations so `int*` is shown as `int*`
+   instead of `int`. Files: `backend/Resolver/TypeChecker.cs`. Test:
+   `testing/cases/null_pointer_compare/`.
 
 ## Blocked / needs dependency
 

@@ -1,0 +1,35 @@
+module main;
+
+import std_memory;
+
+func main() -> int
+{
+	var int * raw = null;
+	if( raw == null ) {}
+	else return 1;
+
+	if( raw != null )
+		return 2;
+
+	raw = new int;
+	*raw = 7;
+	if( raw != null ) {}
+	else return 3;
+
+	if( *raw != 7 )
+		return 4;
+
+	var int *! uniq = null;
+	if( uniq != null )
+		return 5;
+
+	uniq = new int*!;
+	*uniq = 8;
+	if( uniq == null )
+		return 6;
+
+	if( *uniq != 8 )
+		return 7;
+
+	return 0;
+}

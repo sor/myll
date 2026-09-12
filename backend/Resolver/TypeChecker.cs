@@ -925,6 +925,9 @@ namespace Myll.Resolver
 				AddError( binOp.right, String.Format( "Right operand of '{0}' must be an integer type, found '{1}'", OperatorName( binOp.op ), FormatType( rightType ) ) );
 		}
 
+		private static bool IsNullLiteralType( Typespec? type )
+			=> type is TypespecBasic { kind: TypespecBasic.Kind.ExplicitAuto };
+
 		private void ValidateComparisonOperator( BinOp binOp )
 		{
 			Typespec? leftType  = typeResolver.Resolve( binOp.left );
@@ -935,6 +938,18 @@ namespace Myll.Resolver
 
 			if( leftType is not TypespecBasic || rightType is not TypespecBasic )
 				return;
+
+			// Allow `null` to be compared with raw/smart pointers. The conversion rules
+			// already treat `null` (ExplicitAuto) as convertible to any nullable pointer.
+			if( binOp.op is Operand.Equal or Operand.NotEqual ) {
+				if( IsNullLiteralType( leftType )
+				 && ConversionRules.IsImplicitlyConvertible( leftType, rightType ) )
+					return;
+
+				if( IsNullLiteralType( rightType )
+				 && ConversionRules.IsImplicitlyConvertible( rightType, leftType ) )
+					return;
+			}
 
 			// Bit-family types only support equality; no ordering.
 			if( OperatorRules.IsScalarBitFamily( leftType ) || OperatorRules.IsScalarBitFamily( rightType ) ) {
@@ -1368,7 +1383,7 @@ namespace Myll.Resolver
 				                       => "untyped float",
 				TypespecBasic basic when basic.kind == TypespecBasic.Kind.String
 				                       => "string literal",
-				_                      => type.GenType(),
+				_                      => type.Gen().Trim(),
 			};
 		}
 	}
