@@ -897,6 +897,7 @@ namespace Myll.Resolver
 
 		List<(Decl Candidate, ConversionRank WorstRank)> viable = new();
 		ConversionRank bestWorst = ConversionRank.None;
+		bool ownerTemplateArgsUnresolved = false;
 
 		foreach( Decl candidate in templateViable ) {
 			ConversionRank worst = ConversionRank.Exact;
@@ -914,10 +915,25 @@ namespace Myll.Resolver
 					? deduced
 					: null;
 
+			(List<TplParam> ownerParams, List<TplArg>? ownerArgs) = GetOwnerTemplateInfo( candidate, callee );
+			if( ownerArgs == null && ownerParams.Count > 0 ) {
+				ownerTemplateArgsUnresolved = true;
+				LogOverloadResolution( "    candidate {0}: owner template args unresolved, deferring",
+					candidate.name );
+				continue;
+			}
+
+			List<TplParam> combinedParams = TemplateInference.GetAllTemplateParams( candidate );
+			List<TplArg> combinedArgs = new();
+			if( ownerArgs != null )
+				combinedArgs.AddRange( ownerArgs );
+			if( candidateArgs != null )
+				combinedArgs.AddRange( candidateArgs );
+
 			string rankDetails = "";
 			for( int i = 0; i < paras.Count; i++ ) {
-				Typespec paramType = candidate is Func func && candidateArgs != null
-					? TemplateInference.SubstituteTemplateParams( paras[i].type, func.TplParams, candidateArgs, result )
+				Typespec paramType = combinedParams.Count > 0 && combinedArgs.Count > 0
+					? TemplateInference.SubstituteTemplateParams( paras[i].type, combinedParams, combinedArgs, result )
 					: paras[i].type;
 
 				ConversionRank rank = ConversionRules.GetRank(
@@ -993,6 +1009,11 @@ namespace Myll.Resolver
 		if( rejectedPairs.Count > 0
 		 && rejectedPairs.Any( p => TypeMightResolveLater( p.source ) || TypeMightResolveLater( p.target ) ) ) {
 			LogOverloadResolution( "  no viable candidate yet; deferring because types are still unresolved" );
+			return (null, false, false);
+		}
+
+		if( viable.Count == 0 && ownerTemplateArgsUnresolved ) {
+			LogOverloadResolution( "  no viable candidate yet; deferring because owner template args are unresolved" );
 			return (null, false, false);
 		}
 
@@ -1630,6 +1651,182 @@ namespace Myll.Resolver
 			}
 
 			return false;
+		}
+
+		// ------------------------------------------------------------------------
+		// Owner template-parameter handling for class-template method ranking.
+		// ------------------------------------------------------------------------
+
+		/// <summary>
+		/// Returns the chain of enclosing class/struct/union declarations, from outermost
+		/// to innermost, for a method or constructor candidate.
+		/// </summary>
+		private static List<Structural> GetOwnerStructuralChain( Decl decl )
+		{
+			List<Structural> result = new();
+			// Start at the parent scope so we do not include the candidate itself.
+			for( ScopeLeaf? cur = decl.scope?.parent; cur != null; cur = cur.parent ) {
+				if( cur.decl is Structural s )
+					result.Add( s );
+			}
+			result.Reverse();
+			return result;
+		}
+
+		private (List<TplParam> ownerParams, List<TplArg>? ownerArgs) GetOwnerTemplateInfo(
+			Decl   candidate,
+			Expr   callee )
+		{
+			List<Structural> ownerChain = GetOwnerStructuralChain( candidate );
+			if( ownerChain.Count == 0 )
+				return (new List<TplParam>(), new List<TplArg>());
+
+			List<TplParam> ownerParams = ownerChain.SelectMany( s => s.TplParams ).ToList();
+			List<TplArg>? ownerArgs = TryExtractOwnerTemplateArgs( callee, ownerChain );
+
+			// If the receiver is itself dependent (e.g. `ParamOuter<T>::Inner` inside a
+			// free function template), the owner args are not yet concrete. Substituting
+			// them would map T to T and recurse forever. Fall back to the previous
+			// behaviour: do not substitute owner params at all.
+			if( ownerArgs != null && !AreConcreteTemplateArgs( ownerArgs, ownerParams ) )
+				return (new List<TplParam>(), new List<TplArg>());
+
+			return (ownerParams, ownerArgs);
+		}
+
+		private static bool AreConcreteTemplateArgs( List<TplArg> args, List<TplParam> ownerParams )
+		{
+			HashSet<string> ownerNames = new( ownerParams.Select( p => p.name ) );
+			return args.All( a => a.typespec != null && !ContainsTemplateParameterName( a.typespec, ownerNames ) );
+		}
+
+		private static bool ContainsTemplateParameterName( Typespec type, HashSet<string> names )
+		{
+			while( true ) {
+				if( type is TypespecNested { resolvedDecl: TplParamDecl tpl }
+				 && names.Contains( tpl.name ) )
+					return true;
+
+				if( type is not TypespecNested nested || nested.idTpls == null )
+					return false;
+
+				foreach( IdTplArgs segment in nested.idTpls ) {
+					foreach( TplArg arg in segment.tplArgs ) {
+						if( arg.typespec != null && ContainsTemplateParameterName( arg.typespec, names ) )
+							return true;
+					}
+				}
+
+				return false;
+			}
+		}
+
+		private List<TplArg>? TryExtractOwnerTemplateArgs( Expr callee, List<Structural> ownerChain )
+		{
+			return callee switch {
+				BinOp binOp when IsMemberAccessOperator( binOp.op )
+					=> TryExtractOwnerArgsFromReceiver( binOp.left, ownerChain ),
+				ScopedExpr scoped
+					=> TryExtractOwnerArgsFromScopedPrefix( scoped, ownerChain ),
+				_ => null,
+			};
+		}
+
+		private static bool IsMemberAccessOperator( Operand op )
+			=> op is Operand.MemberAccess
+			    or Operand.NCMemberAccess
+			    or Operand.MemberPtrAccess
+			    or Operand.MemberAccessPtr
+			    or Operand.NCMemberAccessPtr
+			    or Operand.MemberPtrAccessPtr;
+
+		private List<TplArg>? TryExtractOwnerArgsFromReceiver(
+			Expr             receiverExpr,
+			List<Structural> ownerChain )
+		{
+			Typespec? receiverType = typeResolver.Resolve( receiverExpr );
+			if( receiverType == null )
+				return null;
+
+			Typespec baseType = StripReferenceAndPointerWrappers( receiverType );
+			if( baseType is TypespecNested nested )
+				return TryExtractOwnerArgsFromTypePath( nested, ownerChain );
+
+			return null;
+		}
+
+		private List<TplArg>? TryExtractOwnerArgsFromScopedPrefix(
+			ScopedExpr       scoped,
+			List<Structural> ownerChain )
+		{
+			TypespecNested prefix = new() {
+				idTpls = scoped.idTpls
+					.Select( s => new IdTplArgs {
+						id      = s.id,
+						tplArgs = s.tplArgs
+							.Select( a => new TplArg { typespec = a.typespec } )
+							.ToList(),
+					} )
+					.ToList(),
+			};
+
+			return TryExtractOwnerArgsFromTypePath( prefix, ownerChain );
+		}
+
+		private List<TplArg>? TryExtractOwnerArgsFromTypePath(
+			TypespecNested   typePath,
+			List<Structural> ownerChain )
+		{
+			List<TplArg> ownerArgs = new();
+			int segIdx = 0;
+
+			foreach( Structural owner in ownerChain ) {
+				while( segIdx < typePath.idTpls.Count
+				    && !TypeSegmentMatchesStructural( typePath.idTpls[segIdx], owner ) )
+					segIdx++;
+
+				if( segIdx >= typePath.idTpls.Count )
+					return null;
+
+				IdTplArgs segment = typePath.idTpls[segIdx];
+				if( segment.tplArgs.Count != owner.TplParams.Count )
+					return null;
+
+				foreach( TplArg arg in segment.tplArgs ) {
+					if( arg.typespec is TypespecNested unresolved && unresolved.resolvedDecl == null
+					 && this.result.TryGetResolved( unresolved, out Decl? decl ) )
+						unresolved.resolvedDecl = decl;
+
+					ownerArgs.Add( arg );
+				}
+
+				segIdx++;
+			}
+
+			return ownerArgs;
+		}
+
+		private static bool TypeSegmentMatchesStructural( IdTplArgs segment, Structural structural )
+			=> segment.id == structural.name;
+
+		private static Typespec StripReferenceAndPointerWrappers( Typespec type )
+		{
+			Typespec current = ConversionRules.CloneTypespecBase( type );
+
+			while( current.ptrs is { Count: > 0 } ) {
+				Pointer last = current.ptrs[current.ptrs.Count - 1];
+				if( last.kind == Pointer.Kind.RawPtr
+				 || last.kind == Pointer.Kind.LVRef
+				 || last.kind == Pointer.Kind.RVRef
+				 || last.kind.Between( Pointer.Kind.SmartPtr_Begin, Pointer.Kind.SmartPtr_End ) ) {
+					current.ptrs.RemoveAt( current.ptrs.Count - 1 );
+				}
+				else {
+					break;
+				}
+			}
+
+			return current;
 		}
 
 		private static Typespec? BuildClassValueType(

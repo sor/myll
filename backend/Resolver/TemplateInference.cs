@@ -42,7 +42,9 @@ namespace Myll.Resolver
 			};
 
 			List<TplParam> enclosing = new();
-			for( ScopeLeaf? cur = decl.scope; cur != null; cur = cur.parent ) {
+			// Start at the parent scope so the declaration's own parameters are not
+			// collected twice as "enclosing" template parameters.
+			for( ScopeLeaf? cur = decl.scope?.parent; cur != null; cur = cur.parent ) {
 				if( cur.decl is ITplParams tp && tp.TplParams.Count > 0 )
 					enclosing.AddRange( tp.TplParams );
 			}
