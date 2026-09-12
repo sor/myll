@@ -1,17 +1,24 @@
 module echo;
 
-import std_iostream;
+import std_iostream, std_string, std_vector, cxxopts;
 
 func main( const int argc, const char *[] argv ) -> int
 {
-	const bool no_newline = argc > 1 && (string)argv[1] == "-n";
-	var int i = no_newline ? 2 : 1;
+	var cxxopts::Options options = cxxopts::Options( "echo", "print arguments" );
+	options.add_options()
+		( "n,newline", "Do not print trailing newline",
+		  cxxopts::value<bool>()->default_value( "false" ) );
+
+	var cxxopts::ParseResult result = options.parse( argc, argv );
+	const bool no_newline = result["newline"].as<bool>();
+	const std::vector<string> args = result.unmatched();
 
 	var bool first = true;
-	while( i < argc ) {
+	var usize i = 0;
+	while( i < args.size() ) {
 		if( !first )
 			std::cout << " ";
-		std::cout << argv[i];
+		std::cout << args[i];
 		first = false;
 		++i;
 	}

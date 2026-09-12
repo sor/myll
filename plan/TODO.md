@@ -54,12 +54,16 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 ## Blocked / needs dependency
 
 1. **Remove lone-candidate overload shortcut** (`backend/Resolver/Resolver.cs`) — the class-hierarchy
-   resolution dependency is now fixed (`result.Apply()` before `ResolveCalls`, plus `ConversionRules`
-   `ResolutionResult` fallback). Removing the shortcut was attempted again but still fails for the
-   Unix app suite because sibling modules expose same-named helper functions (e.g., `copyStream` in
-   `cat` and `cat_cxxopts`), causing unexpected multi-candidate overload sets. It also makes the
-   reference-overload test `overload_inheritance_ref` ambiguous for `Derived` value arguments until
-   reference-category ranking (`T&` vs `const T&` vs `T&&`) is implemented (tier 2/3).
+   resolution dependency is fixed. The Unix-app duplication that created same-name helper overload
+   sets (`copyStream`, `wcStream`, etc.) has been resolved by dropping the non-cxxopts variants.
+   Removing the shortcut was attempted again and now fails on legitimate single-candidate calls:
+   local helper calls in the Unix apps (`headStream`, `wcStream`, ...), class-template method calls
+   such as `DynArray::pushBack`, and calls to builtin/forward declarations such as
+   `std::this_thread::sleep_for`. This means the resolver still relies on the shortcut whenever a
+   single candidate's argument types are not fully checkable by Myll (forward/external functions,
+   dependent class-template methods, or arguments whose Myll type does not yet encode the exact
+   C++ conversion). Removing the shortcut requires either better type modelling for those cases or
+   a deliberate "trust this C++ conversion" path, not just overload ranking improvements.
 
 ## Recently completed
 
@@ -72,12 +76,19 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    adjusted `testing/cases/overload_inheritance_ref/`.
 
 2. **CV-qualified overload ranking** — exact matching now includes type and pointer-block
-   qualifiers; qualifier conversions are allowed for value types (top-level qualifiers can
-   be added/removed) and for adding pointee qualifiers on pointers/references
-   (e.g., `int* -> const int*`). Reference-to-value binding now also permits qualifier
-   changes (e.g., `const std::filesystem::path& -> std::filesystem::path`).
-   Files: `backend/Resolver/ConversionRules.cs`.
-   Tests: `testing/cases/overload_const_ptr/`, `testing/cases/overload_const_ref/`.
+    qualifiers; qualifier conversions are allowed for value types (top-level qualifiers can
+    be added/removed) and for adding pointee qualifiers on pointers/references
+    (e.g., `int* -> const int*`). Reference-to-value binding now also permits qualifier
+    changes (e.g., `const std::filesystem::path& -> std::filesystem::path`).
+    Files: `backend/Resolver/ConversionRules.cs`.
+    Tests: `testing/cases/overload_const_ptr/`, `testing/cases/overload_const_ref/`.
+
+3. **Unix app cleanup** — removed the hand-parsed non-cxxopts variants of `basename`, `cat`,
+    `dirname`, `echo`, `grep`, `head`, `ls`, `wc`, and `yes`; renamed the cxxopts variants to the
+    canonical module/file names (`cat.myll`, module `cat`, binary `cat`, etc.). The remaining
+    utilities are the cxxopts versions plus the trivial builtins `true`/`false`/`pwd` and `find`
+    (which already uses cxxopts). This eliminates the duplicate helper names that were being
+    compiled into one Myll invocation.
 
 2. **Function-scope `using` resolution** — `using Namespace;` inside a function body now resolves names from that namespace for the rest of the block. Implemented by registering `UsingStmt`s as `UnresolvedUsingStmt`, resolving them alongside `UnresolvedUsing`, and generating the appropriate `using namespace` / `using Name;` C++ form. Added regression test `testing/cases/using_function_scope/` and moved the workaround in `frontend/apps/unix/find.myll` into `main()`.
 

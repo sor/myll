@@ -1,6 +1,6 @@
 module cat;
 
-import std_iostream, std_fstream;
+import std_iostream, std_fstream, std_vector, cxxopts;
 
 func copyStream( std::istream & in ) -> void
 {
@@ -9,20 +9,25 @@ func copyStream( std::istream & in ) -> void
 
 func main( const int argc, const char *[] argv ) -> int
 {
-	var int i = 1;
-	if( argc <= 1 ) {
+	var cxxopts::Options options = cxxopts::Options( "cat", "concatenate files" );
+	var cxxopts::ParseResult result = options.parse( argc, argv );
+	const std::vector<string> files = result.unmatched();
+
+	var usize i = 0;
+	if( files.size() == 0 ) {
 		copyStream( std::cin );
 		return 0;
 	}
 
-	while( i < argc ) {
-		if( (string)argv[i] == "-" ) {
+	while( i < files.size() ) {
+		const string path = files[i];
+		if( path == "-" ) {
 			copyStream( std::cin );
 		}
 		else {
-			var std::ifstream file = std::ifstream( argv[i] );
+			var std::ifstream file = std::ifstream( path );
 			if( !file ) {
-				std::cerr << "cat: " << argv[i] << ": cannot open file\n";
+				std::cerr << "cat: " << path << ": cannot open file\n";
 				return 1;
 			}
 			copyStream( file );

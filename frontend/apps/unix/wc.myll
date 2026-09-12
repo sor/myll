@@ -1,6 +1,6 @@
 module wc;
 
-import std_iostream, std_fstream, std_string;
+import std_iostream, std_fstream, std_string, std_vector, cxxopts;
 
 func wcStream( std::istream & in ) -> void
 {
@@ -10,12 +10,14 @@ func wcStream( std::istream & in ) -> void
 	var u64 words = 0;
 	var bool in_word = false;
 
-	while( std::getline(in, line) ) {
+	while( std::getline( in, line ) )
+	{
 		++lines;
 		bytes += line.length() + 1;
 
 		var usize pos = 0;
-		while( pos < line.length() ) {
+		while( pos < line.length() )
+		{
 			const char c = line[pos];
 			const bool isSpace = c == ' ' || c == '\t' || c == '\r' || c == '\f' || c == '\v';
 			if( !isSpace && !in_word )
@@ -30,19 +32,30 @@ func wcStream( std::istream & in ) -> void
 
 func main( const int argc, const char *[] argv ) -> int
 {
-	if( argc <= 1 ) {
+	var cxxopts::Options options = cxxopts::Options( "wc", "count lines, words, and bytes" );
+	var cxxopts::ParseResult result = options.parse( argc, argv );
+	const std::vector<string> files = result.unmatched();
+
+	if( files.size() == 0 ) {
 		wcStream( std::cin );
 		return 0;
 	}
 
-	var int i = 1;
-	while( i < argc ) {
-		var std::ifstream file = std::ifstream( argv[i] );
-		if( !file ) {
-			std::cerr << "wc: " << argv[i] << ": cannot open file\n";
-			return 1;
+	var usize i = 0;
+	while( i < files.size() )
+	{
+		const string path = files[i];
+		if( path == "-" ) {
+			wcStream( std::cin );
 		}
-		wcStream( file );
+		else {
+			var std::ifstream file = std::ifstream( path );
+			if( !file ) {
+				std::cerr << "wc: " << path << ": cannot open file\n";
+				return 1;
+			}
+			wcStream( file );
+		}
 		++i;
 	}
 

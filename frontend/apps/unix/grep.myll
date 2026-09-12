@@ -1,6 +1,6 @@
 module grep;
 
-import std_iostream, std_fstream, std_string, c_ctype;
+import std_iostream, std_fstream, std_string, std_vector, c_ctype, cxxopts;
 
 struct Options
 {
@@ -13,7 +13,7 @@ struct Options
 	field bool no_filename;
 	field bool with_filename;
 	field string pattern;
-}
+};
 
 func usage() -> int
 {
@@ -116,83 +116,61 @@ func grepStream( const string & file_name, std::istream & in, const Options & op
 	return 0;
 }
 
-func parseOptions( const int argc, const char *[] argv, Options & opts, int & argi ) -> int
-{
-	argi = 1;
-
-	while( argi < argc ) {
-		const string arg = (string)argv[argi];
-
-		if( arg == "--" ) {
-			++argi;
-			break;
-		}
-
-		if( arg == "-i" )
-			opts.ignore_case = true;
-		else if( arg == "-v" )
-			opts.invert = true;
-		else if( arg == "-n" )
-			opts.line_number = true;
-		else if( arg == "-c" )
-			opts.count = true;
-		else if( arg == "-l" )
-			opts.list_files = true;
-		else if( arg == "-x" )
-			opts.whole_line = true;
-		else if( arg == "-H" )
-			opts.with_filename = true;
-		else if( arg == "-h" )
-			opts.no_filename = true;
-		else if( arg == "-e" ) {
-			++argi;
-			if( argi >= argc )
-				return usage();
-			opts.pattern = (string)argv[argi];
-		}
-		else if( arg.length() >= 2 && arg[0] == '-' ) {
-			std::cerr << "grep: unknown option " << arg << "\n";
-			return usage();
-		}
-		else if( opts.pattern == "" ) {
-			opts.pattern = arg;
-		}
-		else {
-			break;
-		}
-
-		++argi;
-	}
-
-	if( opts.pattern == "" )
-		return usage();
-
-	return 0;
-}
-
 func main( const int argc, const char *[] argv ) -> int
 {
-	var Options opts = Options();
-	var int argi = 1;
+	var cxxopts::Options cxx = cxxopts::Options( "grep", "search for pattern in files" );
+	cxx.add_options()
+		( "i,ignore-case", "Ignore case", cxxopts::value<bool>()->default_value( "false" ) )
+		( "v,invert-match", "Invert match", cxxopts::value<bool>()->default_value( "false" ) )
+		( "n,line-number", "Show line numbers", cxxopts::value<bool>()->default_value( "false" ) )
+		( "c,count", "Count matches", cxxopts::value<bool>()->default_value( "false" ) )
+		( "l,files-with-matches", "List files with matches",
+		  cxxopts::value<bool>()->default_value( "false" ) )
+		( "x,line-regexp", "Match whole lines", cxxopts::value<bool>()->default_value( "false" ) )
+		( "H,with-filename", "Print filename", cxxopts::value<bool>()->default_value( "false" ) )
+		( "h,no-filename", "Suppress filename", cxxopts::value<bool>()->default_value( "false" ) )
+		( "e,regexp", "Pattern", cxxopts::value<string>() );
 
-	if( parseOptions( argc, argv, opts, argi ) != 0 )
-		return 1;
+	var cxxopts::ParseResult result = cxx.parse( argc, argv );
+
+	var Options opts = Options();
+	opts.ignore_case = result["ignore-case"].as<bool>();
+	opts.invert = result["invert-match"].as<bool>();
+	opts.line_number = result["line-number"].as<bool>();
+	opts.count = result["count"].as<bool>();
+	opts.list_files = result["files-with-matches"].as<bool>();
+	opts.whole_line = result["line-regexp"].as<bool>();
+	opts.with_filename = result["with-filename"].as<bool>();
+	opts.no_filename = result["no-filename"].as<bool>();
+
+	if( result.count( "regexp" ) != 0 ) {
+		opts.pattern = result["regexp"].as<string>();
+	}
+
+	const std::vector<string> positional = result.unmatched();
+	var usize pos = 0;
+
+	if( opts.pattern == "" ) {
+		if( positional.size() == 0 )
+			return usage();
+		opts.pattern = positional[pos];
+		++pos;
+	}
 
 	var bool print_name = false;
 	if( !opts.no_filename ) {
 		if( opts.with_filename )
 			print_name = true;
-		else if( argc - argi > 1 )
+		else if( positional.size() - pos > 1 )
 			print_name = true;
 	}
 
-	if( argi >= argc ) {
+	if( pos >= positional.size() ) {
 		return grepStream( "-", std::cin, opts, print_name );
 	}
 
-	while( argi < argc ) {
-		const string path = (string)argv[argi];
-
+	while( pos < positional.size() ) {
+		const string path = positional[pos];
 		if( path == "-" ) {
 			grepStream( "-", std::cin, opts, print_name );
 		}
@@ -204,8 +182,7 @@ func main( const int argc, const char *[] argv ) -> int
 			}
 			grepStream( path, file, opts, print_name );
 		}
-
-		++argi;
+		++pos;
 	}
 
 	return 0;
