@@ -27,6 +27,33 @@ namespace Myll.Resolver
 				_                      => 0,
 			};
 
+		/// <summary>
+		/// Returns all template parameters in scope for a declaration: the template parameters
+		/// of every enclosing class/struct/union/template-class, followed by the declaration's
+		/// own template parameters. This is what should be substituted when ranking the
+		/// parameters of a class-template method or constructor.
+		/// </summary>
+		public static List<TplParam> GetAllTemplateParams( Decl decl )
+		{
+			List<TplParam> own = decl switch {
+				Func       func       => func.TplParams,
+				Structural structural => structural.TplParams,
+				_                     => new List<TplParam>(),
+			};
+
+			List<TplParam> enclosing = new();
+			for( ScopeLeaf? cur = decl.scope; cur != null; cur = cur.parent ) {
+				if( cur.decl is ITplParams tp && tp.TplParams.Count > 0 )
+					enclosing.AddRange( tp.TplParams );
+			}
+			enclosing.Reverse();
+
+			List<TplParam> result = new( enclosing.Count + own.Count );
+			result.AddRange( enclosing );
+			result.AddRange( own );
+			return result;
+		}
+
 		public static bool HasTemplateArityMismatch(
 			Decl                   candidate,
 			IReadOnlyList<TplArg>? explicitArgs )
