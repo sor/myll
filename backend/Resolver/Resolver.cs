@@ -40,6 +40,16 @@ namespace Myll.Resolver
 		private static readonly bool DebugOverloadResolution =
 			Environment.GetEnvironmentVariable( "MYLL_DEBUG_OVERLOAD" ) == "1";
 
+		// LONE: emergency toggle for the lone-candidate overload shortcut.  It is kept
+		// in the source even though it is currently off so that a future larger testset
+		// can fall back to it quickly if new single-candidate conversion failures surface.
+		// Off by default because the known failure modes are documented and fixed in
+		// plan/lone-candidate-investigation.md.
+		//
+		// Set to true to restore the original behaviour where a single viable candidate
+		// is accepted without a Myll-side conversion check.
+		private const bool UseLoneCandidateShortcut = false;
+
 		private readonly IReadOnlyDictionary<string, ModuleExports> moduleExports;
 		private readonly IReadOnlyDictionary<GlobalNamespace, ModuleContext> moduleContexts;
 		private readonly ResolutionResult result;
@@ -93,26 +103,39 @@ namespace Myll.Resolver
 			var resolver = new NameResolver( exports, contexts, result, diagnostics );
 			resolver.ResolveDialectBackings( modules, exports );
 
-			bool progress;
-			do {
-				progress = false;
-				foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
-					progress |= resolver.ResolveUsings( module, context );
-					progress |= resolver.ResolveAliases( module, context );
-					progress |= resolver.ResolveIds( module, context );
-					progress |= resolver.ResolveScopeds( module, context );
+		bool progress;
+		do {
+			progress = false;
+			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
+				progress |= resolver.ResolveUsings( module, context );
+				progress |= resolver.ResolveAliases( module, context );
+				progress |= resolver.ResolveIds( module, context );
+				progress |= resolver.ResolveScopeds( module, context );
 				progress |= resolver.ResolveTypes( module, context );
 				progress |= resolver.ResolveMemberAccesses( module, context );
+			}
 
-				// Commit resolved declarations after type/member resolution and before
-				// overload resolution so that conversion checks (e.g., derived-to-base
-				// pointer/reference) see populated resolvedDecl fields. Any resolutions
-				// made later will be committed again in the final Apply() below.
-				result.Apply();
+			// Commit resolved declarations after type/member resolution and before
+			// overload resolution so that conversion checks (e.g., derived-to-base
+			// pointer/reference) see populated resolvedDecl fields. Any resolutions
+			// made later will be committed again in the final Apply() below.
+			result.Apply();
 
+			// Infer the concrete type of range-based for loop variables declared with
+			// 'auto' as soon as the range expression type is known. This must happen
+			// before overload resolution so that uses of the loop variable inside the
+			// body are checked against the real element type.
+			var rangeForTransformer = new RangeForAutoTypeTransformer();
+			foreach( CompiledModuleResult module in modules ) {
+				if( module.Context.IsPrototypeFile )
+					continue;
+				diagnostics.AddRange( rangeForTransformer.DoPostTransform(
+					new TransformContext( module, result ) ) );
+			}
+
+			foreach( (GlobalNamespace module, ModuleContext context) in modules )
 				progress |= resolver.ResolveCalls( module, context );
-				}
-			} while( progress );
+		} while( progress );
 
 			// Commit resolved declarations to the AST so that type checking can use
 			// resolvedDecl directly on identifiers, member accesses, and type specs.
@@ -720,6 +743,10 @@ namespace Myll.Resolver
 		if( callable.Count == 0 )
 			return (null, false, true);
 
+		// Collect argument/parameter pairs that rejected with None so we can decide
+		// whether the failure is definitive or just premature (types not resolved yet).
+		List<(Typespec source, Typespec target)> rejectedPairs = new();
+
 		string calleeName = callee switch {
 			IdExpr id                                => id.idTplArgs.id,
 			ScopedExpr scoped                        => scoped.idTpls.Count > 0 ? scoped.idTpls.Last().id : "?",
@@ -841,7 +868,11 @@ namespace Myll.Resolver
 		// candidates were filtered out (e.g. a template whose deduction failed because an
 		// argument type is not known yet), we must run the conversion check or wait for
 		// another resolver pass instead of blindly picking the remaining candidate.
-		if( templateViable.Count == 1
+		// LONE: lone-candidate shortcut.  Currently disabled (UseLoneCandidateShortcut
+		// is false).  If re-enabled, this short-circuit accepts any single viable
+		// candidate without a Myll conversion check.  See plan/lone-candidate-investigation.md.
+		if( UseLoneCandidateShortcut
+		 && templateViable.Count == 1
 		 && sameArity.Count == 1
 		 && explicitTemplateArgs?.Count == 0
 		 && !deducedArgsByCandidate.ContainsKey( templateViable[0] ) ) {
@@ -894,6 +925,7 @@ namespace Myll.Resolver
 					i, FormatTypeForDebug( argTypes[i] ), FormatTypeForDebug( paramType ), rank );
 				if( rank == ConversionRank.None ) {
 					ok = false;
+					rejectedPairs.Add( (argTypes[i]!, paramType) );
 					break;
 				}
 
@@ -954,9 +986,65 @@ namespace Myll.Resolver
 			return (null, true, false);
 		}
 
+		if( rejectedPairs.Count > 0
+		 && rejectedPairs.Any( p => TypeMightResolveLater( p.source ) || TypeMightResolveLater( p.target ) ) ) {
+			LogOverloadResolution( "  no viable candidate yet; deferring because types are still unresolved" );
+			return (null, false, false);
+		}
+
 		LogOverloadResolution( "  no viable candidate" );
 		return (null, false, true);
 	}
+
+		/// <summary>
+		/// Returns true when a type still contains unresolved nested names. In that case a
+		/// conversion that currently ranks as None might succeed once the fixed-point
+		/// resolver fills in resolvedDecl and canonicalizes the type path.
+		/// </summary>
+		private static bool TypeMightResolveLater( Typespec? type )
+		{
+			if( type == null )
+				return true;
+
+			switch( type ) {
+				case TypespecBasic:
+					return false;
+
+				case TypespecNested nested: {
+					if( nested.resolvedDecl == null )
+						return true;
+
+					if( nested.resolvedDecl is TplParamDecl )
+						return false;
+
+					foreach( IdTplArgs segment in nested.idTpls ) {
+						foreach( TplArg arg in segment.tplArgs ) {
+							if( TypeMightResolveLater( arg.typespec ) )
+								return true;
+						}
+					}
+
+					// A class/struct might have base classes that are not resolved yet.
+					// If a derived-to-base conversion is rejected now, it could succeed once
+					// the base type is resolved in a later fixed-point pass.
+					if( nested.resolvedDecl is Structural structural ) {
+						foreach( BaseType bt in structural.basetypes ) {
+							if( TypeMightResolveLater( bt.type ) )
+								return true;
+						}
+					}
+
+					return false;
+				}
+
+				case TypespecFunc func:
+					return TypeMightResolveLater( func.retType )
+					    || func.paras.Any( p => TypeMightResolveLater( p.type ) );
+
+				default:
+					return false;
+			}
+		}
 
 		private void ReportTemplateArityMismatch( Decl candidate, IReadOnlyList<TplArg> args, Expr callee )
 		{

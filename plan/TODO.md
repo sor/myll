@@ -53,17 +53,7 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 
 ## Blocked / needs dependency
 
-1. **Remove lone-candidate overload shortcut** (`backend/Resolver/Resolver.cs`) — the class-hierarchy
-   resolution dependency is fixed. The Unix-app duplication that created same-name helper overload
-   sets (`copyStream`, `wcStream`, etc.) has been resolved by dropping the non-cxxopts variants.
-   Removing the shortcut was attempted again and now fails on legitimate single-candidate calls:
-   local helper calls in the Unix apps (`headStream`, `wcStream`, ...), class-template method calls
-   such as `DynArray::pushBack`, and calls to builtin/forward declarations such as
-   `std::this_thread::sleep_for`. This means the resolver still relies on the shortcut whenever a
-   single candidate's argument types are not fully checkable by Myll (forward/external functions,
-   dependent class-template methods, or arguments whose Myll type does not yet encode the exact
-   C++ conversion). Removing the shortcut requires either better type modelling for those cases or
-   a deliberate "trust this C++ conversion" path, not just overload ranking improvements.
+(none at the moment)
 
 ## Recently completed
 
@@ -89,6 +79,15 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
     utilities are the cxxopts versions plus the trivial builtins `true`/`false`/`pwd` and `find`
     (which already uses cxxopts). This eliminates the duplicate helper names that were being
     compiled into one Myll invocation.
+
+4. **Lone-candidate overload shortcut removed** — the resolver no longer skips conversion checks
+    for single-candidate calls. The previous failures were caused by:
+    - premature "no match" diagnostics emitted before type identities converged, now deferred
+      with `TypeMightResolveLater`;
+    - `auto` loop variables whose type was inferred too late, fixed by running
+      `RangeForAutoTypeTransformer` inside the fixed-point resolver loop.
+    The flag `UseLoneCandidateShortcut` in `backend/Resolver/Resolver.cs` remains as an escape
+    hatch. See `plan/lone-candidate-investigation.md` for full analysis and reproducers.
 
 2. **Function-scope `using` resolution** — `using Namespace;` inside a function body now resolves names from that namespace for the rest of the block. Implemented by registering `UsingStmt`s as `UnresolvedUsingStmt`, resolving them alongside `UnresolvedUsing`, and generating the appropriate `using namespace` / `using Name;` C++ form. Added regression test `testing/cases/using_function_scope/` and moved the workaround in `frontend/apps/unix/find.myll` into `main()`.
 
