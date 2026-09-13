@@ -1753,8 +1753,13 @@ namespace Myll.Resolver
 				return null;
 
 			Typespec baseType = StripReferenceAndPointerWrappers( receiverType );
-			if( baseType is TypespecNested nested )
-				return TryExtractOwnerArgsFromTypePath( nested, ownerChain );
+			if( baseType is TypespecNested nested ) {
+				List<TplArg>? direct = TryExtractOwnerArgsFromTypePath( nested, ownerChain );
+				if( direct != null )
+					return direct;
+
+				return TryExtractOwnerArgsFromBases( nested, ownerChain );
+			}
 
 			return null;
 		}
@@ -1812,6 +1817,52 @@ namespace Myll.Resolver
 
 		private static bool TypeSegmentMatchesStructural( IdTplArgs segment, Structural structural )
 			=> segment.id == structural.name;
+
+		private List<TplArg>? TryExtractOwnerArgsFromBases(
+			TypespecNested   receiverType,
+			List<Structural> ownerChain )
+		{
+			Decl? derivedDecl = receiverType.resolvedDecl;
+			if( derivedDecl == null && this.result.TryGetResolved( receiverType, out Decl? d ) )
+				derivedDecl = d;
+			if( derivedDecl is not Structural derived )
+				return null;
+
+			IdTplArgs? derivedSegment = receiverType.idTpls.LastOrDefault();
+			if( derivedSegment == null || derived.TplParams.Count != derivedSegment.tplArgs.Count )
+				return null;
+
+			List<TplArg> derivedArgs = derivedSegment.tplArgs;
+
+			foreach( BaseType baseType in derived.basetypes ) {
+				Typespec concreteBase = TemplateInference.SubstituteTemplateParams(
+					baseType.type, derived.TplParams, derivedArgs, this.result );
+
+				if( concreteBase is not TypespecNested baseNested )
+					continue;
+
+				Decl? baseDecl = baseNested.resolvedDecl;
+				if( baseDecl == null && this.result.TryGetResolved( baseNested, out Decl? bd ) )
+					baseDecl = bd;
+
+				if( baseDecl is not Structural baseStruct )
+					continue;
+
+				foreach( Structural owner in ownerChain ) {
+					if( baseStruct == owner || GetDefiningStructural( baseStruct ) == owner ) {
+						IdTplArgs? baseSegment = baseNested.idTpls.LastOrDefault();
+						if( baseSegment != null && baseSegment.tplArgs.Count == owner.TplParams.Count )
+							return baseSegment.tplArgs;
+					}
+				}
+
+				List<TplArg>? inherited = TryExtractOwnerArgsFromBases( baseNested, ownerChain );
+				if( inherited != null )
+					return inherited;
+			}
+
+			return null;
+		}
 
 		private static Typespec StripReferenceAndPointerWrappers( Typespec type )
 		{
