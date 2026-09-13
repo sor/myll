@@ -296,6 +296,7 @@ namespace Myll.Resolver
 			return decl switch {
 				VarDecl vd      => vd.type,
 				Func func       => func.retType,
+				AliasDecl alias => alias.type,
 				_               => null,
 			};
 		}
@@ -311,9 +312,15 @@ namespace Myll.Resolver
 				if( d1 is Structor stc )
 					return StructorParentType( stc );
 
-				// Function-style constructor expression: Callee is the class itself.
+				// Function-style constructor expression: Callee is the class itself,
+				// or an alias for a class template instantiation.
 				if( d1 is Structural s1 )
 					return ClassValueType( s1, new[] { id.idTplArgs } );
+
+				if( d1 is AliasDecl alias1
+				 && ConversionRules.UnwrapAlias( alias1.type ) is TypespecNested aliasNested1 ) {
+					return ClassValueType( (Structural)aliasNested1.resolvedDecl!, aliasNested1.idTpls );
+				}
 			}
 
 			if( callee is ScopedExpr scoped && result.TryGetResolved( scoped, out Decl? d2 ) ) {
@@ -324,6 +331,11 @@ namespace Myll.Resolver
 
 				if( d2 is Structural s2 )
 					return ClassValueType( s2, scoped.idTpls );
+
+				if( d2 is AliasDecl alias2
+				 && ConversionRules.UnwrapAlias( alias2.type ) is TypespecNested aliasNested2 ) {
+					return ClassValueType( (Structural)aliasNested2.resolvedDecl!, aliasNested2.idTpls );
+				}
 			}
 
 			if( callee is BinOp binOp

@@ -1240,12 +1240,22 @@ namespace Myll.Resolver
 					progress = true;
 				}
 
-				if( isNamespaceTarget && !scope.importedScopes.Contains( ( (Namespace)resolved ).scope ) ) {
-					scope.importedScopes.Add( ( (Namespace)resolved ).scope );
-					progress = true;
-				}
+			if( isNamespaceTarget && !scope.importedScopes.Contains( ( (Namespace)resolved ).scope ) ) {
+				scope.importedScopes.Add( ( (Namespace)resolved ).scope );
+				progress = true;
+			}
 
-				progress |= AddImportedName( scope, unresolved.Node.name, resolved );
+			// Non-namespace aliases must be registered under their AliasDecl so that uses
+			// of the alias name keep the concrete template arguments stored on the alias.
+			Decl target = isNamespaceTarget ? resolved : unresolved.Node;
+			progress |= AddImportedName( scope, unresolved.Node.name, target );
+
+			if( !isNamespaceTarget
+			 && unresolved.Node.type is TypespecNested aliasPath
+			 && aliasPath.resolvedDecl == null ) {
+				aliasPath.resolvedDecl = resolved;
+				progress = true;
+			}
 			}
 
 			return progress;
@@ -1602,6 +1612,30 @@ namespace Myll.Resolver
 			return null;
 		}
 
+		private static Typespec UnwrapAliasWithIndirection(
+			Typespec           type,
+			HashSet<AliasDecl>? visited = null )
+		{
+			visited ??= new HashSet<AliasDecl>();
+
+			if( type is not TypespecNested { resolvedDecl: AliasDecl alias }
+			 || !visited.Add( alias ) )
+				return type;
+
+			Typespec expanded = ConversionRules.CloneTypespecBase( alias.type );
+
+			// Preserve the outer qualifiers and pointer/reference/smart-pointer wrappers
+			// from the use site unless the alias itself already supplies them.
+			if( expanded.qual == Qualifier.None )
+				expanded.qual = type.qual;
+
+			if( ( expanded.ptrs == null || expanded.ptrs.Count == 0 )
+			 && type.ptrs is { Count: > 0 } )
+				expanded.ptrs = type.ptrs.Select( p => new Pointer { kind = p.kind, qual = p.qual, expr = p.expr } ).ToList();
+
+			return UnwrapAliasWithIndirection( expanded, visited );
+		}
+
 		private bool TryGetBaseHierarchical(
 			Typespec type,
 			GlobalNamespace module,
@@ -1609,6 +1643,8 @@ namespace Myll.Resolver
 			bool viaArrow = false )
 		{
 			baseType = null!;
+
+			type = UnwrapAliasWithIndirection( type );
 
 			if( type is TypespecNested nested ) {
 				Decl? decl = nested.resolvedDecl;

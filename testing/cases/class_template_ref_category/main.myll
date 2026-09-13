@@ -37,6 +37,9 @@ class Derived<T> : Base<T>
 {
 }
 
+alias IntBox = Box<int>;
+alias IntBox2 = IntBox;
+
 func main() -> int
 {
 	var Box<int> b;
@@ -57,6 +60,21 @@ func main() -> int
 	var Derived<int> d;
 	d.baseAssign( x );
 	d.baseAssign( 20 );
+
+	var IntBox ab;
+	ab.assign( 30 );
+	if( ab.retrieve() != 30 )
+		return 7;
+
+	var IntBox2 ab2;
+	ab2.assign( 40 );
+	if( ab2.retrieve() != 40 )
+		return 8;
+
+	var IntBox * ap = new IntBox;
+	ap->assign( 50 );
+	if( ap->retrieve() != 50 )
+		return 9;
 
 	return 0;
 }

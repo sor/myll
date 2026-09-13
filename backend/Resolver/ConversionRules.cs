@@ -752,9 +752,13 @@ namespace Myll.Resolver
 
 		public static Typespec UnwrapAlias( Typespec type )
 		{
-			return type is TypespecNested { resolvedDecl: AliasDecl alias }
-				? UnwrapAlias( alias.type )
-				: type;
+			HashSet<AliasDecl> visited = new();
+			while( type is TypespecNested { resolvedDecl: AliasDecl alias }
+			    && visited.Add( alias ) ) {
+				type = alias.type;
+			}
+
+			return type;
 		}
 	}
 }
