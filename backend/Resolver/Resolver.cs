@@ -1752,7 +1752,7 @@ namespace Myll.Resolver
 			if( receiverType == null )
 				return null;
 
-			Typespec baseType = StripReferenceAndPointerWrappers( receiverType );
+			Typespec baseType = StripReferenceAndPointerWrappers( ConversionRules.UnwrapAlias( receiverType ) );
 			if( baseType is TypespecNested nested ) {
 				List<TplArg>? direct = TryExtractOwnerArgsFromTypePath( nested, ownerChain );
 				if( direct != null )

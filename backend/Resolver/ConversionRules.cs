@@ -750,7 +750,7 @@ namespace Myll.Resolver
 			return true;
 		}
 
-		private static Typespec UnwrapAlias( Typespec type )
+		public static Typespec UnwrapAlias( Typespec type )
 		{
 			return type is TypespecNested { resolvedDecl: AliasDecl alias }
 				? UnwrapAlias( alias.type )

@@ -60,10 +60,11 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
      `IsLValue` heuristic.
    Files: `backend/Resolver/ConversionRules.cs`, `backend/Resolver/Resolver.cs`.
    Test: `testing/cases/ref_category/`.
-   Remaining: class-template methods whose reference parameters wrap the class's own template
-   parameter (`Box<T>::assign(const T&)` vs `Box<T>::assign(T&&)`) still collapse to the same
-   `TemplateParameter` rank because the owning class template parameters are not substituted
-   before ranking. This needs the owning template params to be passed into template inference.
+   Done: owner template parameters are now substituted before ranking for direct member access,
+   scoped calls, inherited methods, and methods with their own template parameters.
+   Regression test: `testing/cases/class_template_ref_category/`.
+   Remaining: class-template method overload ranking for aliased class types is in place once
+   Myll aliases support member access on the underlying class.
 
 7. **Pointer/smart-pointer equality with `null`** — `p != null`, `null == p`, and the reverse
    now compile. This required a small special case in `ValidateComparisonOperator` because

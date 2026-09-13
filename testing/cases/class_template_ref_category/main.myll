@@ -1,0 +1,62 @@
+module main;
+
+class Box<T>
+{
+	field T _value;
+
+[pub]:
+	method assign( const T & value )
+	{
+		_value = value;
+	}
+
+	method assign( T && value )
+	{
+		_value = (move)value;
+	}
+
+	method retrieve() -> T
+	{
+		return _value;
+	}
+
+	method store<U>( U x, T y )
+	{
+		_value = y;
+	}
+}
+
+class Base<T>
+{
+[pub]:
+	method baseAssign( const T & value ) { }
+	method baseAssign( T && value ) { }
+}
+
+class Derived<T> : Base<T>
+{
+}
+
+func main() -> int
+{
+	var Box<int> b;
+
+	var int x = 5;
+	b.assign( x );
+	if( b.retrieve() != 5 )
+		return 1;
+
+	b.assign( 10 );
+	if( b.retrieve() != 10 )
+		return 2;
+
+	b.store( 1.5, 7 );
+	if( b.retrieve() != 7 )
+		return 3;
+
+	var Derived<int> d;
+	d.baseAssign( x );
+	d.baseAssign( 20 );
+
+	return 0;
+}

@@ -152,17 +152,15 @@ These reproducers live under `tmp/lone_repros/repro_complex_*.myll`.
 | `auto` variable initialized from `v[0]` with member access | passes |
 | pointer/smart-pointer equality with `null` (`p != null`, `null == p`) | passes (fixed by allowing `ExplicitAuto`/`null` in `ValidateComparisonOperator`) |
 | non-template overloaded functions/methods `f(int&)`, `f(const int&)`, `f(int&&)` | passes |
-| overloaded class-template methods `assign(const T&)` / `assign(T&&)` inside `Box<T>` | **ambiguous for lvalue and rvalue arguments** (class template params are not substituted before overload ranking, so both overloads collapse to the same `TemplateParameter` rank) |
+| overloaded class-template methods `assign(const T&)` / `assign(T&&)` inside `Box<T>` | passes (owner template params are substituted before ranking) |
 | unqualified base method call inside a derived method | **fails** (known limitation, see AGENTS.md) |
 | range-based `for( auto i : [1,2,3] )` over an initializer list | passes (fixed by handling unresolved `std::initializer_list<T>` in `RangeForAutoTypeTransformer`) |
 
 One remaining reference-category gap:
 
-- **Class-template method overloads** where the references are around the class's own
-  template parameter (`const T&` / `T&&` in `Box<T>`) remain ambiguous because the
-  enclosing `T` is not replaced with the deduced concrete type during overload ranking.
-  Fixing this requires plumbing the owning class template parameters through
-  `TemplateInference.TryDeduceTemplateArgs` / `SubstituteTemplateParams`.
+- Myll aliases do not yet support member access on aliased class types, so
+  `alias IntBox = Box<int>; IntBox b; b.assign(x)` is not resolved by member
+  lookup. The overload resolver now unwraps alias types if they ever reach it.
 
 Another failure shown by the repros is the already-known limitation that
 unqualified base method calls from inside a derived method are not supported

@@ -34,8 +34,13 @@ reports ambiguity.
    their own template parameters.
 4. **Inherited class-template methods** — receiver is `Derived<int>`, method
    lives in a base class template.
-5. **Alias receivers + final tests** — unwrap alias declarations and add
-   regression coverage.
+5. **Alias receivers + final tests** — make `ConversionRules.UnwrapAlias` public
+   and unwrap alias types when extracting owner template arguments from a
+   receiver. Note: Myll aliases currently do not support member access on
+   aliased class types (`alias IntBox = Box<int>; IntBox b; b.assign(...)` is
+   not resolved by the member lookup), so the alias unwrapping is in place for
+   when that is added. Regression test added at
+   `testing/cases/class_template_ref_category/`.
 
 ## Verification
 
@@ -43,3 +48,7 @@ After each phase:
 - `dotnet build myll.sln`
 - `dotnet test testing/`
 - `bash frontend/apps/make_unix.sh release`
+
+## Status
+
+All phases completed.
