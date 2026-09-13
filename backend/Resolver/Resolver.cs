@@ -828,13 +828,29 @@ namespace Myll.Resolver
 				continue;
 			}
 
-			if( candidate is Func func
-			 && TemplateInference.TryDeduceTemplateArgs( func, call, typeResolver, result, out List<TplArg>? deduced )
-			 && deduced != null ) {
-				LogOverloadResolution( "    candidate {0}: internal template deduced ({1}), accepted",
-					candidate.name, String.Join( ", ", deduced.Select( a => FormatTypeForDebug( a.typespec ) ) ) );
-				deducedArgsByCandidate[candidate] = deduced;
-				templateViable.Add( candidate );
+			if( candidate is Func func ) {
+				(List<TplParam> ownerParams, List<TplArg> ownerArgs) = GetOwnerTemplateInfo( func, callee );
+
+				bool deductionOk = TemplateInference.TryDeduceTemplateArgs(
+					func, call, typeResolver, result, out List<TplArg>? deduced,
+					ownerParams.Count > 0 ? ownerParams : null,
+					ownerArgs.Count > 0 ? ownerArgs : null );
+
+				if( deductionOk && deduced != null ) {
+					LogOverloadResolution( "    candidate {0}: internal template deduced ({1}), accepted",
+						candidate.name, String.Join( ", ", deduced.Select( a => FormatTypeForDebug( a.typespec ) ) ) );
+					deducedArgsByCandidate[candidate] = deduced;
+					templateViable.Add( candidate );
+					continue;
+				}
+
+				if( deductionOk && deduced == null && func.TplParams.Count == 0 ) {
+					LogOverloadResolution( "    candidate {0}: non-template method, accepted", candidate.name );
+					templateViable.Add( candidate );
+					continue;
+				}
+
+				LogOverloadResolution( "    candidate {0}: internal template deduction failed", candidate.name );
 				continue;
 			}
 
@@ -897,7 +913,6 @@ namespace Myll.Resolver
 
 		List<(Decl Candidate, ConversionRank WorstRank)> viable = new();
 		ConversionRank bestWorst = ConversionRank.None;
-		bool ownerTemplateArgsUnresolved = false;
 
 		foreach( Decl candidate in templateViable ) {
 			ConversionRank worst = ConversionRank.Exact;
@@ -915,18 +930,11 @@ namespace Myll.Resolver
 					? deduced
 					: null;
 
-			(List<TplParam> ownerParams, List<TplArg>? ownerArgs) = GetOwnerTemplateInfo( candidate, callee );
-			if( ownerArgs == null && ownerParams.Count > 0 ) {
-				ownerTemplateArgsUnresolved = true;
-				LogOverloadResolution( "    candidate {0}: owner template args unresolved, deferring",
-					candidate.name );
-				continue;
-			}
+			(List<TplParam> ownerParams, List<TplArg> ownerArgs) = GetOwnerTemplateInfo( candidate, callee );
 
 			List<TplParam> combinedParams = TemplateInference.GetAllTemplateParams( candidate );
-			List<TplArg> combinedArgs = new();
-			if( ownerArgs != null )
-				combinedArgs.AddRange( ownerArgs );
+			List<TplArg> combinedArgs = new( ownerArgs.Count + ( candidateArgs?.Count ?? 0 ) );
+			combinedArgs.AddRange( ownerArgs );
 			if( candidateArgs != null )
 				combinedArgs.AddRange( candidateArgs );
 
@@ -1009,11 +1017,6 @@ namespace Myll.Resolver
 		if( rejectedPairs.Count > 0
 		 && rejectedPairs.Any( p => TypeMightResolveLater( p.source ) || TypeMightResolveLater( p.target ) ) ) {
 			LogOverloadResolution( "  no viable candidate yet; deferring because types are still unresolved" );
-			return (null, false, false);
-		}
-
-		if( viable.Count == 0 && ownerTemplateArgsUnresolved ) {
-			LogOverloadResolution( "  no viable candidate yet; deferring because owner template args are unresolved" );
 			return (null, false, false);
 		}
 
@@ -1673,9 +1676,9 @@ namespace Myll.Resolver
 			return result;
 		}
 
-		private (List<TplParam> ownerParams, List<TplArg>? ownerArgs) GetOwnerTemplateInfo(
-			Decl   candidate,
-			Expr   callee )
+		private (List<TplParam> ownerParams, List<TplArg> ownerArgs) GetOwnerTemplateInfo(
+			Decl candidate,
+			Expr callee )
 		{
 			List<Structural> ownerChain = GetOwnerStructuralChain( candidate );
 			if( ownerChain.Count == 0 )
@@ -1684,11 +1687,12 @@ namespace Myll.Resolver
 			List<TplParam> ownerParams = ownerChain.SelectMany( s => s.TplParams ).ToList();
 			List<TplArg>? ownerArgs = TryExtractOwnerTemplateArgs( callee, ownerChain );
 
-			// If the receiver is itself dependent (e.g. `ParamOuter<T>::Inner` inside a
-			// free function template), the owner args are not yet concrete. Substituting
-			// them would map T to T and recurse forever. Fall back to the previous
-			// behaviour: do not substitute owner params at all.
-			if( ownerArgs != null && !AreConcreteTemplateArgs( ownerArgs, ownerParams ) )
+			// If the receiver type is unavailable or still dependent, do not substitute
+			// owner parameters. This keeps the old behaviour for unqualified calls inside
+			// class-template methods and for chained member calls whose receiver type has
+			// not been materialised yet; when the receiver is concrete, substitution will
+			// happen on the next resolver pass.
+			if( ownerArgs == null || !AreConcreteTemplateArgs( ownerArgs, ownerParams ) )
 				return (new List<TplParam>(), new List<TplArg>());
 
 			return (ownerParams, ownerArgs);

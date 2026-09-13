@@ -76,15 +76,19 @@ namespace Myll.Resolver
 		}
 
 		/// <summary>
-		/// Tries to deduce template arguments for a function template from the call arguments.
-		/// Only handles simple patterns: T, T*, T&, T[] and other pointer-like wrappers around T.
+		/// Tries to deduce the candidate's own template arguments after first substituting any
+		/// concrete enclosing (owner-class) template arguments into the parameter types. This
+		/// allows a method like <c>Outer&lt;T&gt;::Inner::store&lt;U&gt;(U x, T y)</c> to deduce
+		/// <c>U</c> from <c>x</c> while treating <c>T</c> as already-known from the receiver.
 		/// </summary>
 		public static bool TryDeduceTemplateArgs(
 			Func              candidate,
 			FuncCall          call,
 			TypeResolver      typeResolver,
 			ResolutionResult  result,
-			out List<TplArg>? deduced )
+			out List<TplArg>? deduced,
+			List<TplParam>?   enclosingParameters = null,
+			List<TplArg>?     enclosingArguments  = null )
 		{
 			deduced = null;
 
@@ -94,6 +98,9 @@ namespace Myll.Resolver
 			if( call.args.Count != candidate.paras.Count )
 				return false;
 
+			bool substituteEnclosing = enclosingParameters is { Count: > 0 }
+			                        && enclosingArguments  is { Count: > 0 };
+
 			var bindings = new Dictionary<string, Typespec>( StringComparer.Ordinal );
 
 			for( int i = 0; i < candidate.paras.Count; i++ ) {
@@ -101,7 +108,11 @@ namespace Myll.Resolver
 				if( argType == null )
 					return false;
 
-				if( !TryBindParameter( candidate.paras[i].type, argType, bindings, result ) )
+				Typespec paramType = candidate.paras[i].type;
+				if( substituteEnclosing )
+					paramType = SubstituteTemplateParams( paramType, enclosingParameters!, enclosingArguments!, result );
+
+				if( !TryBindParameter( paramType, argType, bindings, result ) )
 					return false;
 			}
 
