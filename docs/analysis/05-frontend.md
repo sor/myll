@@ -12,10 +12,9 @@
 1. **Parse**: ANTLR4 tokenization and parsing (parallel via PLINQ across input files).
 2. **Classify**: Group files by module.
 3. **Compile**: Build per-module AST + scope tree via instance-based `ModuleContext` visitors (parallel across modules since Phase 2A).
-4. **Implicit imports**: Inject `StdBuiltins.ImplicitStdImports` into every module.
-5. **Resolve**: Cross-module name and type resolution (`NameResolver.Resolve`), including cyclic imports. This stage also runs two AST transformation passes: pre-resolution transforms (default attributes, enum normalization, auto-return, template params, chain methods) and post-resolution transforms (discard, rule-of-N, loop lowering, break/continue lowering, alias-shadowing checks).
-6. **Raw imports / prototype filter**: Build the raw-import map and identify prototype-only modules.
-7. **Generate**: Produce C++ declarations and implementations per module (parallel across non-prototype modules).
+4. **Resolve**: Cross-module name and type resolution (`NameResolver.Resolve`), including cyclic imports and the implicit standard-library imports listed in `StdBuiltins.ImplicitStdImports`. This stage also runs two AST transformation passes: pre-resolution transforms (default attributes, enum normalization, auto-return, template params, chain methods) and post-resolution transforms (discard, rule-of-N, loop lowering, break/continue lowering, alias-shadowing checks).
+5. **Raw imports / prototype filter**: Build the raw-import map and identify prototype-only modules.
+6. **Generate**: Produce C++ declarations and implementations per module (parallel across non-prototype modules).
 8. **Emit**: Write files or output to stdout.
 9. **Compile C++**: Optional invocation of the platform C++ compiler.
 10. **Run**: Optional execution.

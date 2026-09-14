@@ -191,8 +191,19 @@ namespace Myll.Generator
 			foreach( string imp in StdBuiltins.ImplicitStdImports ) {
 				if( imp == globalNS.module )
 					continue;
-				if( !globalNS.imports.OfType<NamedImportSpec>().Any( i => i.name == imp ) )
+
+				bool hasModule =
+					( moduleRawImports != null && moduleRawImports.ContainsKey( imp ) )
+				 || ( prototypeModules != null && prototypeModules.Contains( imp ) );
+
+				if( !hasModule ) {
+					Diagnostics.Add( new Diagnostic(
+						null,
+						DiagnosticKind.Error,
+						Format( "Implicit standard module '{0}' is not part of the compilation.", imp ) ) );
 					continue;
+				}
+
 				AddModuleIncludes( imp );
 			}
 

@@ -147,7 +147,8 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    - Auto-inferred `initlist` types are registered for name resolution, so member access such as `var auto a = [1,2,3]; a.size()` works.
    - Added special members `ctor initlist` and `operator initlist =`. They generate a `const std::initializer_list<E>&` parameter, default parameter name `init`, and are implicitly `[implicit]`. The element type `E` defaults to the enclosing class's first template parameter or can be written explicitly (`ctor initlist<E>`).
    - Added `std/std_initializer_list.decl.myll` and updated `myll/dyn_array.myll` to use `ctor initlist`.
-   - Added `backend/Core/StdBuiltins.cs` containing `ImplicitStdImports`, a central list of standard modules (e.g. `c_math`, `c_stdint`, `std_memory`, `std_initializer_list`, etc.) that are imported into every compiled module. The front-end injects them, and the generator derives the C++ `#include <...>` lines from the imports.
+    - Added `backend/Core/StdBuiltins.cs` containing `ImplicitStdImports`, a central list of standard modules (e.g. `c_math`, `c_stdint`, `std_memory`, `std_initializer_list`, etc.) that are imported implicitly into every compiled module. The resolver treats them as imported for name lookup, the generator emits the matching `#include <...>` lines, and a diagnostic is produced if any listed module is missing from the compilation.
+
    - Removed `StmtFormatting.DefaultIncludes`; C++ header emission is now driven entirely by imports.
    - Regression cases: `testing/cases/direct_ctor/`, `testing/cases/initializer_list/`.
 

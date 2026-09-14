@@ -196,6 +196,16 @@ namespace Myll.Resolver
 			}
 		}
 
+		private static IEnumerable<string> ImportedModuleNames( GlobalNamespace module )
+		{
+			foreach( NamedImportSpec spec in module.imports.OfType<NamedImportSpec>() )
+				yield return spec.name;
+
+			foreach( string imp in StdBuiltins.ImplicitStdImports )
+				if( imp != module.module )
+					yield return imp;
+		}
+
 		private void ResolveDialectBackings(
 			IReadOnlyList<CompiledModuleResult> modules,
 			IReadOnlyDictionary<string, ModuleExports> exports )
@@ -2074,9 +2084,7 @@ namespace Myll.Resolver
 				}
 			}
 
-			foreach( string importedModule in module.imports
-				.OfType<NamedImportSpec>()
-				.Select( i => i.name ) ) {
+			foreach( string importedModule in ImportedModuleNames( module ) ) {
 				if( !moduleExports.TryGetValue( importedModule, out ModuleExports? exports ) )
 					continue;
 
@@ -2110,9 +2118,7 @@ namespace Myll.Resolver
 
 			if( h is Namespace ns ) {
 				string fqn = ns.FullyQualifiedName;
-				foreach( string importedModule in module.imports
-					.OfType<NamedImportSpec>()
-					.Select( i => i.name ) ) {
+				foreach( string importedModule in ImportedModuleNames( module ) ) {
 					if( !moduleExports.TryGetValue( importedModule, out ModuleExports? exports ) )
 						continue;
 

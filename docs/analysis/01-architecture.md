@@ -34,9 +34,8 @@ The implementation targets .NET 10.0 and uses ANTLR4 for lexing and parsing.
 The frontend (`Program.cs`) has clear stages:
 1. Parse all input files (parallel via PLINQ).
 2. Classify declarations by module and build a per-module AST + scope tree in parallel. Each module gets its own `ModuleContext` that owns the visitors and scope stack.
-3. Add implicit standard-library imports (`StdBuiltins.ImplicitStdImports`).
-4. Resolve names and types (`NameResolver.Resolve`), including cyclic imports. This runs a fixed-point loop and performs two AST transformation passes: pre-resolution transforms (auto-return, templates, chain, etc.) and post-resolution transforms (discard, rule-of-N, loop lowering, alias-shadowing checks).
-5. Build the raw-import map and filter prototype-only modules.
+3. Resolve names and types (`NameResolver.Resolve`), including cyclic imports and the implicit standard-library imports from `StdBuiltins.ImplicitStdImports`. This runs a fixed-point loop and performs two AST transformation passes: pre-resolution transforms (auto-return, templates, chain, etc.) and post-resolution transforms (discard, rule-of-N, loop lowering, alias-shadowing checks).
+4. Build the raw-import map and filter prototype-only modules.
 6. Generate C++ declarations and implementations per module (parallel via PLINQ).
 7. Emit files or invoke the C++ compiler and run the binary.
 

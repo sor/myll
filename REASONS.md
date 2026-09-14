@@ -9,7 +9,7 @@ Decision log for Myll. Captures the "why" behind choices so we don't repeat deba
 
 ### What Changed
 - Added `backend/Core/StdBuiltins.ImplicitStdImports`, an ordered list of standard modules (e.g. `c_math`, `c_stdint`, `std_memory`, `std_initializer_list`) that are imported implicitly into every compiled module.
-- The front-end injects these imports automatically.
+- The resolver treats these modules as implicitly imported into every module and the generator emits the matching `#include` lines.
 - The generator derives all C++ `#include <...>` lines from module imports, so the C++ headers exactly match the Myll-side knowledge.
 - Removed `backend/Generator/StmtFormatting.DefaultIncludes`.
 

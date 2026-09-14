@@ -192,16 +192,6 @@ namespace Myll
 			return new( context );
 		}
 
-		private static void AddImplicitImports( List<CompiledModuleResult> modules )
-		{
-			foreach( (GlobalNamespace module, _) in modules ) {
-				foreach( string imp in StdBuiltins.ImplicitStdImports ) {
-					if( module.module != imp )
-						module.imports.Add( new NamedImportSpec { name = imp } );
-				}
-			}
-		}
-
 		private static IReadOnlyDictionary<string, IReadOnlyList<RawImport>> BuildModuleRawImports(
 			List<CompiledModuleResult> modules )
 		{
@@ -451,8 +441,6 @@ namespace Myll
 						g,
 						g.All( p => IsPrototypeFile( p.Start.InputStream.SourceName ) ) ) )
 					.ToList();
-
-			AddImplicitImports( modules );
 
 			PrintDiagnosticsAndBail( modules.SelectMany( m => m.Context.Diagnostics ) );
 
