@@ -86,7 +86,7 @@ All module scope trees and import lists are available.
 3. **Post-resolution transforms** — `DiscardTransformer`, `RuleOfTransformer`, `ElseOnLoopTransformer`, `BreakContinueTransformer`, `ConfiguredAliasShadowingTransformer`.
 
 ### Stage 6: Raw-import map and prototype filter
-`BuildModuleRawImports` collects the raw `#include` metadata and `prototypeModules` identifies modules that contain only prototypes, which generation skips.
+`RawImportCollector` collects the raw `#include` metadata and `prototypeModules` identifies modules that contain only prototypes, which generation skips.
 
 ### Stage 7: C++ generation
 Generate `.h` and `.cpp` files from the fully resolved AST, parallel across non-prototype modules.

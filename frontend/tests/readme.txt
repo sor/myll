@@ -7,8 +7,7 @@ The virtual Expr.Gen should be protected and Expr itself should
 Test EnumerateDF if it really works (see shelf)
 
 For proper Analyze:
-	Program.CompileModule needs to be split up,
-	1.	The Visit needs to happen for each module [para]
+	1.	The Visit needs to happen for each module [para]   (now CompilerPipeline.CompileModules)
 	2.	All these modules need to get to know each other [seq]
 	3.	Each module can properly determine the types [para]
 	4.	If there is still something undetermined loop to 2.

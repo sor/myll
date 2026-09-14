@@ -19,9 +19,8 @@ using Myll.Resolver;
 
 namespace Myll
 {
-	using Strings     = List<string>;
-	using IStrings    = IEnumerable<string>;
-	using ModuleGroup = IGrouping<string, MyllParser.ProgContext>;
+	using Strings  = List<string>;
+	using IStrings = IEnumerable<string>;
 
 	#if !DISABLE_PLINQ
 	using static ParallelEnumerable;
@@ -169,29 +168,6 @@ namespace Myll
 			       && string.IsNullOrEmpty( Environment.GetEnvironmentVariable( "NO_COLOR" ) );
 		}
 
-		private static string ClassifyModule( MyllParser.ProgContext c )
-		{
-			FileInfo fi = new( c.Start.InputStream.SourceName );
-			string ret = c.module()?.id().GetText()
-			          ?? Path.GetFileNameWithoutExtension( fi.Name );
-			//Console.WriteLine( "Time elapsed after ClassifyModule {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
-			return ret;
-		}
-
-		private static CompiledModuleResult CompileModule(
-			ModuleGroup progContext,
-			bool        isPrototypeFile )
-		{
-			ModuleContext context = new() {
-				IsPrototypeFile = isPrototypeFile,
-				Dialect         = Dialect.Default,
-			};
-			//Console.WriteLine( "Time elapsed after CompileModule  {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
-			GlobalNamespace module = context.DeclVisitor.VisitProgs( progContext );
-			context.Module = module;
-			return new( context );
-		}
-
 		private static IEnumerable<string> CollectExternFiles( Options opt )
 		{
 			string? repoRoot = TryGetRepoRoot();
@@ -238,11 +214,6 @@ namespace Myll
 			foreach( string file in Directory.EnumerateFiles( dir, "*.extern.myll" ) )
 				yield return file;
 		}
-
-		private static bool IsPrototypeFile( string path )
-			=> path.EndsWith( ".d.myll", StringComparison.OrdinalIgnoreCase )
-			|| path.EndsWith( ".decl.myll", StringComparison.OrdinalIgnoreCase )
-			|| path.EndsWith( ".extern.myll", StringComparison.OrdinalIgnoreCase );
 
 		private static bool IsArtifact( string path )
 		{
@@ -326,34 +297,6 @@ namespace Myll
 			}
 		}
 
-		private static GeneratedModuleFilesResult GenerateModuleFiles(
-			ModuleContext                                           context,
-			IReadOnlyDictionary<string, IReadOnlyList<RawImport>> moduleRawImports,
-			IReadOnlySet<string>                                    prototypeModules )
-		{
-			GlobalNamespace global_ns = context.Module!;
-			List<(string Path, IEnumerable<string> Lines)> ret = new();
-
-			HierarchicalGen gen = new( global_ns, -1, 0, moduleRawImports, prototypeModules, context );
-			// do NOT call gen.AddNamespace( ret ).
-			// Instead AddToGen() is there to call the correct virtual method on the gen
-			// TODO why is it adding itself as a child?
-			try {
-				global_ns.AddToGen( gen );
-
-				IStrings decl = gen.GenDeclGlobal();
-				IStrings? impl = gen.GenImplGlobal();
-				if( decl != null ) ret.Add( (string.Format( "{0}.hpp", global_ns.module ), decl) );
-				if( impl != null ) ret.Add( (string.Format( "{0}.cpp", global_ns.module ), impl) );
-			}
-			catch( DiagnosticException ex ) {
-				gen.Diagnostics.Add( ex.Diagnostic );
-			}
-
-			//Console.WriteLine( "Time elapsed after GenerateModuleFiles  {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
-			return new( ret, gen.Diagnostics );
-		}
-
 		public static int Main( string[] args )
 		{
 			Console.WriteLine( "Myll compiler. Version {0}\n", Version );
@@ -394,16 +337,7 @@ namespace Myll
 
 			PrintDiagnosticsAndBail( parseResults.SelectMany( r => r.Diagnostics ) );
 
-			List<CompiledModuleResult> modules
-				= parseResults
-					.Select( r => r.Prog )
-					.GroupBy( ClassifyModule )
-					.ToImmutableArray()
-					.AsParallel()
-					.Select( g => CompileModule(
-						g,
-						g.All( p => IsPrototypeFile( p.Start.InputStream.SourceName ) ) ) )
-					.ToList();
+			List<CompiledModuleResult> modules = CompilerPipeline.CompileModules( parseResults );
 
 			PrintDiagnosticsAndBail( modules.SelectMany( m => m.Context.Diagnostics ) );
 
@@ -422,11 +356,7 @@ namespace Myll
 					.ToHashSet();
 
 			List<GeneratedModuleFilesResult> generationResults
-				= modules
-					.Where( m => !m.Context.IsPrototypeFile )
-					.AsParallel()
-					.Select( m => GenerateModuleFiles( m.Context, moduleRawImports, prototypeModules ) )
-					.ToList();
+				= CompilerPipeline.GenerateFiles( modules, moduleRawImports, prototypeModules );
 
 			IEnumerable<(string, IStrings)> output = generationResults.SelectMany( r => r.Files );
 
