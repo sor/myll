@@ -31,13 +31,8 @@ namespace Myll
 		[Option( 'c', "compile", HelpText = "Pass generated .cpp files to a C++ compiler; use MYLL_CXX to override", Default = false )]
 		public bool IsCompile { get; init; } = false;
 
-		[Option( 'C', "clear", HelpText = "Clear the target directory. Use once to remove build artifacts (*.o, *.obj, *.a, *.lib, a.out/a.exe); use twice (-C -C) to also remove generated *.cpp/*.hpp files.", Default = false )]
+		[Option( 'C', "clear", HelpText = "Clear the target directory of old build artifacts (*.o, *.obj, *.a, *.lib, a.out/a.exe)", Default = false )]
 		public bool IsClear { get; init; } = false;
-
-		/// <summary>
-		/// Number of times the clear flag was supplied. Set by Program.Main after parsing raw args.
-		/// </summary>
-		public int ClearLevel { get; set; }
 
 		[Option( 'g', "debug", HelpText = "Let the C++ compiler generate a debug executable", Default = false )]
 		public bool IsDebug { get; init; } = false;

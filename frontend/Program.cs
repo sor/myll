@@ -301,13 +301,6 @@ namespace Myll
 			    || name.EndsWith( ".lib", StringComparison.OrdinalIgnoreCase );
 		}
 
-		private static bool IsGeneratedSource( string path )
-		{
-			string name = Path.GetFileName( path );
-			return name.EndsWith( ".cpp", StringComparison.Ordinal )
-			    || name.EndsWith( ".hpp", StringComparison.Ordinal );
-		}
-
 		private static void PrintDiagnosticsAndBail( IEnumerable<Diagnostic> diagnostics )
 		{
 			List<Diagnostic> list = diagnostics.ToList();
@@ -422,23 +415,6 @@ namespace Myll
 			opt = ParseCommandLine( args );
 			opt.OutPath = Path.GetFullPath( opt.OutPath );
 
-			{
-				int clearLevel = 0;
-				foreach( string arg in args ) {
-					if( arg == "-C" || arg == "--clear" ) {
-						clearLevel++;
-						continue;
-					}
-					if( arg.StartsWith( "-" ) && !arg.StartsWith( "--" ) ) {
-						foreach( char c in arg ) {
-							if( c == 'C' )
-								clearLevel++;
-						}
-					}
-				}
-				opt.ClearLevel = clearLevel > 0 ? clearLevel : (opt.IsClear ? 1 : 0);
-			}
-
 			start = DateTime.Now;
 
 			int cpus = Environment.ProcessorCount;
@@ -507,11 +483,9 @@ namespace Myll
 
 			Console.WriteLine( "Time elapsed after last ToArray call {0:0}ms\n", (DateTime.Now - start).TotalMilliseconds );
 
-		if( opt.ClearLevel > 0 && Directory.Exists( opt.OutPath ) ) {
-			bool clearGenerated = opt.ClearLevel >= 2;
-
+		if( opt.IsClear && Directory.Exists( opt.OutPath ) ) {
 			foreach( string file in Directory.EnumerateFiles( opt.OutPath ) ) {
-				if( IsArtifact( file ) || (clearGenerated && IsGeneratedSource( file )) )
+				if( IsArtifact( file ) )
 					File.Delete( file );
 			}
 		}
