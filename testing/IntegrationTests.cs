@@ -72,8 +72,6 @@ namespace Myll.Tests
 
 				bool useMyllCr = CaseConfig.UseMyllCompileRun( caseName ) && depth == TestDepth.Run;
 				var myllFlags = new List<string> { useMyllCr ? "-Ccr" : "-C" };
-				if( CaseConfig.UseResolve( caseName ) )
-					myllFlags.Add( "-R" );
 				string myllArgs = String.Format( "exec \"{0}\" -i \"*.myll\" -o {1} {2}", FrontendDll,
 					Quote( generatedDir ), string.Join( " ", myllFlags ) );
 

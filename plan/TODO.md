@@ -204,7 +204,7 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 - Fixed `EnumerateDF` for `ForStmt`, `WhileStmt`, `DoWhileStmt`, and `TimesStmt` and added unit tests in `testing/LoopEnumerationTests.cs`.
 - Instance-based `ModuleContext` per module; removed static visitor state.
 - Name resolver skeleton with single-segment, cross-module, cyclic-import, and qualified-path resolution.
-- `-R` / `--resolve` flag and `--extern-dir` for opt-in semantic checks.
+- Semantic name resolution is now mandatory; removed the `-R` / `--resolve` opt-in flag.
 - Function parameters, local `var`s, lambdas, catch variables, and `times` indices are now added to the scope tree.
 - Forward declarations via optional bodies in normal and prototype files: `class A;`, `enum E;`, `func f();`, `namespace Ns;`.
 - Prototype/extern declaration files (`std/*.decl.myll`) and inline `[extern]` forwarding for classes/namespaces.

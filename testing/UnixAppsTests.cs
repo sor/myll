@@ -36,7 +36,7 @@ namespace Myll.Tests
 
 			try {
 				string args = String.Format(
-					"exec \"{0}\" -i \"*.myll\" -o {1} -C -R",
+					"exec \"{0}\" -i \"*.myll\" -o {1} -C",
 					FrontendDll,
 					Quote( generatedDir ) );
 

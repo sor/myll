@@ -62,7 +62,6 @@ dotnet run --project frontend/frontend.csproj -- \
 | `-g` | `--debug` | Generate debug executable via C++ compiler |
 | `-O` | `--optimize` | Set C++ compiler optimization level |
 | `-r` | `--run` | Run the compiled binary |
-| `-R` | `--resolve` | Run semantic name resolution and report errors (default: on) |
 | `-M` | `--main` | Specify module containing `main()` |
 
 ### Environment variables

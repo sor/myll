@@ -480,12 +480,10 @@ namespace Myll
 
 			PrintDiagnosticsAndBail( modules.SelectMany( m => m.Context.Diagnostics ) );
 
-		if( opt.IsResolve ) {
-			var (result, diagnostics) = NameResolver.Resolve( modules );
-			PrintDiagnosticsAndBailOnErrors( diagnostics );
+		var (result, diagnostics) = NameResolver.Resolve( modules );
+		PrintDiagnosticsAndBailOnErrors( diagnostics );
 
-			result.Apply();
-		}
+		result.Apply();
 
 			IReadOnlyDictionary<string, IReadOnlyList<RawImport>> moduleRawImports
 				= BuildModuleRawImports( modules );
