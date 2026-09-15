@@ -178,7 +178,8 @@ namespace Myll.Resolver
 
 			case Operand.Dereference:
 				if( operandType != null
-				 && TryGetClassOperatorReturnType( operandType, "operator*", out Typespec? starReturnType ) )
+				 && OperatorResolver.TryGetOperatorReturnType(
+				 	operandType, "operator*", result, out Typespec? starReturnType ) )
 					return starReturnType;
 
 				return StripOutermostPointer( operandType );
@@ -673,99 +674,5 @@ namespace Myll.Resolver
 		private static bool IsShiftOperation( Operand op )
 			=> op is Operand.LeftShift or Operand.RightShift;
 
-		private Hierarchical? FindEnclosingStructural( Expr expr )
-		{
-			Decl? decl = expr is IdExpr id && result.TryGetResolved( id, out Decl? d )
-				? d
-				: null;
-
-			ScopeLeaf? leaf = decl?.scope;
-			while( leaf != null ) {
-				if( leaf.decl is Hierarchical h && h is Namespace == false )
-					return h;
-
-				leaf = leaf.parent;
-			}
-
-			return null;
-		}
-
-		private bool TryGetClassOperatorReturnType(
-			Typespec   receiverType,
-			string     name,
-			out Typespec? returnType )
-		{
-			returnType = null;
-
-			if( receiverType is not TypespecNested nested
-			 || nested.ptrs is { Count: > 0 }
-			 || nested.resolvedDecl is not Structural structural )
-				return false;
-
-			bool receiverIsConst = ( nested.qual & Qualifier.Const ) != 0;
-			Func? op = LookupOperatorOverload( structural, name, receiverIsConst, new HashSet<Structural>() );
-			if( op == null )
-				return false;
-
-			Typespec ret = op.retType;
-			if( structural.TplParams.Count > 0 ) {
-				List<TplArg>? args = nested.idTpls.LastOrDefault()?.tplArgs;
-				if( args != null && args.Count >= structural.TplParams.Count )
-					ret = TemplateInference.SubstituteTemplateParams(
-						ret, structural.TplParams, args, result );
-			}
-
-			returnType = ret;
-			return returnType != null;
-		}
-
-		private Func? LookupOperatorOverload(
-			Structural          structural,
-			string              name,
-			bool                receiverIsConst,
-			HashSet<Structural> visited )
-		{
-			if( !visited.Add( structural ) )
-				return null;
-
-			Func? strict   = null;
-			Func? fallback = null;
-
-			foreach( Decl decl in structural.children ) {
-				if( decl is not Func func || func.name != name )
-					continue;
-
-				bool isConst = func.IsPure;
-				if( receiverIsConst ) {
-					if( isConst )
-						strict ??= func;
-				}
-				else {
-					if( !isConst )
-						strict ??= func;
-					fallback ??= func;
-				}
-			}
-
-			if( strict != null )
-				return strict;
-			if( fallback != null )
-				return fallback;
-
-			foreach( BaseType bt in structural.basetypes ) {
-				if( bt.type is not TypespecNested nested )
-					continue;
-
-				Decl? baseDecl = nested.resolvedDecl
-					          ?? ( result.TryGetResolved( nested, out Decl? d ) ? d : null );
-				if( baseDecl is Structural baseStruct ) {
-					Func? fromBase = LookupOperatorOverload( baseStruct, name, receiverIsConst, visited );
-					if( fromBase != null )
-						return fromBase;
-				}
-			}
-
-			return null;
-		}
 	}
 }

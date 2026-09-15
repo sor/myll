@@ -1387,7 +1387,8 @@ namespace Myll.Resolver
 				if( TryGetMemberAccessBaseType( derefUnop.expr, scope, module, out Hierarchical inner, viaArrow: false ) ) {
 					Typespec? operandType = typeResolver.Resolve( derefUnop.expr );
 					if( operandType != null
-					 && TryGetOperatorReturnType( operandType, "operator*", out Typespec? starReturnType )
+					 && OperatorResolver.TryGetOperatorReturnType(
+					 	operandType, "operator*", result, out Typespec? starReturnType )
 					 && starReturnType != null
 					 && TryGetBaseHierarchical( starReturnType, module, out Hierarchical operatorBase, viaArrow: false ) ) {
 						baseType = operatorBase;
@@ -1433,7 +1434,7 @@ namespace Myll.Resolver
 							case Func f:
 								type = f.retType;
 								if( TryGetReceiverType( calleeBin.left, out Typespec receiverType ) ) {
-									Typespec? substituted = SubstituteMethodReturnType( f, receiverType );
+									Typespec? substituted = OperatorResolver.SubstituteMethodReturnType( f, receiverType, result );
 									if( substituted != null )
 										type = substituted;
 								}
@@ -1493,32 +1494,6 @@ namespace Myll.Resolver
 			return false;
 		}
 
-		private Typespec? SubstituteMethodReturnType( Func method, Typespec receiverType )
-		{
-			Structural? owner = FindEnclosingStructural( method.scope ) as Structural;
-			if( owner == null || owner.TplParams.Count == 0 )
-				return null;
-
-			if( receiverType is not TypespecNested nested )
-				return null;
-
-			List<TplArg>? args = nested.idTpls.LastOrDefault()?.tplArgs;
-			if( args == null || args.Count < owner.TplParams.Count )
-				return null;
-
-			if( !UsesClassTplParam( method.retType, owner.TplParams ) )
-				return null;
-
-			foreach( TplArg arg in args ) {
-				if( arg.typespec is TypespecNested argNested && argNested.resolvedDecl == null
-				 && result.TryGetResolved( argNested, out Decl? decl ) ) {
-					argNested.resolvedDecl = decl;
-				}
-			}
-
-			return TemplateInference.SubstituteTemplateParams( method.retType, owner.TplParams, args, result );
-		}
-
 		private bool TryGetIndexerElementType( Expr receiver, GlobalNamespace module, out Typespec elementType )
 		{
 			elementType = null!;
@@ -1537,34 +1512,12 @@ namespace Myll.Resolver
 				return false;
 
 			Typespec ret = idxFunc.retType;
-			Typespec? substituted = SubstituteMethodReturnType( idxFunc, receiverType );
+			Typespec? substituted = OperatorResolver.SubstituteMethodReturnType( idxFunc, receiverType, result );
 			if( substituted != null )
 				ret = substituted;
 
 			elementType = ret;
 			return true;
-		}
-
-		private bool UsesClassTplParam( Typespec type, List<TplParam> parameters )
-		{
-			if( type is TypespecNested nested ) {
-				Decl? decl = nested.resolvedDecl;
-				if( decl == null )
-					result.TryGetResolved( nested, out decl );
-				if( decl is TplParamDecl tpl && parameters.Any( p => p.name == tpl.name ) )
-					return true;
-
-				foreach( IdTplArgs segment in nested.idTpls ) {
-					if( segment.tplArgs == null )
-						continue;
-					foreach( TplArg arg in segment.tplArgs ) {
-						if( arg.typespec != null && UsesClassTplParam( arg.typespec, parameters ) )
-							return true;
-					}
-				}
-			}
-
-			return false;
 		}
 
 		private static Hierarchical? FindEnclosingStructural( Scope scope )
@@ -1667,7 +1620,8 @@ namespace Myll.Resolver
 				if( viaArrow
 				 && decl is Structural arrowStruct
 				 && ( type.ptrs == null || type.ptrs.Count == 0 )
-				 && TryGetOperatorReturnType( type, "operator->", out Typespec? arrowReturnType )
+				 && OperatorResolver.TryGetOperatorReturnType(
+				 	type, "operator->", result, out Typespec? arrowReturnType )
 				 && arrowReturnType != null ) {
 					// Recursive `operator->` is intentionally not supported yet.
 					return TryGetBaseHierarchical( arrowReturnType, module, out baseType, viaArrow: false );
@@ -1940,76 +1894,6 @@ namespace Myll.Resolver
 					.Select( s => new IdTplArgs { id = s.id, tplArgs = s.tplArgs } )
 					.ToList(),
 			};
-		}
-
-		private bool TryGetOperatorReturnType(
-			Typespec receiverType,
-			string     name,
-			out Typespec? returnType )
-		{
-			returnType = null;
-
-			if( receiverType is not TypespecNested nested
-			 || nested.ptrs is { Count: > 0 }
-			 || nested.resolvedDecl is not Structural structural )
-				return false;
-
-			bool receiverIsConst = ( nested.qual & Qualifier.Const ) != 0;
-			Func? op = LookupOperatorOverload( structural, name, receiverIsConst, new HashSet<Structural>() );
-			if( op == null )
-				return false;
-
-			returnType = SubstituteMethodReturnType( op, receiverType ) ?? op.retType;
-			return returnType != null;
-		}
-
-		private Func? LookupOperatorOverload(
-			Structural          structural,
-			string              name,
-			bool                receiverIsConst,
-			HashSet<Structural> visited )
-		{
-			if( !visited.Add( structural ) )
-				return null;
-
-			Func? strict   = null;
-			Func? fallback = null;
-
-			foreach( Decl decl in structural.children ) {
-				if( decl is not Func func || func.name != name )
-					continue;
-
-				bool isConst = func.IsPure;
-				if( receiverIsConst ) {
-					if( isConst )
-						strict ??= func;
-				}
-				else {
-					if( !isConst )
-						strict ??= func;
-					fallback ??= func;
-				}
-			}
-
-			if( strict != null )
-				return strict;
-			if( fallback != null )
-				return fallback;
-
-			foreach( BaseType bt in structural.basetypes ) {
-				if( bt.type is not TypespecNested nested )
-					continue;
-
-				Decl? baseDecl = nested.resolvedDecl
-					          ?? ( result.TryGetResolved( nested, out Decl? d ) ? d : null );
-				if( baseDecl is Structural baseStruct ) {
-					Func? fromBase = LookupOperatorOverload( baseStruct, name, receiverIsConst, visited );
-					if( fromBase != null )
-						return fromBase;
-				}
-			}
-
-			return null;
 		}
 
 		private Decl? LookupMember( string name, Structural baseType, GlobalNamespace module )
