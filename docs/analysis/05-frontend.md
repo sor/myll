@@ -4,22 +4,26 @@
 
 | File | Purpose |
 |------|---------|
-| `Program.cs` | Compiler driver — pipeline orchestration |
+| `Program.cs` | Thin CLI driver — file discovery, output I/O, optional C++ compile/run, diagnostic reporting |
 | `CommandLineOptions.cs` | CLI argument parsing |
+| `backend/CompilerPipeline.cs` | Backend pipeline facade: parse, AST construction, resolution, and C++ generation |
+| `backend/Grammar/ParserDiagnostics.cs` | ANTLR lexer/parser diagnostic listeners |
+| `backend/Generator/ModuleGenerator.cs` | Per-module C++ code generation |
+| `backend/Generator/RawImportCollector.cs` | Aggregation of raw `#include`/`import` requirements across prototype modules |
 
 ## Pipeline Stages
 
-1. **Parse**: ANTLR4 tokenization and parsing (parallel via PLINQ across input files).
+1. **Parse**: ANTLR4 tokenization and parsing in `CompilerPipeline.ParseFiles` (parallel via PLINQ across input files).
 2. **Compile**: Group files by module and build per-module AST + scope tree via `CompilerPipeline.CompileModules` (parallel across modules).
-3. **Resolve**: Cross-module name and type resolution (`NameResolver.Resolve`), including cyclic imports and the implicit standard-library imports listed in `StdBuiltins.ImplicitStdImports`. This stage also runs two AST transformation passes: pre-resolution transforms (default attributes, enum normalization, auto-return, template params, chain methods) and post-resolution transforms (discard, rule-of-N, loop lowering, break/continue lowering, alias-shadowing checks).
-4. **Generate**: Produce C++ declarations and implementations per module via `CompilerPipeline.GenerateFiles` (parallel across non-prototype modules). Raw imports are collected by `RawImportCollector` and per-module generation is handled by `ModuleGenerator`.
+3. **Resolve**: Cross-module name and type resolution via `CompilerPipeline.ResolveModules`, including cyclic imports and the implicit standard-library imports listed in `StdBuiltins.ImplicitStdImports`. This stage also runs two AST transformation passes: pre-resolution transforms (default attributes, enum normalization, auto-return, template params, chain methods) and post-resolution transforms (discard, rule-of-N, loop lowering, break/continue lowering, alias-shadowing checks).
+4. **Generate**: Produce C++ declarations and implementations per module via `CompilerPipeline.GenerateFiles` (parallel across non-prototype modules). Raw imports and prototype-module bookkeeping are collected internally; per-module generation is handled by `ModuleGenerator`.
 5. **Emit**: Write files or output to stdout.
 6. **Compile C++**: Optional invocation of the platform C++ compiler.
 7. **Run**: Optional execution.
 
 ## Strengths
 
-- Clear pipeline separation.
+- Clear pipeline separation. The parse/compile/resolve/generate pipeline lives in `backend/CompilerPipeline.cs`; the frontend only handles CLI options, file discovery, output I/O, and optional C++ compile/run.
 - PLINQ parallel parsing for multiple input files.
 - PLINQ parallel module AST construction.
 - Per-module `ModuleContext` owns visitors and scope stack, so modules compile independently.

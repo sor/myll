@@ -113,6 +113,7 @@ myll/
 - **Nullable**: `backend` uses `Nullable=warnings`, `frontend` uses `Nullable=enable`.
 - **Naming**: Mixed conventions in legacy code (`camelCase` and `PascalCase` coexist). Follow existing file patterns.
 - **No `System.Func` conflicts**: The AST has a `Decl.Func` class — be careful with `using System;` at file scope.
+- **No static stateful classes**: Do not introduce `static` classes that hold mutable state or shared mutable collections. Keep compiler state instance-based and scoped to `ModuleContext` or per-invocation pipeline objects. See Known Pitfall 2.
 - **Visitor pattern**: `VExpr`, `VDecl`, `VStmt`, `VTypes` walk the ANTLR parse tree → `Core` AST → `Generator` produces C++.
 - **Generator formatting**:
   - Do not embed literal C++ keywords (e.g. `"constexpr "` or `"static "`) directly in `Gen()` methods.
@@ -219,7 +220,7 @@ Commented out code does not always mean that it is old or obsolete. Maybe it jus
 Before making changes, read these in `docs/analysis/`:
 
 1. **`Decl` inherits from `Stmt`** — widely considered the worst design decision. Future refactors should make them siblings under a common `Node` base. See `01-architecture.md`.
-2. **Static visitor state** — historically `VExt.cs` held a static `ScopeStack`; this was replaced by per-module `ModuleContext`. Make sure no new shared mutable state is introduced. See `01-architecture.md`.
+2. **Static state** — historically `VExt.cs` held a static `ScopeStack`; this was replaced by per-module `ModuleContext`. Do not introduce `static` classes that hold mutable state or shared mutable collections; keep compiler state instance-based and scoped to `ModuleContext` or per-invocation pipeline objects. See `01-architecture.md`.
 3. **Mutating code generation** — `NewExpr.Gen()` used to mutate the AST (`type.ptrs.RemoveAt(0)`). Fixed in `backend/Core/Expr.cs`; the method now temporarily replaces the pointer list and restores it. See `03-ast-core.md` and `plan/suspicious-warnings.md`.
 4. **Dead/future code** — `Symbol.cs` and `Attribute.cs` enums exist but are disconnected. They are stubs intended for semantic analysis. See `07-future-stubs.md`.
 5. **Local target-framework override** — The working tree may temporarily change `.csproj` and Rider `.run.xml` files from `net10.0` to `net6.0` to match a local SDK. Keep these changes unstaged and do **not** commit them; the repository target remains `net10.0`.
@@ -261,7 +262,7 @@ Use `tmp/` inside the project root for any temporary files or scratch tests. Do 
 ## Planned Work
 
 1. **Finish ScopeStack / semantic analysis (endboss)** — DONE. The C++ generator uses resolved declarations for unqualified `IdExpr` generation. Shadowing diagnostics are implemented with a flag-based `ShadowingMode`. Remaining semantic-analysis work is normal bug fixing and edge-case handling. See `plan/semantic-analysis.md`, `plan/resolved-idexpr-generation.md`, `backend/Resolver/Resolver.cs`, `backend/Resolver/TypeChecker.cs`.
-2. **Dialect/ModuleContext refactor and parallel CompileModule** — DONE. `DialectOptions` was collapsed into `Dialect` with a static `Dialect.Default` instance; `CompilationContext` was renamed to `ModuleContext`, owns the module AST, and removed the old `GlobalNamespace.Context` back-reference; all visitors are instance-based per module. Parallel module AST construction and generation are now encapsulated in `backend/CompilerPipeline.cs` (`CompileModules` / `GenerateFiles`), leaving `frontend/Program.cs` as a thin CLI/output driver.
+2. **Dialect/ModuleContext refactor and thin frontend driver** — DONE. `DialectOptions` was collapsed into `Dialect` with a static `Dialect.Default` instance; `CompilationContext` was renamed to `ModuleContext`, owns the module AST, and removed the old `GlobalNamespace.Context` back-reference; all visitors are instance-based per module. The full compiler pipeline (parse, AST construction, name/type resolution, and C++ generation) is encapsulated in `backend/CompilerPipeline.cs` (`ParseFiles` / `CompileModules` / `ResolveModules` / `GenerateFiles`). `frontend/Program.cs` is now a thin CLI/output driver that only handles options, file discovery, output I/O, and optional C++ compile/run.
 3. Testing + CI/CD — xUnit harness is in place under `testing/`; remaining work is CI/CD.
 4. Implement reachable NotImplementedException features:
    - Unix app option parsing — DONE. `frontend/apps/unix/ls.myll`, `cat.myll`, `grep.myll`, etc. use `cxxopts.hpp` for option parsing. The hand-parsed duplicate variants were removed and the cxxopts variants renamed to canonical module/file names, leaving one implementation per utility.

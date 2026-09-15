@@ -1,18 +1,12 @@
-// HACK to disable all PLINQ have the following line be active
-//#define DISABLE_PLINQ
-
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
-using Antlr4.Runtime;
-using Antlr4.Runtime.Atn;
 using Myll.Core;
 using Myll.Generator;
 using Myll.Resolver;
@@ -22,142 +16,13 @@ namespace Myll
 	using Strings  = List<string>;
 	using IStrings = IEnumerable<string>;
 
-	#if !DISABLE_PLINQ
-	using static ParallelEnumerable;
-#endif
-
-	public sealed class LexerDiagnosticListener : IAntlrErrorListener<int>
-	{
-		private readonly string file;
-		private readonly List<Diagnostic> diagnostics;
-
-		public LexerDiagnosticListener( string file, List<Diagnostic> diagnostics )
-		{
-			this.file        = file;
-			this.diagnostics = diagnostics;
-		}
-
-		public void SyntaxError(
-			TextWriter           output,
-			IRecognizer          recognizer,
-			int                  offendingSymbol,
-			int                  line,
-			int                  charPositionInLine,
-			string               msg,
-			RecognitionException e )
-		{
-			diagnostics.Add( new Diagnostic(
-				new SrcPos {
-					file = file,
-					from = new SrcPos.LineCol { line = line, col = charPositionInLine },
-					to   = new SrcPos.LineCol { line = line, col = charPositionInLine + 1 },
-				},
-				DiagnosticKind.Error,
-				msg ) );
-		}
-	}
-
-	public sealed class ParserDiagnosticListener : IAntlrErrorListener<IToken>
-	{
-		private readonly List<Diagnostic> diagnostics;
-
-		public ParserDiagnosticListener( List<Diagnostic> diagnostics )
-		{
-			this.diagnostics = diagnostics;
-		}
-
-		public void SyntaxError(
-			TextWriter           output,
-			IRecognizer          recognizer,
-			IToken               offendingSymbol,
-			int                  line,
-			int                  charPositionInLine,
-			string               msg,
-			RecognitionException e )
-		{
-			string file      = offendingSymbol?.TokenSource?.SourceName
-			                ?? ((MyllParser)recognizer).SourceName;
-			int    startCol  = offendingSymbol?.Column ?? charPositionInLine;
-			int    length    = offendingSymbol?.Text?.Length ?? 1;
-
-			diagnostics.Add( new Diagnostic(
-				new SrcPos {
-					file = file,
-					from = new SrcPos.LineCol { line = line, col = startCol },
-					to   = new SrcPos.LineCol { line = line, col = startCol + length },
-				},
-				DiagnosticKind.Error,
-				msg ) );
-		}
-	}
-
 	static partial class Program
 	{
 		private const  string   Version = "0.01 (Alpha)";
-		private static DateTime start;
-		private static Options  opt = new(); // PERF: new() necessary to let it be not-null
 
 		private static readonly string Executable = RuntimeInformation.IsOSPlatform( OSPlatform.Windows )
 			? "a.exe"
 			: "a.out";
-
-#if DISABLE_PLINQ
-		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static IEnumerable<T> AsParallel<T>( this IEnumerable<T> s ) => s;
-#endif
-
-		[MethodImpl( MethodImplOptions.AggressiveInlining )]
-		public static IEnumerable<T> AsSequential<T>( this IEnumerable<T> s ) => s;
-
-		private static ParserResult CreateParser( string filename )
-		{
-			string            text        = File.ReadAllText( filename );
-			AntlrInputStream  inputStream = new( text ) { name = filename };
-			MyllLexer         lexer       = new( inputStream );
-			List<Diagnostic>  diagnostics = new();
-
-			lexer.RemoveErrorListeners();
-			lexer.AddErrorListener( new LexerDiagnosticListener( filename, diagnostics ) );
-
-			CommonTokenStream tokenStream = new( lexer );
-			MyllParser        parser      = new( tokenStream );
-
-			parser.RemoveErrorListeners();
-			parser.AddErrorListener( new ParserDiagnosticListener( diagnostics ) );
-			// This will exit after the first problem
-			//parser.ErrorHandler = new BailErrorStrategy();
-			//Console.WriteLine( "Time elapsed after CreateParser   {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
-
-			return new( parser, diagnostics );
-		}
-
-		private static ParseResult ParseCST( ParserResult pd )
-		{
-			MyllParser       parser      = pd.Parser;
-			List<Diagnostic> diagnostics = pd.Diagnostics;
-
-			// if exceptions happen, comment this out
-			//parser.Interpreter.PredictionMode = PredictionMode.SLL;
-			parser.Interpreter.PredictionMode = PredictionMode.LL_EXACT_AMBIG_DETECTION;
-
-			try {
-				MyllParser.ProgContext prog = parser.prog();
-				//Console.WriteLine( "Time elapsed after ParseCST       {0:0}ms", (DateTime.Now - start).TotalMilliseconds );
-
-				return new( prog, diagnostics ); // STAGE 1
-			}
-			// This might never be reached since the error handling above
-			catch( Exception ex ) { // STAGE 2
-				Console.Error.WriteLine(
-					"First Stage failed of {0} with exception {1}",
-					parser.RuleContext.Start.InputStream.SourceName,
-					ex );
-				((CommonTokenStream) parser.TokenStream).Reset(); // rewind input stream
-				parser.Reset();
-				parser.Interpreter.PredictionMode = PredictionMode.LL;
-				return new( parser.prog(), diagnostics );
-			}
-		}
 
 		private static bool UseColorForDiagnostics()
 		{
@@ -225,7 +90,9 @@ namespace Myll
 			    || name.EndsWith( ".lib", StringComparison.OrdinalIgnoreCase );
 		}
 
-		private static void PrintDiagnosticsAndBail( IEnumerable<Diagnostic> diagnostics )
+		private static void PrintDiagnosticsAndBail(
+			Options opt,
+			IEnumerable<Diagnostic> diagnostics )
 		{
 			List<Diagnostic> list = diagnostics.ToList();
 			if( list.Count == 0 )
@@ -237,7 +104,9 @@ namespace Myll
 				Environment.Exit( -99 );
 		}
 
-		private static void PrintDiagnosticsAndBailOnErrors( IEnumerable<Diagnostic> diagnostics )
+		private static void PrintDiagnosticsAndBailOnErrors(
+			Options opt,
+			IEnumerable<Diagnostic> diagnostics )
 		{
 			List<Diagnostic> list = diagnostics.ToList();
 			if( list.Count == 0 )
@@ -250,9 +119,10 @@ namespace Myll
 		}
 
 		private static void PrintDiagnosticsAndBailOnErrors<T>(
+			Options opt,
 			IEnumerable<T> items,
 			Func<T, IEnumerable<Diagnostic>> selector )
-			=> PrintDiagnosticsAndBailOnErrors( items.SelectMany( selector ) );
+			=> PrintDiagnosticsAndBailOnErrors( opt, items.SelectMany( selector ) );
 
 		private static IEnumerable<string> CollectMyllLibraryFiles( IEnumerable<string> importedModules )
 		{
@@ -308,68 +178,46 @@ namespace Myll
 				return 1;
 			}
 
-			opt = ParseCommandLine( args );
+			Options opt = ParseCommandLine( args );
 			opt.OutPath = Path.GetFullPath( opt.OutPath );
 
-			start = DateTime.Now;
+			DateTime start = DateTime.Now;
 
 			int cpus = Environment.ProcessorCount;
 			ThreadPool.SetMinThreads( cpus*2, cpus*2 );
-			//ThreadPool.SetMaxThreads( cpus*2, 1000 );
 
-		//  ParallelQuery<(string, IStrings)>
-		// OR IEnumerable<(string, IStrings)>
-		List<string> inputFiles = opt.InFiles.ToList();
-		inputFiles.AddRange( CollectExternFiles( opt ) );
+			List<string> inputFiles = opt.InFiles.ToList();
+			inputFiles.AddRange( CollectExternFiles( opt ) );
 
-		HashSet<string> importedModules = new(
-			inputFiles.SelectMany( ExtractImportedModules ) );
-		inputFiles.AddRange( CollectMyllLibraryFiles( importedModules ) );
-		inputFiles = inputFiles.Distinct().ToList();
+			HashSet<string> importedModules = new(
+				inputFiles.SelectMany( ExtractImportedModules ) );
+			inputFiles.AddRange( CollectMyllLibraryFiles( importedModules ) );
+			inputFiles = inputFiles.Distinct().ToList();
 
-		List<ParseResult> parseResults
-				= inputFiles
-					.Select( CreateParser )
-					.AsParallel()
-					.Select( ParseCST )
-					.AsSequential()
-					.ToList();
-
-			PrintDiagnosticsAndBail( parseResults.SelectMany( r => r.Diagnostics ) );
+			List<ParseResult> parseResults = CompilerPipeline.ParseFiles( inputFiles );
+			PrintDiagnosticsAndBail( opt, parseResults.SelectMany( r => r.Diagnostics ) );
 
 			List<CompiledModuleResult> modules = CompilerPipeline.CompileModules( parseResults );
+			PrintDiagnosticsAndBail( opt, modules.SelectMany( m => m.Context.Diagnostics ) );
 
-			PrintDiagnosticsAndBail( modules.SelectMany( m => m.Context.Diagnostics ) );
-
-		var (result, diagnostics) = NameResolver.Resolve( modules );
-		PrintDiagnosticsAndBailOnErrors( diagnostics );
-
-		result.Apply();
-
-			IReadOnlyDictionary<string, IReadOnlyList<RawImport>> moduleRawImports
-				= RawImportCollector.Collect( modules );
-
-			IReadOnlySet<string> prototypeModules
-				= modules
-					.Where( m => m.Context.IsPrototypeFile )
-					.Select( m => m.Module.module )
-					.ToHashSet();
+			List<Diagnostic> resolutionDiagnostics = CompilerPipeline.ResolveModules( modules );
+			PrintDiagnosticsAndBailOnErrors( opt, resolutionDiagnostics );
 
 			List<GeneratedModuleFilesResult> generationResults
-				= CompilerPipeline.GenerateFiles( modules, moduleRawImports, prototypeModules );
+				= CompilerPipeline.GenerateFiles( modules );
 
 			IEnumerable<(string, IStrings)> output = generationResults.SelectMany( r => r.Files );
 
-			PrintDiagnosticsAndBailOnErrors( generationResults, r => r.Diagnostics );
+			PrintDiagnosticsAndBailOnErrors( opt, generationResults, r => r.Diagnostics );
 
 			Console.WriteLine( "Time elapsed after last ToArray call {0:0}ms\n", (DateTime.Now - start).TotalMilliseconds );
 
-		if( opt.IsClear && Directory.Exists( opt.OutPath ) ) {
-			foreach( string file in Directory.EnumerateFiles( opt.OutPath ) ) {
-				if( IsArtifact( file ) )
-					File.Delete( file );
+			if( opt.IsClear && Directory.Exists( opt.OutPath ) ) {
+				foreach( string file in Directory.EnumerateFiles( opt.OutPath ) ) {
+					if( IsArtifact( file ) )
+						File.Delete( file );
+				}
 			}
-		}
 
 			if( !opt.IsFileOut && !opt.IsStdOut ) {
 				Console.WriteLine( "\nNO OUTPUT wanted, just burning CPU time while calculating the output!\n" );
