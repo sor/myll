@@ -2,13 +2,68 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Antlr4.Runtime;
+using Antlr4.Runtime.Atn;
 using Myll.Core;
 using Myll.Generator;
+using Myll.Resolver;
 
 namespace Myll
 {
 	public static class CompilerPipeline
 	{
+		public static List<ParseResult> ParseFiles( IEnumerable<string> inputFiles )
+		{
+			return inputFiles
+				.Select( CreateParser )
+				.AsParallel()
+				.Select( ParseCST )
+				.ToList();
+		}
+
+		private static ParserResult CreateParser( string filename )
+		{
+			string            text        = File.ReadAllText( filename );
+			AntlrInputStream  inputStream = new( text ) { name = filename };
+			MyllLexer         lexer       = new( inputStream );
+			List<Diagnostic>  diagnostics = new();
+
+			lexer.RemoveErrorListeners();
+			lexer.AddErrorListener( new LexerDiagnosticListener( filename, diagnostics ) );
+
+			CommonTokenStream tokenStream = new( lexer );
+			MyllParser        parser      = new( tokenStream );
+
+			parser.RemoveErrorListeners();
+			parser.AddErrorListener( new ParserDiagnosticListener( diagnostics ) );
+
+			return new( parser, diagnostics );
+		}
+
+		private static ParseResult ParseCST( ParserResult pd )
+		{
+			MyllParser       parser      = pd.Parser;
+			List<Diagnostic> diagnostics = pd.Diagnostics;
+
+			parser.Interpreter.PredictionMode = PredictionMode.LL_EXACT_AMBIG_DETECTION;
+
+			try {
+				MyllParser.ProgContext prog = parser.prog();
+				return new( prog, diagnostics ); // STAGE 1
+			}
+			// This might never be reached since the error handling above
+			catch( Exception ex ) { // STAGE 2
+				Console.Error.WriteLine(
+					"First Stage failed of {0} with exception {1}",
+					parser.RuleContext.Start.InputStream.SourceName,
+					ex );
+				((CommonTokenStream) parser.TokenStream).Reset(); // rewind input stream
+				parser.Reset();
+				parser.Interpreter.PredictionMode = PredictionMode.LL;
+				return new( parser.prog(), diagnostics );
+			}
+		}
+
 		public static string ClassifyModule( MyllParser.ProgContext c )
 		{
 			FileInfo fi = new( c.Start.InputStream.SourceName );
@@ -47,11 +102,25 @@ namespace Myll
 			|| path.EndsWith( ".decl.myll", StringComparison.OrdinalIgnoreCase )
 			|| path.EndsWith( ".extern.myll", StringComparison.OrdinalIgnoreCase );
 
-		public static List<GeneratedModuleFilesResult> GenerateFiles(
-			List<CompiledModuleResult>                              modules,
-			IReadOnlyDictionary<string, IReadOnlyList<RawImport>> moduleRawImports,
-			IReadOnlySet<string>                                    prototypeModules )
+		public static List<Diagnostic> ResolveModules( List<CompiledModuleResult> modules )
 		{
+			ResolveResult result = NameResolver.Resolve( modules );
+			result.Result.Apply();
+			return result.Diagnostics.ToList();
+		}
+
+		public static List<GeneratedModuleFilesResult> GenerateFiles(
+			List<CompiledModuleResult> modules )
+		{
+			IReadOnlyDictionary<string, IReadOnlyList<RawImport>> moduleRawImports
+				= RawImportCollector.Collect( modules );
+
+			IReadOnlySet<string> prototypeModules
+				= modules
+					.Where( m => m.Context.IsPrototypeFile )
+					.Select( m => m.Module.module )
+					.ToHashSet();
+
 			return modules
 				.Where( m => !m.Context.IsPrototypeFile )
 				.AsParallel()
