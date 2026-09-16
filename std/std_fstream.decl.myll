@@ -7,14 +7,14 @@ namespace std {
 	[pub]:
 		ctor();
 		ctor( const char * filename );
-		ctor( const string & filename );
+		ctor( const std::string & filename );
 	};
 
 	class ofstream : [pub] std::ostream {
 	[pub]:
 		ctor();
 		ctor( const char * filename );
-		ctor( const string & filename );
+		ctor( const std::string & filename );
 	};
 
 	class fstream;

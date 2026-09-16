@@ -8,7 +8,7 @@ namespace std {
 	[pub]:
 		func flush() -> void;
 
-		operator <<( const string & value ) -> ostream &;
+		operator <<( const std::string & value ) -> ostream &;
 		operator <<( const char * value ) -> ostream &;
 		operator <<( char value ) -> ostream &;
 		operator <<( int value ) -> ostream &;
@@ -23,7 +23,7 @@ namespace std {
 	[pub]:
 		func rdbuf() -> std::streambuf *;
 
-		operator >>( string & value ) -> istream &;
+		operator >>( std::string & value ) -> istream &;
 		operator >>( int & value ) -> istream &;
 		operator >>( u64 & value ) -> istream &;
 
@@ -36,5 +36,5 @@ namespace std {
 	var ostream cerr;
 	var istream cin;
 
-	func getline( istream & in, string & line ) -> bool;
+	func getline( istream & in, std::string & line ) -> bool;
 }

@@ -11,24 +11,24 @@ namespace std {
 		ctor( const char * str );
 
 		func length() -> usize;
-		func substr( usize pos, usize len ) -> string;
-		func compare( usize pos, usize len, const string & str ) -> int;
+		func substr( usize pos, usize len ) -> std::string;
+		func compare( usize pos, usize len, const std::string & str ) -> int;
 
 		operator []( usize index ) -> char &;
-		operator +=( const string & other ) -> string &;
+		operator +=( const std::string & other ) -> std::string &;
 	};
 
-	operator +( const string & a, const string & b ) -> string;
-	operator <( const string & a, const string & b ) -> bool;
-	operator ==( const string & a, const string & b ) -> bool;
-	operator !=( const string & a, const string & b ) -> bool;
+	operator +( const std::string & a, const std::string & b ) -> std::string;
+	operator <( const std::string & a, const std::string & b ) -> bool;
+	operator ==( const std::string & a, const std::string & b ) -> bool;
+	operator !=( const std::string & a, const std::string & b ) -> bool;
 
 	// Numeric conversions from <string>.
-	func to_string( int value ) -> string;
-	func to_string( i64 value ) -> string;
-	func to_string( u64 value ) -> string;
-	func to_string( f32 value ) -> string;
-	func to_string( f64 value ) -> string;
+	func to_string( int value ) -> std::string;
+	func to_string( i64 value ) -> std::string;
+	func to_string( u64 value ) -> std::string;
+	func to_string( f32 value ) -> std::string;
+	func to_string( f64 value ) -> std::string;
 
-	func stoi( const string & str ) -> int;
+	func stoi( const std::string & str ) -> int;
 }

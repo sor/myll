@@ -7,11 +7,11 @@ namespace std {
 		[pub]:
 			ctor();
 			ctor( const char * source );
-			ctor( const string & source );
+			ctor( const std::string & source );
 
 			func filename() -> path;
 			func parent_path() -> path;
-			func generic_string() -> string;
+			func generic_string() -> std::string;
 
 			operator =( const path & other ) -> path &;
 		};
