@@ -156,7 +156,7 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 
 4. **Language syntax gaps**
    - Range-based `for` loops (`for( a : b )`).
-   - Namespace aliases via `alias` (`alias fs = std::filesystem;` should generate `namespace fs = std::filesystem;`).
+   - Namespace aliases via `alias` — DONE. `alias fs = std::filesystem;` at module or namespace scope resolves to the target namespace and generates `namespace fs = std::filesystem;`. Used in `frontend/apps/unix/find.myll` and tested in `testing/cases/synthetic_sugar/alias.myll`.
    - Auto-property / combined private-field + public-getter syntax.
 
 5. **Cleanup**

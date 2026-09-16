@@ -2,7 +2,7 @@ module find;
 
 import std_filesystem, std_vector, std_string, std_algorithm, cxxopts, glob, std_print, c_stdio;
 
-using std::filesystem;
+alias fs = std::filesystem;
 
 func main( int argc, const char *[] argv ) -> int
 {
@@ -45,9 +45,9 @@ func main( int argc, const char *[] argv ) -> int
 	if( opts.paths.empty() )
 		opts.paths.push_back( "." );
 
-	var std::vector<path> results;
+	var std::vector<fs::path> results;
 	for( auto startStr : opts.paths ) {
-		var path start( startStr );
+		var fs::path start( startStr );
 		find( start, 0, opts, results );
 	}
 
@@ -63,8 +63,6 @@ func main( int argc, const char *[] argv ) -> int
 }
 
 namespace JanSordid:
-
-alias fs = std::filesystem;
 
 struct Options
 {
