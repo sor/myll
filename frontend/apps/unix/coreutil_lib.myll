@@ -1,0 +1,10 @@
+module coreutil_lib;
+
+import std_iostream, std_string;
+
+namespace JanSordid::Coreutil:
+
+func printError( const string & tool, const string & msg ) -> void
+{
+	std::cerr << tool << ": " << msg << "\n";
+}

@@ -1,0 +1,41 @@
+module coreutil_cat;
+
+import coreutil_lib, std_iostream, std_fstream, std_vector, cxxopts;
+
+namespace JanSordid::Coreutil:
+
+func catCopyStream( std::istream & in ) -> void
+{
+	std::cout << in.rdbuf();
+}
+
+func cat( int argc, const char *[] argv ) -> int
+{
+	var cxxopts::Options options = cxxopts::Options( "cat", "concatenate files" );
+	var cxxopts::ParseResult result = options.parse( argc, argv );
+	const std::vector<string> files = result.unmatched();
+
+	var usize i = 0;
+	if( files.size() == 0 ) {
+		catCopyStream( std::cin );
+		return 0;
+	}
+
+	while( i < files.size() ) {
+		const string path = files[i];
+		if( path == "-" ) {
+			catCopyStream( std::cin );
+		}
+		else {
+			var std::ifstream file = std::ifstream( path );
+			if( !file ) {
+				printError( "cat", path + ": cannot open file" );
+				return 1;
+			}
+			catCopyStream( file );
+		}
+		++i;
+	}
+
+	return 0;
+}

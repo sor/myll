@@ -1,0 +1,20 @@
+module coreutil;
+
+import coreutil_find, coreutil_cat, coreutil_lib, std_iostream, std_string;
+
+func main( int argc, const char *[] argv ) -> int
+{
+	if( argc < 2 ) {
+		JanSordid::Coreutil::printError( "coreutil", "missing command" );
+		return 1;
+	}
+
+	const string cmd = argv[1];
+	if( cmd == "find" )
+		return find( argc - 1, &argv[1] );
+	if( cmd == "cat" )
+		return cat( argc - 1, &argv[1] );
+
+	JanSordid::Coreutil::printError( "coreutil", "unknown command: " + cmd );
+	return 1;
+}
