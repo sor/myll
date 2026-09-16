@@ -4,6 +4,6 @@ import std_filesystem;
 import std_vector;
 
 namespace glob {
-	func glob( const string & pathname ) -> std::vector<std::filesystem::path>;
-	func rglob( const string & pathname ) -> std::vector<std::filesystem::path>;
+	func glob( const std::string & pathname ) -> std::vector<std::filesystem::path>;
+	func rglob( const std::string & pathname ) -> std::vector<std::filesystem::path>;
 }

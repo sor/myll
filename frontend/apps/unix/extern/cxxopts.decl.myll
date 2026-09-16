@@ -5,7 +5,7 @@ import "cxxopts.hpp";
 namespace cxxopts {
 	class Options {
 	[pub]:
-		ctor( const string & program, const string & help );
+		ctor( const std::string & program, const std::string & help );
 
 		func parse( int argc, const char *[] argv ) -> ParseResult;
 		func add_options() -> OptionAdder;
@@ -13,22 +13,22 @@ namespace cxxopts {
 
 	class ParseResult {
 	[pub]:
-		func unmatched() -> std::vector<string>;
-		func count( const string & name ) -> int;
+		func unmatched() -> std::vector<std::string>;
+		func count( const std::string & name ) -> int;
 
-		operator []( const string & name ) -> Value &;
+		operator []( const std::string & name ) -> Value &;
 	};
 
 	class Value {
 	[pub]:
-		func default_value( const string & value ) -> Value &;
+		func default_value( const std::string & value ) -> Value &;
 		func as<T>() -> T;
 	};
 
 	class OptionAdder {
 	[pub]:
-		operator ()( const string & option, const string & desc ) -> OptionAdder &;
-		operator ()( const string & option, const string & desc, const Value * value ) -> OptionAdder &;
+		operator ()( const std::string & option, const std::string & desc ) -> OptionAdder &;
+		operator ()( const std::string & option, const std::string & desc, const Value * value ) -> OptionAdder &;
 	};
 
 	func value<T>() -> Value *;

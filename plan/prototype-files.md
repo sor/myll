@@ -16,10 +16,27 @@ Example `extern/std.decl.myll`:
 ```myll
 module std;
 namespace std {
-    func getenv(string name) -> char*;
+    func getenv(std::string name) -> char*;
     class vector<T>;
 }
 ```
+
+## Dialect-aware identifiers in prototype files
+
+Some Myll identifiers are actually language keywords that map to a dialect-configurable C++ entity. The most important one is `string`, which resolves to the class named by `Dialect.StringClassName` (default `std::string`). Bare `string` is therefore the *user-facing* type, not necessarily the real `std::string`.
+
+When a prototype file describes an external C++ API that literally uses `std::string`, write the type out fully:
+
+```myll
+namespace cxxopts {
+    class Options {
+    [pub]:
+        ctor( const std::string & program, const std::string & help );
+    };
+}
+```
+
+Using bare `string` in such a binding would silently describe a different type when the dialect is changed to, for example, `Qt::QString`.
 
 ## Inline `[extern]` in normal `.myll` files
 

@@ -2,10 +2,10 @@ module ls_helpers;
 import "ls_helpers.hpp";
 
 namespace ls_helpers {
-	func fileTypeLetter( const string & path ) -> string;
-	func permissionString( const string & path ) -> string;
-	func hardLinkCount( const string & path ) -> u64;
-	func ownerName( const string & path ) -> string;
-	func groupName( const string & path ) -> string;
-	func formatTime( const string & path ) -> string;
+	func fileTypeLetter( const std::string & path ) -> std::string;
+	func permissionString( const std::string & path ) -> std::string;
+	func hardLinkCount( const std::string & path ) -> u64;
+	func ownerName( const std::string & path ) -> std::string;
+	func groupName( const std::string & path ) -> std::string;
+	func formatTime( const std::string & path ) -> std::string;
 }

@@ -66,6 +66,12 @@ Myll writes `using std::vector;` and `using namespace std;` in C++. When the tar
 
 Using directives are currently supported inside function, namespace, and class/struct/union bodies. Global module-level `using namespace` is restricted to prevent namespace pollution.
 
+## Prototype files and dialect-aware names
+
+Prototype declaration files (`.decl.myll` / `.d.myll`) describe existing C++ APIs. Because they are resolved by the same name lookup as normal code, be careful with dialect-mapped keywords such as `string`, which resolves to `Dialect.StringClassName` rather than always meaning `std::string`.
+
+When a prototype binds an API that literally uses `std::string`, write the type as `std::string`. Bare `string` is only correct when the prototype should track the active dialect's string type.
+
 ## Future Directions
 
 - Module partitions.
