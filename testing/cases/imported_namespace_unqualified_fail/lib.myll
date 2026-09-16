@@ -1,0 +1,8 @@
+module lib;
+
+namespace Ns:
+
+func foo() -> int
+{
+	return 42;
+}

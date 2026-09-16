@@ -257,6 +257,9 @@ namespace Myll.Resolver
 				Decl? stringDecl = ResolveName( context.Dialect.StringClassName );
 				if( stringDecl is Hierarchical ) {
 					context.StringBackingClass = stringDecl;
+
+					if( !module.scope.importedNames.ContainsKey( "string" ) )
+						module.scope.importedNames.Add( "string", new List<Decl> { stringDecl } );
 				}
 				else if( stringDecl != null ) {
 					diagnostics.Add( new Diagnostic(
@@ -1968,16 +1971,65 @@ namespace Myll.Resolver
 				}
 			}
 
+			List<string> activeNs = GetActiveNamespaceFqns( scope );
 			foreach( string importedModule in ImportedModuleNames( module ) ) {
 				if( !moduleExports.TryGetValue( importedModule, out ModuleExports? exports ) )
 					continue;
 
-				result.AddRange( exports.LookupAll( name ) );
+				result.AddRange(
+					exports.LookupAll( name )
+					        .Where( d => IsEnclosingNamespaceActive( d, activeNs ) ) );
 			}
 		}
 
 		return DistinctCandidates( result );
 	}
+
+		private static List<string> GetActiveNamespaceFqns( Scope lookupScope )
+		{
+			List<string> active = new();
+			for( Scope? cur = lookupScope; cur != null; cur = cur.parent ) {
+				if( cur.decl is Namespace ns )
+					active.Add( ns.FullyQualifiedName );
+
+				foreach( Scope imported in cur.importedScopes ) {
+					if( imported.decl is Namespace ins )
+						active.Add( ins.FullyQualifiedName );
+				}
+			}
+
+			return active;
+		}
+
+		private static bool IsEnclosingNamespaceActive( Decl decl, List<string> activeNs )
+		{
+			string? declNs = GetEnclosingNamespaceName( decl );
+			if( declNs == null )
+				return true;
+
+			foreach( string lookupNs in activeNs ) {
+				if( declNs == lookupNs
+				 || lookupNs.StartsWith( declNs + "::", StringComparison.Ordinal ) )
+					return true;
+			}
+
+			return false;
+		}
+
+		private static string? GetEnclosingNamespaceName( Decl decl )
+		{
+			Scope? cur = decl switch {
+				Namespace ns => ns.scope.parent,
+				_            => decl.scope.parent,
+			};
+
+			for( ; cur != null; cur = cur.parent ) {
+				if( cur.decl is Namespace ns )
+					return ns.FullyQualifiedName;
+			}
+
+			return null;
+		}
 
 		private List<Decl> LookupInHierarchicalCandidates(
 			string      name,

@@ -7,6 +7,6 @@ namespace std {
 
 	namespace this_thread {
 		func yield() -> void;
-		func sleep_for( milliseconds duration ) -> void;
+		func sleep_for( chrono::milliseconds duration ) -> void;
 	}
 }

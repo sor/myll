@@ -11,9 +11,9 @@ func main( int argc, const char *[] argv ) -> int
 
 	const string cmd = argv[1];
 	if( cmd == "find" )
-		return find( argc - 1, &argv[1] );
+		return JanSordid::Coreutil::find( argc - 1, &argv[1] );
 	if( cmd == "cat" )
-		return cat( argc - 1, &argv[1] );
+		return JanSordid::Coreutil::cat( argc - 1, &argv[1] );
 
 	JanSordid::Coreutil::printError( "coreutil", "unknown command: " + cmd );
 	return 1;

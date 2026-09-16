@@ -1,0 +1,8 @@
+module main;
+
+import lib;
+
+func main() -> int
+{
+	return foo();
+}
