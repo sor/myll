@@ -2,7 +2,7 @@
 
 //module game_of_life; // this is game_of_life by default
 
-	import c_stdlib, std_iostream, std_thread;
+	import std_iostream, std_thread;
 //import std_iostream;
 
 namespace JanSordid:
@@ -34,7 +34,7 @@ class GameOfLife
 				if( 0 < y < sizeY-1
 				 && 0 < x < sizeX-1 )
 				{
-					dstMap[y][x] = (rand() % 4 == 0) ? 'o' : ' ';
+					dstMap[y][x] = (std::rand() % 4 == 0) ? 'o' : ' ';
 				}
 				else {
 					dstMap[y][x] = 'X';

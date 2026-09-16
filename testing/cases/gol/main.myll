@@ -1,6 +1,6 @@
 module game_of_life;
 
-import game_of_life, std_iostream, std_thread, std_chrono, c_stdlib;
+import game_of_life, std_iostream, std_thread, std_chrono;
 
 func main() -> int
 {

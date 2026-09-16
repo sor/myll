@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <initializer_list>
 #include <memory>
 #include <string>
@@ -10,7 +11,6 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
-#include <cstdlib>
 namespace JanSordid
 {
     class GameOfLife;

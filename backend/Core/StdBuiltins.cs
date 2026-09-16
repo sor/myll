@@ -18,6 +18,7 @@ namespace Myll.Core
 			"c_math",
 			"c_stddef",
 			"c_stdint",
+			"c_stdlib",
 			"std_initializer_list",
 			"std_memory",
 			"std_string",
