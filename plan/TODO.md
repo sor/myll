@@ -75,11 +75,14 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 
 ## Short-term consistency fixes (next few sessions)
 
-1. **Cross-module declaration collisions** — Myll currently lets two imported modules export
-   declarations with the same fully-qualified name (e.g. two `JanSordid::Coreutil::Options`
-   structs) and only fails later in the C++ compiler with a "redefinition" error. Myll must
-   detect this during resolution and emit a clear collision diagnostic at the source location(s).
-   Minimal repro: `tmp/repro_options_clash/` (Myll succeeds; g++ fails on the generated headers).
+1. **Cross-module declaration collisions** — Two imported modules can legitimately export
+   declarations with the same fully-qualified name (e.g. `Options` in two different helper
+   modules). Myll only needs to reject the collision when a *single* module imports both and
+   they end up in the same generated translation unit. Today Myll is silent and the C++ compiler
+   reports a redefinition; the diagnostic is readable but points at generated files. Once we have
+   `#line` source mapping the urgency drops, but Myll should still detect the conflict and emit
+   a source-location-aware error. Minimal repro: `tmp/repro_options_clash/`.
+
 
 2. **Contained global namespace `using` mode** — `Dialect.GlobalUsingNS.Contained` is designed
    but not implemented. Module-scope `using NS;` should emit `using namespace NS;` only in the
@@ -101,6 +104,13 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    literals like `type == 0` because C++ integral promotion leaks through. Since `char` is not a
    number in Myll, this should be rejected; use `type == '\0'`. Files:
    `backend/Resolver/TypeChecker.cs` and `backend/Resolver/ConversionRules.cs`.
+
+6. **Softcoded dialect configuration** — `Dialect` values are currently hardcoded as
+   `Dialect.Default` in `backend/Core/Dialect.cs`. We need an external source of dialect settings
+   (CLI flags and/or a project config file) so language-switch experiments do not require
+   recompiling the compiler. Each `ModuleContext` already owns a `Dialect` instance, so the
+   remaining work is parsing overrides and applying them per compilation. See
+   `docs/design/softcoded-dialect.md`.
 
 ## Blocked / needs dependency
 
