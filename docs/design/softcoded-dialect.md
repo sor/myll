@@ -24,7 +24,7 @@ means "auto", which resolves to the built-in default or a folder-level default.
 
 Sources of dialect configuration, from most specific to least specific:
 
-1. A module attribute pointing to a JSONC/JSON5 file (most specific).
+1. A module attribute pointing to a JSONC file (most specific).
 2. A module attribute with inline key/value pairs (convenience for one-off tweaks).
 3. The nearest folder-level `.myll-dialect.jsonc` file, searched upward from the
    module's source files.
@@ -56,12 +56,13 @@ All scalar, enum, and string properties of `Dialect` should be overridable:
 Derived helpers such as `GetPointerTemplate` and `DefaultFloatSize()` keep reading
 from the configured properties, so no API churn is needed beyond construction.
 
-## Configuration format: JSONC/JSON5
+## Configuration format: JSONC
 
-Pure JSON is unfriendly to hand-edited configuration. We support **JSON with
-comments** (JSONC) and a relaxed **JSON5** subset: `//` line comments, `/* */` block
-comments, and trailing commas. Booleans, numbers, strings, and enum names follow
-the C# property names in camelCase or PascalCase.
+Pure JSON is unfriendly to hand-edited configuration. We use **JSON with comments**
+(JSONC): `//` line comments, `/* */` block comments, and trailing commas. `System.Text.Json`
+natively supports this with `JsonCommentHandling.Skip` and `AllowTrailingCommas = true`.
+Booleans, numbers, strings, and enum names follow the C# property names in camelCase
+or PascalCase.
 
 Example `.myll-dialect.jsonc`:
 
@@ -146,10 +147,9 @@ per-folder configurations still win.
 
 ## Proposed implementation path
 
-1. Add a JSONC/JSON5 tokenizer pre-processor (strip `//`, `/* */`, and trailing
-   commas) and parse the cleaned text with `System.Text.Json`. Do not pull in a
-   heavy third-party parser; the comment-stripping subset is small and easy to
-   maintain.
+1. Parse dialect files with `System.Text.Json` using `ReadCommentHandling =
+   JsonCommentHandling.Skip` and `AllowTrailingCommas = true`. No custom tokenizer
+   is needed for JSONC.
 2. Add `Dialect.ParseOverrides(string jsoncText)` or similar that maps JSON keys to
    `Dialect` properties. Unknown keys error; invalid enum or type values error.
 3. Add a `ModuleContext.Dialect` resolution step that, after files are grouped by
