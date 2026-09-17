@@ -1,5 +1,7 @@
 # Contained global `using NS` plan
 
+Status: ready to implement; listed on `plan/TODO.md` under "Short-term consistency fixes".
+
 ## Goal
 
 With `new Dialect { GlobalUsingNS = GlobalUsingNSMode.Contained }` as the compilation dialect, a module-scope `using NS;` of a namespace must not emit `using namespace NS;` in the generated header. It should be emitted only in the implementation (`.cpp`) file, and all names resolved through that `using` in the header must be emitted fully qualified.

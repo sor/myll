@@ -73,6 +73,35 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    instead of `int`. Files: `backend/Resolver/TypeChecker.cs`. Test:
    `testing/cases/null_pointer_compare/`.
 
+## Short-term consistency fixes (next few sessions)
+
+1. **Cross-module declaration collisions** — Myll currently lets two imported modules export
+   declarations with the same fully-qualified name (e.g. two `JanSordid::Coreutil::Options`
+   structs) and only fails later in the C++ compiler with a "redefinition" error. Myll must
+   detect this during resolution and emit a clear collision diagnostic at the source location(s).
+   Minimal repro: `tmp/repro_options_clash/` (Myll succeeds; g++ fails on the generated headers).
+
+2. **Contained global namespace `using` mode** — `Dialect.GlobalUsingNS.Contained` is designed
+   but not implemented. Module-scope `using NS;` should emit `using namespace NS;` only in the
+   `.cpp` and fully qualify names in the `.hpp`. See `plan/contained-global-using.md` for the
+   detailed approach (track module-scope usings, emit cpp-only usings, qualify header ids).
+
+3. **Self-contained generated headers** — a generated `.hpp` must not rely on the order in which
+   includes appear or on includes pulled in by other headers. Audit the generator for any
+   remaining cases where an include is omitted because another header happens to provide it.
+
+4. **Untyped integer compound constants** — `1024 * 1024 * 1024` resolves as an `UntypedInteger`
+   without a `literalText`, so `ConversionRules.GetUntypedLiteralRank` cannot verify that it fits
+   and rejects assignments to `u64`/etc. Decide whether to evaluate the constant during resolution
+   or preserve/forward `literalText` for compound expressions. Files:
+   `backend/Resolver/TypeResolver.cs` (`CommonArithmeticType`) and
+   `backend/Resolver/ConversionRules.cs` (`GetUntypedLiteralRank`).
+
+5. **`char` compared with integer literals** — `char` values currently compare with integer
+   literals like `type == 0` because C++ integral promotion leaks through. Since `char` is not a
+   number in Myll, this should be rejected; use `type == '\0'`. Files:
+   `backend/Resolver/TypeChecker.cs` and `backend/Resolver/ConversionRules.cs`.
+
 ## Blocked / needs dependency
 
 (none at the moment)
