@@ -1,0 +1,8 @@
+module ls;
+
+import coreutil_ls;
+
+func main( int argc, const char *[] argv ) -> int
+{
+	return JanSordid::Coreutil::ls( argc, argv );
+}

@@ -1,0 +1,8 @@
+module dirname;
+
+import coreutil_dirname;
+
+func main( int argc, const char *[] argv ) -> int
+{
+	return JanSordid::Coreutil::dirname( argc, argv );
+}

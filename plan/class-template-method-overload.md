@@ -47,7 +47,7 @@ reports ambiguity.
 After each phase:
 - `dotnet build myll.sln`
 - `dotnet test testing/`
-- `bash frontend/apps/make_unix.sh release`
+- `bash frontend/coreutil/make_coreutil.sh release`
 
 ## Status
 

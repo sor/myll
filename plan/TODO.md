@@ -114,7 +114,7 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
     The flag `UseLoneCandidateShortcut` in `backend/Resolver/Resolver.cs` remains as an escape
     hatch. See `plan/lone-candidate-investigation.md` for full analysis and reproducers.
 
-2. **Function-scope `using` resolution** — `using Namespace;` inside a function body now resolves names from that namespace for the rest of the block. Implemented by registering `UsingStmt`s as `UnresolvedUsingStmt`, resolving them alongside `UnresolvedUsing`, and generating the appropriate `using namespace` / `using Name;` C++ form. Added regression test `testing/cases/using_function_scope/` and moved the workaround in `frontend/apps/unix/find.myll` into `main()`.
+2. **Function-scope `using` resolution** — `using Namespace;` inside a function body now resolves names from that namespace for the rest of the block. Implemented by registering `UsingStmt`s as `UnresolvedUsingStmt`, resolving them alongside `UnresolvedUsing`, and generating the appropriate `using namespace` / `using Name;` C++ form. Added regression test `testing/cases/using_function_scope/` and moved the workaround in `frontend/coreutil/find.myll` into `main()`.
 
 ## High priority
 
@@ -156,7 +156,7 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 
 4. **Language syntax gaps**
    - Range-based `for` loops (`for( a : b )`).
-   - Namespace aliases via `alias` — DONE. `alias fs = std::filesystem;` at module or namespace scope resolves to the target namespace and generates `namespace fs = std::filesystem;`. Used in `frontend/apps/unix/find.myll` and tested in `testing/cases/synthetic_sugar/alias.myll`.
+   - Namespace aliases via `alias` — DONE. `alias fs = std::filesystem;` at module or namespace scope resolves to the target namespace and generates `namespace fs = std::filesystem;`. Used in `frontend/coreutil/find.myll` and tested in `testing/cases/synthetic_sugar/alias.myll`.
    - Auto-property / combined private-field + public-getter syntax.
 
 5. **Cleanup**

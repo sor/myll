@@ -1,6 +1,8 @@
-module ls;
+module coreutil_ls;
 
 import std_iostream, std_filesystem, std_vector, std_string, std_algorithm, ls_helpers, cxxopts;
+
+namespace JanSordid::Coreutil:
 
 enum SortMode {
 	Name,
@@ -8,7 +10,7 @@ enum SortMode {
 	Time,
 }
 
-struct Options
+struct LsOptions
 {
 	field {
 		bool showAll = false;
@@ -75,7 +77,7 @@ class Formatter
 	func format( const DirEntry & ) -> string;
 }
 
-func humanSize( u64 bytes ) -> string
+func lsHumanSize( u64 bytes ) -> string
 {
 	if( bytes >= 1024 * 1024 * 1024 )
 		return std::to_string( bytes / (1024 * 1024 * 1024) ) + "G";
@@ -86,7 +88,7 @@ func humanSize( u64 bytes ) -> string
 	return std::to_string( bytes );
 }
 
-func padLeft( string s, usize width ) -> string
+func lsPadLeft( string s, usize width ) -> string
 {
 	while( s.length() < width )
 		s = " " + s;
@@ -107,15 +109,15 @@ class LongFormatter : Formatter
 	func format( const DirEntry & e ) -> string
 	{
 		var string sizeStr = _humanReadable
-			? humanSize( e.size() )
+			? lsHumanSize( e.size() )
 			: std::to_string( e.size() );
 
 		return ls_helpers::fileTypeLetter( e.path() )
 			+ ls_helpers::permissionString( e.path() )
-			+ " " + padLeft( std::to_string( ls_helpers::hardLinkCount( e.path() ) ), 2 )
+			+ " " + lsPadLeft( std::to_string( ls_helpers::hardLinkCount( e.path() ) ), 2 )
 			+ " " + ls_helpers::ownerName( e.path() )
 			+ " " + ls_helpers::groupName( e.path() )
-			+ " " + padLeft( sizeStr, 10 )
+			+ " " + lsPadLeft( sizeStr, 10 )
 			+ " " + ls_helpers::formatTime( e.path() )
 			+ " " + e.name()
 			+ "\n";
@@ -135,7 +137,7 @@ class DetailedFormatter : Formatter
 	[override]
 	func format( const DirEntry & e ) -> string
 	{
-		var string s = (_humanReadable ? humanSize( e.size() ) : std::to_string( e.size() ))
+		var string s = (_humanReadable ? lsHumanSize( e.size() ) : std::to_string( e.size() ))
 			+ " " + e.name();
 		if( e.isDirectory() )
 			s += "/";
@@ -156,43 +158,43 @@ class NameOnlyFormatter : Formatter
 	}
 }
 
-func entryNameLess( const DirEntry & a, const DirEntry & b ) -> bool
+func lsEntryNameLess( const DirEntry & a, const DirEntry & b ) -> bool
 {
 	return a.name() < b.name();
 }
 
-func entrySizeLess( const DirEntry & a, const DirEntry & b ) -> bool
+func lsEntrySizeLess( const DirEntry & a, const DirEntry & b ) -> bool
 {
 	if( a.size() != b.size() )
 		return a.size() > b.size();
 	return a.name() < b.name();
 }
 
-func entryTimeLess( const DirEntry & a, const DirEntry & b ) -> bool
+func lsEntryTimeLess( const DirEntry & a, const DirEntry & b ) -> bool
 {
 	if( a.time() != b.time() )
 		return a.time() > b.time();
 	return a.name() < b.name();
 }
 
-func isHidden( const DirEntry & e ) -> bool
+func lsIsHidden( const DirEntry & e ) -> bool
 {
 	return e.name().length() > 0 && e.name().compare( 0, 1, "." ) == 0;
 }
 
-func isDotOrDotDot( const DirEntry & e ) -> bool
+func lsIsDotOrDotDot( const DirEntry & e ) -> bool
 {
 	return e.name() == "." || e.name() == "..";
 }
 
-func shouldShow( const DirEntry & e, const Options & options ) -> bool
+func lsShouldShow( const DirEntry & e, const LsOptions & options ) -> bool
 {
-	if( isDotOrDotDot( e ) )
+	if( lsIsDotOrDotDot( e ) )
 		return options.showAll;
-	return options.showAll || options.almostAll || !isHidden( e );
+	return options.showAll || options.almostAll || !lsIsHidden( e );
 }
 
-func listPath( const std::filesystem::path & target, const Options & options, Formatter *! & fmt, bool printHeader ) -> int
+func lsListPath( const std::filesystem::path & target, const LsOptions & options, Formatter *! & fmt, bool printHeader ) -> int
 {
 	if( !std::filesystem::exists( target ) ) {
 		std::cerr << "ls: " << target.generic_string() << ": No such file or directory\n";
@@ -219,18 +221,18 @@ func listPath( const std::filesystem::path & target, const Options & options, Fo
 	}
 
 	if( options.sortMode == SortMode::Name )
-		std::sort( entries.begin(), entries.end(), entryNameLess );
+		std::sort( entries.begin(), entries.end(), lsEntryNameLess );
 	else if( options.sortMode == SortMode::Size )
-		std::sort( entries.begin(), entries.end(), entrySizeLess );
+		std::sort( entries.begin(), entries.end(), lsEntrySizeLess );
 	else
-		std::sort( entries.begin(), entries.end(), entryTimeLess );
+		std::sort( entries.begin(), entries.end(), lsEntryTimeLess );
 
 	if( options.reverse )
 		std::reverse( entries.begin(), entries.end() );
 
 	var usize k = 0;
 	while( k < entries.size() ) {
-		if( shouldShow( entries[k], options ) )
+		if( lsShouldShow( entries[k], options ) )
 			std::cout << fmt->format( entries[k] );
 		++k;
 	}
@@ -241,9 +243,9 @@ func listPath( const std::filesystem::path & target, const Options & options, Fo
 	if( options.recursive ) {
 		var usize j = 0;
 		while( j < entries.size() ) {
-			if( entries[j].isDirectory() && !isDotOrDotDot( entries[j] ) && shouldShow( entries[j], options ) ) {
+			if( entries[j].isDirectory() && !lsIsDotOrDotDot( entries[j] ) && lsShouldShow( entries[j], options ) ) {
 				std::cout << "\n";
-				listPath( std::filesystem::path( entries[j].path() ), options, fmt, true );
+				lsListPath( std::filesystem::path( entries[j].path() ), options, fmt, true );
 			}
 			++j;
 		}
@@ -252,7 +254,7 @@ func listPath( const std::filesystem::path & target, const Options & options, Fo
 	return 0;
 }
 
-func main( const int argc, const char *[] argv ) -> int
+func ls( int argc, const char *[] argv ) -> int
 {
 	var cxxopts::Options cli = cxxopts::Options( "ls", "list directory contents" );
 	cli.add_options()
@@ -269,7 +271,7 @@ func main( const int argc, const char *[] argv ) -> int
 
 	var cxxopts::ParseResult result = cli.parse( argc, argv );
 
-	var Options options;
+	var LsOptions options;
 	options.showAll       = result["all"].as<bool>();
 	options.almostAll     = result["almost-all"].as<bool>();
 	options.humanReadable = result["human-readable"].as<bool>();
@@ -311,7 +313,7 @@ func main( const int argc, const char *[] argv ) -> int
 			std::cout << "\n";
 		if( printHeader )
 			std::cout << targets[t].generic_string() << ":\n";
-		if( listPath( targets[t], options, fmt, false ) != 0 )
+		if( lsListPath( targets[t], options, fmt, false ) != 0 )
 			exitCode = 1;
 		++t;
 	}

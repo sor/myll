@@ -1,8 +1,10 @@
-module dirname;
+module coreutil_dirname;
 
 import std_iostream, std_filesystem, std_vector, cxxopts;
 
-func main( const int argc, const char *[] argv ) -> int
+namespace JanSordid::Coreutil:
+
+func dirname( int argc, const char *[] argv ) -> int
 {
 	var cxxopts::Options options = cxxopts::Options( "dirname", "print directory part of path" );
 	var cxxopts::ParseResult result = options.parse( argc, argv );

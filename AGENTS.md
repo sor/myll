@@ -151,7 +151,7 @@ myll/
 - **Myll class layout**: Group fields in a `field { ... }` block at the top; fields are private by default. Outdent access-section specifiers (`[pub]:`, `[priv]:`, `[prot]:`) one level so they line up with the class keyword. Keep per-declaration attributes (`[pure]`, `[override]`, `[static]`) indented with their declaration.
 - **Myll method bodies**: Use the arrow form for simple expression-bodied getters: `func size() -> u64 => _size;`.
 - **Rider links**: When running inside Rider's terminal, file-line references like `backend/Core/Expr.cs:42` are clickable. If using the `jetbrains://rd/navigate/reference?...` URI from the shell, the `line` value is zero-based, so subtract 1 from the 1-based source line.
-- **Unix sample apps**: Build all utilities in `frontend/apps/unix/` with `frontend/apps/make_unix.sh`. It delegates to the existing `unix/Makefile` and supports `clean`, `release`, and `debug` targets.
+- **Coreutil sample apps**: Build all utilities in `frontend/coreutil/` with `frontend/coreutil/make_coreutil.sh`. It delegates to the existing `coreutil/Makefile` and supports `clean`, `release`, and `debug` targets.
 
 ## Documentation & Code Formatting Rules
 
@@ -162,7 +162,7 @@ myll/
 ## Build & Test
 
 - xUnit integration tests live under `testing/`. Run them with `dotnet test testing/`.
-- The default harness includes `UnixAppsTests.GenerateUnixApps`, which generates C++ for every utility in `frontend/apps/unix/`. The full C++ build (`bash frontend/apps/make_unix.sh`) should run in pre-submit/CI; it takes about 30 seconds from a clean state.
+- The default harness includes `CoreutilAppsTests.GenerateCoreutilApps`, which generates C++ for every utility in `frontend/coreutil/`. The full C++ build (`bash frontend/coreutil/make_coreutil.sh`) should run in pre-submit/CI; it takes about 30 seconds from a clean state.
 - Manual testing: compile `.myll` files via the CLI and inspect generated `.cpp`/`.h` output. Also pass generated C++ code to a C++ compiler with sane warnings.
 - See `docs/analysis/06-test-coverage.md` for test inventory and earlier harness design notes.
 
@@ -172,7 +172,7 @@ A `Dockerfile` and `.dockerignore` are provided at the repository root. They tar
 
 - Build image: `podman build -t myll .`
 - Run tests: `podman run --rm myll`
-- The container currently runs `dotnet test testing/`; for a full pre-submit gate it should also run `bash frontend/apps/make_unix.sh`.
+- The container currently runs `dotnet test testing/`; for a full pre-submit gate it should also run `bash frontend/coreutil/make_coreutil.sh`.
 
 Tests run with `MYLL_TEST_TEMP=1` so each test case uses an isolated temp directory under `testing/generated/`. This prevents concurrent runs from interfering and avoids relying on `/tmp`, which is often mounted `noexec`.
 
@@ -265,9 +265,9 @@ Use `tmp/` inside the project root for any temporary files or scratch tests. Do 
 2. **Dialect/ModuleContext refactor and thin frontend driver** — DONE. `DialectOptions` was collapsed into `Dialect` with a static `Dialect.Default` instance; `CompilationContext` was renamed to `ModuleContext`, owns the module AST, and removed the old `GlobalNamespace.Context` back-reference; all visitors are instance-based per module. The full compiler pipeline (parse, AST construction, name/type resolution, and C++ generation) is encapsulated in `backend/CompilerPipeline.cs` (`ParseFiles` / `CompileModules` / `ResolveModules` / `GenerateFiles`). `frontend/Program.cs` is now a thin CLI/output driver that only handles options, file discovery, output I/O, and optional C++ compile/run.
 3. Testing + CI/CD — xUnit harness is in place under `testing/`; remaining work is CI/CD.
 4. Implement reachable NotImplementedException features:
-   - Unix app option parsing — DONE. `frontend/apps/unix/ls.myll`, `cat.myll`, `grep.myll`, etc. use `cxxopts.hpp` for option parsing. The hand-parsed duplicate variants were removed and the cxxopts variants renamed to canonical module/file names, leaving one implementation per utility.
+    - Coreutil app option parsing — DONE. `frontend/coreutil/ls.myll`, `cat.myll`, `grep.myll`, etc. use `cxxopts.hpp` for option parsing. The hand-parsed duplicate variants were removed and the cxxopts variants renamed to canonical module/file names, leaving one implementation per utility.
    - discard — DONE. `_ = expr` lowers to `static_cast<void>(expr)`; `_` as a raw-pointer argument becomes `static_cast<T*>(nullptr)`; `_` as a value/reference argument introduces a hidden `myll_tmp_` local; `var`/`let T a = _` omits the initializer. See `backend/Resolver/DiscardTransformer.cs`, `testing/cases/discard/`.
-   - abstract/default/delete function bodies — DONE. `[abstract]` emits `= 0` and auto-virtual; `[default]` emits `= default`; `[delete]`/`[disallow]` emit `= delete`. See `testing/cases/abstract_default_delete/` and `frontend/apps/unix/ls.myll`.
+   - abstract/default/delete function bodies — DONE. `[abstract]` emits `= 0` and auto-virtual; `[default]` emits `= default`; `[delete]`/`[disallow]` emit `= delete`. See `testing/cases/abstract_default_delete/` and `frontend/coreutil/ls.myll`.
     - inheritance resolution — DONE. Derived-to-base conversions work for raw pointers/references and smart pointers; member lookup walks base classes; object slicing is rejected; base methods hidden by an overloaded derived method are re-exposed with C++ `using Base::name;`. `[shadow]` and `[unshadow]` attributes can opt out or opt in per method or per class; when the hidden name exists in multiple unrelated bases a warning is emitted and no `using` is generated. See `testing/cases/inheritance/` and `testing/cases/slicing_fail/`.
     - implicit class aliases — DONE. `Dialect.Default.BaseClassAliasName` (default `"base"`) injects the first base class; `Dialect.Default.OwnClassAliasName` (default unset) injects the enclosing class/struct. Aliases are skipped and a warning is emitted when shadowed by a member, parameter, local variable, or catch parameter. See `backend/Resolver/ConfiguredAliasShadowingTransformer.cs` and `backend/Generator/HierachicalGen.cs`.
     - auto-return variable — DONE. `Dialect.Default.AutoReturnName` (default `"ret"`) declares an implicit result variable at the start of a non-void function and appends `return ret;` when control can fall off the end. It is suppressed when the return type is `void` or a reference, when the name is shadowed, or when the name is never used. See `backend/Resolver/AutoReturnTransformer.cs` and `testing/cases/auto_return/`.

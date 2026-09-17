@@ -8,7 +8,7 @@ This file records what should be carried forward, what is already covered, and w
 
 ### Already covered by origin/master
 
-- **Class-based `ls.myll`**: upstream already rewrote `frontend/apps/unix/ls.myll` to use a `DirEntry` class.
+- **Class-based `ls.myll`**: upstream already rewrote `frontend/coreutil/coreutil_ls.myll` to use a `DirEntry` class.
 - **Base-clause formatting tokens**: upstream `StmtFormatting.StructFormat` already has slots 1 and 2 for the first and subsequent bases, with placeholders for access and `virtual`.
 - **Type aliases via `alias`**: upstream supports `alias MyInt = int;` and emits `using MyInt = int;`.
 - **Namespace `using` distinction**: upstream changed `UsingDecl` to include `IsNamespaceUsing`, and `HierarchicalGen.AddUsing` emits either a type alias or a namespace using from the same `UsingFormat` array.

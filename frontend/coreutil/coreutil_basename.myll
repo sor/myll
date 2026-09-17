@@ -1,8 +1,10 @@
-module basename;
+module coreutil_basename;
 
 import std_iostream, std_filesystem, std_vector, cxxopts;
 
-func main( const int argc, const char *[] argv ) -> int
+namespace JanSordid::Coreutil:
+
+func basename( int argc, const char *[] argv ) -> int
 {
 	var cxxopts::Options options = cxxopts::Options( "basename", "print base name of path" );
 	var cxxopts::ParseResult result = options.parse( argc, argv );

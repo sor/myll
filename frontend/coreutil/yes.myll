@@ -1,0 +1,8 @@
+module yes;
+
+import coreutil_yes;
+
+func main( int argc, const char *[] argv ) -> int
+{
+	return JanSordid::Coreutil::yes( argc, argv );
+}

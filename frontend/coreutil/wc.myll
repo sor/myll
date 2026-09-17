@@ -1,0 +1,8 @@
+module wc;
+
+import coreutil_wc;
+
+func main( int argc, const char *[] argv ) -> int
+{
+	return JanSordid::Coreutil::wc( argc, argv );
+}

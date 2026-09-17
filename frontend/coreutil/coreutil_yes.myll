@@ -1,8 +1,10 @@
-module yes;
+module coreutil_yes;
 
 import std_iostream, std_vector, cxxopts;
 
-func main( const int argc, const char *[] argv ) -> int
+namespace JanSordid::Coreutil:
+
+func yes( int argc, const char *[] argv ) -> int
 {
 	var cxxopts::Options options = cxxopts::Options( "yes", "print a string repeatedly" );
 	var cxxopts::ParseResult result = options.parse( argc, argv );

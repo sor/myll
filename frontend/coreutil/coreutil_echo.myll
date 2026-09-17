@@ -1,8 +1,10 @@
-module echo;
+module coreutil_echo;
 
 import std_iostream, std_string, std_vector, cxxopts;
 
-func main( const int argc, const char *[] argv ) -> int
+namespace JanSordid::Coreutil:
+
+func echo( int argc, const char *[] argv ) -> int
 {
 	var cxxopts::Options options = cxxopts::Options( "echo", "print arguments" );
 	options.add_options()

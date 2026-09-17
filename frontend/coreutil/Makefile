@@ -1,4 +1,4 @@
-# Build all Myll Unix utilities in this directory.
+# Build all Myll core utilities in this directory.
 #
 # Run from this directory:
 #   make
@@ -6,7 +6,7 @@
 
 MAKEFLAGS += -j4
 
-MYLL_ROOT ?= ../../..
+MYLL_ROOT ?= ../..
 MYLL      := dotnet run --project $(MYLL_ROOT)/frontend -- -i '*.myll' -o gen
 
 CXX      ?= g++
@@ -15,9 +15,11 @@ CXXFLAGS ?= -std=c++23 -Ithird_party -DCXXOPTS_NO_REGEX -O1 -Wall -Wextra -Wsugg
 RELEASE_FLAGS ?= -O2 -s
 DEBUG_FLAGS   ?= -Og -g
 
-# Logic modules (coreutil_*.myll) and the combined dispatcher (coreutil.myll)
-# do not produce standalone binaries by themselves.
-SPLIT_TOOLS := find cat
+# Tools split into a shared logic module (coreutil_*.myll), a thin standalone
+# wrapper, and the JanSordid::Coreutil shared library.
+SPLIT_TOOLS := find cat basename dirname echo head wc grep ls yes pwd
+
+# Trivial tools (true, false) are compiled straight from their wrapper .myll.
 TOOLS       := $(filter-out $(SPLIT_TOOLS),$(basename $(filter-out coreutil_%.myll coreutil.myll,$(wildcard *.myll))))
 BINS        := $(addprefix gen/,$(TOOLS))
 ALL_BINS    := $(BINS) $(addprefix gen/,$(SPLIT_TOOLS)) gen/coreutil
@@ -35,18 +37,17 @@ gen/.stamp: $(wildcard *.myll) $(wildcard *.hpp)
 	@for h in $(wildcard *.hpp); do cp -f "$$h" gen/; done
 	@touch gen/.stamp
 
-# Pilot tools that are split into logic + standalone wrapper + shared library.
-gen/find: gen/.stamp
-	$(CXX) $(CXXFLAGS) gen/find.cpp gen/coreutil_find.cpp gen/coreutil_lib.cpp -o $@
-
-gen/cat: gen/.stamp
-	$(CXX) $(CXXFLAGS) gen/cat.cpp gen/coreutil_cat.cpp gen/coreutil_lib.cpp -o $@
+# Split tools: wrapper + logic + shared library.
+$(addprefix gen/,$(SPLIT_TOOLS)): gen/%: gen/.stamp
+	$(CXX) $(CXXFLAGS) gen/$*.cpp gen/coreutil_$*.cpp gen/coreutil_lib.cpp -o $@
 
 # Combined multi-call binary: dispatcher + all tool logics + shared library.
-gen/coreutil: gen/.stamp
-	$(CXX) $(CXXFLAGS) gen/coreutil.cpp gen/coreutil_find.cpp gen/coreutil_cat.cpp gen/coreutil_lib.cpp -o $@
+COREUTIL_SRCS := coreutil.cpp $(foreach t,$(SPLIT_TOOLS),coreutil_$(t).cpp) coreutil_lib.cpp
 
-# Unconverted tools still compile from a single generated .cpp.
+gen/coreutil: gen/.stamp
+	$(CXX) $(CXXFLAGS) $(addprefix gen/,$(COREUTIL_SRCS)) -o $@
+
+# Trivial tools still compile from a single generated .cpp.
 $(BINS): gen/.stamp
 	$(CXX) $(CXXFLAGS) gen/$(@F).cpp -o $@
 

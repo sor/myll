@@ -7,11 +7,11 @@ using Xunit.Abstractions;
 namespace Myll.Tests
 {
 	/// <summary>
-	/// Quick smoke test for the Unix sample apps.
+	/// Quick smoke test for the coreutil sample apps.
 	/// The default harness only generates C++ for all utilities; the actual C++
 	/// compilation is left to a pre-submit / CI step (see AGENTS.md).
 	/// </summary>
-	public sealed class UnixAppsTests
+	public sealed class CoreutilAppsTests
 	{
 		private static readonly string RepoRoot = Path.GetFullPath(
 			Path.Combine( AppContext.BaseDirectory, "..", "..", "..", ".." ) );
@@ -20,17 +20,17 @@ namespace Myll.Tests
 
 		private readonly ITestOutputHelper output;
 
-		public UnixAppsTests( ITestOutputHelper output )
+		public CoreutilAppsTests( ITestOutputHelper output )
 		{
 			this.output = output;
 		}
 
 		[Fact]
-		public void GenerateUnixApps()
+		public void GenerateCoreutilApps()
 		{
-			string unixDir      = Path.Combine( RepoRoot, "frontend", "apps", "unix" );
+			string coreutilDir  = Path.Combine( RepoRoot, "frontend", "coreutil" );
 			string generatedDir = Path.Combine( RepoRoot, "testing", "generated",
-				String.Format( "unix_apps_tmp_{0:N}", Guid.NewGuid() ) );
+				String.Format( "coreutil_apps_tmp_{0:N}", Guid.NewGuid() ) );
 
 			Directory.CreateDirectory( generatedDir );
 
@@ -40,10 +40,10 @@ namespace Myll.Tests
 					FrontendDll,
 					Quote( generatedDir ) );
 
-				output.WriteLine( "Running: dotnet " + args + " in " + unixDir );
+				output.WriteLine( "Running: dotnet " + args + " in " + coreutilDir );
 				ProcessResult result = ProcessRunner.Run(
 					"dotnet", args,
-					workingDirectory: unixDir,
+					workingDirectory: coreutilDir,
 					timeout: TimeSpan.FromSeconds( 60 ) );
 
 				output.WriteLine( result.StdOut );

@@ -1,0 +1,8 @@
+module echo;
+
+import coreutil_echo;
+
+func main( int argc, const char *[] argv ) -> int
+{
+	return JanSordid::Coreutil::echo( argc, argv );
+}

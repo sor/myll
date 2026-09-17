@@ -38,7 +38,7 @@ These have grammar, AST nodes, or visitor entry points already; they mainly need
 
 - **Namespace aliases (`alias fs = std::filesystem;`)** — DONE.
   - `alias` declarations that resolve to a namespace produce `namespace fs = std::filesystem;`.
-  - Used in `frontend/apps/unix/find.myll` and regression-tested in `testing/cases/synthetic_sugar/alias.myll`.
+  - Used in `frontend/coreutil/find.myll` and regression-tested in `testing/cases/synthetic_sugar/alias.myll`.
 
 - **Contained module-scope `using NS`**
   - Files: `backend/Core/Dialect.cs:57–60, 218–220`, `backend/Resolver/Resolver.cs:322–348`

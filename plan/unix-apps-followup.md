@@ -27,7 +27,7 @@ This plan is complete.
    The existing `cxxopts.decl.myll` covers the patterns used by the sample apps, so no further work is required for now.
 
 9. **Build all unix utilities as a CI gate** — DONE  
-   The default `dotnet test testing/` harness includes `UnixAppsTests.GenerateUnixApps`, which generates C++ for all unix utilities. The full C++ build (`bash frontend/apps/make_unix.sh`, ~30s clean) now runs in the container build as well.
+   The default `dotnet test testing/` harness includes `CoreutilAppsTests.GenerateCoreutilApps`, which generates C++ for all unix utilities. The full C++ build (`bash frontend/coreutil/make_coreutil.sh`, ~30s clean) now runs in the container build as well.
 
 ## Current status
 All items are done. The unix utilities build end-to-end with the resolver enabled, their generation is exercised by the default test harness, and the full C++ build is part of the container image build.

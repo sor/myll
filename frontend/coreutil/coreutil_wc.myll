@@ -1,6 +1,8 @@
-module wc;
+module coreutil_wc;
 
 import std_iostream, std_fstream, std_string, std_vector, cxxopts;
+
+namespace JanSordid::Coreutil:
 
 func wcStream( std::istream & in ) -> void
 {
@@ -30,7 +32,7 @@ func wcStream( std::istream & in ) -> void
 	std::cout << lines << " " << words << " " << bytes << "\n";
 }
 
-func main( const int argc, const char *[] argv ) -> int
+func wc( int argc, const char *[] argv ) -> int
 {
 	var cxxopts::Options options = cxxopts::Options( "wc", "count lines, words, and bytes" );
 	var cxxopts::ParseResult result = options.parse( argc, argv );

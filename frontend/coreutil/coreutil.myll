@@ -1,0 +1,44 @@
+module coreutil;
+
+import coreutil_find, coreutil_cat, coreutil_basename, coreutil_dirname,
+       coreutil_echo, coreutil_head, coreutil_wc, coreutil_grep, coreutil_ls,
+       coreutil_pwd, coreutil_yes, coreutil_lib, std_iostream, std_string;
+
+func main( int argc, const char *[] argv ) -> int
+{
+	if( argc < 2 ) {
+		JanSordid::Coreutil::printError( "coreutil", "missing command" );
+		return 1;
+	}
+
+	const string cmd = argv[1];
+	if( cmd == "find" )
+		return JanSordid::Coreutil::find( argc - 1, &argv[1] );
+	if( cmd == "cat" )
+		return JanSordid::Coreutil::cat( argc - 1, &argv[1] );
+	if( cmd == "basename" )
+		return JanSordid::Coreutil::basename( argc - 1, &argv[1] );
+	if( cmd == "dirname" )
+		return JanSordid::Coreutil::dirname( argc - 1, &argv[1] );
+	if( cmd == "echo" )
+		return JanSordid::Coreutil::echo( argc - 1, &argv[1] );
+	if( cmd == "head" )
+		return JanSordid::Coreutil::head( argc - 1, &argv[1] );
+	if( cmd == "wc" )
+		return JanSordid::Coreutil::wc( argc - 1, &argv[1] );
+	if( cmd == "grep" )
+		return JanSordid::Coreutil::grep( argc - 1, &argv[1] );
+	if( cmd == "ls" )
+		return JanSordid::Coreutil::ls( argc - 1, &argv[1] );
+	if( cmd == "yes" )
+		return JanSordid::Coreutil::yes( argc - 1, &argv[1] );
+	if( cmd == "pwd" )
+		return JanSordid::Coreutil::pwd( argc - 1, &argv[1] );
+	if( cmd == "true" )
+		return 0;
+	if( cmd == "false" )
+		return 1;
+
+	JanSordid::Coreutil::printError( "coreutil", "unknown command: " + cmd );
+	return 1;
+}

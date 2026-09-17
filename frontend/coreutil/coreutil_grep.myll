@@ -1,8 +1,10 @@
-module grep;
+module coreutil_grep;
 
 import std_iostream, std_fstream, std_string, std_vector, c_ctype, cxxopts;
 
-struct Options
+namespace JanSordid::Coreutil:
+
+struct GrepOptions
 {
 	field bool ignore_case;
 	field bool invert;
@@ -15,35 +17,35 @@ struct Options
 	field string pattern;
 };
 
-func usage() -> int
+func grepUsage() -> int
 {
 	std::cerr << "usage: grep [options] pattern [file...]\n"
 	          << "options: -e pattern  -i  -v  -n  -c  -l  -x  -H  -h\n";
 	return 1;
 }
 
-func charEquals( const char a, const char b, const bool ignore_case ) -> bool
+func grepCharEquals( const char a, const char b, const bool ignore_case ) -> bool
 {
 	if( !ignore_case )
 		return a == b;
 	return std::tolower( a ) == std::tolower( b );
 }
 
-func stringEquals( const string & a, const string & b, const bool ignore_case ) -> bool
+func grepStringEquals( const string & a, const string & b, const bool ignore_case ) -> bool
 {
 	if( a.length() != b.length() )
 		return false;
 
 	var usize i = 0;
 	while( i < a.length() ) {
-		if( !charEquals( a[i], b[i], ignore_case ) )
+		if( !grepCharEquals( a[i], b[i], ignore_case ) )
 			return false;
 		++i;
 	}
 	return true;
 }
 
-func contains( const string & haystack, const string & needle, const bool ignore_case ) -> bool
+func grepContains( const string & haystack, const string & needle, const bool ignore_case ) -> bool
 {
 	if( needle.length() == 0 )
 		return true;
@@ -55,7 +57,7 @@ func contains( const string & haystack, const string & needle, const bool ignore
 	while( i <= last ) {
 		var usize j = 0;
 		while( j < needle.length() ) {
-			if( !charEquals( haystack[i + j], needle[j], ignore_case ) )
+			if( !grepCharEquals( haystack[i + j], needle[j], ignore_case ) )
 				break;
 			++j;
 		}
@@ -66,15 +68,15 @@ func contains( const string & haystack, const string & needle, const bool ignore
 	return false;
 }
 
-func matches( const string & line, const string & pattern, const bool whole_line,
+func grepMatches( const string & line, const string & pattern, const bool whole_line,
 	const bool ignore_case ) -> bool
 {
 	if( whole_line )
-		return stringEquals( line, pattern, ignore_case );
-	return contains( line, pattern, ignore_case );
+		return grepStringEquals( line, pattern, ignore_case );
+	return grepContains( line, pattern, ignore_case );
 }
 
-func grepStream( const string & file_name, std::istream & in, const Options & opts,
+func grepStream( const string & file_name, std::istream & in, const GrepOptions & opts,
 	const bool print_name ) -> int
 {
 	var string line;
@@ -83,7 +85,7 @@ func grepStream( const string & file_name, std::istream & in, const Options & op
 
 	while( std::getline( in, line ) ) {
 		++line_no;
-		var bool matched = matches( line, opts.pattern, opts.whole_line, opts.ignore_case );
+		var bool matched = grepMatches( line, opts.pattern, opts.whole_line, opts.ignore_case );
 		if( opts.invert )
 			matched = !matched;
 
@@ -116,7 +118,7 @@ func grepStream( const string & file_name, std::istream & in, const Options & op
 	return 0;
 }
 
-func main( const int argc, const char *[] argv ) -> int
+func grep( int argc, const char *[] argv ) -> int
 {
 	var cxxopts::Options cxx = cxxopts::Options( "grep", "search for pattern in files" );
 	cxx.add_options()
@@ -133,7 +135,7 @@ func main( const int argc, const char *[] argv ) -> int
 
 	var cxxopts::ParseResult result = cxx.parse( argc, argv );
 
-	var Options opts = Options();
+	var GrepOptions opts = GrepOptions();
 	opts.ignore_case = result["ignore-case"].as<bool>();
 	opts.invert = result["invert-match"].as<bool>();
 	opts.line_number = result["line-number"].as<bool>();
@@ -152,7 +154,7 @@ func main( const int argc, const char *[] argv ) -> int
 
 	if( opts.pattern == "" ) {
 		if( positional.size() == 0 )
-			return usage();
+			return grepUsage();
 		opts.pattern = positional[pos];
 		++pos;
 	}

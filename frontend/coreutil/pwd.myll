@@ -1,0 +1,8 @@
+module pwd;
+
+import coreutil_pwd;
+
+func main( int argc, const char *[] argv ) -> int
+{
+	return JanSordid::Coreutil::pwd( argc, argv );
+}

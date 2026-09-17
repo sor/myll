@@ -1,6 +1,8 @@
-module head;
+module coreutil_head;
 
 import std_iostream, std_fstream, std_exception, std_string, std_vector, cxxopts;
+
+namespace JanSordid::Coreutil:
 
 func headStream( std::istream & in, const int n ) -> void
 {
@@ -13,7 +15,7 @@ func headStream( std::istream & in, const int n ) -> void
 	}
 }
 
-func main( const int argc, const char *[] argv ) -> int
+func head( int argc, const char *[] argv ) -> int
 {
 	try {
 		var cxxopts::Options options = cxxopts::Options( "head", "print first lines" );

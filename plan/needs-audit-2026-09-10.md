@@ -21,7 +21,7 @@ The most urgent remaining items are places where user code can crash the compile
 
 ## 2. CI / test gaps
 
-- `bash frontend/apps/make_unix.sh` is not part of the runtime test entrypoint.
+- `bash frontend/coreutil/make_coreutil.sh` is not part of the runtime test entrypoint.
   The container build runs it, but there is no PR gate.
 - There is no `.github/workflows` or equivalent CI file.
   Pre-submit relies on manual container builds.
@@ -51,4 +51,4 @@ The most urgent remaining items are places where user code can crash the compile
 2. Clean up stale docs.
 3. Decide whether to delete `Symbol.cs`, `Attribute.cs`, `oldParser/`, and `oldCodeGen/`.
 4. Address remaining reachable `NotImplementedException` throws (start with the ones most likely to be hit).
-5. Add a minimal CI workflow that runs `dotnet test testing/` and `bash frontend/apps/make_unix.sh`.
+5. Add a minimal CI workflow that runs `dotnet test testing/` and `bash frontend/coreutil/make_coreutil.sh`.

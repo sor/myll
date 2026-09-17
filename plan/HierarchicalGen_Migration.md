@@ -226,8 +226,8 @@ Then implement **Option B for `Expr` only** in a spike branch, run the golden te
    - `GenerateFunction`
 4. Clean Unix apps build:
    ```bash
-   bash frontend/apps/make_unix.sh clean
-   bash frontend/apps/make_unix.sh
+   bash frontend/coreutil/make_coreutil.sh clean
+   bash frontend/coreutil/make_coreutil.sh
    ```
 5. Final commit.
 
@@ -241,7 +241,7 @@ Then implement **Option B for `Expr` only** in a spike branch, run the golden te
 
 - Golden-file output must remain byte-identical.
 - `dotnet test testing/` must pass (106/106).
-- `bash frontend/apps/make_unix.sh` must build all utilities.
+- `bash frontend/coreutil/make_coreutil.sh` must build all utilities.
 
 ## Commit strategy
 

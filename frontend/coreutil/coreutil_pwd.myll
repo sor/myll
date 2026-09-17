@@ -1,0 +1,13 @@
+module coreutil_pwd;
+
+import coreutil_lib, std_iostream, std_filesystem, std_string;
+
+namespace JanSordid::Coreutil:
+
+func pwd( int argc, const char *[] argv ) -> int
+{
+	_ = argc;
+	_ = argv;
+	std::cout << (string)std::filesystem::current_path().generic_string() << "\n";
+	return 0;
+}
