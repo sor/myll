@@ -106,11 +106,11 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    `backend/Resolver/TypeChecker.cs` and `backend/Resolver/ConversionRules.cs`.
 
 6. **Softcoded dialect configuration** — `Dialect` values are currently hardcoded as
-   `Dialect.Default` in `backend/Core/Dialect.cs`. We need an external source of dialect settings
-   (CLI flags and/or a project config file) so language-switch experiments do not require
-   recompiling the compiler. Each `ModuleContext` already owns a `Dialect` instance, so the
-   remaining work is parsing overrides and applying them per compilation. See
-   `docs/design/softcoded-dialect.md`.
+   `Dialect.Default` in `backend/Core/Dialect.cs`. Dialect is a per-module concept: multiple
+   modules in the same compilation may use different dialects (e.g. a header-only library that
+   ships its own settings), and missing configuration resolves to the built-in default or a
+   folder-level default without error. Configuration should be authored in JSONC/JSON5, not
+   strict JSON. See `docs/design/softcoded-dialect.md`.
 
 ## Blocked / needs dependency
 
