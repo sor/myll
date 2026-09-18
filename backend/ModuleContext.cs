@@ -44,6 +44,12 @@ namespace Myll
 		public Dialect Dialect { get; init; } = Myll.Core.Dialect.Default;
 
 		/// <summary>
+		/// When true, the generator emits C++ <c>#line</c> directives mapping generated code
+		/// back to the original Myll source locations.
+		/// </summary>
+		public bool EmitSourceMap { get; set; } = false;
+
+		/// <summary>
 		/// Resolved declaration backing the <c>string</c> keyword for this module, if any.
 		/// </summary>
 		public Decl? StringBackingClass { get; set; }

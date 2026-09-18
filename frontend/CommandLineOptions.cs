@@ -48,6 +48,9 @@ namespace Myll
 
 		[Option( "extern-dir", HelpText = "Directory containing .extern.myll prototype files; replaces default extern/ subfolder" )]
 		public IEnumerable<string> ExternDirs { get; set; } = Enumerable.Empty<string>();
+
+		[Option( "source-map", HelpText = "Emit #line directives mapping generated C++ back to Myll source locations", Default = false )]
+		public bool SourceMap { get; init; } = false;
 	}
 
 	static partial class Program

@@ -118,7 +118,7 @@ func f() -> int {
 ", mode );
 
 				SwitchStmt sw = FindSwitch( module );
-				Assert.Contains( sw.cases[0].then.stmts, s => s is FreetextStmt ft && ft.lines.Any( l => l.Contains( "fallthrough" ) ) );
+				Assert.Contains( sw.cases[0].then.stmts, s => s is FreetextStmt ft && ft.lines.Any( l => l.Text.Contains( "fallthrough" ) ) );
 			}
 		}
 	}

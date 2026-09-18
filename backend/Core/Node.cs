@@ -7,7 +7,6 @@ using static System.String;
 
 namespace Myll.Core
 {
-	using Strings = List<string>;
 	using Attribs = Dictionary<string, List<string>>;
 
 	public abstract class Node
@@ -58,7 +57,7 @@ namespace Myll.Core
 			=> attribs.ContainsKey( attrib );
 
 		public bool IsAttrib( string attrib, string value )
-			=> attribs.TryGetValue( attrib, out Strings? values )
+			=> attribs.TryGetValue( attrib, out List<string>? values )
 			&& values.Contains( value );
 
 		public virtual void AssignAttribs( Attribs inAttribs )
@@ -68,7 +67,7 @@ namespace Myll.Core
 
 		public void MergeAttribs( Attribs incoming )
 		{
-			foreach( KeyValuePair<string, Strings> kv in incoming ) {
+			foreach( KeyValuePair<string, List<string>> kv in incoming ) {
 				if( !attribs.ContainsKey( kv.Key ) )
 					attribs[kv.Key] = kv.Value;
 			}

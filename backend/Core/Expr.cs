@@ -401,7 +401,7 @@ namespace Myll.Core
 					DiagnosticKind.Error,
 					"Lambda must have a body" ) );
 
-			List<string> body        = func.body.GenWithoutCurly( 1 );
+			SourceLines body        = func.body.GenWithoutCurly( 1 );
 			bool         shortLambda = body.Count <= 1;
 			if( shortLambda )
 				return Format(

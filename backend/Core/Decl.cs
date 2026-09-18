@@ -9,7 +9,6 @@ namespace Myll.Core
 {
 	using static String;
 
-	using Strings = List<string>;
 	using Attribs = Dictionary<string, List<string>>;
 
 	public enum Access
@@ -89,7 +88,7 @@ namespace Myll.Core
 
 		private string BuildQualifiedName( bool includeOwnTemplateParams )
 		{
-			Strings ret = new();
+			SourceLines ret = new();
 			for( ScopeLeaf cur = scope; cur?.parent != null; cur = cur.parent ) {
 				Decl?  decl     = cur.decl;
 				string declName = decl?.name ?? "unknown_fix_me";
@@ -103,7 +102,7 @@ namespace Myll.Core
 				ret.Add( declName );
 			}
 			// WTF dot net framework?
-			return ((IEnumerable<string>) ret).Reverse().Join( "::" );
+			return string.Join( "::", ret.AsEnumerable().Reverse().Select( l => l.Text ) );
 		}
 
 		public abstract void AddToGen( HierarchicalGen gen );
@@ -119,7 +118,7 @@ namespace Myll.Core
 			if( inAttribs == null )
 				return;
 
-			if( inAttribs.TryGetValue( "access", out Strings? values ) && values.Count > 0 ) {
+			if( inAttribs.TryGetValue( "access", out List<string>? values ) && values.Count > 0 ) {
 				access = values[0] switch {
 					"pub"  => Access.Public,
 					"priv" => Access.Private,

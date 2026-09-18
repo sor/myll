@@ -56,22 +56,28 @@ namespace Myll.Tests
 		public void RunCase( string caseName )
 		{
 			string caseDir      = Path.Combine( RepoRoot, "testing", "cases", caseName );
-			string generatedDir = UseTempOutputDirectory()
+			bool cleanupGeneratedDir = UseTempOutputDirectory() && !CaseConfig.UseFixedOutput( caseName );
+			string generatedDir = cleanupGeneratedDir
 				? Path.Combine( RepoRoot, "testing", "generated", String.Format( "tmp_{0}_{1:N}", caseName, Guid.NewGuid() ) )
 				: Path.Combine( RepoRoot, "testing", "generated", caseName );
-
-			bool cleanupGeneratedDir = UseTempOutputDirectory();
 			TestDepth depth = CaseConfig.GetDepth( caseName );
 
 			try
 			{
 				Directory.CreateDirectory( generatedDir );
 
-				string[] myllFiles = Directory.GetFiles( caseDir, "*.myll" );
+				string[] myllFiles = Directory.GetFiles( caseDir, "*.myll" )
+					.OrderBy( f => Path.GetFileName( f ) )
+					.ToArray();
 				Assert.NotEmpty( myllFiles );
 
 				bool useMyllCr = CaseConfig.UseMyllCompileRun( caseName ) && depth == TestDepth.Run;
 				var myllFlags = new List<string> { useMyllCr ? "-Ccr" : "-C" };
+
+				string extraFlags = CaseConfig.MyllExtraFlags( caseName );
+				if( !string.IsNullOrWhiteSpace( extraFlags ) )
+					myllFlags.Add( extraFlags );
+
 				string myllArgs = String.Format( "exec \"{0}\" -i \"*.myll\" -o {1} {2}", FrontendDll,
 					Quote( generatedDir ), string.Join( " ", myllFlags ) );
 

@@ -10,20 +10,37 @@ namespace Myll.Core
 	using static String;
 	using static StmtFormatting;
 
-	using Strings  = List<string>;
-	using IStrings = IEnumerable<string>;
-	using Attribs  = Dictionary<string, List<string>>;
+	using Attribs = Dictionary<string, List<string>>;
 
 	public abstract class Stmt : AttributedNode
 	{
 
 		// Only override in Block and EmptyStmt, is the same as Gen() everywhere else
-		public virtual Strings GenWithoutCurly( int level )
+		public virtual SourceLines GenWithoutCurly( int level )
 			=> Gen( level );
 
 		// Outputs immediate generated lines of code
 		// level is the level of indentation
-		public abstract Strings Gen( int level );
+		public abstract SourceLines Gen( int level );
+
+		/// <summary>
+		/// Stamps every emitted line that has no source position with this statement's
+		/// <see cref="srcPos"/>. Do not use for normal statement generation: braces and
+		/// other helper lines are intentionally left unmapped because they never produce
+		/// useful compiler diagnostics on their own. Use this helper only when you
+		/// explicitly want every line produced by a generator to share one source
+		/// location.
+		/// </summary>
+		[Obsolete( "Only use when every produced line must share this statement's srcPos; braces should stay unmapped." )]
+		protected SourceLines WithSourceMap( SourceLines lines )
+		{
+			if( srcPos == null )
+				return lines;
+			foreach( SourceLine line in lines )
+				if( line.SrcPos == null )
+					line.SrcPos = srcPos;
+			return lines;
+		}
 	}
 
 	public class VarStmt : Stmt
@@ -36,7 +53,7 @@ namespace Myll.Core
 		public VarDecl?     decl;
 		public bool         IsAutoReturn { get; set; }
 
-		public override Strings Gen( int level )
+		public override SourceLines Gen( int level )
 		{
 			// Dependent nested types emit 'typename ' from TypespecNested.GenType().
 			// The VarFormat typename slot is intentionally left empty here to avoid
@@ -73,7 +90,7 @@ namespace Myll.Core
 				needsTypename ? VarFormat[5] : "",
 				typeAndName,
 				initStr );
-			return ret.IndentAll( level );
+			return ret.IndentAll( level, srcPos );
 		}
 	}
 
@@ -87,13 +104,13 @@ namespace Myll.Core
 
 		// in locations where C++ does not support "using namespace" this must not be printed
 		// but instead the unqualified types need to be changed to qualified ones
-		public override Strings Gen( int level )
+		public override SourceLines Gen( int level )
 		{
 			string ret = Format(
 				UsingFormat[IsNamespaceUsing ? 1 : 0],
 				"",
 				type.Gen() );
-			return ret.IndentAll( level );
+			return ret.IndentAll( level, srcPos );
 		}
 	}
 
@@ -102,14 +119,14 @@ namespace Myll.Core
 		public Typespec type = null!;
 		public string   name = null!;
 
-		public override Strings Gen( int level )
+		public override SourceLines Gen( int level )
 		{
 			string ret = Format(
 				AliasFormat[0],
 				"",
 				name,
 				type.Gen() );
-			return ret.IndentAll( level );
+			return ret.IndentAll( level, srcPos );
 		}
 	}
 
@@ -118,37 +135,37 @@ namespace Myll.Core
 		public Expr? expr;
 		public bool  HasValue => expr != null;
 
-		public override Strings Gen( int level )
+		public override SourceLines Gen( int level )
 			=> ((expr != null)
 					? Format( "return {0};", expr.Gen() )
 					: Format( "return;" ))
-				.IndentAll( level );
+				.IndentAll( level, srcPos );
 	}
 
 	public class ThrowStmt : Stmt
 	{
 		public Expr? expr;
 
-		public override Strings Gen( int level )
+		public override SourceLines Gen( int level )
 			=> expr != null
-				? Format( "throw {0};", expr.Gen() ).IndentAll( level )
-				: "throw;".IndentAll( level );
+				? Format( "throw {0};", expr.Gen() ).IndentAll( level, srcPos )
+				: "throw;".IndentAll( level, srcPos );
 	}
 
 	public class BreakStmt : Stmt
 	{
 		public int depth = 1; // C++ default is 1, break one level
 
-		public override Strings Gen( int level )
-			=> Format( "break;" ).IndentAll( level );
+		public override SourceLines Gen( int level )
+			=> Format( "break;" ).IndentAll( level, srcPos );
 	}
 
 	public class ContinueStmt : Stmt
 	{
 		public int depth = 1; // C++ default is 1, continue the innermost loop
 
-		public override Strings Gen( int level )
-			=> Format( "continue;" ).IndentAll( level );
+		public override SourceLines Gen( int level )
+			=> Format( "continue;" ).IndentAll( level, srcPos );
 	}
 
 	public class CatchClause
@@ -162,9 +179,9 @@ namespace Myll.Core
 		public Stmt              tryBody = null!;
 		public List<CatchClause> catches = new();
 
-		public override Strings Gen( int level )
+		public override SourceLines Gen( int level )
 		{
-			Strings ret    = new();
+			SourceLines ret    = new();
 			string  indent = IndentString.Repeat( level );
 
 			ret.Add( Format( TryCatchFormat[0], indent ) );
@@ -191,10 +208,10 @@ namespace Myll.Core
 	{
 		public List<Expr> exprs = new();
 
-		public override Strings Gen( int level )
+		public override SourceLines Gen( int level )
 			=> (exprs
 				.Select( e => e.Gen() )
-				.Join( " = " ) + ";").IndentAll( level );
+				.Join( " = " ) + ";").IndentAll( level, srcPos );
 	}
 
 	public class AggrAssign : Stmt
@@ -203,40 +220,40 @@ namespace Myll.Core
 		public Expr    leftExpr = null!;
 		public Expr    rightExpr = null!;
 
-		public override Strings Gen( int level )
+		public override SourceLines Gen( int level )
 			=> Format(
 				op.GetAssignFormat(),
 				leftExpr.Gen(),
-				rightExpr.Gen() ).IndentAll( level );
+				rightExpr.Gen() ).IndentAll( level, srcPos );
 	}
 
 	public class ExprStmt : Stmt
 	{
 		public Expr expr = null!;
 
-		public override Strings Gen( int level )
-			=> Format( "{0};", expr.Gen() ).IndentAll( level );
+		public override SourceLines Gen( int level )
+			=> Format( "{0};", expr.Gen() ).IndentAll( level, srcPos );
 	}
 
 	public class EmptyStmt : Stmt
 	{
-		public override Strings GenWithoutCurly( int level )
-			=> ";".IndentAll( level );
+		public override SourceLines GenWithoutCurly( int level )
+			=> ";".IndentAll( level, srcPos );
 
-		public override Strings Gen( int level )
-			=> ";".IndentAll( level );
+		public override SourceLines Gen( int level )
+			=> ";".IndentAll( level, srcPos );
 	}
 
 	// This class should be phased out in the far future, but for now it's just too useful
 	public class FreetextStmt : Stmt
 	{
-		public Strings lines;
+		public SourceLines lines;
 
 		public FreetextStmt( string text )
-			=> lines = new Strings { text };
+			=> lines = new SourceLines { text };
 
-		public override Strings Gen( int level )
-			=> lines.Indent( level ).ToList();
+		public override SourceLines Gen( int level )
+			=> new SourceLines( lines.Indent( level ) );
 	}
 
 	/// =!= Stmt which contain other Stmt themselves =!=
@@ -259,9 +276,9 @@ namespace Myll.Core
 		public List<CondThen> ifThens = new();
 		public Stmt?          els;
 
-		public override Strings Gen( int level )
+		public override SourceLines Gen( int level )
 		{
-			Strings ret     = new();
+			SourceLines ret     = new();
 			string  indent  = IndentString.Repeat( level );
 			bool    isFirst = true;
 			foreach( CondThen ifThen in ifThens ) {
@@ -299,9 +316,9 @@ namespace Myll.Core
 		public List<CaseBlock> cases = new();
 		public MultiStmt?      els; // isScope = true
 
-		public override Strings Gen( int level )
+		public override SourceLines Gen( int level )
 		{
-			Strings ret      = new();
+			SourceLines ret      = new();
 			string  indent   = IndentString.Repeat( level );
 			string  inindent = IndentString.Repeat( level + 1 );
 			ret.Add( Format( "{0}switch({1}) {{", indent, cond.Gen() ) );
@@ -325,9 +342,9 @@ namespace Myll.Core
 	{
 		public Stmt body = null!;
 
-		public override Strings Gen( int level )
+		public override SourceLines Gen( int level )
 		{
-			Strings ret    = new();
+			SourceLines ret    = new();
 			string  indent = IndentString.Repeat( level );
 			ret.Add( Format( "{0}while( true ) {{", indent ) );
 			ret.AddRange( body.GenWithoutCurly( level + 1 ) );
@@ -345,22 +362,22 @@ namespace Myll.Core
 		public Expr? iter;
 		public Stmt? els; // TODO: not implemented yet
 
-		public override Strings Gen( int level )
+		public override SourceLines Gen( int level )
 		{
 			if( init is MultiStmt )
 				throw new NotImplementedException( "A MultiStmt can not be used in for-loop as init" );
 
-			Strings inits = init.GenWithoutCurly( 0 );
+			SourceLines inits = init.GenWithoutCurly( 0 );
 			if( inits.Count > 1 )
 				throw new NotImplementedException( "for statement does not support more than one initializer yet" );
 
-			Strings ret     = new();
+			SourceLines ret     = new();
 			string  indent  = IndentString.Repeat( level );
-			string  initStr = inits.First();
+			string  initStr = inits.First().Text;
 			string  condStr = cond?.Gen() ?? "";
 			string  iterStr = iter?.Gen() ?? "";
 			ret.Add( Format( "{0}for( {1} {2}; {3} ) {{", indent, initStr, condStr, iterStr ) );
-			ret.AddRange( body?.GenWithoutCurly( level + 1 ) ?? Enumerable.Empty<string>() );
+			ret.AddRange( body?.GenWithoutCurly( level + 1 ) ?? new SourceLines() );
 			ret.Add( Format( "{0}}}", indent ) );
 			return ret;
 		}
@@ -374,13 +391,13 @@ namespace Myll.Core
 		public Stmt?   body;
 		public Stmt?   els;
 
-		public override Strings Gen( int level )
+		public override SourceLines Gen( int level )
 		{
-			Strings ret    = new();
+			SourceLines ret    = new();
 			string  indent = IndentString.Repeat( level );
 			string  decl   = varDecl.type.Gen( varDecl.name );
 			ret.Add( Format( RangeForFormat[0], indent, decl, range.Gen() ) );
-			ret.AddRange( body?.GenWithoutCurly( level + 1 ) ?? Enumerable.Empty<string>() );
+			ret.AddRange( body?.GenWithoutCurly( level + 1 ) ?? new SourceLines() );
 			ret.Add( Format( CurlyClose, indent ) );
 			return ret;
 		}
@@ -393,9 +410,9 @@ namespace Myll.Core
 		public Expr  cond = null!;
 		public Stmt? els;
 
-		public override Strings Gen( int level )
+		public override SourceLines Gen( int level )
 		{
-			Strings ret    = new();
+			SourceLines ret    = new();
 			string  indent = IndentString.Repeat( level );
 			ret.Add( Format( "{0}while( {1} ) {{", indent, cond.Gen() ) );
 			ret.AddRange( body.GenWithoutCurly( level + 1 ) );
@@ -409,9 +426,9 @@ namespace Myll.Core
 		public Stmt body = null!;
 		public Expr cond = null!;
 
-		public override Strings Gen( int level )
+		public override SourceLines Gen( int level )
 		{
-			Strings ret    = new();
+			SourceLines ret    = new();
 			string  indent = IndentString.Repeat( level );
 			ret.Add( Format( "{0}do {{", indent ) );
 			ret.AddRange( body.GenWithoutCurly( level + 1 ) );
@@ -427,9 +444,9 @@ namespace Myll.Core
 		public string? name;
 		public long    offset = 0;
 
-		public override Strings Gen( int level )
+		public override SourceLines Gen( int level )
 		{
-			Strings ret     = new();
+			SourceLines ret     = new();
 			string  indent  = IndentString.Repeat( level );
 			string  varName = name ?? "myll_tmp_missing";
 			ret.Add(
@@ -469,19 +486,17 @@ namespace Myll.Core
 		public override void AssignAttribs( Attribs inAttribs )
 			=> stmts.ForEach( v => v.AssignAttribs( inAttribs ) );
 
-		public override Strings GenWithoutCurly( int level )
-			=> NonEmptyStmts()
-				.SelectMany( s => s.Gen( level ) )
-				.ToList();
+		public override SourceLines GenWithoutCurly( int level )
+			=> new SourceLines( NonEmptyStmts()
+				.SelectMany( s => s.Gen( level ) ) );
 
-		public override Strings Gen( int level )
+		public override SourceLines Gen( int level )
 		{
 			// Block to Block needs to indent further else it's ok to remain same level
 			// The curly braces need to be outdentented one level
-			Strings ret = NonEmptyStmts()
+			SourceLines ret = new SourceLines( NonEmptyStmts()
 				.SelectMany( s => s.Gen( isScope ? level + 1 : level ) )
-				.Curly( level, isScope )
-				.ToList();
+				.Curly( level, isScope ) );
 			return ret;
 		}
 	}

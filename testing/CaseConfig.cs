@@ -63,10 +63,23 @@ namespace Myll.Tests
 		public static TimeSpan RunTimeout( string caseName )
 			=> ResolveTimeout( Config.Timeouts.Run, caseName, DefaultRunSeconds );
 
-		public static bool UseMyllCompileRun( string caseName )
-			=> Config.MyllCompileRun != null && Config.MyllCompileRun.Contains( caseName );
+	public static bool UseMyllCompileRun( string caseName )
+		=> Config.MyllCompileRun != null && Config.MyllCompileRun.Contains( caseName );
 
-		public static TestDepth GetDepth( string caseName )
+	public static bool UseFixedOutput( string caseName )
+		=> Config.FixedOutput != null && Config.FixedOutput.Contains( caseName );
+
+	public static string MyllExtraFlags( string caseName )
+	{
+		if( Config.MyllExtraFlags != null
+		 && Config.MyllExtraFlags.TryGetValue( caseName, out string? flags )
+		 && flags != null )
+			return flags;
+
+		return string.Empty;
+	}
+
+	public static TestDepth GetDepth( string caseName )
 		{
 			DepthConfig d = Config.Depth;
 
@@ -104,6 +117,8 @@ namespace Myll.Tests
 	{
 		public TimeoutSection Timeouts { get; set; } = new();
 		public HashSet<string> MyllCompileRun { get; set; } = new();
+		public Dictionary<string, string> MyllExtraFlags { get; set; } = new();
+		public HashSet<string> FixedOutput { get; set; } = new();
 		public DepthConfig Depth { get; set; } = new();
 	}
 

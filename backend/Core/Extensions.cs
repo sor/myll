@@ -92,6 +92,53 @@ namespace Myll.Core
 			return split.Skip( 1 ).Indent( level ).Prepend( split.First() ).ToList();
 		}
 
+		public static SourceLines IndentAll( this string value, int level, SrcPos? srcPos = null )
+		{
+			string indent = StmtFormatting.IndentString.Repeat( level );
+			if( !value.Contains( "\n" ) )
+				return new SourceLines { new SourceLine( indent + value, srcPos ) };
+
+			string[] split = value.Split( '\n' );
+			return new SourceLines(
+				split.Select( l => new SourceLine( indent + l, srcPos ) ) );
+		}
+
+		public static SourceLines Indent2nd( this string value, int level, SrcPos? srcPos = null )
+		{
+			string indent = StmtFormatting.IndentString.Repeat( level );
+			if( !value.Contains( "\n" ) )
+				return new SourceLines { new SourceLine( indent + value, srcPos ) };
+
+			string[] split = value.Split( '\n' );
+			return new SourceLines(
+				split
+					.Skip( 1 )
+					.Indent( level )
+					.Prepend( split.First() )
+					.Select( l => new SourceLine( l, srcPos ) ) );
+		}
+
+		public static IEnumerable<SourceLine> Indent( this IEnumerable<SourceLine> values, string indent )
+			=> values.Select( l => l.WithText( string.Format( "{0}{1}", indent, l.Text ) ) );
+
+		public static IEnumerable<SourceLine> Indent( this IEnumerable<SourceLine> values, int level )
+			=> values.Indent( StmtFormatting.IndentString.Repeat( level ) );
+
+		public static string Join( this IEnumerable<SourceLine> values, string delimiter )
+			=> string.Join( delimiter, values.Select( l => l.Text ) );
+
+		public static IEnumerable<SourceLine> Curly( this IEnumerable<SourceLine> values, string indent, bool doCurly = true )
+			=> doCurly
+				? values
+					.Prepend( new SourceLine( string.Format( "{0}{{", indent ) ) )
+					.Append( new SourceLine( string.Format( "{0}}}", indent ) ) )
+				: values;
+
+		public static IEnumerable<SourceLine> Curly( this IEnumerable<SourceLine> values, int level, bool doCurly = true )
+			=> doCurly
+				? values.Curly( StmtFormatting.IndentString.Repeat( level ), true )
+				: values;
+
 		[Pure]
 		public static bool IsEmpty<T>( [NotNull] this IEnumerable<T> values )
 			=> !values.Any();

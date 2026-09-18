@@ -3,7 +3,6 @@ using Myll.Core;
 
 namespace Myll.Generator
 {
-	using Strings     = List<string>;
 	using IntToString = Dictionary<int, string>;
 
 	internal static class StmtFormatting

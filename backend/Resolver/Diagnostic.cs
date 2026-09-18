@@ -29,6 +29,6 @@ namespace Myll
 		IReadOnlyList<Diagnostic> Diagnostics );
 
 	public sealed record GeneratedModuleFilesResult(
-		List<(string Path, IEnumerable<string> Lines)> Files,
+		List<(string Path, IEnumerable<SourceLine> Lines)> Files,
 		List<Diagnostic> Diagnostics );
 }

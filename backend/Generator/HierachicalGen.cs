@@ -9,10 +9,9 @@ namespace Myll.Generator
 	using static String;
 	using static StmtFormatting;
 
-	using Strings        = List<string>;
-	using IStrings       = IEnumerable<string>;
-	using AccessStrings  = List<(Access access, List<string> gen)>;
-	using IAccessStrings = IEnumerable<(Access access, List<string> gen)>;
+	using ISourceLines      = IEnumerable<SourceLine>;
+	using AccessSourceLines  = List<(Access access, SourceLines gen)>;
+	using IAccessSourceLines = IEnumerable<(Access access, SourceLines gen)>;
 
 	[Flags]
 	public enum GenerateAt
@@ -23,14 +22,14 @@ namespace Myll.Generator
 		Everywhere = Decl | Impl,
 	}
 
-	internal class PPPStrings
+	internal class PPPSourceLines
 	{
-		public readonly Strings
+		public readonly SourceLines
 			priv = new(),
 			prot = new(),
 			pub  = new();
 
-		public Strings Target( Access access )
+		public SourceLines Target( Access access )
 			=> access switch {
 				Access.Private   => priv,
 				Access.Protected => prot,
@@ -40,12 +39,12 @@ namespace Myll.Generator
 
 	internal static class Extensions
 	{
-		internal static IAccessStrings Concat( this IAccessStrings self, PPPStrings pppStrings )
+		internal static IAccessSourceLines Concat( this IAccessSourceLines self, PPPSourceLines pppSourceLines )
 			=> self.Concat(
-				new AccessStrings {
-					(Access.Private,   pppStrings.priv),
-					(Access.Protected, pppStrings.prot),
-					(Access.Public,    pppStrings.pub),
+				new AccessSourceLines {
+					(Access.Private,   pppSourceLines.priv),
+					(Access.Protected, pppSourceLines.prot),
+					(Access.Public,    pppSourceLines.pub),
 				} );
 	}
 
@@ -73,14 +72,14 @@ namespace Myll.Generator
 	public class HierarchicalGen
 	{
 		/// Fields are special, they can not be grouped by ppp or sorted
-		private readonly AccessStrings
+		private readonly AccessSourceLines
 			staticFieldDecl = new(),
 			staticFieldImpl = new(),
 			fieldDecl       = new(),
 			fieldImpl       = new();
 
 		// Super memory inefficient but I don't care for the moment
-		private readonly PPPStrings
+		private readonly PPPSourceLines
 			protoEarly         = new(),
 			protoLate          = new(),
 			hierarchicalDecl   = new(),
@@ -142,13 +141,13 @@ namespace Myll.Generator
 			defaultAccess = obj.defaultAccess;
 		}
 
-		public IStrings GenDeclGlobal()
+		public ISourceLines GenDeclGlobal()
 		{
 			// throw if not global
 			GlobalNamespace globalNS = (GlobalNamespace) hierarchical;
 			ISet<string> implicitImports = new HashSet<string>( StdBuiltins.ImplicitStdImports );
 
-			Strings includes = new();
+			SourceLines includes = new();
 			HashSet<string> seen = new();
 
 			void AddRawImport( RawImport raw )
@@ -224,21 +223,21 @@ namespace Myll.Generator
 				}
 			}
 
-			IStrings declList = GenDecl();
-			IStrings decl = new Strings { PragmaOnce }
+			ISourceLines declList = GenDecl();
+			ISourceLines decl = new SourceLines { PragmaOnce }
 				.Concat( includes )
 				.Concat( declList );
 
 			return decl;
 		}
 
-		// TODO: convert to IStrings if too slow
-		private Strings GenDecl()
+		// TODO: convert to ISourceLines if too slow
+		private SourceLines GenDecl()
 		{
 			Access curAccess    = defaultAccess;
 			string accessIndent = DeIndentDecl;
 
-			Strings ret = new();
+			SourceLines ret = new();
 
 			foreach( string ns in namespaceAliasTargetNames
 				.Where( n => definedNamespaces.Contains( n ) )
@@ -255,8 +254,8 @@ namespace Myll.Generator
 				}
 			}
 
-			IAccessStrings
-				listDecl = new AccessStrings()
+			IAccessSourceLines
+				listDecl = new AccessSourceLines()
 					.Concat( protoEarly )
 					.Concat( hierarchicalDecl )
 					.Concat( staticFieldDecl )
@@ -270,7 +269,7 @@ namespace Myll.Generator
 					.Concat( operatorDecl )
 					.Concat( methodDecl );
 
-			foreach( (Access access, Strings gen) in listDecl ) {
+			foreach( (Access access, SourceLines gen) in listDecl ) {
 				if( gen.Count == 0 )
 					continue;
 
@@ -285,12 +284,12 @@ namespace Myll.Generator
 			return ret;
 		}
 
-		public IStrings? GenImplGlobal()
+		public ISourceLines? GenImplGlobal()
 		{
-			Strings implList = GenImpl();
+			SourceLines implList = GenImpl();
 			if( implList.Count != 0 ) {
 				GlobalNamespace globalNS = (GlobalNamespace) hierarchical;
-				IStrings        impl     = implList.Prepend( Format( "#include \"{0}.hpp\"", globalNS.module ) );
+				ISourceLines        impl     = implList.Prepend( Format( "#include \"{0}.hpp\"", globalNS.module ) );
 				return impl;
 			}
 			else {
@@ -298,12 +297,12 @@ namespace Myll.Generator
 			}
 		}
 
-		// TODO: convert to IStrings if too slow
-		private Strings GenImpl()
+		// TODO: convert to ISourceLines if too slow
+		private SourceLines GenImpl()
 		{
-			Strings ret = new();
-			IAccessStrings
-				listImpl = new AccessStrings()
+			SourceLines ret = new();
+			IAccessSourceLines
+				listImpl = new AccessSourceLines()
 					.Concat( hierarchicalImpl )
 					.Concat( staticFieldImpl )
 					.Concat( staticAccessorImpl )
@@ -315,7 +314,7 @@ namespace Myll.Generator
 					.Concat( operatorImpl )
 					.Concat( methodImpl );
 
-			foreach( (Access access, Strings gen) in listImpl ) {
+			foreach( (Access access, SourceLines gen) in listImpl ) {
 				if( gen.Count == 0 )
 					continue;
 
@@ -330,8 +329,8 @@ namespace Myll.Generator
 		{
 			string        indent     = IndentDecl;
 			string        name       = obj.name;
-			AccessStrings targetDecl = obj.IsStatic ? staticFieldDecl : fieldDecl;
-			Strings ret = new() {
+			AccessSourceLines targetDecl = obj.IsStatic ? staticFieldDecl : fieldDecl;
+			SourceLines ret = new() {
 				Format(
 					EntryFormat[0],
 					indent,
@@ -436,8 +435,8 @@ namespace Myll.Generator
 			if( hadError )
 				return;
 
-			AccessStrings targetDecl = isStatic ? staticFieldDecl : fieldDecl;
-			AccessStrings targetImpl = isStatic ? staticFieldImpl : fieldImpl;
+			AccessSourceLines targetDecl = isStatic ? staticFieldDecl : fieldDecl;
+			AccessSourceLines targetImpl = isStatic ? staticFieldImpl : fieldImpl;
 
 			bool       needsInline   = isExplicitInline
 			                        || ( isInsideStruct && isStatic && isCompileTime );
@@ -488,7 +487,7 @@ namespace Myll.Generator
 
 			// 0 indent, 1 extern, 2 inline, 3 static, 4 constexpr, 5 typename, 6 type & name, 7 init
 			if( (emitAt & GenerateAt.Decl) != 0 ) {
-				Strings retDecl = new() {
+				SourceLines retDecl = new() {
 					Format(
 						VarFormat[0],
 						IndentDecl,
@@ -504,7 +503,7 @@ namespace Myll.Generator
 			}
 
 			if( (emitAt & GenerateAt.Impl) != 0 ) {
-				Strings retImpl = new() {
+				SourceLines retImpl = new() {
 					Format(
 						VarFormat[0],
 						IndentImpl,
@@ -533,9 +532,9 @@ namespace Myll.Generator
 			string  indentImpl     = IndentImpl;
 			string  nameDecl       = obj.name;
 			string  nameImpl       = obj.FullyQualifiedName;
-			Strings targetDecl     = (isStatic ? staticMethodDecl : methodDecl).Target( obj.access );
-			Strings targetImpl     = (isStatic ? staticMethodImpl : methodImpl).Target( obj.access );
-			Strings targetProto    = isInsideStruct ? targetDecl : protoLate.Target( obj.access );
+			SourceLines targetDecl     = (isStatic ? staticMethodDecl : methodDecl).Target( obj.access );
+			SourceLines targetImpl     = (isStatic ? staticMethodImpl : methodImpl).Target( obj.access );
+			SourceLines targetProto    = isInsideStruct ? targetDecl : protoLate.Target( obj.access );
 
 			string paramString = obj.paras
 				.Select( p => p.Gen() )
@@ -710,9 +709,9 @@ namespace Myll.Generator
 
 			string  indent      = gen.DeIndentDecl;
 			string  nameDecl    = gen.hierarchical.name;
-			Strings targetProto = protoEarly.Target( obj.access );
-			Strings targetDecl  = hierarchicalDecl.Target( obj.access );
-			Strings targetImpl  = hierarchicalImpl.Target( obj.access );
+			SourceLines targetProto = protoEarly.Target( obj.access );
+			SourceLines targetDecl  = hierarchicalDecl.Target( obj.access );
+			SourceLines targetImpl  = hierarchicalImpl.Target( obj.access );
 
 			if( gen.hierarchical is ITplParams hierWithTpl
 			 && hierWithTpl.TplParams.Count >= 1 ) {
@@ -1032,7 +1031,7 @@ namespace Myll.Generator
 				_                      => throw new InvalidOperationException( "unknown structural kind" ),
 			};
 
-			Strings target = protoEarly.Target( structural.access );
+			SourceLines target = protoEarly.Target( structural.access );
 			string  indent = DeIndentDecl;
 
 			if( structural.TplParams.Count >= 1 ) {
@@ -1061,8 +1060,8 @@ namespace Myll.Generator
 			string  indentImpl = IndentImpl;
 			string  nameDecl   = obj.name;
 			string  nameImpl   = obj.FullyQualifiedName;
-			Strings targetDecl = (isCtor ? ctorDecl : dtorDecl).Target( obj.access );
-			Strings targetImpl = (isCtor ? ctorImpl : dtorImpl).Target( obj.access );
+			SourceLines targetDecl = (isCtor ? ctorDecl : dtorDecl).Target( obj.access );
+			SourceLines targetImpl = (isCtor ? ctorImpl : dtorImpl).Target( obj.access );
 
 			string paramString = obj.paras
 				.Select( para => para.Gen() )

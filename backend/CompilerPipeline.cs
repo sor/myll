@@ -110,7 +110,9 @@ namespace Myll
 		}
 
 		public static List<GeneratedModuleFilesResult> GenerateFiles(
-			List<CompiledModuleResult> modules )
+			List<CompiledModuleResult> modules,
+			string                     outputDirectory = "",
+			bool                       emitSourceMap   = false )
 		{
 			IReadOnlyDictionary<string, IReadOnlyList<RawImport>> moduleRawImports
 				= RawImportCollector.Collect( modules );
@@ -121,11 +123,14 @@ namespace Myll
 					.Select( m => m.Module.module )
 					.ToHashSet();
 
+			foreach( CompiledModuleResult m in modules )
+				m.Context.EmitSourceMap = emitSourceMap;
+
 			return modules
 				.Where( m => !m.Context.IsPrototypeFile )
 				.AsParallel()
 				.Select( m => ModuleGenerator.GenerateForModule(
-					m.Context, moduleRawImports, prototypeModules ) )
+					m.Context, moduleRawImports, prototypeModules, outputDirectory ) )
 				.ToList();
 		}
 	}

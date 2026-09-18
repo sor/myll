@@ -8,13 +8,11 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Myll.Core;
-using Myll.Generator;
 using Myll.Resolver;
 
 namespace Myll
 {
 	using Strings  = List<string>;
-	using IStrings = IEnumerable<string>;
 
 	static partial class Program
 	{
@@ -204,9 +202,9 @@ namespace Myll
 			PrintDiagnosticsAndBailOnErrors( opt, resolutionDiagnostics );
 
 			List<GeneratedModuleFilesResult> generationResults
-				= CompilerPipeline.GenerateFiles( modules );
+				= CompilerPipeline.GenerateFiles( modules, opt.OutPath, opt.SourceMap );
 
-			IEnumerable<(string, IStrings)> output = generationResults.SelectMany( r => r.Files );
+			IEnumerable<(string, IEnumerable<SourceLine>)> output = generationResults.SelectMany( r => r.Files );
 
 			PrintDiagnosticsAndBailOnErrors( opt, generationResults, r => r.Diagnostics );
 
@@ -233,7 +231,7 @@ namespace Myll
 				}
 
 				if( opt.IsStdOut ) {
-					output.ForAll( o => Console.WriteLine( "// {0}\n{1}\n", o.Item1, o.Item2.Join( "\n" ) ) );
+					output.ForAll( o => Console.WriteLine( "// {0}\n{1}\n", o.Item1, string.Join( "\n", o.Item2.Select( l => l.Text ) ) ) );
 				}
 
 				// NOT else if
@@ -242,7 +240,7 @@ namespace Myll
 
 					output.ForAll( o => {
 						string target = Path.GetFullPath( Path.Combine( opt.OutPath, o.Item1 ) );
-						File.WriteAllLines( target, o.Item2 );
+						File.WriteAllLines( target, o.Item2.Select( l => l.Text ) );
 					} );
 				}
 			}

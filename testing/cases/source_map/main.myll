@@ -1,0 +1,5 @@
+import source_map;
+
+func main() -> int {
+    return oneValue() + twoValue() - 3;
+}

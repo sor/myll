@@ -1,0 +1,5 @@
+module source_map;
+
+func twoValue() -> int {
+    return 2;
+}
