@@ -1,8 +1,19 @@
 module source_map;
 
-struct One {
-	var int value = 10;
-	func half() -> int => value / 2;
+namespace NSOne {
+	struct One {
+		var int value = 10;
+
+		ctor() {}
+		ctor( int v ) { value = v; }
+		dtor() {}
+
+		func half() -> int => value / 2;
+	};
+
+	func tplFunc<T>( T x ) -> T {
+		return x;
+	}
 }
 
 func oneValue() -> int {

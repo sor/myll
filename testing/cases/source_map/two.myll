@@ -1,8 +1,24 @@
 module source_map;
 
-class Two {
-	var int value = 20;
-	func twice() -> int => value * 2;
+namespace NSTwo {
+	class Two {
+		var int value = 20;
+
+		ctor() {}
+		ctor( int v ) { value = v; }
+		dtor() {}
+
+		func twice() -> int => value * 2;
+	};
+
+	class Wrapper<T> {
+		var T value;
+
+		ctor( T v ) { value = v; }
+		dtor() {}
+
+		func unwrap() -> T { return value; }
+	};
 }
 
 func twoValue() -> int {
