@@ -1,5 +1,10 @@
 module source_map;
 
+class Two {
+	var int value = 20;
+	func twice() -> int => value * 2;
+}
+
 func twoValue() -> int {
-    return 2;
+	return 2;
 }

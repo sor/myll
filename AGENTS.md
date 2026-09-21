@@ -63,6 +63,9 @@ dotnet run --project frontend/frontend.csproj -- \
 | `-O` | `--optimize` | Set C++ compiler optimization level |
 | `-r` | `--run` | Run the compiled binary |
 | `-M` | `--main` | Specify module containing `main()` |
+| | `--source-map` | Emit `#line` directives for both declarations and statements |
+| | `--source-map-decl` | Emit `#line` directives at declaration boundaries only |
+| | `--source-map-stmt` | Emit `#line` directives at statement boundaries only |
 
 ### Environment variables
 

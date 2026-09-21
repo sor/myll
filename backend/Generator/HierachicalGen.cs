@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Myll.Core;
 using Myll.Resolver;
@@ -114,6 +115,23 @@ namespace Myll.Generator
 		private Dialect Dialect => context?.Dialect ?? Dialect.Default;
 
 		public List<Diagnostic> Diagnostics { get; } = new();
+
+		private void PrependDeclSourceMap( SourceLines target, Decl decl )
+		{
+			if( context?.SourceMap.Decl != true )
+				return;
+
+			SrcPos? pos = decl.srcPos;
+			if( pos == null )
+				return;
+
+			string basePath = !IsNullOrEmpty( context.OutputBasePath )
+				? context.OutputBasePath
+				: Directory.GetCurrentDirectory();
+			string mappedFile = Path.GetRelativePath( basePath, pos.file ).Replace( '\\', '/' );
+
+			target.Add( Format( "#line {0} \"{1}\"", pos.from.line, mappedFile ) );
+		}
 
 		private int LevelDecl { get; }
 		private int LevelImpl { get; }
@@ -337,6 +355,7 @@ namespace Myll.Generator
 					name,
 					obj.value != null ? EntryFormat[1] + obj.value.Gen() : "" )
 			};
+			PrependDeclSourceMap( ret, obj );
 			targetDecl.Add( (obj.access, ret) );
 		}
 
@@ -499,6 +518,7 @@ namespace Myll.Generator
 						obj.type.Gen( obj.name ),
 						initDecl )
 				};
+				PrependDeclSourceMap( retDecl, obj );
 				targetDecl.Add( (obj.access, retDecl) );
 			}
 
@@ -515,6 +535,7 @@ namespace Myll.Generator
 						obj.type.Gen( obj.FullyQualifiedName ),
 						initImpl )
 				};
+				PrependDeclSourceMap( retImpl, obj );
 				targetImpl.Add( (obj.access, retImpl) );
 			}
 		}
@@ -627,6 +648,7 @@ namespace Myll.Generator
 					return;
 				}
 
+				PrependDeclSourceMap( targetProto, obj );
 				if( hasTpl )
 					targetProto.Add( tplDecl );
 
@@ -634,12 +656,22 @@ namespace Myll.Generator
 				return;
 			}
 
+
 			// TODO: move inlines to bottom of header
 			if( isInlined || isExternal || hasTpl ) {
 				if( !isInsideStruct ) {
+					PrependDeclSourceMap( targetProto, obj );
 					if( hasTpl )
 						targetProto.Add( tplDecl );
 					targetProto.Add( headlineDecl + ";" );
+				}
+				else if( isExternal ) {
+					// External members still need a declaration inside the class definition,
+					// and it should get its own source-map directive.
+					PrependDeclSourceMap( targetDecl, obj );
+					if( hasTpl )
+						targetDecl.Add( tplDecl );
+					targetDecl.Add( headlineDecl + ";" );
 				}
 
 				if( !isExternal ) {
@@ -651,6 +683,7 @@ namespace Myll.Generator
 						return;
 					}
 
+					PrependDeclSourceMap( targetDecl, obj );
 					if( hasTpl )
 						targetDecl.Add( tplDecl );
 
@@ -675,11 +708,13 @@ namespace Myll.Generator
 					paramString,
 					(obj.IsConstMethod ? " const" : "") );
 
+				PrependDeclSourceMap( targetProto, obj );
 				if( hasTpl )
 					targetProto.Add( tplDecl );
 
 				targetProto.Add( headlineDecl + ";" );
 
+				PrependDeclSourceMap( targetImpl, obj );
 				if( hasTpl )
 					targetImpl.Add( tplImpl );
 
@@ -713,6 +748,15 @@ namespace Myll.Generator
 			SourceLines targetDecl  = hierarchicalDecl.Target( obj.access );
 			SourceLines targetImpl  = hierarchicalImpl.Target( obj.access );
 
+			bool isGlobal    = gen.hierarchical is GlobalNamespace;
+			bool isNamespace = gen.hierarchical is Namespace;
+			bool isEnum      = gen.hierarchical is Enumeration;
+
+			if( !isGlobal ) {
+				PrependDeclSourceMap( targetProto, obj );
+				PrependDeclSourceMap( targetDecl, obj );
+			}
+
 			if( gen.hierarchical is ITplParams hierWithTpl
 			 && hierWithTpl.TplParams.Count >= 1 ) {
 				string tpl = Format(
@@ -725,10 +769,6 @@ namespace Myll.Generator
 				targetProto.Add( tpl );
 				targetDecl.Add( tpl );
 			}
-
-			bool isGlobal    = gen.hierarchical is GlobalNamespace;
-			bool isNamespace = gen.hierarchical is Namespace;
-			bool isEnum      = gen.hierarchical is Enumeration;
 
 			if( isNamespace )
 				definedNamespaces.Add( nameDecl );
@@ -1034,6 +1074,8 @@ namespace Myll.Generator
 			SourceLines target = protoEarly.Target( structural.access );
 			string  indent = DeIndentDecl;
 
+			PrependDeclSourceMap( target, structural );
+
 			if( structural.TplParams.Count >= 1 ) {
 				target.Add( Format(
 					"{0}template <{1}>",
@@ -1092,6 +1134,7 @@ namespace Myll.Generator
 				followingDecl );
 
 			if( isInlined ) {
+				PrependDeclSourceMap( targetDecl, obj );
 				targetDecl.Add( headlineDecl );
 				if( !isDefault && !isDisabled ) {
 					if( obj.body == null ) {
@@ -1122,8 +1165,10 @@ namespace Myll.Generator
 					paramString,
 					"" );
 
+				PrependDeclSourceMap( targetDecl, obj );
 				targetDecl.Add( headlineDecl + ";" );
 
+				PrependDeclSourceMap( targetImpl, obj );
 				targetImpl.Add( headlineImpl );
 				targetImpl.AddRange( obj.body.Gen( LevelImpl ) );
 			}

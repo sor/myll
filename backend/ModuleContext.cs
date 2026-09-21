@@ -44,10 +44,17 @@ namespace Myll
 		public Dialect Dialect { get; init; } = Myll.Core.Dialect.Default;
 
 		/// <summary>
-		/// When true, the generator emits C++ <c>#line</c> directives mapping generated code
-		/// back to the original Myll source locations.
+		/// Controls whether the generator emits C++ <c>#line</c> directives mapping generated code
+		/// back to the original Myll source locations — either at declaration boundaries,
+		/// statement boundaries, or both.
 		/// </summary>
-		public bool EmitSourceMap { get; set; } = false;
+		public SourceMapOptions SourceMap { get; set; } = new();
+
+		/// <summary>
+		/// Output directory used by the current compilation. Used to compute relative paths in
+		/// <c>#line</c> directives.
+		/// </summary>
+		public string? OutputBasePath { get; set; }
 
 		/// <summary>
 		/// Resolved declaration backing the <c>string</c> keyword for this module, if any.

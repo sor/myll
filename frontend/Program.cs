@@ -201,8 +201,12 @@ namespace Myll
 			List<Diagnostic> resolutionDiagnostics = CompilerPipeline.ResolveModules( modules );
 			PrintDiagnosticsAndBailOnErrors( opt, resolutionDiagnostics );
 
+			SourceMapOptions sourceMapOptions = new(
+				Decl: opt.SourceMap || opt.SourceMapDecl,
+				Stmt: opt.SourceMap || opt.SourceMapStmt );
+
 			List<GeneratedModuleFilesResult> generationResults
-				= CompilerPipeline.GenerateFiles( modules, opt.OutPath, opt.SourceMap );
+				= CompilerPipeline.GenerateFiles( modules, opt.OutPath, sourceMapOptions );
 
 			IEnumerable<(string, IEnumerable<SourceLine>)> output = generationResults.SelectMany( r => r.Files );
 

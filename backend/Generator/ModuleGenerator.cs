@@ -20,7 +20,7 @@ namespace Myll.Generator
 
 			HierarchicalGen gen = new( global_ns, -1, 0, moduleRawImports, prototypeModules, context );
 			try {
-				if( context.EmitSourceMap ) {
+				if( context.SourceMap.Any ) {
 					// Source-mapped output is checked against golden files, so make the
 					// ordering of top-level declarations deterministic.
 					global_ns.children.Sort( ( a, b ) => {
@@ -39,7 +39,7 @@ namespace Myll.Generator
 				IEnumerable<SourceLine>? decl = gen.GenDeclGlobal();
 				IEnumerable<SourceLine>? impl = gen.GenImplGlobal();
 
-				if( context.EmitSourceMap ) {
+				if( context.SourceMap.Stmt ) {
 					string basePath = string.IsNullOrEmpty( outputDirectory )
 						? Directory.GetCurrentDirectory()
 						: outputDirectory;

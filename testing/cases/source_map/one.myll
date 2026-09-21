@@ -1,5 +1,10 @@
 module source_map;
 
+struct One {
+	var int value = 10;
+	func half() -> int => value / 2;
+}
+
 func oneValue() -> int {
-    return 1;
+	return 1;
 }

@@ -112,9 +112,11 @@ namespace Myll
 
 		public static List<GeneratedModuleFilesResult> GenerateFiles(
 			List<CompiledModuleResult> modules,
-			string                     outputDirectory = "",
-			bool                       emitSourceMap   = false )
+			string                     outputDirectory  = "",
+			SourceMapOptions?          sourceMapOptions = null )
 		{
+			SourceMapOptions sourceMap = sourceMapOptions ?? new();
+
 			IReadOnlyDictionary<string, IReadOnlyList<RawImport>> moduleRawImports
 				= RawImportCollector.Collect( modules );
 
@@ -124,8 +126,10 @@ namespace Myll
 					.Select( m => m.Module.module )
 					.ToHashSet();
 
-			foreach( CompiledModuleResult m in modules )
-				m.Context.EmitSourceMap = emitSourceMap;
+			foreach( CompiledModuleResult m in modules ) {
+				m.Context.SourceMap       = sourceMap;
+				m.Context.OutputBasePath  = outputDirectory;
+			}
 
 			return modules
 				.Where( m => !m.Context.IsPrototypeFile )
