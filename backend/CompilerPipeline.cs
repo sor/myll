@@ -89,6 +89,7 @@ namespace Myll
 		{
 			return parseResults
 				.Select( r => r.Prog )
+				.OrderBy( p => p.Start.InputStream.SourceName )	// deterministically order files before grouping so multi-file modules emit stable output
 				.GroupBy( ClassifyModule )
 				.AsParallel()
 				.Select( g => CompileModule(
