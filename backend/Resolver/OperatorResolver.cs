@@ -28,7 +28,7 @@ namespace Myll.Resolver
 				if( decl is not Func func || func.name != name )
 					continue;
 
-				bool isConst = func.IsPure;
+				bool isConst = func.IsConstMethod;
 				if( receiverIsConst ) {
 					if( isConst )
 						strict ??= func;

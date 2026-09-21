@@ -155,10 +155,12 @@ namespace Myll
 				? Visit( defDecl )
 				: VisitMulti( c.decl() );
 
-			if( attribs != null )
-				ret.AssignAttribs( attribs );
+		if( attribs != null )
+			ret.AssignAttribs( attribs );
 
-			switch( ret ) {
+		EnsureComparisonOperatorConst( ret, scopeStack.Peek() );
+
+		switch( ret ) {
 				case Func func:
 					ValidateForwardDeclaration( func );
 					break;
@@ -223,6 +225,8 @@ namespace Myll
 
 			if( attribs != null )
 				ret.AssignAttribs( attribs );
+
+			EnsureComparisonOperatorConst( ret, scopeStack.Peek() );
 
 			return ret;
 		}
@@ -863,8 +867,18 @@ namespace Myll
 						opName,
 						Func.Kind.Operator,
 						VisitTypespecsNested( c.typespecsNested() ) );
+
+					if( IsComparisonOperator( opName )
+					 && ret.retType is TypespecBasic { kind: TypespecBasic.Kind.ImplicitAuto } ) {
+						ret.retType = opName == "operator<=>"
+							? new TypespecBasic { kind = TypespecBasic.Kind.ExplicitAuto, size = TypespecBasic.SizeUndetermined }
+							: new TypespecBasic { kind = TypespecBasic.Kind.Bool, size = 1 };
+					}
+
 					AddParamsToScope( ret.paras );
 					ret.body = c.funcBody().Visit( Context );
+					if( IsEmptyFunctionBody( ret.body ) )
+						ret.body = null;
 				}
 				else {
 					throw new NotSupportedException( "Unknown operator definition form." );
@@ -886,6 +900,34 @@ namespace Myll
 				"operator?="   => true,
 				_              => false,
 			};
+		}
+
+		private static bool IsComparisonOperator( string opName )
+		{
+			return opName switch {
+				"operator<"    => true,
+				"operator>"    => true,
+				"operator<="   => true,
+				"operator>="   => true,
+				"operator=="   => true,
+				"operator!="   => true,
+				"operator<=>"  => true,
+				_              => false,
+			};
+		}
+
+		private static void EnsureComparisonOperatorConst( Decl ret, Scope parentScope )
+		{
+			if( ret is not Func func )
+				return;
+			if( !IsComparisonOperator( func.name ) )
+				return;
+			if( parentScope.decl is not Structural )
+				return;
+			if( func.IsConstMethod )
+				return;
+
+			func.MergeAttribs( new() { ["pure"] = new List<string>() } );
 		}
 
 		// no override

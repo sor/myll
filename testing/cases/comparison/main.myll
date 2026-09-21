@@ -1,0 +1,102 @@
+module comparison;
+
+func main() -> int {
+    // Spaceship mode auto-generates == and <=>.
+    var SpaceshipWidget a;
+    a.value = 1;
+
+    var SpaceshipWidget b;
+    b.value = 1;
+
+    var SpaceshipWidget c;
+    c.value = 2;
+
+    if( !(a == b) )
+        return 1;
+
+    if( a == c )
+        return 2;
+
+    if( a != b )
+        return 3;
+
+    if( !(a < c) )
+        return 4;
+
+    if( !(a <= b) )
+        return 5;
+
+    if( !(a >= b) )
+        return 6;
+
+    if( !(c > a) )
+        return 7;
+
+    // MaybeSpaceship mode allows manual ==/<=>.
+    var MaybeSpaceshipWidget m1;
+    m1.value = 5;
+
+    var MaybeSpaceshipWidget m2;
+    m2.value = 5;
+
+    if( !(m1 == m2) )
+        return 8;
+
+    if( m1 != m2 )
+        return 9;
+
+    // All mode with old-six operators.
+    var AllOldWidget o1;
+    o1.value = 1;
+
+    var AllOldWidget o2;
+    o2.value = 2;
+
+    if( o1 == o2 )        return 10;
+    if( !(o1 != o2) )     return 11;
+    if( !(o1 < o2) )      return 12;
+    if( !(o1 <= o2) )     return 13;
+    if( o1 > o2 )         return 14;
+    if( o1 >= o2 )        return 15;
+
+    // All mode with spaceship operators.
+    var AllNewWidget n1;
+    n1.value = 1;
+
+    var AllNewWidget n2;
+    n2.value = 1;
+
+    if( !(n1 == n2) )
+        return 16;
+
+    if( n1 != n2 )
+        return 17;
+
+    // Free operators.
+    var Point p;
+    p.x = 1;
+    p.y = 2;
+
+    var Point q;
+    q.x = 1;
+    q.y = 2;
+
+    var Point r;
+    r.x = 2;
+    r.y = 2;
+
+    if( !(p == q) )
+        return 18;
+
+    if( p == r )
+        return 19;
+
+    if( p != q )
+        return 20;
+
+    // MaybeNothingWidget has no comparison ops, but should still compile.
+    var MaybeNothingWidget empty;
+    empty.value = 0;
+
+    return 0;
+}

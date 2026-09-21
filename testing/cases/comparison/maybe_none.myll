@@ -1,0 +1,6 @@
+module comparison;
+
+[comp=maybespaceship]
+struct MaybeNothingWidget {
+    field int value;
+}

@@ -1,0 +1,8 @@
+module comparison_fail;
+
+[comp=spaceship]
+struct Widget {
+    field int value;
+
+    operator < ( const Widget & other ) -> bool => value < other.value;
+}

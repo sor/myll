@@ -1,0 +1,12 @@
+module comparison;
+
+[comp=maybespaceship]
+struct MaybeSpaceshipWidget {
+    field int value;
+
+    operator == ( const MaybeSpaceshipWidget & other ) -> bool
+        => value == other.value;
+
+    [default]
+    operator <=> ( const MaybeSpaceshipWidget & other ) -> auto;
+}

@@ -43,6 +43,8 @@ namespace Myll.Core
 		public bool IsVirtual   => HasAttrib( "virtual" );
 		public bool IsConst     => HasAttrib( "const" );
 		public bool IsPure      => HasAttrib( "pure" ) || HasAttrib( "const" );
+		public bool IsMutable   => HasAttrib( "mutable" ) || HasAttrib( "mut" );
+		public bool IsConstMethod => this is Decl decl && decl.IsInStruct && IsPure && !IsMutable;
 		public bool IsOverride  => HasAttrib( "override" );
 		public bool IsImplicit  => HasAttrib( "implicit" );
 		public bool IsDefault   => HasAttrib( "default" );

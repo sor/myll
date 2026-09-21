@@ -81,7 +81,7 @@ namespace Myll.Transform
 				ptrs         = new List<Pointer> { new() { kind = Pointer.Kind.LVRef } },
 			};
 
-			if( func.IsPure )
+			if( func.IsConstMethod )
 				retType.qual = Qualifier.Const;
 
 			func.retType = retType;

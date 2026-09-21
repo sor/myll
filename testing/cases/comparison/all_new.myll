@@ -1,0 +1,12 @@
+module comparison;
+
+[comp=all]
+struct AllNewWidget {
+    field int value;
+
+    [default]
+    operator == ( const AllNewWidget & other ) -> bool;
+
+    [default]
+    operator <=> ( const AllNewWidget & other ) -> auto;
+}

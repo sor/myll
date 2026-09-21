@@ -1,0 +1,13 @@
+module comparison;
+
+[comp=all]
+struct AllOldWidget {
+    field int value;
+
+    operator == ( const AllOldWidget & other ) -> bool => value == other.value;
+    operator != ( const AllOldWidget & other ) -> bool => value != other.value;
+    operator <  ( const AllOldWidget & other ) -> bool => value < other.value;
+    operator >  ( const AllOldWidget & other ) -> bool => value > other.value;
+    operator <= ( const AllOldWidget & other ) -> bool => value <= other.value;
+    operator >= ( const AllOldWidget & other ) -> bool => value >= other.value;
+}

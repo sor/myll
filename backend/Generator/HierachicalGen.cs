@@ -564,8 +564,8 @@ namespace Myll.Generator
 		              + (isExternal        ? "extern "    : "")
 		              + (obj.IsVirtual || isAbstract ? "virtual "   : "")
 		              + (isInlined         ? "inline "    : "");
-			string suffix = (obj.IsPure     ? " const"    : "")
-		              + (obj.IsOverride ? " override" : "");
+			string suffix = (obj.IsConstMethod ? " const"    : "")
+		              + (obj.IsOverride    ? " override" : "");
 			string headlineDecl = Format(
 				FuncFormat[0],
 				indentDecl,
@@ -673,7 +673,7 @@ namespace Myll.Generator
 					"",
 					obj.retType.Gen( nameImpl ),
 					paramString,
-					(obj.IsPure ? " const" : "") );
+					(obj.IsConstMethod ? " const" : "") );
 
 				if( hasTpl )
 					targetProto.Add( tplDecl );

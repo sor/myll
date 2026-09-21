@@ -1,0 +1,12 @@
+module comparison;
+
+struct Point {
+    field int x;
+    field int y;
+}
+
+operator == ( const Point & a, const Point & b ) -> bool
+    => a.x == b.x && a.y == b.y;
+
+operator != ( const Point & a, const Point & b ) -> bool
+    => a.x != b.x || a.y != b.y;

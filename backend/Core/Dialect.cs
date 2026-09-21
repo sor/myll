@@ -71,6 +71,12 @@ namespace Myll.Core
 		// If empty or null, no implicit variable is created.
 		public string AutoReturnName { get; init; } = "ret";
 
+		/// <summary>
+		/// Controls how comparison operators are validated and auto-generated for classes/structs.
+		/// <see cref="ComparisonMode.Any"/> means no enforcement.
+		/// </summary>
+		public ComparisonMode ComparisonOperators { get; init; } = ComparisonMode.Any;
+
 		// Default attributes applied to class, struct, union, and enum declarations that do not
 		// already specify the corresponding attribute. Use the same syntax as source attributes,
 		// e.g. "rule_of_n=5" or "[rule_of_n=3, pub]". Brackets are optional.
@@ -233,6 +239,44 @@ namespace Myll.Core
 		/// Reject module-scope `using NS;` entirely.
 		/// </summary>
 		Disabled,
+	}
+
+	/// <summary>
+	/// Controls which comparison operators a class/struct is expected to provide, and whether
+	/// the compiler may auto-generate defaulted <c>operator==</c> / <c>operator&lt;=&gt;</c>.
+	/// </summary>
+	public enum ComparisonMode
+	{
+		/// <summary>No comparison operators are allowed.</summary>
+		None = 0,
+
+		/// <summary>Only <c>operator==</c> is allowed/required.</summary>
+		Equal,
+
+		/// <summary><c>operator==</c> and <c>operator&lt;</c> are allowed/required.</summary>
+		LessThan,
+
+		/// <summary>
+		/// Only <c>operator==</c> and <c>operator&lt;=&gt;</c> are allowed; missing ones are
+		/// auto-generated as <c>= default</c>.
+		/// </summary>
+		Spaceship,
+
+		/// <summary>
+		/// Only <c>operator==</c> and <c>operator&lt;=&gt;</c> are allowed, but they are not
+		/// required and are never auto-generated.
+		/// </summary>
+		MaybeSpaceship,
+
+		/// <summary>
+		/// The class must provide either the full pre-spaceship set
+		/// (<c>== != &lt; &gt; &lt;= &gt;=</c>) or the full spaceship set
+		/// (<c>== &lt;=&gt;</c>). Mixing the two styles is an error.
+		/// </summary>
+		All,
+
+		/// <summary>No checks are performed. This is the dialect default.</summary>
+		Any,
 	}
 
 	/// <summary>

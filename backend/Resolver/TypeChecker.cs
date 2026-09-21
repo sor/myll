@@ -367,6 +367,11 @@ namespace Myll.Resolver
 			if( func.retType is not TypespecBasic { kind: TypespecBasic.Kind.ExplicitAuto or TypespecBasic.Kind.ImplicitAuto } )
 				return;
 
+			// Defaulted/deleted functions (e.g. `[default] operator<=> -> auto`) leave the
+			// return type for the C++ compiler to deduce.
+			if( func.IsDefault || func.IsDisabled )
+				return;
+
 			if( func.body == null ) {
 				if( func.IsForwardDeclaration || func.IsExternal ) {
 					func.retType = new TypespecBasic {
