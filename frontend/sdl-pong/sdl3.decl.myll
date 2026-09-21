@@ -1,0 +1,39 @@
+module sdl3;
+import <SDL3/SDL.h>;
+
+[extern] struct SDL_Window {}
+[extern] struct SDL_Renderer {}
+[extern] struct SDL_FRect {
+[pub]:
+	var f32 x;
+	var f32 y;
+	var f32 w;
+	var f32 h;
+}
+[extern] struct SDL_Event {
+[pub]:
+	var u32 type;
+}
+
+const u32 SDL_INIT_VIDEO       = 0x00000010;
+const u64 SDL_WINDOW_RESIZABLE = 0x0000000000000020;
+const u32 SDL_EVENT_QUIT       = 0x00000100;
+
+const int SDL_SCANCODE_W     = 26;
+const int SDL_SCANCODE_S     = 22;
+const int SDL_SCANCODE_UP    = 82;
+const int SDL_SCANCODE_DOWN  = 81;
+
+func SDL_Init( u32 flags ) -> bool;
+func SDL_CreateWindow( const char * title, int w, int h, u64 flags ) -> SDL_Window *;
+func SDL_CreateRenderer( SDL_Window * window, const char * name ) -> SDL_Renderer *;
+func SDL_PollEvent( SDL_Event * event ) -> bool;
+func SDL_GetKeyboardState( int * numkeys ) -> const bool *;
+func SDL_SetRenderDrawColor( SDL_Renderer * r, u8 red, u8 green, u8 blue, u8 alpha ) -> bool;
+func SDL_RenderClear( SDL_Renderer * r ) -> bool;
+func SDL_RenderFillRect( SDL_Renderer * r, SDL_FRect * rect ) -> bool;
+func SDL_RenderPresent( SDL_Renderer * r ) -> void;
+func SDL_Delay( u32 ms ) -> void;
+func SDL_DestroyRenderer( SDL_Renderer * r ) -> void;
+func SDL_DestroyWindow( SDL_Window * window ) -> void;
+func SDL_Quit() -> void;

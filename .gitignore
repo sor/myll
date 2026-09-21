@@ -299,3 +299,6 @@ testing/generated/
 
 # Coreutil app generated sources/binaries
 frontend/coreutil/gen/
+
+# SDL Pong sample generated sources/binaries
+frontend/sdl-pong/gen/

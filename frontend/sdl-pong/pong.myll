@@ -1,0 +1,135 @@
+import sdl3;
+
+const f32 SCREEN_W = 800.0;
+const f32 SCREEN_H = 600.0;
+const f32 PADDLE_W = 20.0;
+const f32 PADDLE_H = 100.0;
+const f32 BALL_SZ  = 15.0;
+const f32 PADDLE_SPEED = 7.0;
+const f32 BALL_SPEED   = 5.0;
+
+func clamp( f32 v, f32 min, f32 max ) -> f32
+{
+	if( v < min )
+		return min;
+	if( v > max )
+		return max;
+	return v;
+}
+
+func drawRect( SDL_Renderer * r, f32 x, f32 y, f32 w, f32 h ) -> void
+{
+	var SDL_FRect rect;
+	rect.x = x;
+	rect.y = y;
+	rect.w = w;
+	rect.h = h;
+	SDL_RenderFillRect( r, &rect );
+}
+
+func main() -> int
+{
+	if( !SDL_Init( SDL_INIT_VIDEO ) ) {
+		return 1;
+	}
+
+	var SDL_Window * window = SDL_CreateWindow( "Myll Pong", 800, 600, SDL_WINDOW_RESIZABLE );
+	if( window == null ) {
+		SDL_Quit();
+		return 1;
+	}
+
+	var SDL_Renderer * renderer = SDL_CreateRenderer( window, null );
+	if( renderer == null ) {
+		SDL_DestroyWindow( window );
+		SDL_Quit();
+		return 1;
+	}
+
+	var f32 p1x = 20.0;
+	var f32 p1y = (SCREEN_H - PADDLE_H) / 2.0;
+	var f32 p2x = SCREEN_W - 20.0 - PADDLE_W;
+	var f32 p2y = (SCREEN_H - PADDLE_H) / 2.0;
+
+	var f32 bx = SCREEN_W / 2.0;
+	var f32 by = SCREEN_H / 2.0;
+	var f32 bvx = BALL_SPEED;
+	var f32 bvy = BALL_SPEED;
+
+	var bool running = true;
+	var int frames = 0;
+	var SDL_Event event;
+
+	while( running && frames < 600 ) {
+		frames = frames + 1;
+
+		while( SDL_PollEvent( &event ) ) {
+			if( event.type == SDL_EVENT_QUIT ) {
+				running = false;
+			}
+		}
+
+		var const bool * keys = SDL_GetKeyboardState( null );
+		if( keys[SDL_SCANCODE_W] ) {
+			p1y = p1y - PADDLE_SPEED;
+		}
+		if( keys[SDL_SCANCODE_S] ) {
+			p1y = p1y + PADDLE_SPEED;
+		}
+		if( keys[SDL_SCANCODE_UP] ) {
+			p2y = p2y - PADDLE_SPEED;
+		}
+		if( keys[SDL_SCANCODE_DOWN] ) {
+			p2y = p2y + PADDLE_SPEED;
+		}
+
+		p1y = clamp( p1y, 0.0, SCREEN_H - PADDLE_H );
+		p2y = clamp( p2y, 0.0, SCREEN_H - PADDLE_H );
+
+		bx = bx + bvx;
+		by = by + bvy;
+
+		if( by <= 0.0 || by + BALL_SZ >= SCREEN_H ) {
+			bvy = -bvy;
+		}
+
+		if( bvx < 0.0
+		 && bx <= p1x + PADDLE_W
+		 && by + BALL_SZ >= p1y
+		 && by <= p1y + PADDLE_H ) {
+			bvx = -bvx;
+			bx = p1x + PADDLE_W;
+		}
+
+		if( bvx > 0.0
+		 && bx + BALL_SZ >= p2x
+		 && by + BALL_SZ >= p2y
+		 && by <= p2y + PADDLE_H ) {
+			bvx = -bvx;
+			bx = p2x - BALL_SZ;
+		}
+
+		if( bx + BALL_SZ < 0.0 || bx > SCREEN_W ) {
+			bx = SCREEN_W / 2.0;
+			by = SCREEN_H / 2.0;
+			bvx = -bvx;
+		}
+
+		SDL_SetRenderDrawColor( renderer, 0, 0, 0, 255 );
+		SDL_RenderClear( renderer );
+
+		SDL_SetRenderDrawColor( renderer, 255, 255, 255, 255 );
+		drawRect( renderer, p1x, p1y, PADDLE_W, PADDLE_H );
+		drawRect( renderer, p2x, p2y, PADDLE_W, PADDLE_H );
+		drawRect( renderer, bx, by, BALL_SZ, BALL_SZ );
+
+		SDL_RenderPresent( renderer );
+		SDL_Delay( 16 );
+	}
+
+	SDL_DestroyRenderer( renderer );
+	SDL_DestroyWindow( window );
+	SDL_Quit();
+
+	return 0;
+}
