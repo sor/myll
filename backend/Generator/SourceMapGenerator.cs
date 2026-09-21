@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 using Myll.Core;
 
 namespace Myll.Generator
@@ -47,6 +48,50 @@ namespace Myll.Generator
 				++linesSinceLastDirective;
 			}
 		}
+
+		/// <summary>
+		/// Removes redundant file names from generated <c>#line</c> directives.
+		/// A <c>#line</c> only needs to repeat the file name when the file changes
+		/// from the previous directive.
+		/// </summary>
+		public static IEnumerable<SourceLine> NormalizeFileDirectives(
+			IEnumerable<SourceLine> lines )
+		{
+			string? lastFile = null;
+
+			foreach( SourceLine line in lines ) {
+				string text = line.Text;
+				Match m = DirectiveRegex.Match( text );
+
+				if( m.Success ) {
+					int     lineNumber = int.Parse( m.Groups[1].Value );
+					Group   fileGroup  = m.Groups[2];
+
+					if( fileGroup.Success ) {
+						string file = fileGroup.Value;
+						if( lastFile == file ) {
+							yield return new SourceLine(
+								String.Format( "#line {0}", lineNumber ) );
+						}
+						else {
+							lastFile = file;
+							yield return line;
+						}
+					}
+					else {
+						yield return line;
+					}
+				}
+				else {
+					yield return line;
+				}
+			}
+		}
+
+		private static readonly Regex DirectiveRegex
+			= new(
+				@"^#line\s+(\d+)(?:\s+""([^""]*)"")?\s*$",
+				RegexOptions.Compiled | RegexOptions.CultureInvariant );
 
 		private static string MakeRelativePath( string fromDirectory, string toFile )
 		{

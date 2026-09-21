@@ -47,6 +47,11 @@ namespace Myll.Generator
 					impl = impl != null ? SourceMapGenerator.Apply( impl, basePath ) : impl;
 				}
 
+				if( context.SourceMap.Decl ) {
+					decl = decl != null ? SourceMapGenerator.NormalizeFileDirectives( decl ) : decl;
+					impl = impl != null ? SourceMapGenerator.NormalizeFileDirectives( impl ) : impl;
+				}
+
 				if( decl != null )
 					ret.Add( (String.Format( "{0}.hpp", global_ns.module ), decl) );
 				if( impl != null )

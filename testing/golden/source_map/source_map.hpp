@@ -16,16 +16,16 @@ class Two;
 struct One
 {
     int value = 10;
-#line 4 "../../cases/source_map/one.myll"
-#line 5 "../../cases/source_map/one.myll"
+#line 4
+#line 5
     int half() const;
 };
 #line 3 "../../cases/source_map/two.myll"
 class Two
 {
     int value = 20;
-#line 4 "../../cases/source_map/two.myll"
-#line 5 "../../cases/source_map/two.myll"
+#line 4
+#line 5
     int twice() const;
 };
 #line 8 "../../cases/source_map/one.myll"
