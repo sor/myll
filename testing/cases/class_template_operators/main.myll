@@ -15,7 +15,7 @@ class Widget {
 
 [pub]:
 	[default] ctor();
-	[pure]    func value() -> int => _value;
+	func value() -> int => _value;
 }
 
 func main() -> int

@@ -1,5 +1,5 @@
 #include "cpp_fail.hpp"
-void A::secret()
+void A::secret() const
 {
 }
 int main()

@@ -54,19 +54,14 @@ class DirEntry
 		}
 	}
 
-	[pure]
 	func path() -> string => (string)_path.generic_string();
 
-	[pure]
 	func name() -> string => (string)_path.filename().generic_string();
 
-	[pure]
 	func size() -> u64 => _size;
 
-	[pure]
 	func time() -> std::filesystem::file_time_type => _time;
 
-	[pure]
 	func isDirectory() -> bool => _isDirectory;
 }
 

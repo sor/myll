@@ -11,6 +11,6 @@
 class A;
 class A
 {
-    void secret();
+    void secret() const;
 };
 int main();

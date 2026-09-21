@@ -43,7 +43,7 @@ class GameOfLife
 		}
 	}
 
-	func iterate()
+	proc iterate()
 	{
 		let u8		nextIndex	= 1 - currentIndex;
 		let Map2D &	srcMap		= doubleBufferedMap[currentIndex];
@@ -78,7 +78,7 @@ class GameOfLife
 	}
 
 	//func output( std::ostream& stream )
-	func output( std::ostream & stream )
+	proc output( std::ostream & stream )
 	{
 		const Map2D & srcMap = doubleBufferedMap[currentIndex];
 
@@ -90,7 +90,6 @@ class GameOfLife
 		}
 	}
 
-	[pure]
 	func hasConverged() -> bool
 	{
 		let Map2D &	zeroMap	= doubleBufferedMap[0],

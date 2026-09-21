@@ -30,8 +30,8 @@ class Box
 
 [priv]:
 	field i32 _secret;
-	method helperA() -> i32 => _x + _y;
-	method helperB() -> i32 => _y + _z;
+	func helperA() -> i32 => _x + _y;
+	func helperB() -> i32 => _y + _z;
 
 [prot]:
 	field i32 _childVisible;

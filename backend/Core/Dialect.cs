@@ -88,9 +88,9 @@ namespace Myll.Core
 
 		// Default attributes applied to func/proc/method declarations that do not already
 		// specify an effect attribute. Not applied to operators (see operator categories below).
-		public string DefaultAttributesFunction  { get; init; } = ""; // func
-		public string DefaultAttributesProcedure { get; init; } = ""; // proc
-		public string DefaultAttributesMethod    { get; init; } = ""; // method
+		public string DefaultAttributesFunction  { get; init; } = "pure";    // func
+		public string DefaultAttributesProcedure { get; init; } = "mutable"; // proc
+		public string DefaultAttributesMethod    { get; init; } = "";        // method
 
 		/// <summary>
 		/// Categories for operator default-effect policies. The active dialect map supplies an

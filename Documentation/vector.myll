@@ -50,28 +50,27 @@ public:
 			delete[] buff;
 	}
 
-	[pure]
-	func {
+	proc {
 		front()	-> T& => buff[0];
 		back()	-> T& => buff[size-1];
 	}
 
 	[virtual]
-	func push(const T& v) {
+	proc push(const T& v) {
 		if(size >= capa)
 			grow();
 		buff[size] = v;
 		++size;
 	}
 
-	func pop() {
+	proc pop() {
 		--size;
 	}
 
 	operator [] (int index) -> T& => buff[index];
 
 private:
-	func grow() {
+	proc grow() {
 		++numRealocs;
 		capa *= 2;
 		var T* new_buff = new T[capa];

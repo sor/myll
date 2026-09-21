@@ -26,7 +26,7 @@
 			while( i++ < 10 ) {}
 		}
 		
-		[noreturn, pure, virtual, override, final, nothrow]
+		[noreturn, virtual, override, final, nothrow]
 		func foo()
 		-> const float
 		{}

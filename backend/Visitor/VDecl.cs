@@ -828,6 +828,7 @@ namespace Myll
 						srcPos   = c.ToSrcPos(),
 						name     = "operator=",
 						access   = curAccess,
+						kind     = Func.Kind.Operator,
 						body     = IsEmptyFunctionBody( opBody ) ? null : opBody,
 						Requires = VisitTypespecsNested( c.typespecsNested() ),
 						paras    = new() { param },
