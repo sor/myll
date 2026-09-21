@@ -268,7 +268,6 @@ namespace Myll.Transform
 
 		func.MergeAttribs( new() {
 			["default"] = new List<string>(),
-			["pure"]    = new List<string>(),
 		} );
 
 			return func;

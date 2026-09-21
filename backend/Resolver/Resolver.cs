@@ -83,6 +83,7 @@ namespace Myll.Resolver
 			var transformers = new List<Transformer> {
 				new DefaultAttributesTransformer(),
 				new ComparisonModeTransformer(),
+				new OperatorDefaultAttributesTransformer(),
 				new EnumTransformer(),
 				new AutoReturnTransformer(),
 				new TemplateParamTransformer(),

@@ -34,11 +34,17 @@ namespace Myll.Transform
 
 		private static Attribs GetDefaultAttributes( Decl decl, Dialect dialect )
 		{
+			if( decl is Func func && func.IsExternal )
+				return new Attribs();
+
 			string? source = decl switch {
 				Structural s when s.kind == Structural.Kind.Class  => dialect.DefaultAttributesClass,
 				Structural s when s.kind == Structural.Kind.Struct => dialect.DefaultAttributesStruct,
 				Structural s when s.kind == Structural.Kind.Union  => dialect.DefaultAttributesUnion,
 				Enumeration                                        => dialect.DefaultAttributesEnum,
+				Func f when f.kind == Func.Kind.Function && !HasEffectAttribute( f )  => dialect.DefaultAttributesFunction,
+				Func f when f.kind == Func.Kind.Procedure && !HasEffectAttribute( f ) => dialect.DefaultAttributesProcedure,
+				Func f when f.kind == Func.Kind.Method && !HasEffectAttribute( f )    => dialect.DefaultAttributesMethod,
 				_                                                  => null,
 			};
 
@@ -47,5 +53,11 @@ namespace Myll.Transform
 
 			return AttributeStringParser.Parse( source );
 		}
+
+		private static bool HasEffectAttribute( Func func )
+			=> func.HasAttrib( "pure" )
+			|| func.HasAttrib( "const" )
+			|| func.HasAttrib( "mutable" )
+			|| func.HasAttrib( "mut" );
 	}
 }

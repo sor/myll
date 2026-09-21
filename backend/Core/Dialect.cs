@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Myll.Core
 {
@@ -84,6 +85,42 @@ namespace Myll.Core
 		public string DefaultAttributesStruct { get; init; } = "";
 		public string DefaultAttributesUnion  { get; init; } = "";
 		public string DefaultAttributesEnum   { get; init; } = "";
+
+		// Default attributes applied to func/proc/method declarations that do not already
+		// specify an effect attribute. Not applied to operators (see operator categories below).
+		public string DefaultAttributesFunction  { get; init; } = ""; // func
+		public string DefaultAttributesProcedure { get; init; } = ""; // proc
+		public string DefaultAttributesMethod    { get; init; } = ""; // method
+
+		/// <summary>
+		/// Categories for operator default-effect policies. The active dialect map supplies an
+		/// attribute string such as "pure" or "mutable"; operators that already carry an effect
+		/// attribute keep their explicit choice.
+		/// </summary>
+		public enum OperatorCategory
+		{
+			Comparison,
+			Arithmetic,
+			Assignment,
+			IncDecrement,
+			Subscript,
+			Call,
+			Indirection,
+			Other,
+		}
+
+		/// <summary>
+		/// Per-category default attributes for operator declarations. Comparison and arithmetic
+		/// operators default to pure; assignment and increment/decrement default to mutable.
+		/// Subscript, call, indirection, and other operators have no default effect.
+		/// </summary>
+		public IReadOnlyDictionary<OperatorCategory, string> DefaultAttributesOperatorCategory { get; init; }
+			= new Dictionary<OperatorCategory, string> {
+				[OperatorCategory.Comparison]   = "pure",
+				[OperatorCategory.Arithmetic]   = "pure",
+				[OperatorCategory.Assignment]   = "mutable",
+				[OperatorCategory.IncDecrement] = "mutable",
+			};
 
 		/// <summary>
 		/// Controls which concrete size the `float` keyword refers to. `Unspecified` means the

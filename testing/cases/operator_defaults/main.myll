@@ -1,0 +1,27 @@
+module operator_defaults;
+
+struct Num {
+    field int v;
+
+    ctor( int value ) { v = value; }
+
+    operator + ( const Num & other ) -> Num => Num( v + other.v );
+    operator += ( const Num & other ) -> Num & { v = v + other.v; return self; }
+    operator ++ () -> Num & { v = v + 1; return self; }
+}
+
+func main() -> int {
+    var Num a = Num( 1 );
+    var Num b = Num( 2 );
+    var const Num & ca = a;
+    var Num c = ca + b;
+    if( c.v != 3 )
+        return 1;
+    a += b;
+    if( a.v != 3 )
+        return 2;
+    ++a;
+    if( a.v != 4 )
+        return 3;
+    return 0;
+}

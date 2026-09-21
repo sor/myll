@@ -155,12 +155,10 @@ namespace Myll
 				? Visit( defDecl )
 				: VisitMulti( c.decl() );
 
-		if( attribs != null )
-			ret.AssignAttribs( attribs );
+			if( attribs != null )
+				ret.AssignAttribs( attribs );
 
-		EnsureComparisonOperatorConst( ret, scopeStack.Peek() );
-
-		switch( ret ) {
+			switch( ret ) {
 				case Func func:
 					ValidateForwardDeclaration( func );
 					break;
@@ -225,8 +223,6 @@ namespace Myll
 
 			if( attribs != null )
 				ret.AssignAttribs( attribs );
-
-			EnsureComparisonOperatorConst( ret, scopeStack.Peek() );
 
 			return ret;
 		}
@@ -914,20 +910,6 @@ namespace Myll
 				"operator<=>"  => true,
 				_              => false,
 			};
-		}
-
-		private static void EnsureComparisonOperatorConst( Decl ret, Scope parentScope )
-		{
-			if( ret is not Func func )
-				return;
-			if( !IsComparisonOperator( func.name ) )
-				return;
-			if( parentScope.decl is not Structural )
-				return;
-			if( func.IsConstMethod )
-				return;
-
-			func.MergeAttribs( new() { ["pure"] = new List<string>() } );
 		}
 
 		// no override
