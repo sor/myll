@@ -92,6 +92,12 @@ namespace Myll.Core
 		public string DefaultAttributesProcedure { get; init; } = "mutable"; // proc
 		public string DefaultAttributesMethod    { get; init; } = "";        // method
 
+		// Default attributes applied to convert declarations. `convert -> T` operators
+		// default to const (via "pure"); the user/dialect must supply "implicit" or
+		// "explicit". `convert <- T` constructors likewise, but start with no defaults.
+		public string DefaultAttributesConvertTo   { get; init; } = "pure"; // operator conversion
+		public string DefaultAttributesConvertFrom { get; init; } = "";     // converting ctor
+
 		/// <summary>
 		/// Categories for operator default-effect policies. The active dialect map supplies an
 		/// attribute string such as "pure" or "mutable"; operators that already carry an effect

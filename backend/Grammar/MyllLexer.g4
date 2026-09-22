@@ -148,9 +148,7 @@ DTOR		: 'dtor';//|'destructor';
 // explicit ctor( OTHER o )	{...}	// manual, converting ctor, convert from type OTHER
 // convert <- OTHER o 		{...}	// is a ctor like above
 // convert from OTHER o 	{...}	// is a ctor like above
-// convert OTHER o ->		{...}	// same as above, alternative syntax
 // ctor convert <- OTHER o	{...}	// same as above, with ctor
-// ctor convert OTHER o ->	{...}	// same as above, alternative syntax
 // ctor convert OTHER o		{...}	// same as above, no arrow syntax
 //
 // # Read as "convert to OTHER"

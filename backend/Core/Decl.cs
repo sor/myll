@@ -202,6 +202,7 @@ namespace Myll.Core
 		}
 
 		public Kind        kind;
+		public bool        isConversionCtor; // true for `convert <- T` declarations
 		public List<Param> paras = new();
 		public MultiStmt?  body; // isScope = true
 
@@ -209,6 +210,7 @@ namespace Myll.Core
 
 		public override void AddToGen( HierarchicalGen gen ) { gen.AddStructor( this ); }
 	}
+
 
 	public class UsingDecl : Decl
 	{

@@ -1,0 +1,22 @@
+module convert_decl;
+
+class A {
+[pub]:
+	field int i;
+
+	[implicit] convert -> bool { return i > 0; }
+	[implicit] convert <- int { i = other; }
+}
+
+func main() -> int
+{
+	var A a = 5;            // convert <- int
+	if( !a )                // convert -> bool
+		return 1;
+
+	var A b = -3;
+	if( b )
+		return 2;
+
+	return 0;
+}

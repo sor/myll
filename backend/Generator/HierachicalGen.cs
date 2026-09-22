@@ -587,6 +587,12 @@ namespace Myll.Generator
 		              + (isInlined         ? "inline "    : "");
 			string suffix = (obj.IsConstMethod ? " const"    : "")
 		              + (obj.IsOverride    ? " override" : "");
+
+			if( obj.kind == Func.Kind.Convert ) {
+				AddConversionOperator( obj, prefix, suffix, hasTpl, isInlined, isExternal, isInsideStruct, targetDecl, targetImpl, targetProto );
+				return;
+			}
+
 			string headlineDecl = Format(
 				FuncFormat[0],
 				indentDecl,
@@ -719,6 +725,110 @@ namespace Myll.Generator
 					targetImpl.Add( tplImpl );
 
 				targetImpl.Add( headlineImpl );
+				targetImpl.AddRange( obj.body.Gen( LevelImpl ) );
+			}
+		}
+
+		private void AddConversionOperator(
+			Func         obj,
+			string       prefix,
+			string       suffix,
+			bool         hasTpl,
+			bool         isInlined,
+			bool         isExternal,
+			bool         isInsideStruct,
+			SourceLines  targetDecl,
+			SourceLines  targetImpl,
+			SourceLines  targetProto )
+		{
+			string indentDecl = IndentDecl;
+			string indentImpl = IndentImpl;
+			string targetType = obj.retType.GenType();
+			string explicitKw = obj.IsImplicit ? "" : "explicit ";
+			string declHeadline = Format(
+				"{0}{1}{2}operator {3}(){4}",
+				indentDecl,
+				prefix,
+				explicitKw,
+				targetType,
+				suffix );
+
+			string tplDecl, tplImpl;
+			if( hasTpl ) {
+				string tplContent = obj.TplParams
+					.Select( o => "typename " + o.name )
+					.Join( ", " );
+
+				tplDecl = Format( "{0}template <{1}>", indentDecl, tplContent );
+				tplImpl = Format( "{0}template <{1}>", indentImpl, tplContent );
+			}
+			else {
+				tplDecl = string.Empty;
+				tplImpl = string.Empty;
+			}
+
+			string qual = obj.FullyQualifiedName;
+			if( !qual.EndsWith( "::" ) )
+				qual += "::";
+			string implHeadline = Format(
+				"{0}{1}operator {2}(){3}",
+				indentImpl,
+				qual,
+				targetType,
+				suffix );
+
+			if( isInlined || isExternal || hasTpl ) {
+				if( !isInsideStruct ) {
+					Diagnostics.Add( new Diagnostic(
+						obj.srcPos,
+						DiagnosticKind.Error,
+						"Conversion operators must be defined inside a class or struct" ) );
+					return;
+				}
+
+				if( isExternal ) {
+					PrependDeclSourceMap( targetDecl, obj );
+					if( hasTpl )
+						targetDecl.Add( tplDecl );
+					targetDecl.Add( declHeadline + ";" );
+				}
+				else {
+					if( obj.body == null ) {
+						Diagnostics.Add( new Diagnostic(
+							obj.srcPos,
+							DiagnosticKind.Error,
+							"Non-external conversion operator must have a body" ) );
+						return;
+					}
+
+					PrependDeclSourceMap( targetDecl, obj );
+					if( hasTpl )
+						targetDecl.Add( tplDecl );
+
+					targetDecl.Add( declHeadline );
+					targetDecl.AddRange( obj.body.Gen( LevelDecl ) );
+				}
+			}
+			else {
+				if( obj.body == null ) {
+					Diagnostics.Add( new Diagnostic(
+						obj.srcPos,
+						DiagnosticKind.Error,
+						"Non-external conversion operator must have a body" ) );
+					return;
+				}
+
+				PrependDeclSourceMap( targetProto, obj );
+				if( hasTpl )
+					targetProto.Add( tplDecl );
+
+				targetProto.Add( declHeadline + ";" );
+
+				PrependDeclSourceMap( targetImpl, obj );
+				if( hasTpl )
+					targetImpl.Add( tplImpl );
+
+				targetImpl.Add( implHeadline );
 				targetImpl.AddRange( obj.body.Gen( LevelImpl ) );
 			}
 		}

@@ -59,7 +59,7 @@ namespace Myll.Resolver
 					if( argType == null )
 						continue; // cannot determine argument type yet
 
-				if( !ConversionRules.IsImplicitlyConvertible( argType, paras[i].type, result ) ) {
+				if( !ConversionRules.IsImplicitlyConvertible( argType, paras[i].type, result, allowArrayDecay: true ) ) {
 					ReportTypeConversionError(
 						call.Call.args[i].expr.srcPos,
 						argType,
@@ -87,10 +87,24 @@ namespace Myll.Resolver
 			};
 		}
 
+		private void ValidateConvertAttributes( Decl decl )
+		{
+			bool hasImplicit = decl.HasAttrib( "implicit" );
+			bool hasExplicit = decl.HasAttrib( "explicit" );
+			if( !hasImplicit && !hasExplicit ) {
+				AddError( decl, "convert declaration must be [implicit] or [explicit]" );
+			}
+			if( hasImplicit && hasExplicit ) {
+				AddError( decl, "convert declaration cannot be both [implicit] and [explicit]" );
+			}
+		}
+
 		private void ValidateDecl( Decl decl )
 		{
 			switch( decl ) {
 			case Func func:
+				if( func.kind == Func.Kind.Convert )
+					ValidateConvertAttributes( func );
 				if( IsAutoKind( func.retType ) )
 					InferReturnType( func );
 				if( func.body != null ) {
@@ -100,6 +114,8 @@ namespace Myll.Resolver
 				break;
 
 				case Structor stc:
+					if( stc.isConversionCtor )
+						ValidateConvertAttributes( stc );
 					if( stc.body != null )
 						ValidateStmt( stc.body, null );
 					break;

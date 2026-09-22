@@ -585,9 +585,67 @@ namespace Myll
 			return ret;
 		}
 
-		// TODO
 		public override Decl VisitDefConvert( DefConvertContext c )
-			=> throw new NotSupportedException( "convert is not supported; see REASONS.md" );
+		{
+			Scope parent = scopeStack.Peek();
+			if( parent.decl is not Structural structuralParent )
+				throw new Exception( "convert declarations are only allowed inside a class or struct" );
+
+			// Determine direction: `convert -> T` is an operator, `convert <- T` is a
+			// converting constructor.
+			string raw            = c.GetText();
+			string afterConvert = raw.StartsWith( "convert" ) ? raw.Substring( "convert".Length ) : raw;
+			bool isOperator     = afterConvert.StartsWith( "->" );
+
+			if( isOperator ) {
+				Typespec retType = VisitTypespec( c.typespec() );
+				if( retType is TypespecNested nested )
+					Context.UnresolvedTypes.Add( new UnresolvedType( nested, scopeStack.Peek() ) );
+
+				PushScope();
+				Func ret = new() {
+					srcPos  = c.ToSrcPos(),
+					name    = string.Empty,
+					access  = curAccess,
+					kind    = Func.Kind.Convert,
+					paras   = new(),
+					body    = c.funcBody().Visit( Context ),
+					retType = retType,
+				};
+				ret.funcScope = scopeStack.Peek();
+				PopScope();
+				AddChild( ret );
+				c.id()?.Visit();
+				return ret;
+			}
+
+			// Converting constructor: convert <- T
+			Typespec paramType = VisitTypespec( c.typespec() );
+			if( paramType is TypespecNested nestedParam )
+				Context.UnresolvedTypes.Add( new UnresolvedType( nestedParam, scopeStack.Peek() ) );
+
+			string paramName = c.id()?.Visit() ?? "other";
+
+			PushScope();
+			Structor retCtor = new() {
+				srcPos           = c.ToSrcPos(),
+				name             = structuralParent.name,
+				access           = curAccess,
+				kind             = Structor.Kind.Constructor,
+				isConversionCtor = true,
+				paras = new() {
+					new Param {
+						name = paramName,
+						type = paramType,
+					},
+				},
+				body = c.funcBody().Visit( Context ),
+			};
+			AddParamsToScope( retCtor.paras );
+			PopScope();
+			AddChild( retCtor );
+			return retCtor;
+		}
 
 		public override Structor VisitDefCtor( DefCtorContext c )
 		{

@@ -79,7 +79,7 @@ These parse-tree nodes exist but the visitor throws:
 Do not implement these unless `REASONS.md` is reopened.
 
 - `defer` statement (`backend/Visitor/VStmt.cs:297–298`)
-- `aspect` / `concept` / `convert` (`backend/Visitor/VDecl.cs:427–433, 559–561`; grammar reserved at `backend/Grammar/MyllParser.g4:46–47, 90–92, 113–117`)
+- `aspect` / `concept` (`backend/Visitor/VDecl.cs:427–433`; grammar reserved at `backend/Grammar/MyllParser.g4:46–47, 90–92`)
 
 ## Safe cleanup (dead code)
 

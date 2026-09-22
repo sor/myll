@@ -34,7 +34,11 @@ namespace Myll.Transform
 
 		private static Attribs GetDefaultAttributes( Decl decl, Dialect dialect )
 		{
-			if( decl is Func func && func.IsExternal )
+			// External function effect attributes are intentionally not defaulted, because
+			// Myll cannot verify the body of a C++ function. Convert declarations are an
+			// exception: their implicit/explicit/const nature is part of the interface
+			// Myll needs to know, so defaults apply even to external bindings.
+			if( decl is Func func && func.IsExternal && func.kind != Func.Kind.Convert )
 				return new Attribs();
 
 			string? source = decl switch {
@@ -42,10 +46,12 @@ namespace Myll.Transform
 				Structural s when s.kind == Structural.Kind.Struct => dialect.DefaultAttributesStruct,
 				Structural s when s.kind == Structural.Kind.Union  => dialect.DefaultAttributesUnion,
 				Enumeration                                        => dialect.DefaultAttributesEnum,
-				Func f when f.kind == Func.Kind.Function && !HasEffectAttribute( f )  => dialect.DefaultAttributesFunction,
-				Func f when f.kind == Func.Kind.Procedure && !HasEffectAttribute( f ) => dialect.DefaultAttributesProcedure,
-				Func f when f.kind == Func.Kind.Method && !HasEffectAttribute( f )    => dialect.DefaultAttributesMethod,
-				_                                                  => null,
+				Func f when f.kind == Func.Kind.Convert                                 => dialect.DefaultAttributesConvertTo,
+				Func f when f.kind == Func.Kind.Function && !HasEffectAttribute( f )    => dialect.DefaultAttributesFunction,
+				Func f when f.kind == Func.Kind.Procedure && !HasEffectAttribute( f )   => dialect.DefaultAttributesProcedure,
+				Func f when f.kind == Func.Kind.Method && !HasEffectAttribute( f )      => dialect.DefaultAttributesMethod,
+				Structor s when s.kind == Structor.Kind.Constructor && s.isConversionCtor => dialect.DefaultAttributesConvertFrom,
+				_                                                                       => null,
 			};
 
 			if( source == null )

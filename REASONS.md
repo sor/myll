@@ -60,6 +60,26 @@ Types like `std::int8_t` in `StmtFormatting.cs` are left as-is. C++ guarantees t
 `<cstdint>` provides these in `std::` namespace. Myll targets C++ only (no C mode),
 so `int8_t` in global namespace is irrelevant.
 
+## 2026-09-22 — `convert` declarations implemented
+
+### Decision
+Implemented Myll `convert` declarations for user-defined conversions.
+
+- `convert -> T` is a conversion operator (emits `operator T()`).
+- `convert <- T` is a converting constructor (emits a single-argument constructor).
+- Default attributes are controlled by the dialect: `DefaultAttributesConvertTo` defaults to `"pure"` (operators are const), `DefaultAttributesConvertFrom` defaults to `""`. Every convert declaration must be explicitly `[implicit]` or `[explicit]`.
+- Converting constructors/operators participate in overload resolution via `ConversionRules`.
+
+### Why now
+The endboss resolver and type-checker now provide enough context (resolved declarations, attribute merging, and conversion ranking) to implement `convert` without locking in bad structural decisions.
+
+### Files
+`backend/Visitor/VDecl.cs`, `backend/Generator/HierachicalGen.cs`, `backend/Resolver/TypeChecker.cs`, `backend/Resolver/ConversionRules.cs`, `backend/Core/Dialect.cs`, `backend/Core/Decl.cs`, `backend/Transform/DefaultAttributesTransformer.cs`, `std/std_string.decl.myll`.
+
+### Where to find tests
+`testing/cases/convert_decl/` and `testing/cases/convert_string/`.
+
+
 ## 2026-06-10 — Intentionally Unimplemented Features
 
 ### Problem
@@ -73,7 +93,6 @@ migration pain when the real design emerges.
 | `aspect` | Parsed, visitor stub | Concept not finalized |
 | `concept` | Parsed, visitor stub | Concept not finalized |
 | `defer` | Parsed, no visitor | Needs ownership/borrowing semantics first |
-| `convert` | Parsed, visitor stub | Syntax direction (`->` vs `<-`) undecided |
 
 ### What Changed
 No code changes. These remain as `throw new NotImplementedException` in the

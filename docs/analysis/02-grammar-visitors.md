@@ -30,7 +30,7 @@
 **Stubbed / TODO in Grammar:**
 - `aspect` — parser rule exists, body is `// TODO`
 - `concept` — parser rule exists, body is `// TODO`
-- `convert` — parsed but visitor is incomplete
+- `convert` — parsed and implemented
 - `range-based-for` — not in grammar
 - `continue` variants — partially parsed
 

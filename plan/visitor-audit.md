@@ -62,7 +62,7 @@ These overrides exist but do nothing useful, so code that uses them silently van
 |--------|------|-----------|--------|
 | `VisitDefAspect` | `backend/Visitor/VDecl.cs:273` | aspect definition | fixed: now throws `NotSupportedException` |
 | `VisitDefConcept` | `backend/Visitor/VDecl.cs:276` | concept definition | fixed: now throws `NotSupportedException` |
-| `VisitDefConvert` | `backend/Visitor/VDecl.cs:329` | convert definition | fixed: now throws `NotSupportedException` |
+| `VisitDefConvert` | `backend/Visitor/VDecl.cs:329` | convert definition | implemented |
 
 These ruled-out/deferred features are documented in `REASONS.md`.
 

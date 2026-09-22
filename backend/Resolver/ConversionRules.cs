@@ -34,7 +34,8 @@ namespace Myll.Resolver
 			Typespec?         source,
 			Typespec?         target,
 			ResolutionResult? result = null,
-			bool              sourceIsLValue = false )
+			bool              sourceIsLValue = false,
+			bool              allowArrayDecay = false )
 		{
 			if( source == null || target == null )
 				return ConversionRank.None;
@@ -109,6 +110,21 @@ namespace Myll.Resolver
 			if( TryGetInheritanceConversionRank( source, target, result, out ConversionRank inheritanceRank ) )
 				return inheritanceRank;
 
+			// User-defined conversions: converting constructors and conversion operators.
+			if( target is TypespecNested { resolvedDecl: Hierarchical targetHier }
+			 && TryGetImplicitConversionCtor( targetHier, source ) )
+				return ConversionRank.Conversion;
+
+			if( source is TypespecNested { resolvedDecl: Hierarchical sourceHier }
+			 && TryGetImplicitConversionOperator( sourceHier, target ) )
+				return ConversionRank.Conversion;
+
+			// Array/pointer decay equivalence. In C++ a function parameter declared
+			// `T[]` is a pointer, and `&array[i]` has type `T*`; treat `T*` and `T[]`
+			// (and nested forms) as convertible in argument/parameter contexts.
+			if( allowArrayDecay && TryGetArrayDecayMatch( source, target ) )
+				return ConversionRank.Conversion;
+
 			// String literal to C-style string pointer.
 			if( source is TypespecBasic { kind: TypespecBasic.Kind.String }
 			 && IsCharPointer( target ) )
@@ -126,9 +142,10 @@ namespace Myll.Resolver
 		public static bool IsImplicitlyConvertible(
 			Typespec?         source,
 			Typespec?         target,
-			ResolutionResult? result = null )
+			ResolutionResult? result = null,
+			bool              allowArrayDecay = false )
 		{
-			ConversionRank rank = GetRank( source, target, result );
+			ConversionRank rank = GetRank( source, target, result, allowArrayDecay: allowArrayDecay );
 			return rank <= ConversionRank.Conversion || rank == ConversionRank.TemplateParameter;
 		}
 
@@ -759,6 +776,66 @@ namespace Myll.Resolver
 			}
 
 			return type;
+		}
+
+		private static bool TryGetArrayDecayMatch( Typespec source, Typespec target )
+		{
+			if( source.ptrs == null || target.ptrs == null )
+				return false;
+
+			if( source.ptrs.Count == 0 || target.ptrs.Count == 0 )
+				return false;
+
+			Pointer.Kind srcOuter = source.ptrs[ ^1 ].kind;
+			Pointer.Kind tgtOuter = target.ptrs[ ^1 ].kind;
+
+			bool srcArray = srcOuter == Pointer.Kind.RawArray;
+			bool tgtArray = tgtOuter == Pointer.Kind.RawArray;
+
+			if( srcArray == tgtArray )
+				return false;
+
+			Typespec modSource = CloneTypespecBase( source );
+			modSource.ptrs = source.ptrs.ToList();
+			modSource.ptrs[ modSource.ptrs.Count - 1 ] = new() { kind = Pointer.Kind.RawPtr };
+
+			Typespec modTarget = CloneTypespecBase( target );
+			modTarget.ptrs = target.ptrs.ToList();
+			modTarget.ptrs[ modTarget.ptrs.Count - 1 ] = new() { kind = Pointer.Kind.RawPtr };
+
+			return IsExactMatch( modSource, modTarget );
+		}
+
+		private static bool TryGetImplicitConversionCtor( Hierarchical target, Typespec source )
+		{
+			foreach( Decl child in target.children ) {
+				if( child is not Structor stc
+				 || stc.kind != Structor.Kind.Constructor
+				 || !stc.isConversionCtor
+				 || !stc.IsImplicit )
+					continue;
+
+				if( stc.paras.Count != 1 )
+					continue;
+
+				if( IsImplicitlyConvertible( source, stc.paras[0].type ) )
+					return true;
+			}
+			return false;
+		}
+
+		private static bool TryGetImplicitConversionOperator( Hierarchical source, Typespec target )
+		{
+			foreach( Decl child in source.children ) {
+				if( child is not Func func
+				 || func.kind != Func.Kind.Convert
+				 || !func.IsImplicit )
+					continue;
+
+				if( IsImplicitlyConvertible( func.retType, target ) )
+					return true;
+			}
+			return false;
 		}
 	}
 }

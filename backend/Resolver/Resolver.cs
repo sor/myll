@@ -963,7 +963,8 @@ namespace Myll.Resolver
 					argTypes[i]!,
 					paramType,
 					result,
-					ConversionRules.IsLValue( call.args[i].expr ) );
+					ConversionRules.IsLValue( call.args[i].expr ),
+					allowArrayDecay: true );
 				rankDetails += String.Format( " [{0}] {1}->{2}={3}",
 					i, FormatTypeForDebug( argTypes[i] ), FormatTypeForDebug( paramType ), rank );
 				if( rank == ConversionRank.None ) {

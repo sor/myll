@@ -8,7 +8,7 @@ namespace std {
 	class string {
 	[pub]:
 		ctor();
-		ctor( const char * str );
+		[implicit] convert <- const char*;
 
 		func length() -> usize;
 		func substr( usize pos, usize len ) -> std::string;
