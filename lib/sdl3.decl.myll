@@ -10,6 +10,13 @@ import <SDL3/SDL.h>;
 	var f32 w;
 	var f32 h;
 }
+[extern] struct SDL_Rect {
+[pub]:
+	var int x;
+	var int y;
+	var int w;
+	var int h;
+}
 [extern] struct SDL_Event {
 [pub]:
 	var u32 type;

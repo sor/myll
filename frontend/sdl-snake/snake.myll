@@ -11,11 +11,6 @@ const int DIR_RIGHT = 1;
 const int DIR_DOWN  = 2;
 const int DIR_LEFT  = 3;
 
-struct Pos {
-	var int x;
-	var int y;
-}
-
 func drawCell( SDL_Renderer * r, int x, int y, u8 red, u8 green, u8 blue ) -> void
 {
 	var SDL_FRect rect(
@@ -28,7 +23,7 @@ func drawCell( SDL_Renderer * r, int x, int y, u8 red, u8 green, u8 blue ) -> vo
 	SDL_RenderFillRect( r, &rect );
 }
 
-func collidesWithSnake( int fx, int fy, int[ MAX_LEN ] sx, int[ MAX_LEN ] sy, int head, int len ) -> bool
+func collidesWithSnake( int fx, int fy, SDL_Rect[ MAX_LEN ] body, int head, int len ) -> bool
 {
 	var int i = 0;
 	while( i < len ) {
@@ -36,7 +31,7 @@ func collidesWithSnake( int fx, int fy, int[ MAX_LEN ] sx, int[ MAX_LEN ] sy, in
 		if( idx < 0 )
 			idx = idx + MAX_LEN;
 
-		if( sx[idx] == fx && sy[idx] == fy )
+		if( body[idx].x == fx && body[idx].y == fy )
 			return true;
 
 		i = i + 1;
@@ -44,7 +39,7 @@ func collidesWithSnake( int fx, int fy, int[ MAX_LEN ] sx, int[ MAX_LEN ] sy, in
 	return false;
 }
 
-func collidesWithSelf( int[ MAX_LEN ] sx, int[ MAX_LEN ] sy, int head, int len ) -> bool
+func collidesWithSelf( SDL_Rect[ MAX_LEN ] body, int head, int len ) -> bool
 {
 	var int i = 1;
 	while( i < len ) {
@@ -52,7 +47,7 @@ func collidesWithSelf( int[ MAX_LEN ] sx, int[ MAX_LEN ] sy, int head, int len )
 		if( idx < 0 )
 			idx = idx + MAX_LEN;
 
-		if( sx[idx] == sx[head] && sy[idx] == sy[head] )
+		if( body[idx].x == body[head].x && body[idx].y == body[head].y )
 			return true;
 
 		i = i + 1;
@@ -79,20 +74,19 @@ func main() -> int
 		return 1;
 	}
 
-	var int[ MAX_LEN ] sx;
-	var int[ MAX_LEN ] sy;
+	var SDL_Rect[ MAX_LEN ] body;
 
 	var int head = 0;
 	var int len  = 3;
 	var int dir  = DIR_RIGHT;
 
-	sx[0] = 5;  sy[0] = 5;
-	sx[1] = 4;  sy[1] = 5;
-	sx[2] = 3;  sy[2] = 5;
+	body[0].x = 5;  body[0].y = 5;
+	body[1].x = 4;  body[1].y = 5;
+	body[2].x = 3;  body[2].y = 5;
 
 	var int foodX = std::rand() % GRID_W;
 	var int foodY = std::rand() % GRID_H;
-	while( collidesWithSnake( foodX, foodY, sx, sy, head, len ) ) {
+	while( collidesWithSnake( foodX, foodY, body, head, len ) ) {
 		foodX = std::rand() % GRID_W;
 		foodY = std::rand() % GRID_H;
 	}
@@ -124,8 +118,8 @@ func main() -> int
 			dir = DIR_RIGHT;
 		}
 
-		var int nx = sx[head];
-		var int ny = sy[head];
+		var int nx = body[head].x;
+		var int ny = body[head].y;
 		if( dir == DIR_UP )    ny = ny - 1;
 		if( dir == DIR_DOWN )  ny = ny + 1;
 		if( dir == DIR_LEFT )  nx = nx - 1;
@@ -138,20 +132,20 @@ func main() -> int
 		head = head + 1;
 		if( head >= MAX_LEN )
 			head = 0;
-		sx[head] = nx;
-		sy[head] = ny;
+		body[head].x = nx;
+		body[head].y = ny;
 
 		if( nx == foodX && ny == foodY ) {
 			len = len + 1;
 			foodX = std::rand() % GRID_W;
 			foodY = std::rand() % GRID_H;
-			while( collidesWithSnake( foodX, foodY, sx, sy, head, len ) ) {
+			while( collidesWithSnake( foodX, foodY, body, head, len ) ) {
 				foodX = std::rand() % GRID_W;
 				foodY = std::rand() % GRID_H;
 			}
 		}
 
-		if( running && collidesWithSelf( sx, sy, head, len ) ) {
+		if( running && collidesWithSelf( body, head, len ) ) {
 			running = false;
 		}
 
@@ -165,7 +159,7 @@ func main() -> int
 			var int idx = head - i;
 			if( idx < 0 )
 				idx = idx + MAX_LEN;
-			drawCell( renderer, sx[idx], sy[idx], 0, 255, 0 );
+			drawCell( renderer, body[idx].x, body[idx].y, 0, 255, 0 );
 			i = i + 1;
 		}
 
