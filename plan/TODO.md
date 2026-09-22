@@ -33,16 +33,16 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 ## Critical / next
 
 1. **Overload resolution maturity** — fill the remaining gaps in a deliberate order, adding regression tests at each step:
-   1. **Simple types**: exact match, promotions, safe conversions — regression locked in `testing/cases/overload_simple/`.
+   1. **Simple types**: exact match, promotions, safe conversions — regression locked in `testing/cases/overload_non_template/`.
    2. **Pointers and references**: `T*`/`T&` conversions, derived-to-base pointer/reference
       (including when only a base overload exists), `null` to pointer, and CV-qualified
       pointer/reference overload ranking — regression locked in
-      `testing/cases/overload_pointer/`, `testing/cases/overload_inheritance_ptr/`,
-      `testing/cases/overload_inheritance_conversion/`, `testing/cases/overload_inheritance_ref/`,
-      `testing/cases/overload_const_ptr/`, and `testing/cases/overload_const_ref/`.
+      `testing/cases/overload_non_template/`, `testing/cases/overload_non_template/`,
+      `testing/cases/overload_non_template/`, `testing/cases/overload_non_template/`,
+      `testing/cases/overload_non_template/`, and `testing/cases/overload_non_template/`.
       Also fixed `CloneTypespecBase` losing `isDefaultSized` on pointer-wrapped basic types.
    3. **Smart pointers**: `T*!`/`T*+`/`T*?` conversions and overload preference — regression locked in
-      `testing/cases/overload_smart_ptr/` and `testing/cases/overload_smart_inheritance/`.
+      `testing/cases/overload_non_template/` and `testing/cases/overload_non_template/`.
       (Value parameters of unique pointer require `(move)`; this matches C++ ownership transfer.)
    4. **Templates**: deduction for `T`, `T*`, `T&` and overload ranking between template and non-template
       candidates — regression locked in `testing/cases/overload_template/` and
@@ -59,10 +59,10 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    - `Resolver.TryResolveOverload` classifies each argument expression with a lightweight
      `IsLValue` heuristic.
    Files: `backend/Resolver/ConversionRules.cs`, `backend/Resolver/Resolver.cs`.
-   Test: `testing/cases/ref_category/`.
+   Test: `testing/cases/overload_non_template/`.
    Done: owner template parameters are now substituted before ranking for direct member access,
    scoped calls, inherited methods, and methods with their own template parameters.
-   Regression test: `testing/cases/class_template_ref_category/`.
+   Regression test: `testing/cases/class_templates/`.
    Remaining: class-template method overload ranking for aliased class types is in place once
    Myll aliases support member access on the underlying class.
 
@@ -123,8 +123,8 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    back to the `ResolutionResult` map for base-class `TypespecNested`s. This makes `Derived*` ->
    `Base*` and `Derived&` -> `Base&` conversions visible to Myll. Files:
    `backend/Resolver/Resolver.cs`, `backend/Resolver/ConversionRules.cs`,
-   `backend/Resolver/TypeChecker.cs`. Tests: `testing/cases/overload_inheritance_conversion/`,
-   adjusted `testing/cases/overload_inheritance_ref/`.
+   `backend/Resolver/TypeChecker.cs`. Tests: `testing/cases/overload_non_template/`,
+   adjusted `testing/cases/overload_non_template/`.
 
 2. **CV-qualified overload ranking** — exact matching now includes type and pointer-block
     qualifiers; qualifier conversions are allowed for value types (top-level qualifiers can
@@ -132,7 +132,7 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
     (e.g., `int* -> const int*`). Reference-to-value binding now also permits qualifier
     changes (e.g., `const std::filesystem::path& -> std::filesystem::path`).
     Files: `backend/Resolver/ConversionRules.cs`.
-    Tests: `testing/cases/overload_const_ptr/`, `testing/cases/overload_const_ref/`.
+    Tests: `testing/cases/overload_non_template/`, `testing/cases/overload_non_template/`.
 
 3. **Unix app cleanup** — removed the hand-parsed non-cxxopts variants of `basename`, `cat`,
     `dirname`, `echo`, `grep`, `head`, `ls`, `wc`, and `yes`; renamed the cxxopts variants to the
@@ -189,7 +189,7 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
     - Added `backend/Core/StdBuiltins.cs` containing `ImplicitStdImports`, a central list of standard modules (e.g. `c_math`, `c_stdint`, `std_memory`, `std_initializer_list`, etc.) that are imported implicitly into every compiled module. The resolver treats them as imported for name lookup, the generator emits the matching `#include <...>` lines, and a diagnostic is produced if any listed module is missing from the compilation.
 
    - Removed `StmtFormatting.DefaultIncludes`; C++ header emission is now driven entirely by imports.
-   - Regression cases: `testing/cases/direct_ctor/`, `testing/cases/initializer_list/`.
+   - Regression cases: `testing/cases/init_syntax/`, `testing/cases/init_syntax/`.
 
 ## Medium priority
 
@@ -214,7 +214,7 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 
 ## From SDL sample work
 
-- **Resolve member access on array-of-struct elements.** Indexing into a fixed array of a user-defined struct (`body[idx].x`) now resolves the element's members. The resolver strips the outermost subscriptable pointer/array and looks up members in the resulting type. Regression test: `testing/cases/array_of_struct/`.
+- **Resolve member access on array-of-struct elements.** Indexing into a fixed array of a user-defined struct (`body[idx].x`) now resolves the element's members. The resolver strips the outermost subscriptable pointer/array and looks up members in the resulting type. Regression test: `testing/cases/array_features/`.
 - **SDL Snake now uses a single struct array.** Instead of parallel `int[...] sx` / `int[...] sy` arrays, the snake body is stored as `SDL_Rect[ MAX_LEN ] body` (and previously `Pos[ MAX_LEN ] body`). This exercises the new array-of-struct member resolution.
 - **Support braced aggregate initialization.** Myll does not parse `var T a = { 1, 2, 3 };` or `var T a { 1, 2, 3 };`. Direct construction (`var T a( 1, 2, 3 );`) works for types with a suitable constructor/aggregate call.
 - **Shared external-library declarations.** Created `lib/` at repo root, auto-discovered by `frontend/Program.cs` alongside `std/` and `myll/`. The SDL3 binding lives at `lib/sdl3.decl.myll` and is consumed by both `frontend/sdl-pong/` and `frontend/sdl-snake/`.
@@ -277,8 +277,8 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 - Bit-container types (`bint`, `b8`, `b16`, `b32`, `b64`) backed by unsigned integers; the internal AST kind is now `TypespecBasic.Kind.Bitwise`. `byte` is a separate `std::byte`-backed `TypespecBasic.Kind.Byte`. Bit operators are aliased so `+` is OR, `*` is AND, `-` is AND-NOT, `/` is implication, and `^` is XOR. `byte` and the `b##` family may not mix and only support `==`/`!=`. End-to-end tests: `testing/cases/bint/`, `testing/cases/byte/`.
 - Default-sized type dialect model with `DefaultTypeMode` flags (`SizeIndeterminate`, `Forbidden`, `ForbiddenInStruct`, `Size8`...`Size64`, `SizeFast`) and per-type `Dialect.Default.DefaultInt`, `Dialect.Default.DefaultUInt`, `Dialect.Default.DefaultFloat`, and `Dialect.Default.DefaultBint`. The old on/off `AllowFloatKeyword` switch is replaced by `DefaultFloat & Forbidden`. The `ForbiddenInStruct` mode is checked by the type checker for struct/class fields.
 - Generator fixes for bit/byte expressions: untyped integer literals are cast to the bit/byte type in comparisons and operator aliases; `std::byte` casts are emitted as `std::byte{ n }`; `0x...E` literals are no longer mis-resolved as floats.
-- Rule-of-N class enforcement via `[rule_of_n=0|3|5]`, `[rule_of_0]`, `[rule_of_3]`, and `[rule_of_5]`. The active rule set is checked after name resolution; classes must satisfy at least one allowed rule. Copy/move constructors are recognized and are no longer emitted with `explicit`, enabling copy/move initialization. Cases: `testing/cases/rule_of_n/`, `testing/cases/rule_of_n_fail/`.
-- `ctor copy`/`ctor move` shorthand generates the `const C&` / `C&&` parameter automatically, supports optional parameter names, and works with `[default]`/`[delete]`. Case: `testing/cases/special_ctors/`.
+- Rule-of-N class enforcement via `[rule_of_n=0|3|5]`, `[rule_of_0]`, `[rule_of_3]`, and `[rule_of_5]`. The active rule set is checked after name resolution; classes must satisfy at least one allowed rule. Copy/move constructors are recognized and are no longer emitted with `explicit`, enabling copy/move initialization. Cases: `testing/cases/special_members/`, `testing/cases/rule_of_n_fail/`.
+- `ctor copy`/`ctor move` shorthand generates the `const C&` / `C&&` parameter automatically, supports optional parameter names, and works with `[default]`/`[delete]`. Case: `testing/cases/special_members/`.
 - Per-kind default attributes (`Dialect.Default.DefaultAttributesClass`/`Struct`/`Union`/`Enum`) are parsed and merged before other attribute-consuming transforms.
 - Built-in `(move)` and `(forward)` casts return the operand's own type and emit `std::move(...)` / `std::forward(...)`.
 - `null` is allowed as an implicit null-pointer constant for raw pointers and smart pointers (`T*`, `T*!`, `T*+`, `T*?`, `T[]!`, `T[]+`, `T[]?`, etc.). It is rejected for value types and references. Added move ctor/move assignment to `Myll::DynArray<T>` that nulls the moved-from `_data`.

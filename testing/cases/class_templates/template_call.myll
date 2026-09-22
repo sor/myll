@@ -1,0 +1,28 @@
+module class_templates;
+
+namespace template_call {
+
+class Wrapper<T>
+{
+[pub]:
+	method foo<U>() -> U
+	{
+		var U value;
+		return value;
+	}
+
+	method bar() -> int
+	{
+		// `self` has dependent type `Wrapper<T>`, so the generated C++ needs
+		// `this->template foo<int>()` (or `(*this).template foo<int>()`).
+		return self.foo<int>();
+	}
+}
+
+func run() -> int
+{
+	var Wrapper<int> w;
+	return w.bar();
+}
+
+} // namespace template_call

@@ -1,0 +1,25 @@
+module overload_non_template;
+
+namespace overload_inheritance_ptr {
+
+class Base {}
+class Derived : Base {}
+
+func handle( Base * b ) -> int { return 1; }
+func handle( Derived * d ) -> int { return 2; }
+
+func run() -> int
+{
+	var Derived * d = new Derived();
+
+	if( handle( d ) != 2 )
+		return 1;
+
+	var Base * b = d;
+	if( handle( b ) != 1 )
+		return 2;
+
+	return 0;
+}
+
+} // namespace overload_inheritance_ptr

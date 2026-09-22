@@ -1,0 +1,23 @@
+module overload_non_template;
+
+namespace overload_const_ref {
+
+func isFive( const int & r ) -> bool
+{
+	return (int)r == 5;
+}
+
+func run() -> int
+{
+	var int x = 5;
+	if( !isFive( x ) )
+		return 1;
+
+	var const int cx = 5;
+	if( !isFive( cx ) )
+		return 2;
+
+	return 0;
+}
+
+} // namespace overload_const_ref

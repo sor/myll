@@ -1,0 +1,20 @@
+module convert_test;
+
+import std_string;
+
+func takesString( const std::string & s ) -> bool
+{
+	return s == "hello";
+}
+
+func run_convert_string() -> int
+{
+	const string s = "hello";           // convert <- const char*
+	if( s != "hello" )
+		return 1;
+
+	if( !takesString( "hello" ) )       // argument conversion
+		return 2;
+
+	return 0;
+}

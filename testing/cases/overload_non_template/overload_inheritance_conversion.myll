@@ -1,0 +1,23 @@
+module overload_non_template;
+
+namespace overload_inheritance_conversion {
+
+class Base {}
+class Derived : Base {}
+
+func handle( Base * b ) -> int { return 1; }
+
+func run() -> int
+{
+	var Derived * d = new Derived*;
+	if( handle( d ) != 1 )
+		return 1;
+
+	var Derived dObj;
+	if( handle( &dObj ) != 1 )
+		return 2;
+
+	return 0;
+}
+
+} // namespace overload_inheritance_conversion

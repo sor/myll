@@ -1,0 +1,12 @@
+module array_features;
+
+func main( int argc, const char *[] argv ) -> int
+{
+	if( run_array_of_struct() != 0 )
+		return 1;
+
+	if( run_array_subscript_ptr( argc, argv ) != 0 )
+		return 2;
+
+	return 0;
+}

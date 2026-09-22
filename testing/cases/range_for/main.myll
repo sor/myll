@@ -1,0 +1,12 @@
+module range_for;
+
+func main() -> int
+{
+	if( run_range_for_auto() != 0 )
+		return 1;
+
+	if( run_range_for_initlist_auto() != 0 )
+		return 2;
+
+	return 0;
+}

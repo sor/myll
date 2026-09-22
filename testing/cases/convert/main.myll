@@ -1,0 +1,12 @@
+module convert_test;
+
+func main() -> int
+{
+	if( run_convert_decl() != 0 )
+		return 1;
+
+	if( run_convert_string() != 0 )
+		return 2;
+
+	return 0;
+}

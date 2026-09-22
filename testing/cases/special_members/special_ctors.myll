@@ -1,0 +1,200 @@
+module special_members;
+
+struct Buffer {
+[pub]:
+	field {
+		int[]! _data;
+		usize  _size = 0;
+	}
+
+	ctor() {}
+
+	ctor( usize size ) {
+		_size = size;
+		_data = new int[size]!;
+	}
+
+	dtor() {}
+
+	ctor copy other {
+		_size = other._size;
+		_data = new int[_size]!;
+		var usize i = 0;
+		while( i < _size ) {
+			_data[i] = other._data[i];
+			++i;
+		}
+	}
+
+	operator = ( const Buffer & other ) {
+		if( &self == &other )
+			return self;
+		_size = other._size;
+		_data = new int[_size]!;
+		var usize i = 0;
+		while( i < _size ) {
+			_data[i] = other._data[i];
+			++i;
+		}
+		return self;
+	}
+}
+
+[rule_of_5]
+struct Handle {
+[pub]:
+	field {
+		int* _ptr;
+	}
+
+	ctor() {}
+
+	ctor( int value ) {
+		_ptr = new int;
+		*_ptr = value;
+	}
+
+	dtor() {}
+
+	ctor copy other {
+		_ptr = new int;
+		*_ptr = *other._ptr;
+	}
+
+	ctor move src {
+		_ptr     = src._ptr;
+		src._ptr = null;
+	}
+
+	operator = ( const Handle & other ) {
+		if( &self == &other )
+			return self;
+		_ptr = new int;
+		*_ptr = *other._ptr;
+		return self;
+	}
+
+	operator move = src {
+		if( &self == &src )
+			return self;
+		_ptr     = src._ptr;
+		src._ptr = null;
+		return self;
+	}
+}
+
+[rule_of_3]
+struct DefaultCopy {
+[pub]:
+	field { int value = 0; }
+
+	ctor() {}
+
+	[default]
+	ctor copy;
+
+	dtor() {}
+
+	operator = ( const DefaultCopy & other ) {
+		value = other.value;
+		return self;
+	}
+}
+
+struct UBox {
+[pub]:
+	field {
+		int[]! data;
+	}
+
+	ctor() {}
+
+	ctor( usize n ) {
+		data = new int[n]!;
+	}
+
+	ctor move src {
+		data     = (move)src.data;
+		src.data = null;
+	}
+
+	operator move = src {
+		if( &self == &src )
+			return self;
+		data     = (move)src.data;
+		src.data = null;
+		return self;
+	}
+}
+
+struct PtrBox {
+[pub]:
+	field {
+		int*! ptr;
+	}
+
+	ctor() {}
+
+	ctor( int value ) {
+		ptr = new int*!;
+		*ptr = value;
+	}
+
+	ctor move src {
+		ptr     = (move)src.ptr;
+		src.ptr = null;
+	}
+}
+
+func run_special_ctors() -> int {
+	var Buffer a = Buffer( 3 );
+	a._data[0] = 10;
+
+	var Buffer b = a;             // shorthand copy ctor
+	if( b._size != 3 ) return 1;
+	if( b._data[0] != 10 ) return 2;
+
+	var Buffer c;
+	c = a;                        // copy assign
+	if( c._data[0] != 10 ) return 3;
+
+	var Handle h = Handle( 42 );
+	var Handle i = h;             // copy ctor
+	if( *i._ptr != 42 ) return 4;
+
+	var Handle j;
+	j = i;                        // copy assign
+	if( *j._ptr != 42 ) return 5;
+
+	var Handle k = (move)h;       // move ctor
+	if( *k._ptr != 42 ) return 6;
+	// h's raw pointer is now null; do not dereference it.
+
+	var Handle m;
+	m = (move)k;                  // move assign
+	if( *m._ptr != 42 ) return 7;
+
+	var DefaultCopy d1;
+	d1.value = 7;
+	var DefaultCopy d2 = d1;      // defaulted copy ctor
+	if( d2.value != 7 ) return 8;
+
+	var int* rp = null;
+	rp = null;                    // null assignment to raw pointer
+
+	var int*! up = null;          // null init of unique object pointer
+	up = null;                    // null assignment
+
+	var int[]! ua = null;         // null init of unique array pointer
+	ua = null;                    // null assignment
+
+	var UBox box = UBox( 4 );
+	var UBox movedBox;
+	movedBox = (move)box;         // move assign with null reset
+
+	var PtrBox pb = PtrBox( 7 );
+	var PtrBox qb = (move)pb;     // move ctor with unique object pointer null reset
+	if( *qb.ptr != 7 ) return 9;
+
+	return 0;
+}

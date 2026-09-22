@@ -135,7 +135,7 @@ resolver loop, immediately after the mid-loop `result.Apply()`, so the loop
 variable gets a concrete type before `ResolveCalls` processes the body. The
 post-resolution invocation is kept as a no-op safety net.
 
-Regression test added: `testing/cases/range_for_auto/`.
+Regression test added: `testing/cases/range_for/`.
 
 ## Additional complex scenarios checked after the fix
 
@@ -166,5 +166,5 @@ Another failure shown by the repros is the already-known limitation that
 unqualified base method calls from inside a derived method are not supported
 (`baseValue(v)` must be written as `Base<T>::baseValue(v)` or similar).
 
-Regression tests added: `testing/cases/range_for_auto/` and
-`testing/cases/range_for_initlist_auto/`.
+Regression tests added: `testing/cases/range_for/` and
+`testing/cases/range_for/`.

@@ -1,0 +1,13 @@
+module range_for;
+
+func run_range_for_initlist_auto() -> int
+{
+	var int total = 0;
+	for( auto i : [1, 2, 3, 4, 5] )
+		total += i;
+
+	if( total != 15 )
+		return 1;
+
+	return 0;
+}

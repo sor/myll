@@ -1,0 +1,70 @@
+module special_members;
+
+struct RuleZero {
+[pub]:
+	field { int value = 0; }
+	ctor() {}
+}
+
+[rule_of_3]
+struct RuleBuffer {
+[pub]:
+	field {
+		int[]! _data;
+		usize  _size = 0;
+	}
+
+	ctor() {}
+
+	ctor( usize size ) {
+		_size = size;
+		_data = new int[size]!;
+	}
+
+	dtor() {
+	}
+
+	ctor( const RuleBuffer & other ) {
+		_size = other._size;
+		_data = new int[_size]!;
+		var usize i = 0;
+		while( i < _size ) {
+			_data[i] = other._data[i];
+			++i;
+		}
+	}
+
+	operator = ( const RuleBuffer & other ) {
+		if( &self == &other )
+			return self;
+		_size = other._size;
+		_data = new int[_size]!;
+		var usize i = 0;
+		while( i < _size ) {
+			_data[i] = other._data[i];
+			++i;
+		}
+		return self;
+	}
+}
+
+func run_rule_of_n() -> int {
+	var RuleBuffer a = RuleBuffer( 3 );
+	a._data[0] = 10;
+	a._data[1] = 20;
+	a._data[2] = 30;
+
+	var RuleBuffer b = a;             // copy ctor
+	if( b._size != 3 ) return 1;
+	if( b._data[0] != 10 ) return 2;
+
+	var RuleBuffer c;
+	c = a;                        // copy assign
+	if( c._data[1] != 20 ) return 3;
+
+	var RuleZero z;
+	z.value = 42;
+	if( z.value != 42 ) return 4;
+
+	return 0;
+}

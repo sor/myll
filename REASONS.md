@@ -77,7 +77,7 @@ The endboss resolver and type-checker now provide enough context (resolved decla
 `backend/Visitor/VDecl.cs`, `backend/Generator/HierachicalGen.cs`, `backend/Resolver/TypeChecker.cs`, `backend/Resolver/ConversionRules.cs`, `backend/Core/Dialect.cs`, `backend/Core/Decl.cs`, `backend/Transform/DefaultAttributesTransformer.cs`, `std/std_string.decl.myll`.
 
 ### Where to find tests
-`testing/cases/convert_decl/` and `testing/cases/convert_string/`.
+`testing/cases/convert/`.
 
 
 ## 2026-06-10 — Intentionally Unimplemented Features

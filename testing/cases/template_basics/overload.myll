@@ -1,0 +1,47 @@
+module template_basics;
+
+namespace overload {
+
+// Non-template value overload vs. template const-reference overload.
+func dispatch( int value ) -> int { return 0; }
+func dispatch<T>( const T & value ) -> int { return 1; }
+
+// Template reference deduction from plain values and pointers.
+func identity<T>( const T & value ) -> T { return value; }
+
+// Pointer vs. value overload.
+func inspect( int value ) -> int { return 10; }
+func inspect<T>( T * ptr ) -> int { return 11; }
+
+func run() -> int
+{
+	// Non-template wins when both are equally good.
+	if( dispatch( 7 ) != 0 )
+		return 1;
+
+	// Template selected when non-template is not viable.
+	if( dispatch( "hello" ) != 1 )
+		return 2;
+
+	// Reference deduction from a value argument.
+	var int n = 42;
+	if( identity( n ) != 42 )
+		return 3;
+
+	var float f = 2.5;
+	if( identity( f ) != 2.5 )
+		return 4;
+
+	// Non-template value wins over pointer template for a value argument.
+	if( inspect( 5 ) != 10 )
+		return 5;
+
+	// Pointer template selected when value overload is not viable.
+	var int* p = &n;
+	if( inspect( p ) != 11 )
+		return 6;
+
+	return 0;
+}
+
+} // namespace overload

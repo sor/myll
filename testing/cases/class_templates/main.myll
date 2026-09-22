@@ -1,0 +1,9 @@
+module class_templates;
+
+func main() -> int
+{
+	if( operators::run()     != 0 ) return 1;
+	if( ref_category::run()  != 0 ) return 2;
+	if( template_call::run() != 0 ) return 3;
+	return 0;
+}

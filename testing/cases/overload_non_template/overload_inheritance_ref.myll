@@ -1,0 +1,26 @@
+module overload_non_template;
+
+namespace overload_inheritance_ref {
+
+class Base {}
+class Derived : Base {}
+
+func handle( Base & b ) -> int { return 1; }
+func handle( Derived & d ) -> int { return 2; }
+
+func run() -> int
+{
+	var Derived d;
+
+	var Derived & dr = d;
+	if( handle( dr ) != 2 )
+		return 1;
+
+	var Base & br = d;
+	if( handle( br ) != 1 )
+		return 2;
+
+	return 0;
+}
+
+} // namespace overload_inheritance_ref

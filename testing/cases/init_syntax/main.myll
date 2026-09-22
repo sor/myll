@@ -1,0 +1,12 @@
+module init_syntax;
+
+func main() -> int
+{
+	if( run_direct_ctor() != 0 )
+		return 1;
+
+	if( run_initializer_list() != 0 )
+		return 2;
+
+	return 0;
+}

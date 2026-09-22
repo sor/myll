@@ -23,7 +23,7 @@ reports ambiguity.
 3. For methods with their own template parameters, pre-substitute the owner
    parameters before running deduction.
 4. Extend the receiver extraction to inherited methods and alias receivers.
-5. Add regression tests under `testing/cases/class_template_ref_category/`.
+5. Add regression tests under `testing/cases/class_templates/`.
 
 ## Phases
 
@@ -40,7 +40,7 @@ reports ambiguity.
    aliased class types (`alias IntBox = Box<int>; IntBox b; b.assign(...)` is
    not resolved by the member lookup), so the alias unwrapping is in place for
    when that is added. Regression test added at
-   `testing/cases/class_template_ref_category/`.
+   `testing/cases/class_templates/`.
 
 ## Verification
 
