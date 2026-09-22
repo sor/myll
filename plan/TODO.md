@@ -219,6 +219,21 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 - **Support braced aggregate initialization.** Myll does not parse `var T a = { 1, 2, 3 };` or `var T a { 1, 2, 3 };`. Direct construction (`var T a( 1, 2, 3 );`) works for types with a suitable constructor/aggregate call.
 - **Shared external-library declarations.** Created `lib/` at repo root, auto-discovered by `frontend/Program.cs` alongside `std/` and `myll/`. The SDL3 binding lives at `lib/sdl3.decl.myll` and is consumed by both `frontend/sdl-pong/` and `frontend/sdl-snake/`.
 
+## Pointer-to-array (`[*]`) — superficial plan
+
+- **Syntax**: `T[*]` is a pointer to an array of `T`, distinct from `T[]` (array of `T`) and `T*` (pointer to a single `T`).
+  - `T*[]` remains "array of pointers to `T`" (e.g. `const char *[] argv`).
+- **Parser**: `[*]` already tokenized as `PTR_TO_ARY` and mapped to `Pointer.Kind.PtrToAry`.
+- **Type system**:
+  - Allow implicit conversion from `T[N]` to `T[*]` (array lvalue decays to pointer-to-array).
+  - Reject scalar / `T*` to `T[*]` conversions.
+  - Subscript `p[i]` on `T[*]` returns `T`.
+- **C++ emission**: `PtrToAry` currently emits `T*`; change to emit the parenthesized form `T (*name)[]` / `T (*name)[N]`.
+- **Regression tests**: revive the old thesis cases (`frontend/tests/thesis/main.myll:263-264`):
+  - `var int[*] ptr_to_ary1 = ary;` should work.
+  - `var int[*] ptr_to_ary2 = &scl;` should fail with a clear diagnostic.
+- **Docs**: update places that describe `[*]` as `std::vector<T>`; vector should be imported as a normal external type, not `[*]`.
+
 ## Lower priority / design decisions
 
 8. **Imports**
