@@ -38,6 +38,10 @@ namespace Myll
 				string stdDir = Path.Combine( repoRoot, "std" );
 				foreach( string file in EnumeratePrototypeFiles( stdDir ) )
 					yield return file;
+
+				string libDir = Path.Combine( repoRoot, "lib" );
+				foreach( string file in EnumeratePrototypeFiles( libDir ) )
+					yield return file;
 			}
 
 			IEnumerable<string> candidates;

@@ -19,11 +19,9 @@ func clamp( f32 v, f32 min, f32 max ) -> f32
 
 func drawRect( SDL_Renderer * r, f32 x, f32 y, f32 w, f32 h ) -> void
 {
-	var SDL_FRect rect;
-	rect.x = x;
-	rect.y = y;
-	rect.w = w;
-	rect.h = h;
+	// Try direct construction first; if it does not compile, fall back to
+	// setting fields one by one.
+	var SDL_FRect rect( x, y, w, h );
 	SDL_RenderFillRect( r, &rect );
 }
 

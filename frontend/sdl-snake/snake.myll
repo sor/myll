@@ -1,0 +1,181 @@
+import sdl3;
+import c_stdlib;
+
+const int GRID_W = 40;
+const int GRID_H = 30;
+const int CELL   = 20;
+const int MAX_LEN = 1200;
+
+const int DIR_UP    = 0;
+const int DIR_RIGHT = 1;
+const int DIR_DOWN  = 2;
+const int DIR_LEFT  = 3;
+
+struct Pos {
+	var int x;
+	var int y;
+}
+
+func drawCell( SDL_Renderer * r, int x, int y, u8 red, u8 green, u8 blue ) -> void
+{
+	var SDL_FRect rect(
+		(f32)(x * CELL),
+		(f32)(y * CELL),
+		(f32)CELL,
+		(f32)CELL );
+
+	SDL_SetRenderDrawColor( r, red, green, blue, 255 );
+	SDL_RenderFillRect( r, &rect );
+}
+
+func collidesWithSnake( int fx, int fy, int[ MAX_LEN ] sx, int[ MAX_LEN ] sy, int head, int len ) -> bool
+{
+	var int i = 0;
+	while( i < len ) {
+		var int idx = head - i;
+		if( idx < 0 )
+			idx = idx + MAX_LEN;
+
+		if( sx[idx] == fx && sy[idx] == fy )
+			return true;
+
+		i = i + 1;
+	}
+	return false;
+}
+
+func collidesWithSelf( int[ MAX_LEN ] sx, int[ MAX_LEN ] sy, int head, int len ) -> bool
+{
+	var int i = 1;
+	while( i < len ) {
+		var int idx = head - i;
+		if( idx < 0 )
+			idx = idx + MAX_LEN;
+
+		if( sx[idx] == sx[head] && sy[idx] == sy[head] )
+			return true;
+
+		i = i + 1;
+	}
+	return false;
+}
+
+func main() -> int
+{
+	if( !SDL_Init( SDL_INIT_VIDEO ) ) {
+		return 1;
+	}
+
+	var SDL_Window * window = SDL_CreateWindow( "Myll Snake", GRID_W * CELL, GRID_H * CELL, SDL_WINDOW_RESIZABLE );
+	if( window == null ) {
+		SDL_Quit();
+		return 1;
+	}
+
+	var SDL_Renderer * renderer = SDL_CreateRenderer( window, null );
+	if( renderer == null ) {
+		SDL_DestroyWindow( window );
+		SDL_Quit();
+		return 1;
+	}
+
+	var int[ MAX_LEN ] sx;
+	var int[ MAX_LEN ] sy;
+
+	var int head = 0;
+	var int len  = 3;
+	var int dir  = DIR_RIGHT;
+
+	sx[0] = 5;  sy[0] = 5;
+	sx[1] = 4;  sy[1] = 5;
+	sx[2] = 3;  sy[2] = 5;
+
+	var int foodX = std::rand() % GRID_W;
+	var int foodY = std::rand() % GRID_H;
+	while( collidesWithSnake( foodX, foodY, sx, sy, head, len ) ) {
+		foodX = std::rand() % GRID_W;
+		foodY = std::rand() % GRID_H;
+	}
+
+	var bool running = true;
+	var int frames = 0;
+	var SDL_Event event;
+
+	while( running && frames < 60 ) {
+		frames = frames + 1;
+
+		while( SDL_PollEvent( &event ) ) {
+			if( event.type == SDL_EVENT_QUIT ) {
+				running = false;
+			}
+		}
+
+		var const bool * keys = SDL_GetKeyboardState( null );
+		if( keys[SDL_SCANCODE_UP] && dir != DIR_DOWN ) {
+			dir = DIR_UP;
+		}
+		if( keys[SDL_SCANCODE_DOWN] && dir != DIR_UP ) {
+			dir = DIR_DOWN;
+		}
+		if( keys[SDL_SCANCODE_LEFT] && dir != DIR_RIGHT ) {
+			dir = DIR_LEFT;
+		}
+		if( keys[SDL_SCANCODE_RIGHT] && dir != DIR_LEFT ) {
+			dir = DIR_RIGHT;
+		}
+
+		var int nx = sx[head];
+		var int ny = sy[head];
+		if( dir == DIR_UP )    ny = ny - 1;
+		if( dir == DIR_DOWN )  ny = ny + 1;
+		if( dir == DIR_LEFT )  nx = nx - 1;
+		if( dir == DIR_RIGHT ) nx = nx + 1;
+
+		if( nx < 0 || nx >= GRID_W || ny < 0 || ny >= GRID_H ) {
+			running = false;
+		}
+
+		head = head + 1;
+		if( head >= MAX_LEN )
+			head = 0;
+		sx[head] = nx;
+		sy[head] = ny;
+
+		if( nx == foodX && ny == foodY ) {
+			len = len + 1;
+			foodX = std::rand() % GRID_W;
+			foodY = std::rand() % GRID_H;
+			while( collidesWithSnake( foodX, foodY, sx, sy, head, len ) ) {
+				foodX = std::rand() % GRID_W;
+				foodY = std::rand() % GRID_H;
+			}
+		}
+
+		if( running && collidesWithSelf( sx, sy, head, len ) ) {
+			running = false;
+		}
+
+		SDL_SetRenderDrawColor( renderer, 0, 0, 0, 255 );
+		SDL_RenderClear( renderer );
+
+		drawCell( renderer, foodX, foodY, 255, 0, 0 );
+
+		var int i = 0;
+		while( i < len ) {
+			var int idx = head - i;
+			if( idx < 0 )
+				idx = idx + MAX_LEN;
+			drawCell( renderer, sx[idx], sy[idx], 0, 255, 0 );
+			i = i + 1;
+		}
+
+		SDL_RenderPresent( renderer );
+		SDL_Delay( 100 );
+	}
+
+	SDL_DestroyRenderer( renderer );
+	SDL_DestroyWindow( window );
+	SDL_Quit();
+
+	return 0;
+}

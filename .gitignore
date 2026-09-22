@@ -302,3 +302,6 @@ frontend/coreutil/gen/
 
 # SDL Pong sample generated sources/binaries
 frontend/sdl-pong/gen/
+
+# SDL Snake sample generated sources/binaries
+frontend/sdl-snake/gen/

@@ -15,14 +15,16 @@ import <SDL3/SDL.h>;
 	var u32 type;
 }
 
-const u32 SDL_INIT_VIDEO       = 0x00000010;
-const u64 SDL_WINDOW_RESIZABLE = 0x0000000000000020;
-const u32 SDL_EVENT_QUIT       = 0x00000100;
+const u32 SDL_INIT_VIDEO;
+const u64 SDL_WINDOW_RESIZABLE;
+const u32 SDL_EVENT_QUIT;
 
-const int SDL_SCANCODE_W     = 26;
-const int SDL_SCANCODE_S     = 22;
-const int SDL_SCANCODE_UP    = 82;
-const int SDL_SCANCODE_DOWN  = 81;
+const int SDL_SCANCODE_UP;
+const int SDL_SCANCODE_DOWN;
+const int SDL_SCANCODE_LEFT;
+const int SDL_SCANCODE_RIGHT;
+const int SDL_SCANCODE_W;
+const int SDL_SCANCODE_S;
 
 func SDL_Init( u32 flags ) -> bool;
 func SDL_CreateWindow( const char * title, int w, int h, u64 flags ) -> SDL_Window *;
