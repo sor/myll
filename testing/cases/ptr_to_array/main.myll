@@ -1,0 +1,53 @@
+module ptr_to_array;
+
+func process( int[*] data, usize len ) -> int
+{
+	if( len < 3 )
+		return 99;
+
+	if( data[0] != 1 )
+		return 1;
+
+	// pointer-to-array supports binary addition
+	data = data + 1;
+	if( data[0] != 2 )
+		return 2;
+
+	// pointer-to-array supports pre-increment
+	++data;
+	if( data[0] != 3 )
+		return 3;
+
+	// pointer-to-array supports subtraction
+	data = data - 1;
+	if( data[0] != 2 )
+		return 4;
+
+	return 0;
+}
+
+func main() -> int
+{
+	var int[4] arr;
+	arr[0] = 1;
+	arr[1] = 2;
+	arr[2] = 3;
+	arr[3] = 4;
+
+	// fixed array decays to pointer-to-array
+	if( process( arr, 4 ) != 0 )
+		return 5;
+
+	// pointer-to-array can be initialized from an array
+	var int[*] p = arr;
+	if( p[2] != 3 )
+		return 6;
+
+	// pointer-to-array can be cast from a raw pointer (explicit)
+	var int * raw = &arr[1];
+	var int[*] view = (int[*])raw;
+	if( view[0] != 2 )
+		return 7;
+
+	return 0;
+}

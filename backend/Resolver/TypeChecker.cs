@@ -748,13 +748,24 @@ namespace Myll.Resolver
 					break;
 				}
 
+			case FuncCallExpr fc when fc.funcCall.indexer: {
+				Typespec? receiverType = typeResolver.Resolve( fc.expr );
+				if( receiverType is TypespecBasic
+				 && TypeResolver.TryGetArrayElementType( receiverType ) == null )
+					AddError( fc, String.Format(
+						"Subscript is not allowed on raw pointer type '{0}'; use a pointer-to-array type such as 'T[*]' if indexing is intended.",
+						FormatType( receiverType ) ) );
+				break;
+			}
+
 			case NewExpr newExpr: {
 				if( currentDialect.StrictNew
 				 && ( newExpr.type.ptrs == null || newExpr.type.ptrs.Count == 0 ) )
 					AddError( newExpr, "StrictNew is enabled: bare `new T` is not allowed; use an explicit pointer type such as `new T*` or `new T*!`." );
 
-					break;
-				}
+				break;
+			}
+
 
 				case CastExpr cast: {
 					Typespec? sourceType = typeResolver.Resolve( cast.expr );
@@ -824,13 +835,31 @@ namespace Myll.Resolver
 			if( leftType == null || rightType == null )
 				return;
 
+			// References participate as the referenced type for arithmetic purposes.
+			Typespec left  = ConversionRules.TryStripReference( leftType, out Typespec? ls ) ? ls! : leftType;
+			Typespec right = ConversionRules.TryStripReference( rightType, out Typespec? rs ) ? rs! : rightType;
+
 			// Leave class-typed operands and their operator overloads to C++.
-			if( leftType is not TypespecBasic || rightType is not TypespecBasic )
+			if( left is TypespecNested || right is TypespecNested )
 				return;
 
 			if( binOp.op is Operand.Add or Operand.Subtract
-			 && ( OperatorRules.HasPointer( leftType ) || OperatorRules.HasPointer( rightType ) ) ) {
-				AddError( binOp, "Pointer arithmetic is disabled; use indexing instead." );
+			 && ( OperatorRules.HasPointer( left ) || OperatorRules.HasPointer( right ) ) ) {
+				bool leftIsPtrAry  = OperatorRules.IsPointerToArray( left );
+				bool rightIsPtrAry = OperatorRules.IsPointerToArray( right );
+				bool leftIsInt     = OperatorRules.IsScalarInteger( left );
+				bool rightIsInt    = OperatorRules.IsScalarInteger( right );
+
+				bool ptrArithAllowed = currentDialect.AllowPointerToArrayArithmetic
+				                    && ( ( leftIsPtrAry && rightIsInt )
+				                      || ( binOp.op == Operand.Add && rightIsPtrAry && leftIsInt ) );
+				if( ptrArithAllowed )
+					return;
+
+				string message = currentDialect.AllowPointerToArrayArithmetic
+					? "Pointer arithmetic is only allowed on pointer-to-array types (T[*])."
+					: "Pointer arithmetic is disabled.";
+				AddError( binOp, message );
 				return;
 			}
 
@@ -1019,6 +1048,14 @@ namespace Myll.Resolver
 
 			if( checkType is not TypespecBasic )
 				return;
+
+			if( OperatorRules.IsPointerToArray( checkType ) ) {
+				if( currentDialect.AllowPointerToArrayArithmetic )
+					return;
+
+				AddError( unOp, "Pointer arithmetic is disabled." );
+				return;
+			}
 
 			if( !OperatorRules.IsScalarNumber( checkType ) )
 				AddError( unOp, String.Format( "Operator '{0}' cannot be applied to type '{1}'", OperatorName( unOp.op ), FormatType( operandType ) ) );

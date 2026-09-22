@@ -221,12 +221,32 @@ namespace Myll.Resolver
 				return bitResult;
 
 			if( IsArithmeticOperation( binOp.op ) ) {
+				if( leftType == null || rightType == null )
+					return null;
+
+				// References participate as the referenced type for arithmetic.
+				Typespec left  = ConversionRules.TryStripReference( leftType, out Typespec? ls ) ? ls! : leftType;
+				Typespec right = ConversionRules.TryStripReference( rightType, out Typespec? rs ) ? rs! : rightType;
+
+				if( binOp.op is Operand.Add or Operand.Subtract
+				 && ( OperatorRules.IsPointerToArray( left ) || OperatorRules.IsPointerToArray( right ) ) ) {
+					bool leftIsPtrAry  = OperatorRules.IsPointerToArray( left );
+					bool rightIsPtrAry = OperatorRules.IsPointerToArray( right );
+					bool leftIsInt     = OperatorRules.IsScalarInteger( left );
+					bool rightIsInt    = OperatorRules.IsScalarInteger( right );
+
+					if( leftIsPtrAry && rightIsInt )
+						return left;
+					if( binOp.op == Operand.Add && rightIsPtrAry && leftIsInt )
+						return right;
+				}
+
 				if( binOp.op == Operand.Modulo )
-					return CommonIntegerType( leftType, rightType );
+					return CommonIntegerType( left, right );
 				if( binOp.op == Operand.FractionalDivide )
 					return new TypespecBasic { kind = TypespecBasic.Kind.Float, size = 8 };
 
-				return CommonArithmeticType( leftType, rightType );
+				return CommonArithmeticType( left, right );
 			}
 
 			if( IsComparisonOperation( binOp.op ) || IsLogicalOperation( binOp.op ) )
@@ -530,8 +550,8 @@ namespace Myll.Resolver
 
 		/// <summary>
 		/// For an array/pointer typespec, returns the element type after stripping the outermost
-		/// subscriptable pointer (raw array, raw pointer, pointer-to-array, or smart array).
-		/// Returns null if the type is not subscriptable.
+		/// subscriptable pointer (pointer-to-array, raw array, or smart array).
+		/// Raw pointers (T*) are not subscriptable. Returns null if the type is not subscriptable.
 		/// </summary>
 		internal static Typespec? TryGetArrayElementType( Typespec? type )
 		{
@@ -539,8 +559,7 @@ namespace Myll.Resolver
 				return null;
 
 			Pointer.Kind kind = type.ptrs[ type.ptrs.Count - 1 ].kind;
-			if( kind != Pointer.Kind.RawPtr
-			 && kind != Pointer.Kind.PtrToAry
+			if( kind != Pointer.Kind.PtrToAry
 			 && kind != Pointer.Kind.RawArray
 			 && kind != Pointer.Kind.UniqueArray
 			 && kind != Pointer.Kind.SharedArray

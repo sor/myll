@@ -1534,8 +1534,8 @@ namespace Myll.Resolver
 
 		/// <summary>
 		/// For an array/pointer typespec, returns the element type after stripping the outermost
-		/// subscriptable pointer (raw array, raw pointer, pointer-to-array, or smart array).
-		/// Returns null if the type is not subscriptable.
+		/// subscriptable pointer (pointer-to-array, raw array, or smart array).
+		/// Raw pointers (T*) are not subscriptable. Returns null if the type is not subscriptable.
 		/// </summary>
 		private static Typespec? TryGetArrayElementType( Typespec? type )
 		{
@@ -1543,8 +1543,7 @@ namespace Myll.Resolver
 				return null;
 
 			Pointer.Kind kind = type.ptrs[ type.ptrs.Count - 1 ].kind;
-			if( kind != Pointer.Kind.RawPtr
-			 && kind != Pointer.Kind.PtrToAry
+			if( kind != Pointer.Kind.PtrToAry
 			 && kind != Pointer.Kind.RawArray
 			 && kind != Pointer.Kind.UniqueArray
 			 && kind != Pointer.Kind.SharedArray

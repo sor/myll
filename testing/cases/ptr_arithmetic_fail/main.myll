@@ -1,0 +1,12 @@
+module ptr_arithmetic_fail;
+
+func main() -> int
+{
+	var int x = 0;
+	var int * p = &x;
+
+	var int a = p[0];
+	var int * q = p + 1;
+
+	return 0;
+}

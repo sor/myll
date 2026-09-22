@@ -239,6 +239,7 @@ Before making changes, read these in `docs/analysis/`:
    See `plan/contained-global-using.md` and `testing/cases/new_in_myll/using_ns.myll`.
 9. **Untyped integer compound expressions** — a compound untyped-integer expression such as `1024 * 1024 * 1024` is resolved as an `UntypedInteger` without a `literalText`, so `ConversionRules.GetUntypedLiteralRank` cannot verify that it fits and rejects it when assigning to `u64`/etc. The intended behavior is that an untyped integer constant fits into any numeric type that can hold it. Workaround: cast the first literal to the target type, e.g. `(u64)1024 * 1024 * 1024`. See `backend/Resolver/TypeResolver.cs` (`CommonArithmeticType`) and `backend/Resolver/ConversionRules.cs` (`GetUntypedLiteralRank`).
 10. **Char compared with integer literals** — `char` values currently compare with integer literals like `type == 0` because C++ integral promotion leaks through. Since `char` is not a number in Myll, this should be rejected; use character literals such as `type == '\0'` instead.
+11. **Raw pointer semantics** — raw `T*` does not support `p[i]` or pointer arithmetic (`p + n`, `++p`, etc.) in Myll. Use `T[*]` (pointer-to-array) when you need C-style array-view semantics; it lowers to the same C++ `T*`. Arrays (`T[N]`) and smart arrays (`T[]!`/`T[]+`/`T[]?`) keep their indexing. Pointer arithmetic on `T[*]` can be disabled per module via `Dialect.AllowPointerToArrayArithmetic`.
 
 ## Current State & Priorities
 

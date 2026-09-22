@@ -55,5 +55,9 @@ namespace Myll.Resolver
 
 		public static bool HasPointer( Typespec? t )
 			=> t?.ptrs is { Count: > 0 };
+
+		public static bool IsPointerToArray( Typespec? t )
+			=> t?.ptrs is { Count: > 0 } p
+			 && p[^1].kind == Pointer.Kind.PtrToAry;
 	}
 }

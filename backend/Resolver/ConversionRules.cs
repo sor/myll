@@ -119,6 +119,11 @@ namespace Myll.Resolver
 			 && TryGetImplicitConversionOperator( sourceHier, target ) )
 				return ConversionRank.Conversion;
 
+			// Pointer-to-array conversions. T[N] decays to T[*], and T[*] is interchangeable
+			// with T* at the C++ ABI level, so allow these conversions unconditionally.
+			if( TryGetPointerToArrayConversion( source, target ) )
+				return ConversionRank.Conversion;
+
 			// Array/pointer decay equivalence. In C++ a function parameter declared
 			// `T[]` is a pointer, and `&array[i]` has type `T*`; treat `T*` and `T[]`
 			// (and nested forms) as convertible in argument/parameter contexts.
@@ -633,7 +638,7 @@ namespace Myll.Resolver
 				System.Globalization.CultureInfo.InvariantCulture, out value );
 		}
 
-		private static bool TryStripReference( Typespec target, out Typespec? stripped )
+		public static bool TryStripReference( Typespec target, out Typespec? stripped )
 		{
 			stripped = null;
 			if( target.ptrs == null || target.ptrs.Count == 0 )
@@ -776,6 +781,53 @@ namespace Myll.Resolver
 			}
 
 			return type;
+		}
+
+		/// <summary>
+		/// Allows implicit conversions along the decay chain T[N] -> T[*] -> T*.
+		/// These are ABI-compatible in C++, so Myll permits them everywhere.
+		/// </summary>
+		private static bool TryGetPointerToArrayConversion( Typespec source, Typespec target )
+		{
+			if( source.ptrs == null || target.ptrs == null )
+				return false;
+
+			if( source.ptrs.Count == 0 || target.ptrs.Count == 0 )
+				return false;
+
+			Pointer.Kind srcOuter = source.ptrs[ ^1 ].kind;
+			Pointer.Kind tgtOuter = target.ptrs[ ^1 ].kind;
+
+			bool srcIsArray     = srcOuter == Pointer.Kind.RawArray;
+			bool srcIsPtrToAry  = srcOuter == Pointer.Kind.PtrToAry;
+			bool tgtIsPtrToAry  = tgtOuter == Pointer.Kind.PtrToAry;
+			bool tgtIsRawPtr    = tgtOuter == Pointer.Kind.RawPtr;
+
+			if( !(( srcIsArray && tgtIsPtrToAry ) || ( srcIsPtrToAry && tgtIsRawPtr )) )
+				return false;
+
+			// Normalize the outer pointer to RawPtr so exact-match/qualifier logic applies
+			// to the same kind on both sides.
+			Typespec modSource = CloneTypespecBase( source );
+			modSource.ptrs = source.ptrs.ToList();
+			Pointer srcPtr = modSource.ptrs[ modSource.ptrs.Count - 1 ];
+			modSource.ptrs[ modSource.ptrs.Count - 1 ] = new() {
+				kind  = Pointer.Kind.RawPtr,
+				qual  = srcPtr.qual,
+			};
+
+			Typespec modTarget = CloneTypespecBase( target );
+			modTarget.ptrs = target.ptrs.ToList();
+			Pointer tgtPtr = modTarget.ptrs[ modTarget.ptrs.Count - 1 ];
+			modTarget.ptrs[ modTarget.ptrs.Count - 1 ] = new() {
+				kind  = Pointer.Kind.RawPtr,
+				qual  = tgtPtr.qual,
+			};
+
+			if( IsExactMatch( modSource, modTarget ) )
+				return true;
+
+			return TryGetQualifierConversionRank( modSource, modTarget, out _ );
 		}
 
 		private static bool TryGetArrayDecayMatch( Typespec source, Typespec target )

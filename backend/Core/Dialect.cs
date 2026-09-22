@@ -38,6 +38,12 @@ namespace Myll.Core
 		public bool StrictNew { get; init; } = false;
 
 		/// <summary>
+		/// When true, pointer arithmetic (+, -, ++, --) is allowed on pointer-to-array types (T[*]).
+		/// When false, all pointer arithmetic is rejected. Subscripting T[*] is always allowed.
+		/// </summary>
+		public bool AllowPointerToArrayArithmetic { get; init; } = true;
+
+		/// <summary>
 		/// Controls which shadowing situations produce warnings or errors.
 		/// Defaults to warnings for local-local and local-instance collisions.
 		/// </summary>
