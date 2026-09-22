@@ -1506,6 +1506,12 @@ namespace Myll.Resolver
 			if( !TryGetReceiverType( receiver, out Typespec receiverType ) )
 				return false;
 
+			Typespec? builtinElement = TryGetArrayElementType( receiverType );
+			if( builtinElement != null ) {
+				elementType = builtinElement;
+				return true;
+			}
+
 			if( !TryGetBaseHierarchical( receiverType, module, out Hierarchical? container ) )
 				return false;
 
@@ -1523,6 +1529,32 @@ namespace Myll.Resolver
 
 			elementType = ret;
 			return true;
+		}
+
+		/// <summary>
+		/// For an array/pointer typespec, returns the element type after stripping the outermost
+		/// subscriptable pointer (raw array, raw pointer, pointer-to-array, or smart array).
+		/// Returns null if the type is not subscriptable.
+		/// </summary>
+		private static Typespec? TryGetArrayElementType( Typespec? type )
+		{
+			if( type?.ptrs == null || type.ptrs.Count == 0 )
+				return null;
+
+			Pointer.Kind kind = type.ptrs[ type.ptrs.Count - 1 ].kind;
+			if( kind != Pointer.Kind.RawPtr
+			 && kind != Pointer.Kind.PtrToAry
+			 && kind != Pointer.Kind.RawArray
+			 && kind != Pointer.Kind.UniqueArray
+			 && kind != Pointer.Kind.SharedArray
+			 && kind != Pointer.Kind.WeakArray
+			 && kind != Pointer.Kind.Array
+			 && kind != Pointer.Kind.Vector )
+				return null;
+
+			Typespec ret = ConversionRules.CloneTypespecBase( type );
+			ret.ptrs = type.ptrs.Take( type.ptrs.Count - 1 ).ToList();
+			return ret;
 		}
 
 		private static Hierarchical? FindEnclosingStructural( Scope scope )

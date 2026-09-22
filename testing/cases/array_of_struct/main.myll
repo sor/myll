@@ -1,0 +1,32 @@
+module array_of_struct;
+
+struct Pos {
+[pub]:
+	field {
+		int x = 0;
+		int y = 0;
+	}
+}
+
+func modify( Pos[4] arr, int idx, int vx, int vy ) -> void
+{
+	arr[ idx ].x = vx;
+	arr[ idx ].y = vy;
+}
+
+func main() -> int
+{
+	var Pos[4] p;
+	p[0].x = 7;
+	p[1].y = 3;
+
+	if( p[0].x != 7 ) return 1;
+	if( p[1].y != 3 ) return 2;
+	if( p[1].x != 0 ) return 3;
+
+	modify( p, 2, 10, 20 );
+	if( p[2].x != 10 ) return 4;
+	if( p[2].y != 20 ) return 5;
+
+	return 0;
+}
