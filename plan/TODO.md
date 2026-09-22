@@ -214,7 +214,8 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 
 ## From SDL sample work
 
-- **Resolve member access on array-of-struct elements.** Indexing into a fixed array of a user-defined struct (`body[idx].x`) currently fails with “Unresolved member 'x'”. Workaround: use parallel primitive arrays (`int[...] sx`, `int[...] sy`).
+- **Resolve member access on array-of-struct elements.** Indexing into a fixed array of a user-defined struct (`body[idx].x`) now resolves the element's members. The resolver strips the outermost subscriptable pointer/array and looks up members in the resulting type. Regression test: `testing/cases/array_of_struct/`.
+- **SDL Snake now uses a single struct array.** Instead of parallel `int[...] sx` / `int[...] sy` arrays, the snake body is stored as `SDL_Rect[ MAX_LEN ] body` (and previously `Pos[ MAX_LEN ] body`). This exercises the new array-of-struct member resolution.
 - **Support braced aggregate initialization.** Myll does not parse `var T a = { 1, 2, 3 };` or `var T a { 1, 2, 3 };`. Direct construction (`var T a( 1, 2, 3 );`) works for types with a suitable constructor/aggregate call.
 - **Shared external-library declarations.** Created `lib/` at repo root, auto-discovered by `frontend/Program.cs` alongside `std/` and `myll/`. The SDL3 binding lives at `lib/sdl3.decl.myll` and is consumed by both `frontend/sdl-pong/` and `frontend/sdl-snake/`.
 
