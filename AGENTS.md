@@ -100,9 +100,12 @@ myll/
 ├── Documentation/    # Thesis PDF and design notes from thesis era
 ├── oldParser/        # Earlier ANTLR grammar iteration (reference only)
 ├── oldCodeGen/       # Earlier code generator (reference only)
+├── lib/              # Shared external-library .decl.myll bindings
 ├── run/              # Rider IDE run configurations
 └── myll.sln          # Solution file
 ```
+
+Shared external declarations in `lib/` are auto-discovered by the frontend, alongside `std/` and `myll/`.
 
 ## ANTLR
 
