@@ -1519,9 +1519,12 @@ namespace Myll.Resolver
 			if( container is not Structural structural )
 				return false;
 
-			Decl? indexer = LookupMember( "operator[]", structural, module );
-			if( indexer is not Func idxFunc )
+			bool receiverIsConst = ( receiverType.qual & Qualifier.Const ) != 0;
+			Func? idxFunc = OperatorResolver.LookupOperatorOverload(
+				structural, "operator[]", receiverIsConst, new HashSet<Structural>(), result );
+			if( idxFunc == null )
 				return false;
+
 
 			Typespec ret = idxFunc.retType;
 			Typespec? substituted = OperatorResolver.SubstituteMethodReturnType( idxFunc, receiverType, result );

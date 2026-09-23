@@ -35,6 +35,12 @@ namespace Myll
 		/// </summary>
 		public GlobalNamespace? Module { get; set; }
 
+		/// <summary>
+		/// True when this module contains the program entry point. Set by the driver after
+		/// resolution so the generator can emit a C++ main wrapper when needed.
+		/// </summary>
+		public bool IsMainModule { get; set; }
+
 		public bool IsPrototypeFile { get; init; }
 
 		/// <summary>

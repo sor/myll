@@ -169,6 +169,48 @@ namespace Myll
 			}
 		}
 
+		private static List<Diagnostic> SetMainModule( Options opt, List<CompiledModuleResult> modules )
+		{
+			List<Diagnostic> diagnostics = new();
+
+			List<string> mainModules = modules
+				.Where( m => m.Module.children.OfType<Func>().Any( f => f.name == "main" ) )
+				.Select( m => m.Module.module )
+				.Distinct()
+				.ToList();
+
+			string? selectedMain = null;
+
+			if( !String.IsNullOrEmpty( opt.MainModule ) ) {
+				if( !mainModules.Contains( opt.MainModule ) ) {
+					diagnostics.Add( new Diagnostic(
+						null,
+						DiagnosticKind.Error,
+						String.Format(
+							"Module '{0}' specified by -M/--main does not contain a function named 'main'",
+							opt.MainModule ) ) );
+					return diagnostics;
+				}
+
+				selectedMain = opt.MainModule;
+			}
+			else if( mainModules.Count == 1 ) {
+				selectedMain = mainModules[0];
+			}
+			// If several modules define main, do not auto-select any. This lets the
+			// backend emit each main as a normal function while the user can still use
+			// -M/--main to choose the entry point for an executable build.
+
+			if( selectedMain != null ) {
+				foreach( CompiledModuleResult m in modules ) {
+					if( m.Module.module == selectedMain )
+						m.Context.IsMainModule = true;
+				}
+			}
+
+			return diagnostics;
+		}
+
 		public static int Main( string[] args )
 		{
 			Console.WriteLine( "Myll compiler. Version {0}\n", Version );
@@ -204,6 +246,9 @@ namespace Myll
 
 			List<Diagnostic> resolutionDiagnostics = CompilerPipeline.ResolveModules( modules );
 			PrintDiagnosticsAndBailOnErrors( opt, resolutionDiagnostics );
+
+			List<Diagnostic> mainDiagnostics = SetMainModule( opt, modules );
+			PrintDiagnosticsAndBailOnErrors( opt, mainDiagnostics );
 
 			SourceMapOptions sourceMapOptions = new(
 				Decl: opt.SourceMap || opt.SourceMapDecl,
