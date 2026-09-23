@@ -30,5 +30,4 @@ namespace JanSordid
         bool hasConverged() const;
     };
 }
-int main();
 void clear();

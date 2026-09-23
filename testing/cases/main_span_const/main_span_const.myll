@@ -1,0 +1,9 @@
+import std_span;
+
+func main( std::span<const char[*]> args ) -> int
+{
+	if( args.size() < 1 )
+		return 1;
+
+	return 0;
+}

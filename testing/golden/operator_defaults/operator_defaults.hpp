@@ -17,4 +17,3 @@ struct Num
     Num& operator+=(const Num& other);
     Num& operator++();
 };
-int main();

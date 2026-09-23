@@ -140,4 +140,3 @@ namespace ref_category
     void assign(int&& value);
     int run();
 }
-int main();

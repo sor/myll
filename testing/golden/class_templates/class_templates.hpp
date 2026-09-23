@@ -109,4 +109,3 @@ namespace template_call
     };
     int run();
 }
-int main();

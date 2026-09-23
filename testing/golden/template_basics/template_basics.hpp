@@ -80,4 +80,3 @@ namespace templates
         return a > b ? a : b;
     }
 }
-int main();

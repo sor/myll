@@ -13,4 +13,3 @@ class A
 {
     void secret() const;
 };
-int main();
