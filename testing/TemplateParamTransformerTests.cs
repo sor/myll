@@ -37,6 +37,9 @@ namespace Myll.Tests
 		private static Structural FindClass( GlobalNamespace module, string name )
 			=> module.children.OfType<Structural>().First( s => s.name == name );
 
+		private static VarDecl FindVar( GlobalNamespace module, string name )
+			=> module.children.OfType<VarDecl>().First( v => v.name == name );
+
 		[Fact]
 		public void FunctionTemplateParameter_ResolvesInBody()
 		{
@@ -91,6 +94,25 @@ func f<T>( T x ) -> T { return x; }
 
 			Func func = FindFunc( module, "f" );
 			Assert.Single( func.funcScope!.children["T"] );
+		}
+
+		[Fact]
+		public void VariableTemplateParameter_ResolvesInType()
+		{
+			var (module, context) = CompileModule( @"
+module test;
+const T answer<T> = (T)42;
+" );
+
+			var (_, diagnostics) = NameResolver.Resolve( new CompiledModuleResult[] { (module, context) } );
+
+			Assert.Empty( diagnostics );
+
+			VarDecl answer = FindVar( module, "answer" );
+			Assert.Single( answer.TplParams );
+			Assert.NotNull( answer.TemplateParamScope );
+			Assert.True( answer.TemplateParamScope!.children.ContainsKey( "T" ) );
+			Assert.Single( answer.TemplateParamScope!.children["T"] );
 		}
 	}
 }

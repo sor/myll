@@ -18,9 +18,10 @@ namespace Myll.Core
 		Public,
 	}
 
-	interface ITplParams
+	interface ITemplatedDecl
 	{
 		List<TplParam> TplParams { get; }
+		Scope?         TemplateParamScope { get; }
 	}
 
 	/// <summary>
@@ -35,10 +36,10 @@ namespace Myll.Core
 		// recursively check if there is anything templated surrounding
 		public bool IsTemplateUp {
 			get {
-				for( ScopeLeaf cur = scope; cur?.parent != null; cur = cur.parent )
-					if( cur.decl is ITplParams curStruct )
-						if( curStruct.TplParams.Count >= 1 )
-							return true;
+			for( ScopeLeaf cur = scope; cur?.parent != null; cur = cur.parent )
+				if( cur.decl is ITemplatedDecl curStruct )
+					if( curStruct.TplParams.Count >= 1 )
+						return true;
 
 				return false;
 			}
@@ -94,7 +95,7 @@ namespace Myll.Core
 				string declName = decl?.name ?? "unknown_fix_me";
 				bool includeTplParams = includeOwnTemplateParams || cur != scope;
 				if( includeTplParams
-				 && decl is ITplParams curStruct
+				 && decl is ITemplatedDecl curStruct
 				 && curStruct.TplParams.Count >= 1 )
 					declName += "<" + curStruct.TplParams
 						.Select( t => t.name )
@@ -162,7 +163,7 @@ namespace Myll.Core
 	}
 
 	// functions, methods, operators, accessors (in the end)
-	public class Func : Decl, ITplParams
+	public class Func : Decl, ITemplatedDecl
 	{
 		public enum Kind
 		{
@@ -185,6 +186,8 @@ namespace Myll.Core
 		/// function. It is a child of the enclosing class/struct/global scope.
 		/// </summary>
 		public Scope? funcScope;
+
+		public Scope? TemplateParamScope => funcScope;
 
 		// TODO: analyze, for void or auto return type of funcs
 		public bool IsReturningSomething => false;
@@ -244,7 +247,7 @@ namespace Myll.Core
 		var int i { [inline] get; [inline] set; } = 99;
 	</example>
 	*/
-	public class VarDecl : Decl, ITplParams
+	public class VarDecl : Decl, ITemplatedDecl
 	{
 		public enum Kind
 		{
@@ -261,6 +264,8 @@ namespace Myll.Core
 		public bool           isDirectConstruct;
 		public List<TplParam> TplParams { get; init; } = new();
 		public Scope?         varScope;
+
+		public Scope? TemplateParamScope => varScope;
 
 		public override void AddToGen( HierarchicalGen gen )
 		{
@@ -355,7 +360,7 @@ namespace Myll.Core
 		public TypespecNested type      = null!;
 	}
 
-	public class Structural : Hierarchical, ITplParams
+	public class Structural : Hierarchical, ITemplatedDecl
 	{
 		public enum Kind
 		{
@@ -368,6 +373,8 @@ namespace Myll.Core
 		public List<TplParam>       TplParams { get; set; } = new();
 		public List<BaseType>       basetypes = new();
 		public List<TypespecNested> reqs = new();
+
+		public Scope? TemplateParamScope => scope;
 
 		// default access for child elements
 		public override Access defaultAccess

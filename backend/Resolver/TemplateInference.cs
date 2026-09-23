@@ -21,12 +21,7 @@ namespace Myll.Resolver
 		}
 
 		public static int GetTemplateParamCount( Decl decl )
-			=> decl switch {
-				Func       func        => func.TplParams.Count,
-				Structural structural  => structural.TplParams.Count,
-				VarDecl    var         => var.TplParams.Count,
-				_                      => 0,
-			};
+			=> ( decl as ITemplatedDecl )?.TplParams.Count ?? 0;
 
 		/// <summary>
 		/// Returns all template parameters in scope for a declaration: the template parameters
@@ -36,19 +31,15 @@ namespace Myll.Resolver
 		/// </summary>
 		public static List<TplParam> GetAllTemplateParams( Decl decl )
 		{
-			List<TplParam> own = decl switch {
-				Func       func       => func.TplParams,
-				Structural structural => structural.TplParams,
-				VarDecl    var        => var.TplParams,
-				_                     => new List<TplParam>(),
-			};
+			List<TplParam> own = ( decl as ITemplatedDecl )?.TplParams
+				                 ?? new List<TplParam>();
 
 			List<TplParam> enclosing = new();
 			// Start at the parent scope so the declaration's own parameters are not
 			// collected twice as "enclosing" template parameters.
 			for( ScopeLeaf? cur = decl.scope?.parent; cur != null; cur = cur.parent ) {
-				if( cur.decl is ITplParams tp && tp.TplParams.Count > 0 )
-					enclosing.AddRange( tp.TplParams );
+				if( cur.decl is ITemplatedDecl td && td.TplParams.Count > 0 )
+					enclosing.AddRange( td.TplParams );
 			}
 			enclosing.Reverse();
 

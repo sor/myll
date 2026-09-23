@@ -20,18 +20,10 @@ namespace Myll.Transform
 
 		private static void TransformDecl( Decl decl, ModuleContext context )
 		{
-			switch( decl ) {
-				case Func func when func.TplParams.Count >= 1 && func.funcScope != null:
-					InjectParameters( func.funcScope, func.TplParams, context );
-					break;
-
-				case Structural structural when structural.TplParams.Count >= 1:
-					InjectParameters( structural.scope, structural.TplParams, context );
-					break;
-
-				case VarDecl varDecl when varDecl.TplParams.Count >= 1 && varDecl.varScope != null:
-					InjectParameters( varDecl.varScope, varDecl.TplParams, context );
-					break;
+			if( decl is ITemplatedDecl templated
+			 && templated.TplParams.Count >= 1
+			 && templated.TemplateParamScope != null ) {
+				InjectParameters( templated.TemplateParamScope, templated.TplParams, context );
 			}
 
 			if( decl is Hierarchical h ) {

@@ -977,7 +977,7 @@ namespace Myll.Generator
 				PrependDeclSourceMap( targetDecl, obj );
 			}
 
-			if( gen.hierarchical is ITplParams hierWithTpl
+			if( gen.hierarchical is ITemplatedDecl hierWithTpl
 			 && hierWithTpl.TplParams.Count >= 1 ) {
 				string tpl = Format(
 					"{0}template <{1}>",
