@@ -9,9 +9,9 @@ const f32 DT       = 0.016;
 
 const f32 PI = 3.1415926535;
 
-const int MAX_VERTS = 12;
-const int MAX_ASTEROIDS = 96;
-const int MAX_BULLETS   = 32;
+[ct] const int MAX_VERTS     = 12;
+[ct] const int MAX_ASTEROIDS = 96;
+[ct] const int MAX_BULLETS   = 32;
 
 struct Vec2 {
 [pub]:
@@ -64,7 +64,7 @@ struct Asteroid {
 		f32  spin   = 0.0;
 		f32  radius = 0.0;
 		int  size   = 0;
-		Vec2[12] verts;
+		Vec2[MAX_VERTS] verts;
 		int  vertCount = 0;
 	}
 }
