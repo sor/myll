@@ -275,19 +275,39 @@ namespace Myll.Resolver
 			}
 		}
 
-		private bool ResolveIds( GlobalNamespace module, ModuleContext context )
+		private readonly struct NameRef<TNode>
+			where TNode : Expr
+		{
+			public readonly TNode                  Node;
+			public readonly Scope                  Scope;
+			public readonly IReadOnlyList<IdTplArgs> Segments;
+
+			public NameRef( TNode node, Scope scope, IReadOnlyList<IdTplArgs> segments )
+			{
+				Node     = node;
+				Scope    = scope;
+				Segments = segments;
+			}
+		}
+
+		private bool ResolveNameReferences<TNode>(
+			GlobalNamespace                         module,
+			ModuleContext                           context,
+			IEnumerable<NameRef<TNode>>             refs,
+			IReadOnlyDictionary<TNode, Decl>        alreadyResolved,
+			Action<TNode, Decl>                     recordResolution )
+			where TNode : Expr
 		{
 			bool progress = false;
-			foreach( UnresolvedId unresolved in context.UnresolvedIds ) {
-				if( result.Ids.ContainsKey( unresolved.Node ) )
+			foreach( NameRef<TNode> r in refs ) {
+				if( alreadyResolved.ContainsKey( r.Node ) )
 					continue;
 
-				IdTplArgs[] segments = new[] { unresolved.Node.idTplArgs };
-				bool callSite = context.FuncCallCallees.Contains( unresolved.Node );
-				Decl? resolved = ResolvePath( segments, unresolved.Scope, module, out _, callSite );
+				bool callSite = context.FuncCallCallees.Contains( r.Node );
+				Decl? resolved = ResolvePath( r.Segments, r.Scope, module, out _, callSite );
 				if( resolved != null ) {
-					TryResolveVariableTemplate( resolved, unresolved.Node );
-					result.Resolve( unresolved.Node, resolved );
+					TryResolveVariableTemplate( resolved, r.Node );
+					recordResolution( r.Node, resolved );
 					progress = true;
 				}
 			}
@@ -295,23 +315,26 @@ namespace Myll.Resolver
 			return progress;
 		}
 
+		private bool ResolveIds( GlobalNamespace module, ModuleContext context )
+		{
+			return ResolveNameReferences(
+				module,
+				context,
+				context.UnresolvedIds.Select(
+					u => new NameRef<IdExpr>( u.Node, u.Scope, new[] { u.Node.idTplArgs } ) ),
+				result.Ids,
+				( node, decl ) => result.Resolve( node, decl ) );
+		}
+
 		private bool ResolveScopeds( GlobalNamespace module, ModuleContext context )
 		{
-			bool progress = false;
-			foreach( UnresolvedScoped unresolved in context.UnresolvedScopeds ) {
-				if( result.Scopeds.ContainsKey( unresolved.Node ) )
-					continue;
-
-				bool callSite = context.FuncCallCallees.Contains( unresolved.Node );
-				Decl? resolved = ResolvePath( unresolved.Node.idTpls, unresolved.Scope, module, out _, callSite );
-				if( resolved != null ) {
-					TryResolveVariableTemplate( resolved, unresolved.Node );
-					result.Resolve( unresolved.Node, resolved );
-					progress = true;
-				}
-			}
-
-			return progress;
+			return ResolveNameReferences(
+				module,
+				context,
+				context.UnresolvedScopeds.Select(
+					u => new NameRef<ScopedExpr>( u.Node, u.Scope, u.Node.idTpls ) ),
+				result.Scopeds,
+				( node, decl ) => result.Resolve( node, decl ) );
 		}
 
 		/// <summary>
