@@ -4,4 +4,6 @@ import <cmath>;
 namespace std {
 	[ct] func sqrt(f64 x) -> f64;
 	[ct] func fabs(f64 x) -> f64;
+	func sin(f64 x) -> f64;
+	func cos(f64 x) -> f64;
 }
