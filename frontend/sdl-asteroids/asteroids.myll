@@ -8,7 +8,7 @@ import std_numbers;
 [ct] const f32 SCREEN_H = 360.0;
 [ct] const f32 DT       = 0.016;
 
-[ct] const f32 PI = (f32)std::numbers::pi;
+[ct] const f32 PI = std::numbers::pi_v<f32>;
 
 [ct] const int MAX_VERTS     = 12;
 [ct] const int MAX_ASTEROIDS = 96;

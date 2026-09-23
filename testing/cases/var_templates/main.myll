@@ -1,0 +1,15 @@
+module var_templates;
+
+const T answer<T> = (T)42;
+
+func main() -> int {
+	var int a = answer<int>;
+	if( a != 42 )
+		return 1;
+
+	var f32 b = answer<f32>;
+	if( b < 41.9 || b > 42.1 )
+		return 2;
+
+	return 0;
+}
