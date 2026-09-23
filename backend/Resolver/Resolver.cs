@@ -286,6 +286,7 @@ namespace Myll.Resolver
 				bool callSite = context.FuncCallCallees.Contains( unresolved.Node );
 				Decl? resolved = ResolvePath( segments, unresolved.Scope, module, out _, callSite );
 				if( resolved != null ) {
+					TryResolveVariableTemplate( resolved, unresolved.Node );
 					result.Resolve( unresolved.Node, resolved );
 					progress = true;
 				}
@@ -304,12 +305,49 @@ namespace Myll.Resolver
 				bool callSite = context.FuncCallCallees.Contains( unresolved.Node );
 				Decl? resolved = ResolvePath( unresolved.Node.idTpls, unresolved.Scope, module, out _, callSite );
 				if( resolved != null ) {
+					TryResolveVariableTemplate( resolved, unresolved.Node );
 					result.Resolve( unresolved.Node, resolved );
 					progress = true;
 				}
 			}
 
 			return progress;
+		}
+
+		/// <summary>
+		/// Performs template argument validation and type substitution for variable templates.
+		/// Emits a diagnostic on arity mismatch and leaves the expression type unset in that
+		/// case; the caller still records the resolution so the error is not re-reported.
+		/// </summary>
+		private bool TryResolveVariableTemplate( Decl resolved, Expr expr )
+		{
+			if( resolved is not VarDecl varDecl || varDecl.TplParams.Count == 0 )
+				return true;
+
+			IdTplArgs idTpl = expr switch {
+				IdExpr     id     => id.idTplArgs,
+				ScopedExpr scoped => scoped.idTpls.Last(),
+				_                 => throw new InvalidOperationException(
+					"Unexpected expression kind for variable template resolution" ),
+			};
+
+			if( TemplateInference.HasTemplateArityMismatch( varDecl, idTpl.tplArgs ) ) {
+				diagnostics.Add( new Diagnostic(
+					expr.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "Template argument count mismatch for variable '{0}': expected {1}, got {2}",
+						varDecl.name,
+						varDecl.TplParams.Count,
+						idTpl.tplArgs.Count ) ) );
+				return false;
+			}
+
+			expr.Type = TemplateInference.SubstituteTemplateParams(
+				varDecl.type,
+				varDecl.TplParams,
+				idTpl.tplArgs.ToList(),
+				result );
+			return true;
 		}
 
 		private bool ResolveTypes( GlobalNamespace module, ModuleContext context )
