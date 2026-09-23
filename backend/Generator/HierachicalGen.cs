@@ -563,37 +563,53 @@ namespace Myll.Generator
 			                : obj.IsNoInit                      ? ""
 			                : VarEmptyInitFormat;
 
+			bool hasTpl = obj.TplParams.Count >= 1;
+			string tplDeclLine = hasTpl
+				? Format(
+					"{0}template <{1}>",
+					IndentDecl,
+					obj.TplParams.Select( p => "typename " + p.name ).Join( ", " ) )
+				: string.Empty;
+			string tplImplLine = hasTpl
+				? Format(
+					"{0}template <{1}>",
+					IndentImpl,
+					obj.TplParams.Select( p => "typename " + p.name ).Join( ", " ) )
+				: string.Empty;
+
 			// 0 indent, 1 extern, 2 inline, 3 static, 4 constexpr, 5 typename, 6 type & name, 7 init
 			if( (emitAt & GenerateAt.Decl) != 0 ) {
-				SourceLines retDecl = new() {
-					Format(
-						VarFormat[0],
-						IndentDecl,
-						isExtern             ? VarFormat[1] : "",
-						needsInline          ? VarFormat[2] : "",
-						isStatic || isHidden ? VarFormat[3] : "",
-						isCompileTime        ? VarFormat[4] : "",
-						needsTypename        ? VarFormat[5] : "",
-						obj.type.Gen( obj.name ),
-						initDecl )
-				};
+				SourceLines retDecl = new();
+				if( hasTpl )
+					retDecl.Add( tplDeclLine );
+				retDecl.Add( Format(
+					VarFormat[0],
+					IndentDecl,
+					isExtern             ? VarFormat[1] : "",
+					needsInline          ? VarFormat[2] : "",
+					isStatic || isHidden ? VarFormat[3] : "",
+					isCompileTime        ? VarFormat[4] : "",
+					needsTypename        ? VarFormat[5] : "",
+					obj.type.Gen( obj.name ),
+					initDecl ) );
 				PrependDeclSourceMap( retDecl, obj );
 				targetDecl.Add( (obj.access, retDecl) );
 			}
 
 			if( (emitAt & GenerateAt.Impl) != 0 ) {
-				SourceLines retImpl = new() {
-					Format(
-						VarFormat[0],
-						IndentImpl,
-						"",
-						"",
-						isHidden      ? VarFormat[3] : "",
-						"",
-						needsTypename ? VarFormat[5] : "",
-						obj.type.Gen( obj.FullyQualifiedName ),
-						initImpl )
-				};
+				SourceLines retImpl = new();
+				if( hasTpl )
+					retImpl.Add( tplImplLine );
+				retImpl.Add( Format(
+					VarFormat[0],
+					IndentImpl,
+					"",
+					"",
+					isHidden      ? VarFormat[3] : "",
+					"",
+					needsTypename ? VarFormat[5] : "",
+					obj.type.Gen( obj.FullyQualifiedName ),
+					initImpl ) );
 				PrependDeclSourceMap( retImpl, obj );
 				targetImpl.Add( (obj.access, retImpl) );
 			}
