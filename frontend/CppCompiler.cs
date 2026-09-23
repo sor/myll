@@ -137,7 +137,7 @@ namespace Myll
 			string quotedFiles = string.Join( " ", cppFiles.Select( Quote ) );
 
 			if( IsCl( compiler ) ) {
-				var parts = new List<string> { "/nologo", "/std:c++20", "/EHsc" };
+				var parts = new List<string> { "/nologo", "/std:c++23", "/EHsc" };
 				if( !string.IsNullOrWhiteSpace( flags ) )
 					parts.Add( flags );
 				parts.Add( quotedFiles );
@@ -146,7 +146,7 @@ namespace Myll
 				return string.Join( " ", parts );
 			}
 			else {
-				var parts = new List<string> { "-std=c++20" };
+				var parts = new List<string> { "-std=c++23" };
 				if( !string.IsNullOrWhiteSpace( flags ) )
 					parts.Add( flags );
 				parts.Add( quotedFiles );
@@ -163,7 +163,7 @@ namespace Myll
 			string? outputObject )
 		{
 			if( IsCl( compiler ) ) {
-				var parts = new List<string> { "/nologo", "/std:c++20", "/EHsc", "/c" };
+				var parts = new List<string> { "/nologo", "/std:c++23", "/EHsc", "/c" };
 				if( !string.IsNullOrWhiteSpace( flags ) )
 					parts.Add( flags );
 				parts.Add( Quote( sourceFile ) );
@@ -172,7 +172,7 @@ namespace Myll
 				return string.Join( " ", parts );
 			}
 			else {
-				var parts = new List<string> { "-std=c++20", "-c" };
+				var parts = new List<string> { "-std=c++23", "-c" };
 				if( !string.IsNullOrWhiteSpace( flags ) )
 					parts.Add( flags );
 				parts.Add( Quote( sourceFile ) );
