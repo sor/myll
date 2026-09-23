@@ -3,11 +3,11 @@ import sdl3;
 import c_stdlib;
 import c_math;
 
-const f32 SCREEN_W = 640.0;
-const f32 SCREEN_H = 360.0;
-const f32 DT       = 0.016;
+[ct] const f32 SCREEN_W = 640.0;
+[ct] const f32 SCREEN_H = 360.0;
+[ct] const f32 DT       = 0.016;
 
-const f32 PI = 3.1415926535;
+[ct] const f32 PI = 3.1415926535;
 
 [ct] const int MAX_VERTS     = 12;
 [ct] const int MAX_ASTEROIDS = 96;

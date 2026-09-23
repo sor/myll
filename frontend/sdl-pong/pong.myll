@@ -1,12 +1,12 @@
 import sdl3;
 
-const f32 SCREEN_W = 800.0;
-const f32 SCREEN_H = 600.0;
-const f32 PADDLE_W = 20.0;
-const f32 PADDLE_H = 100.0;
-const f32 BALL_SZ  = 15.0;
-const f32 PADDLE_SPEED = 7.0;
-const f32 BALL_SPEED   = 5.0;
+[ct] const f32 SCREEN_W = 800.0;
+[ct] const f32 SCREEN_H = 600.0;
+[ct] const f32 PADDLE_W = 20.0;
+[ct] const f32 PADDLE_H = 100.0;
+[ct] const f32 BALL_SZ  = 15.0;
+[ct] const f32 PADDLE_SPEED = 7.0;
+[ct] const f32 BALL_SPEED   = 5.0;
 
 func clamp( f32 v, f32 min, f32 max ) -> f32
 {

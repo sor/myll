@@ -1,15 +1,15 @@
 import sdl3;
 import c_stdlib;
 
-const int GRID_W = 40;
-const int GRID_H = 30;
-const int CELL   = 20;
-const int MAX_LEN = 1200;
+[ct] const int GRID_W = 40;
+[ct] const int GRID_H = 30;
+[ct] const int CELL   = 20;
+[ct] const int MAX_LEN = 1200;
 
-const int DIR_UP    = 0;
-const int DIR_RIGHT = 1;
-const int DIR_DOWN  = 2;
-const int DIR_LEFT  = 3;
+[ct] const int DIR_UP    = 0;
+[ct] const int DIR_RIGHT = 1;
+[ct] const int DIR_DOWN  = 2;
+[ct] const int DIR_LEFT  = 3;
 
 func drawCell( SDL_Renderer * r, int x, int y, u8 red, u8 green, u8 blue ) -> void
 {
