@@ -16,18 +16,18 @@ namespace std {
 		operator <<( bool value ) -> ostream &;
 		operator <<( std::streambuf * sb ) -> ostream &;
 
-		operator !() -> bool;
+		[pure,nodiscard] operator !() -> bool;
 	};
 
 	class istream {
 	[pub]:
-		func rdbuf() -> std::streambuf *;
+		[pure,nodiscard] func rdbuf() -> std::streambuf *;
 
 		operator >>( std::string & value ) -> istream &;
 		operator >>( int & value ) -> istream &;
 		operator >>( u64 & value ) -> istream &;
 
-		operator !() -> bool;
+		[pure,nodiscard] operator !() -> bool;
 	};
 
 	class ostringstream;

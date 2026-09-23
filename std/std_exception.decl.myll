@@ -4,6 +4,6 @@ import <exception>;
 namespace std {
 	class exception {
 	[pub]:
-		func what() -> const char *;
+		[pure] func what() -> const char *;
 	};
 }

@@ -9,16 +9,16 @@ namespace std {
 			ctor( const char * source );
 			ctor( const std::string & source );
 
-			func filename() -> path;
-			func parent_path() -> path;
-			func generic_string() -> std::string;
+			[pure] func filename() -> path;
+			[pure] func parent_path() -> path;
+			[pure] func generic_string() -> std::string;
 
 			operator =( const path & other ) -> path &;
 		};
 
 		class directory_entry {
 		[pub]:
-			func path() -> std::filesystem::path;
+			[pure,noexcept] func path() -> std::filesystem::path;
 		};
 
 		class directory_iterator {
@@ -26,7 +26,7 @@ namespace std {
 			ctor();
 			ctor( const std::filesystem::path & p );
 
-			operator *() -> const std::filesystem::directory_entry &;
+			[pure,noexcept] operator *() -> const std::filesystem::directory_entry &;
 			operator ++() -> std::filesystem::directory_iterator &;
 
 			operator !=( const std::filesystem::directory_iterator & other ) -> bool;

@@ -1,0 +1,18 @@
+module std_span;
+import <span>;
+
+namespace std {
+	// std::span backing declaration for Myll resolution.
+	// The real definition comes from the C++ standard library <span> header.
+	class span<T> {
+	[pub]:
+		[ct,noexcept] ctor( T* ptr, usize count );
+
+		[pure,ct,nodiscard,noexcept] func size() -> usize;
+		[pure,ct,nodiscard,noexcept] func data() -> T[*];
+
+		[pure,ct,nodiscard,noexcept] operator []( usize index ) -> T &;
+
+		[pure,ct,nodiscard,noexcept] func subspan( usize pos, usize count ) -> std::span<T>;
+	};
+}

@@ -3,8 +3,8 @@ import <initializer_list>;
 
 namespace std {
 	class initializer_list<T> {
-		method size() -> usize;
-		method begin() -> const T*;
-		method end() -> const T*;
+		[pure,ct,noexcept] method size() -> usize;
+		[pure,ct,noexcept] method begin() -> const T*;
+		[pure,ct,noexcept] method end() -> const T*;
 	}
 }
