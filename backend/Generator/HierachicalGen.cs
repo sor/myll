@@ -74,6 +74,7 @@ namespace Myll.Generator
 	{
 		/// Fields are special, they can not be grouped by ppp or sorted
 		private readonly AccessSourceLines
+			constexprDecl   = new(),
 			staticFieldDecl = new(),
 			staticFieldImpl = new(),
 			fieldDecl       = new(),
@@ -328,6 +329,7 @@ namespace Myll.Generator
 			IAccessSourceLines
 				listDecl = new AccessSourceLines()
 					.Concat( protoEarly )
+					.Concat( constexprDecl )
 					.Concat( hierarchicalDecl )
 					.Concat( staticFieldDecl )
 					.Concat( staticAccessorDecl )
@@ -507,7 +509,11 @@ namespace Myll.Generator
 			if( hadError )
 				return;
 
-			AccessSourceLines targetDecl = isStatic ? staticFieldDecl : fieldDecl;
+			AccessSourceLines targetDecl = isStatic
+				? staticFieldDecl
+				: ( isCompileTime && !isInsideStruct )
+				? constexprDecl
+				: fieldDecl;
 			AccessSourceLines targetImpl = isStatic ? staticFieldImpl : fieldImpl;
 
 			bool       needsInline   = isExplicitInline
