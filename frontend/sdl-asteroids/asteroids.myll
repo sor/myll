@@ -1,0 +1,342 @@
+module asteroids;
+import sdl3;
+import c_stdlib;
+import c_math;
+
+const f32 SCREEN_W = 640.0;
+const f32 SCREEN_H = 360.0;
+const f32 DT       = 0.016;
+
+const f32 PI = 3.1415926535;
+
+const int MAX_VERTS = 12;
+const int MAX_ASTEROIDS = 96;
+const int MAX_BULLETS   = 32;
+
+struct Vec2 {
+[pub]:
+	field {
+		f32 x = 0.0;
+		f32 y = 0.0;
+	}
+
+	ctor() {
+		x = 0.0;
+		y = 0.0;
+	}
+
+	ctor( f32 px, f32 py ) {
+		x = px;
+		y = py;
+	}
+}
+
+func v2add( Vec2 a, Vec2 b ) -> Vec2 => Vec2( a.x + b.x, a.y + b.y );
+func v2sub( Vec2 a, Vec2 b ) -> Vec2 => Vec2( a.x - b.x, a.y - b.y );
+func v2scale( Vec2 a, f32 s ) -> Vec2 => Vec2( a.x * s, a.y * s );
+func v2len( Vec2 a ) -> f32 => (f32)std::sqrt( (f64)( a.x * a.x + a.y * a.y ) );
+func v2dist( Vec2 a, Vec2 b ) -> f32 => v2len( v2sub( a, b ) );
+
+func v2rotate( Vec2 a, f32 angle ) -> Vec2 {
+	var f32 c = (f32)std::cos( (f64)angle );
+	var f32 s = (f32)std::sin( (f64)angle );
+	return Vec2( a.x * c - a.y * s, a.x * s + a.y * c );
+}
+
+func rand01() -> f32 {
+	return (f32)( std::rand() % 1000 ) / 1000.0;
+}
+
+func wrapf( f32 v, f32 max ) -> f32 {
+	if( v < 0.0 )
+		return v + max;
+	if( v >= max )
+		return v - max;
+	return v;
+}
+
+struct Asteroid {
+[pub]:
+	field {
+		Vec2 p;
+		Vec2 v;
+		f32  angle  = 0.0;
+		f32  spin   = 0.0;
+		f32  radius = 0.0;
+		int  size   = 0;
+		Vec2[12] verts;
+		int  vertCount = 0;
+	}
+}
+
+struct Bullet {
+[pub]:
+	field {
+		Vec2 p;
+		Vec2 v;
+		f32  life = 0.0;
+	}
+}
+
+struct Ship {
+[pub]:
+	field {
+		Vec2 p;
+		Vec2 v;
+		f32  angle = 0.0;
+		bool alive = true;
+		f32  respawnTimer = 0.0;
+	}
+}
+
+func spawnAsteroid( Asteroid & out, Vec2 pos, f32 speed, int size ) -> void {
+	out.p = pos;
+	out.size = size;
+	out.angle = rand01() * PI * 2.0;
+	out.spin = ( rand01() - 0.5 ) * 2.0;
+	out.radius = size == 2 ? 25.0 : ( size == 1 ? 15.0 : 8.0 );
+
+	var f32 dir = rand01() * PI * 2.0;
+	out.v = v2scale( Vec2( (f32)std::cos( (f64)dir ), (f32)std::sin( (f64)dir ) ), speed );
+
+	out.vertCount = 8 + ( std::rand() % 5 );
+	var int i = 0;
+	while( i < out.vertCount ) {
+		var f32 a = (f32)i / (f32)out.vertCount * PI * 2.0;
+		var f32 r = out.radius * ( 0.7 + rand01() * 0.6 );
+		out.verts[i] = Vec2( (f32)std::cos( (f64)a ) * r, (f32)std::sin( (f64)a ) * r );
+		i = i + 1;
+	}
+}
+
+func drawShip( SDL_Renderer * r, Vec2 p, f32 angle ) -> void {
+	var SDL_FPoint[4] pts;
+	pts[0].x = p.x + (f32)std::cos( (f64)angle ) * 16.0;
+	pts[0].y = p.y + (f32)std::sin( (f64)angle ) * 16.0;
+	pts[1].x = p.x + (f32)std::cos( (f64)( angle + 2.5 ) ) * 12.0;
+	pts[1].y = p.y + (f32)std::sin( (f64)( angle + 2.5 ) ) * 12.0;
+	pts[2].x = p.x + (f32)std::cos( (f64)( angle - 2.5 ) ) * 12.0;
+	pts[2].y = p.y + (f32)std::sin( (f64)( angle - 2.5 ) ) * 12.0;
+	pts[3].x = pts[0].x;
+	pts[3].y = pts[0].y;
+	SDL_RenderLines( r, &pts[0], 4 );
+}
+
+func drawAsteroid( SDL_Renderer * r, Asteroid & a ) -> void {
+	var SDL_FPoint[ MAX_VERTS + 1 ] pts;
+	var int i = 0;
+	while( i < a.vertCount ) {
+		var Vec2 rv = v2rotate( a.verts[i], a.angle );
+		pts[i].x = a.p.x + rv.x;
+		pts[i].y = a.p.y + rv.y;
+		i = i + 1;
+	}
+	pts[a.vertCount].x = pts[0].x;
+	pts[a.vertCount].y = pts[0].y;
+	SDL_RenderLines( r, &pts[0], a.vertCount + 1 );
+}
+
+func main() -> int {
+	if( !SDL_Init( SDL_INIT_VIDEO ) ) {
+		return 1;
+	}
+
+	var SDL_Window * window = SDL_CreateWindow( "Myll Asteroids", (int)SCREEN_W, (int)SCREEN_H, SDL_WINDOW_RESIZABLE );
+	if( window == null ) {
+		SDL_Quit();
+		return 1;
+	}
+
+	var SDL_Renderer * renderer = SDL_CreateRenderer( window, null );
+	if( renderer == null ) {
+		SDL_DestroyWindow( window );
+		SDL_Quit();
+		return 1;
+	}
+
+	var Ship ship;
+	ship.p = Vec2( SCREEN_W * 0.5, SCREEN_H * 0.5 );
+	ship.angle = -PI * 0.5;
+
+	var Asteroid[ MAX_ASTEROIDS ] asteroids;
+	var int asteroidCount = 0;
+
+	var Bullet[ MAX_BULLETS ] bullets;
+	var int bulletCount = 0;
+
+	var int score = 0;
+	var int level = 1;
+	var f32 shootCooldown = 0.0;
+
+	// initial level
+	spawnAsteroid( asteroids[asteroidCount], Vec2( 100.0, 100.0 ), 40.0, 2 );
+	asteroidCount = asteroidCount + 1;
+
+	var bool running = true;
+	var SDL_Event event;
+
+	while( running ) {
+		while( SDL_PollEvent( &event ) ) {
+			if( event.type == SDL_EVENT_QUIT ) {
+				running = false;
+			}
+		}
+
+		var const bool * keys = SDL_GetKeyboardState( null );
+
+		if( ship.alive ) {
+			if( keys[SDL_SCANCODE_LEFT] )  ship.angle = ship.angle - 3.0 * DT;
+			if( keys[SDL_SCANCODE_RIGHT] ) ship.angle = ship.angle + 3.0 * DT;
+			if( keys[SDL_SCANCODE_UP] ) {
+				var Vec2 thrust = v2scale( Vec2( (f32)std::cos( (f64)ship.angle ), (f32)std::sin( (f64)ship.angle ) ), 150.0 * DT );
+				ship.v = v2add( ship.v, thrust );
+			}
+			ship.v = v2scale( ship.v, 0.99 );
+			ship.p = v2add( ship.p, v2scale( ship.v, DT ) );
+			ship.p.x = wrapf( ship.p.x, SCREEN_W );
+			ship.p.y = wrapf( ship.p.y, SCREEN_H );
+		}
+		else {
+			ship.respawnTimer = ship.respawnTimer - DT;
+			if( ship.respawnTimer <= 0.0 ) {
+				ship.alive = true;
+				ship.p = Vec2( SCREEN_W * 0.5, SCREEN_H * 0.5 );
+				ship.v = Vec2( 0.0, 0.0 );
+				ship.angle = -PI * 0.5;
+			}
+		}
+
+		if( shootCooldown > 0.0 )
+			shootCooldown = shootCooldown - DT;
+
+		if( ship.alive && keys[SDL_SCANCODE_SPACE] && shootCooldown <= 0.0 && bulletCount < MAX_BULLETS ) {
+			bullets[bulletCount].p = ship.p;
+			bullets[bulletCount].v = v2add( ship.v, v2scale( Vec2( (f32)std::cos( (f64)ship.angle ), (f32)std::sin( (f64)ship.angle ) ), 350.0 ) );
+			bullets[bulletCount].life = 1.2;
+			bulletCount = bulletCount + 1;
+			shootCooldown = 0.25;
+		}
+
+		// update bullets
+		var int bi = 0;
+		while( bi < bulletCount ) {
+			bullets[bi].p = v2add( bullets[bi].p, v2scale( bullets[bi].v, DT ) );
+			bullets[bi].p.x = wrapf( bullets[bi].p.x, SCREEN_W );
+			bullets[bi].p.y = wrapf( bullets[bi].p.y, SCREEN_H );
+			bullets[bi].life = bullets[bi].life - DT;
+			if( bullets[bi].life <= 0.0 ) {
+				bullets[bi] = bullets[bulletCount - 1];
+				bulletCount = bulletCount - 1;
+			}
+			else {
+				bi = bi + 1;
+			}
+		}
+
+		// update asteroids
+		var int ai = 0;
+		while( ai < asteroidCount ) {
+			asteroids[ai].p = v2add( asteroids[ai].p, v2scale( asteroids[ai].v, DT ) );
+			asteroids[ai].p.x = wrapf( asteroids[ai].p.x, SCREEN_W );
+			asteroids[ai].p.y = wrapf( asteroids[ai].p.y, SCREEN_H );
+			asteroids[ai].angle = asteroids[ai].angle + asteroids[ai].spin * DT;
+			ai = ai + 1;
+		}
+
+		// collisions bullet vs asteroid
+		bi = 0;
+		while( bi < bulletCount ) {
+			var bool hit = false;
+			ai = 0;
+			while( ai < asteroidCount ) {
+				if( v2dist( bullets[bi].p, asteroids[ai].p ) < asteroids[ai].radius ) {
+					hit = true;
+					var int oldSize = asteroids[ai].size;
+					var Vec2 oldPos = asteroids[ai].p;
+					asteroids[ai] = asteroids[asteroidCount - 1];
+					asteroidCount = asteroidCount - 1;
+					score = score + ( oldSize == 2 ? 20 : ( oldSize == 1 ? 50 : 100 ) );
+					if( oldSize > 0 ) {
+						var int k = 0;
+						while( k < 2 && asteroidCount < MAX_ASTEROIDS ) {
+							spawnAsteroid( asteroids[asteroidCount], oldPos, 60.0, oldSize - 1 );
+							asteroidCount = asteroidCount + 1;
+							k = k + 1;
+						}
+					}
+					break;
+				}
+				ai = ai + 1;
+			}
+			if( hit ) {
+				bullets[bi] = bullets[bulletCount - 1];
+				bulletCount = bulletCount - 1;
+			}
+			else {
+				bi = bi + 1;
+			}
+		}
+
+		// ship vs asteroid collision
+		if( ship.alive ) {
+			ai = 0;
+			while( ai < asteroidCount ) {
+				if( v2dist( ship.p, asteroids[ai].p ) < asteroids[ai].radius + 8.0 ) {
+					ship.alive = false;
+					ship.respawnTimer = 1.0;
+					break;
+				}
+				ai = ai + 1;
+			}
+		}
+
+		// next level
+		if( asteroidCount == 0 ) {
+			level = level + 1;
+			var int count = 3 + level;
+			if( count > 8 ) count = 8;
+			var int n = 0;
+			while( n < count && asteroidCount < MAX_ASTEROIDS ) {
+				var f32 margin = 60.0;
+				var Vec2 pos;
+				pos.x = margin + rand01() * ( SCREEN_W - margin * 2.0 );
+				pos.y = margin + rand01() * ( SCREEN_H - margin * 2.0 );
+				if( v2dist( pos, ship.p ) > 100.0 ) {
+					spawnAsteroid( asteroids[asteroidCount], pos, 30.0 + (f32)level * 8.0, 2 );
+					asteroidCount = asteroidCount + 1;
+				}
+				n = n + 1;
+			}
+		}
+
+		// render
+		SDL_SetRenderDrawColor( renderer, 0, 0, 0, 255 );
+		SDL_RenderClear( renderer );
+
+		SDL_SetRenderDrawColor( renderer, 255, 255, 255, 255 );
+
+		if( ship.alive )
+			drawShip( renderer, ship.p, ship.angle );
+
+		ai = 0;
+		while( ai < asteroidCount ) {
+			drawAsteroid( renderer, asteroids[ai] );
+			ai = ai + 1;
+		}
+
+		bi = 0;
+		while( bi < bulletCount ) {
+			var SDL_FRect br( bullets[bi].p.x - 1.0, bullets[bi].p.y - 1.0, 2.0, 2.0 );
+			SDL_RenderFillRect( renderer, &br );
+			bi = bi + 1;
+		}
+
+		SDL_RenderPresent( renderer );
+		SDL_Delay( 16 );
+	}
+
+	SDL_DestroyRenderer( renderer );
+	SDL_DestroyWindow( window );
+	SDL_Quit();
+	return 0;
+}
