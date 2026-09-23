@@ -17,6 +17,11 @@ import <SDL3/SDL.h>;
 	var int w;
 	var int h;
 }
+[extern] struct SDL_FPoint {
+[pub]:
+	var f32 x;
+	var f32 y;
+}
 [extern] struct SDL_Event {
 [pub]:
 	var u32 type;
@@ -30,6 +35,7 @@ const int SDL_SCANCODE_UP;
 const int SDL_SCANCODE_DOWN;
 const int SDL_SCANCODE_LEFT;
 const int SDL_SCANCODE_RIGHT;
+const int SDL_SCANCODE_SPACE;
 const int SDL_SCANCODE_W;
 const int SDL_SCANCODE_S;
 
@@ -42,6 +48,7 @@ const int SDL_SCANCODE_S;
 [noexcept] func SDL_RenderClear( SDL_Renderer * r ) -> bool;
 [noexcept] func SDL_RenderFillRect( SDL_Renderer * r, SDL_FRect * rect ) -> bool;
 [noexcept] func SDL_RenderPresent( SDL_Renderer * r ) -> void;
+[noexcept] func SDL_RenderLines( SDL_Renderer * r, const SDL_FPoint * points, int count ) -> bool;
 [noexcept] func SDL_Delay( u32 ms ) -> void;
 [noexcept] func SDL_DestroyRenderer( SDL_Renderer * r ) -> void;
 [noexcept] func SDL_DestroyWindow( SDL_Window * window ) -> void;
