@@ -112,6 +112,12 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    folder-level default without error. Configuration should be authored in JSONC/JSON5, not
    strict JSON. See `docs/design/softcoded-dialect.md`.
 
+7. **Standard-library declaration attributes** — finish populating `std/*.decl.myll` and `c_*.decl.myll`
+   with `[pure]`, `[ct]`, `[nodiscard]`, and `[noexcept]` to match the installed C++23 standard-library
+   headers. Use `/usr/include/c++/15/` (or the highest version under `/usr/include/c++/`) as the
+   reference for `constexpr`, `const`, `noexcept`, and `[[nodiscard]]`. Keep the bindings updated when
+   adding new standard-library wrappers.
+
 ## Blocked / needs dependency
 
 (none at the moment)
