@@ -116,6 +116,59 @@ namespace Myll.Generator
 
 		public List<Diagnostic> Diagnostics { get; } = new();
 
+		private bool IsEntryPointForModule( Func obj )
+			=> obj.name == "main"
+			&& !obj.IsInStruct
+			&& context?.IsMainModule == true
+			&& (obj.kind == Func.Kind.Function || obj.kind == Func.Kind.Procedure);
+
+		private static bool IsStdSpanType( TypespecNested nested )
+		{
+			if( nested.idTpls.Count != 2 )
+				return false;
+			if( nested.idTpls[0].id != "std" )
+				return false;
+			if( nested.idTpls[1].id != "span" )
+				return false;
+			return nested.idTpls[1].tplArgs.Count == 1;
+		}
+
+		private bool TryGetSpanMainInfo( Func obj, out string argvType, out string argName, out string localType )
+		{
+			argvType = "";
+			argName  = "";
+			localType = "";
+
+			if( obj.paras.Count != 1 )
+				return false;
+
+			Param param = obj.paras[0];
+			if( param.type is not TypespecNested nested )
+				return false;
+			if( !IsStdSpanType( nested ) )
+				return false;
+
+			Typespec element = nested.idTpls[1].tplArgs[0].typespec;
+			if( element == null
+			 || element.ptrs == null
+			 || element.ptrs.Count != 1
+			 || element.ptrs[0].kind != Pointer.Kind.PtrToAry )
+				return false;
+
+			if( element is not TypespecBasic basic
+			 || basic.kind != TypespecBasic.Kind.Char
+			 || basic.size != 1 )
+				return false;
+
+			bool isConst = (basic.qual & Qualifier.Const) != 0
+			            || (element.ptrs[0].qual & Qualifier.Const) != 0;
+
+			argvType  = isConst ? "const char*" : "char*";
+			argName   = param.name ?? "args";
+			localType = "std::span<" + element.Gen() + ">";
+			return true;
+		}
+
 		private void PrependDeclSourceMap( SourceLines target, Decl decl )
 		{
 			if( context?.SourceMap.Decl != true )
@@ -580,26 +633,42 @@ namespace Myll.Generator
 				return;
 			}
 
-			string prefix = (obj.IsCompileTime ? "constexpr " : "")
+			string prefix = (obj.IsNodiscard ? "[[nodiscard]] " : "")
+		              + (obj.IsCompileTime ? "constexpr " : "")
 		              + (isStatic          ? "static "    : "")
 		              + (isExternal        ? "extern "    : "")
 		              + (obj.IsVirtual || isAbstract ? "virtual "   : "")
 		              + (isInlined         ? "inline "    : "");
-			string suffix = (obj.IsConstMethod ? " const"    : "")
+			string declSuffix = (obj.IsConstMethod ? " const"    : "")
+		              + (obj.IsNoexcept  ? " noexcept" : "")
 		              + (obj.IsOverride    ? " override" : "");
+			string implSuffix = (obj.IsConstMethod ? " const" : "")
+		              + (obj.IsNoexcept  ? " noexcept" : "");
 
-			if( obj.kind == Func.Kind.Convert ) {
-				AddConversionOperator( obj, prefix, suffix, hasTpl, isInlined, isExternal, isInsideStruct, targetDecl, targetImpl, targetProto );
-				return;
-			}
+			bool isMainEntry = IsEntryPointForModule( obj );
+			string argvType = "";
+			string argName  = "";
+			string localType = "";
+			bool isSpanMain  = isMainEntry
+			                && TryGetSpanMainInfo( obj, out argvType, out argName, out localType );
+			bool emitPrototype = !isMainEntry;
 
-			string headlineDecl = Format(
+			if( isSpanMain )
+				paramString = Format( "int myll_argc, {0} myll_argv[]", argvType );
+
+		if( obj.kind == Func.Kind.Convert ) {
+			AddConversionOperator( obj, prefix, declSuffix, hasTpl, isInlined, isExternal, isInsideStruct, targetDecl, targetImpl, targetProto );
+			return;
+		}
+
+		string headlineDecl = Format(
+
 				FuncFormat[0],
 				indentDecl,
 				prefix,
 				obj.retType.Gen( nameDecl ),
 				paramString,
-				suffix );
+				declSuffix );
 
 			if( isAbstract && obj.IsVirtual )
 				Diagnostics.Add( new Diagnostic(
@@ -654,11 +723,13 @@ namespace Myll.Generator
 					return;
 				}
 
-				PrependDeclSourceMap( targetProto, obj );
-				if( hasTpl )
-					targetProto.Add( tplDecl );
+				if( emitPrototype ) {
+					PrependDeclSourceMap( targetProto, obj );
+					if( hasTpl )
+						targetProto.Add( tplDecl );
 
-				targetProto.Add( headlineDecl + specialTail + ";" );
+					targetProto.Add( headlineDecl + specialTail + ";" );
+				}
 				return;
 			}
 
@@ -666,10 +737,12 @@ namespace Myll.Generator
 			// TODO: move inlines to bottom of header
 			if( isInlined || isExternal || hasTpl ) {
 				if( !isInsideStruct ) {
-					PrependDeclSourceMap( targetProto, obj );
-					if( hasTpl )
-						targetProto.Add( tplDecl );
-					targetProto.Add( headlineDecl + ";" );
+					if( emitPrototype ) {
+						PrependDeclSourceMap( targetProto, obj );
+						if( hasTpl )
+							targetProto.Add( tplDecl );
+						targetProto.Add( headlineDecl + ";" );
+					}
 				}
 				else if( isExternal ) {
 					// External members still need a declaration inside the class definition,
@@ -689,12 +762,19 @@ namespace Myll.Generator
 						return;
 					}
 
-					PrependDeclSourceMap( targetDecl, obj );
-					if( hasTpl )
-						targetDecl.Add( tplDecl );
+				PrependDeclSourceMap( targetDecl, obj );
+				if( hasTpl )
+					targetDecl.Add( tplDecl );
 
-					targetDecl.Add( headlineDecl );
-					targetDecl.AddRange( obj.body.Gen( LevelDecl ) );
+				MultiStmt bodyToGen = obj.body;
+				if( isSpanMain ) {
+					Stmt init = new FreetextStmt( Format( "{0} {1}( myll_argv, myll_argc );", localType, argName ) );
+					bodyToGen = new MultiStmt( new List<Stmt> { init }.Concat( obj.body.stmts ), true );
+				}
+
+				targetDecl.Add( headlineDecl );
+				targetDecl.AddRange( bodyToGen.Gen( LevelDecl ) );
+
 				}
 			}
 			else {
@@ -712,27 +792,35 @@ namespace Myll.Generator
 					"",
 					obj.retType.Gen( nameImpl ),
 					paramString,
-					(obj.IsConstMethod ? " const" : "") );
+					implSuffix );
 
-				PrependDeclSourceMap( targetProto, obj );
-				if( hasTpl )
-					targetProto.Add( tplDecl );
+				if( emitPrototype ) {
+					PrependDeclSourceMap( targetProto, obj );
+					if( hasTpl )
+						targetProto.Add( tplDecl );
 
-				targetProto.Add( headlineDecl + ";" );
+					targetProto.Add( headlineDecl + ";" );
+				}
 
 				PrependDeclSourceMap( targetImpl, obj );
 				if( hasTpl )
 					targetImpl.Add( tplImpl );
 
+				MultiStmt bodyToGen = obj.body;
+				if( isSpanMain ) {
+					Stmt init = new FreetextStmt( Format( "{0} {1}( myll_argv, myll_argc );", localType, argName ) );
+					bodyToGen = new MultiStmt( new List<Stmt> { init }.Concat( obj.body.stmts ), true );
+				}
+
 				targetImpl.Add( headlineImpl );
-				targetImpl.AddRange( obj.body.Gen( LevelImpl ) );
+				targetImpl.AddRange( bodyToGen.Gen( LevelImpl ) );
 			}
 		}
 
 		private void AddConversionOperator(
 			Func         obj,
 			string       prefix,
-			string       suffix,
+			string       declSuffix,
 			bool         hasTpl,
 			bool         isInlined,
 			bool         isExternal,
@@ -751,7 +839,7 @@ namespace Myll.Generator
 				prefix,
 				explicitKw,
 				targetType,
-				suffix );
+				declSuffix );
 
 			string tplDecl, tplImpl;
 			if( hasTpl ) {
@@ -775,7 +863,7 @@ namespace Myll.Generator
 				indentImpl,
 				qual,
 				targetType,
-				suffix );
+				declSuffix );
 
 			if( isInlined || isExternal || hasTpl ) {
 				if( !isInsideStruct ) {
@@ -1219,7 +1307,7 @@ namespace Myll.Generator
 				.Select( para => para.Gen() )
 				.Join( ", " );
 
-			string leadingAttrDecl = "";
+			string leadingAttrDecl = obj.IsNodiscard ? "[[nodiscard]] " : "";
 			if( obj.paras.Count == 1 // TODO: 0, 1 or more parameterizable
 					&& !obj.IsImplicit
 					&& !IsCopyOrMoveConstructor( obj ) ) {
@@ -1231,9 +1319,10 @@ namespace Myll.Generator
 			}
 
 			string followingDecl =
-				isDefault  ? " = default;" :
-				isDisabled ? " = delete;" :
-							 "";
+				(obj.IsNoexcept ? " noexcept" : "")
+				+ (isDefault  ? " = default;" :
+				   isDisabled ? " = delete;" :
+				                "");
 
 			string headlineDecl = Format(
 				FuncFormat[1],
@@ -1279,7 +1368,7 @@ namespace Myll.Generator
 				targetDecl.Add( headlineDecl + ";" );
 
 				PrependDeclSourceMap( targetImpl, obj );
-				targetImpl.Add( headlineImpl );
+				targetImpl.Add( headlineImpl + (obj.IsNoexcept ? " noexcept" : "") );
 				targetImpl.AddRange( obj.body.Gen( LevelImpl ) );
 			}
 		}
