@@ -1,0 +1,8 @@
+module std_numbers;
+import <numbers>;
+
+namespace std {
+namespace numbers {
+	[ct] const f64 pi;
+}
+}
