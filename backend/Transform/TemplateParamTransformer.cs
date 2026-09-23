@@ -28,6 +28,10 @@ namespace Myll.Transform
 				case Structural structural when structural.TplParams.Count >= 1:
 					InjectParameters( structural.scope, structural.TplParams, context );
 					break;
+
+				case VarDecl varDecl when varDecl.TplParams.Count >= 1 && varDecl.varScope != null:
+					InjectParameters( varDecl.varScope, varDecl.TplParams, context );
+					break;
 			}
 
 			if( decl is Hierarchical h ) {

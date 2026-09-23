@@ -244,7 +244,7 @@ namespace Myll.Core
 		var int i { [inline] get; [inline] set; } = 99;
 	</example>
 	*/
-	public class VarDecl : Decl
+	public class VarDecl : Decl, ITplParams
 	{
 		public enum Kind
 		{
@@ -259,6 +259,8 @@ namespace Myll.Core
 		public List<Accessor> accessor = new(); // opt, structural or global
 		public Expr?          init;
 		public bool           isDirectConstruct;
+		public List<TplParam> TplParams { get; init; } = new();
+		public Scope?         varScope;
 
 		public override void AddToGen( HierarchicalGen gen )
 		{

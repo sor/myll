@@ -1042,42 +1042,57 @@ namespace Myll
 		// list of typed and initialized vars
 		public MultiDecl VisitDefVar( DefVarContext c, VarDecl.Kind kind )
 		{
-			Scope  scope  = scopeStack.Peek();
+			Scope  parent = scopeStack.Peek();
 			SrcPos srcPos = c.ToSrcPos();
-			// determine if only scope or container
-			Typespec type = VisitTypespec( c.typedIdAcors().typespec() );
-			if( kind.ToQualifier() == Qualifier.Const ) {
-				type.qual |= Qualifier.Const;
+			TypespecContext sharedTypeCtx = c.typedIdAcors().typespec();
+
+			List<Decl> decls = new();
+			foreach( IdAccessorContext q in c.typedIdAcors().idAccessors().idAccessor() ) {
+				List<TplParam> tplParams = VisitTplParams( q.tplParams() );
+				bool isTemplate = tplParams.Count >= 1;
+
+				// Variable template parameters need their own scope so the parameter
+				// names are visible in the type/initializer without leaking out.
+				Scope? varTplScope = null;
+				if( isTemplate ) {
+					PushScope();
+					varTplScope = scopeStack.Peek();
+				}
+
+				Typespec type = VisitTypespec( sharedTypeCtx );
+				if( kind.ToQualifier() == Qualifier.Const ) {
+					type.qual |= Qualifier.Const;
+				}
+
+				bool isDirectConstruct = q.funcCall() != null;
+				Expr? init = isDirectConstruct
+					? new FuncCallExpr {
+						srcPos     = srcPos,
+						expr       = TypespecToExpr( type, srcPos ),
+						funcCall   = VisitFuncCall( q.funcCall() ),
+					}
+					: q.expr()?.Visit( Context );
+
+				if( varTplScope != null )
+					PopScope();
+
+				VarDecl decl = new() {
+					srcPos             = srcPos,
+					name               = q.id().GetText(),
+					kind               = kind,
+					access             = curAccess,
+					type               = type,
+					init               = init,
+					isDirectConstruct  = isDirectConstruct,
+					accessor           = q.accessorDef().Visit( Context ),
+					TplParams          = tplParams,
+					varScope           = varTplScope,
+				};
+				decls.Add( decl );
 			}
-			List<Decl> decls = c.typedIdAcors()
-				.idAccessors()
-				.idAccessor()
-				.Select(
-					q => {
-						bool isDirectConstruct = q.funcCall() != null;
-						Expr? init = isDirectConstruct
-							? new FuncCallExpr {
-								srcPos     = srcPos,
-								expr       = TypespecToExpr( type, srcPos ),
-								funcCall   = VisitFuncCall( q.funcCall() ),
-							}
-							: q.expr()?.Visit( Context );
-						return new VarDecl {
-							srcPos             = srcPos,
-							name               = q.id().GetText(),
-							kind               = kind,
-							access             = curAccess,
-							type               = type,
-							init               = init,
-							isDirectConstruct  = isDirectConstruct,
-							accessor           = q.accessorDef().Visit( Context ),
-							// TODO: Accessors, is this still valid?
-						} as Decl;
-					} )
-				.ToList();
+
 			AddChildren( decls );
-			MultiDecl ret = new( decls );
-			return ret;
+			return new MultiDecl( decls );
 		}
 
 		#region Disallowed Visitors (throwing InvalidOperationException)
