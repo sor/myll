@@ -96,6 +96,15 @@ Generated `.cpp` and `.h` files exist but are build artifacts, not committed ref
 - Are not compared against anything.
 - May be stale from older compiler versions.
 
+## Golden File Baseline
+
+The xUnit harness in `testing/` now compares Myll output against committed reference files in `testing/golden/`.
+Keep the following rules in mind when updating a baseline:
+
+- `testing/golden/` contains only Myll-generated `.cpp` and `.hpp` files.
+- Support files such as `helper.hpp` or `inner.hpp` that live in `testing/cases/` must not be added to the golden baseline. The harness copies them into the generated directory after the golden comparison so they are available for C++ compilation.
+- Regenerate a baseline with the current compiler and then remove any copied support files before committing.
+
 ## Future Outlook
 
 ### Immediate: Test Harness Design

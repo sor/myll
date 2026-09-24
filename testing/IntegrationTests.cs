@@ -65,6 +65,11 @@ namespace Myll.Tests
 
 			try
 			{
+				// Ensure the generated directory starts empty so stale support files
+				// from previous runs do not pollute the golden-file comparison.
+				if( Directory.Exists( generatedDir ) )
+					Directory.Delete( generatedDir, true );
+
 				Directory.CreateDirectory( generatedDir );
 
 				string[] myllFiles = Directory.GetFiles( caseDir, "*.myll" )
