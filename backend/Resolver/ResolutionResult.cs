@@ -3,6 +3,20 @@ using Myll.Core;
 
 namespace Myll.Resolver
 {
+	public enum InvalidCallKind
+	{
+		Ambiguous,
+		NoMatchingOverload,
+		TemplateArityMismatchSingle,
+		TemplateArityMismatchMultiple,
+	}
+
+	public sealed record InvalidCallInfo(
+		InvalidCallKind Kind,
+		string          Name,
+		Decl?           AttemptedDecl,
+		int             TemplateArgCount );
+
 	/// <summary>
 	/// Holds the outcome of a resolution pass without modifying AST nodes.
 	/// Maps unresolved references to their resolved declarations.
@@ -20,11 +34,16 @@ namespace Myll.Resolver
 		// out by a generic "unresolved identifier" message.
 		private readonly Dictionary<IdExpr, Decl?>         invalidIds      = new();
 		private readonly Dictionary<ScopedExpr, Decl?>     invalidScopeds  = new();
+		private readonly Dictionary<TypespecNested, Decl?> invalidTypes    = new();
+		private readonly Dictionary<Expr, InvalidCallInfo> invalidCalls    = new();
 
 		public IReadOnlyDictionary<IdExpr, Decl>          Ids      => ids;
 		public IReadOnlyDictionary<TypespecNested, Decl>  Types    => types;
 		public IReadOnlyDictionary<ScopedExpr, Decl>      Scopeds  => scopeds;
 		public IReadOnlyDictionary<IdExpr, Decl>          Members  => members;
+
+		public IReadOnlyDictionary<TypespecNested, Decl?> InvalidTypes => invalidTypes;
+		public IReadOnlyDictionary<Expr, InvalidCallInfo> InvalidCalls => invalidCalls;
 
 		public void Resolve( IdExpr id, Decl decl )
 			=> ids[id] = decl;
@@ -50,18 +69,44 @@ namespace Myll.Resolver
 		public bool IsInvalid( ScopedExpr scoped )
 			=> invalidScopeds.ContainsKey( scoped );
 
+		public bool IsInvalid( TypespecNested type )
+			=> invalidTypes.ContainsKey( type );
+
+		public bool IsInvalidCall( Expr callee )
+			=> invalidCalls.ContainsKey( callee );
+
+		public bool IsInvalid( Expr expr )
+			=> expr switch {
+				IdExpr     id     => invalidIds.ContainsKey( id ) || invalidCalls.ContainsKey( id ),
+				ScopedExpr scoped => invalidScopeds.ContainsKey( scoped ) || invalidCalls.ContainsKey( scoped ),
+				_                 => invalidCalls.ContainsKey( expr ),
+			};
+
 		public bool IsResolvedOrInvalid( IdExpr id )
-			=> ids.ContainsKey( id ) || invalidIds.ContainsKey( id );
+			=> ids.ContainsKey( id )
+			|| invalidIds.ContainsKey( id )
+			|| invalidCalls.ContainsKey( id );
 
 		public bool IsResolvedOrInvalid( ScopedExpr scoped )
-			=> scopeds.ContainsKey( scoped ) || invalidScopeds.ContainsKey( scoped );
+			=> scopeds.ContainsKey( scoped )
+			|| invalidScopeds.ContainsKey( scoped )
+			|| invalidCalls.ContainsKey( scoped );
+
+		public bool IsResolvedOrInvalid( TypespecNested type )
+			=> types.ContainsKey( type ) || invalidTypes.ContainsKey( type );
 
 		public bool IsResolvedOrInvalid( Expr expr )
 			=> expr switch {
 				IdExpr     id     => IsResolvedOrInvalid( id ),
 				ScopedExpr scoped => IsResolvedOrInvalid( scoped ),
-				_                 => false,
+				_                 => IsInvalidCall( expr ),
 			};
+
+		public void MarkInvalid( TypespecNested type, Decl? attemptedDecl = null )
+			=> invalidTypes[type] = attemptedDecl;
+
+		public void MarkInvalidCall( Expr callee, InvalidCallInfo info )
+			=> invalidCalls[callee] = info;
 
 		public bool TryGetResolved( IdExpr id, out Decl? decl )
 			=> ids.TryGetValue( id, out decl );

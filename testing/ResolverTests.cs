@@ -614,5 +614,73 @@ func main() -> int {
 			Assert.Equal( DiagnosticKind.Error, diagnostics[0].Kind );
 			Assert.Contains( "StrictNew", diagnostics[0].Message );
 		}
+
+		[Fact]
+		public void ClassTemplateArityMismatch_MarksTypeInvalid()
+		{
+			var (module, context) = CompileModule( @"
+module test;
+class Box<T> {
+method get() -> T;
+}
+func main() -> int {
+	var Box<int, float> b = Box<int, float>();
+	return 0;
+}
+" );
+
+			var (result, diagnostics) = Resolve( (module, context) );
+
+			Assert.Single( diagnostics );
+			Assert.Contains( "Template argument count mismatch for type 'Box'", diagnostics[0].Message );
+
+			var boxType = context.UnresolvedTypes.Single( ut => ut.Node.idTpls.Last().id == "Box" ).Node;
+			Assert.False( result.Types.ContainsKey( boxType ) );
+			Assert.True( result.InvalidTypes.ContainsKey( boxType ) );
+		}
+
+		[Fact]
+		public void FunctionTemplateArityMismatch_MarksCallInvalid()
+		{
+			var (module, context) = CompileModule( @"
+module test;
+func identity<T>(T value) -> T { return value; }
+func main() -> int {
+	identity<int, float>( 1 );
+	return 0;
+}
+" );
+
+			var (result, diagnostics) = Resolve( (module, context) );
+
+			Assert.Single( diagnostics );
+			Assert.Contains( "Template argument count mismatch for 'identity'", diagnostics[0].Message );
+
+			var callee = context.UnresolvedIds.Single( u => u.Node.idTplArgs.id == "identity" ).Node;
+			Assert.True( result.InvalidCalls.ContainsKey( callee ) );
+			Assert.Equal( InvalidCallKind.TemplateArityMismatchSingle, result.InvalidCalls[callee].Kind );
+		}
+
+		[Fact]
+		public void NoMatchingOverload_MarksCallInvalid()
+		{
+			var (module, context) = CompileModule( @"
+module test;
+func bar(int x) -> int { return x; }
+func main() -> int {
+	bar( 1, 2 );
+	return 0;
+}
+" );
+
+			var (result, diagnostics) = Resolve( (module, context) );
+
+			Assert.Single( diagnostics );
+			Assert.Contains( "No matching overload for 'bar'", diagnostics[0].Message );
+
+			var callee = context.UnresolvedIds.Single( u => u.Node.idTplArgs.id == "bar" ).Node;
+			Assert.True( result.InvalidCalls.ContainsKey( callee ) );
+			Assert.Equal( InvalidCallKind.NoMatchingOverload, result.InvalidCalls[callee].Kind );
+		}
 	}
 }

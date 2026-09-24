@@ -55,9 +55,6 @@ namespace Myll.Resolver
 		private readonly ResolutionResult result;
 		private readonly List<Diagnostic> diagnostics;
 		private readonly TypeResolver typeResolver;
-		private readonly HashSet<Expr> ambiguousCalls = new();
-		private readonly HashSet<Expr> noMatchingCalls = new();
-		private readonly HashSet<Expr> templateArityMismatchCalls = new();
 
 		private NameResolver(
 			IReadOnlyDictionary<string, ModuleExports> moduleExports,
@@ -386,7 +383,7 @@ namespace Myll.Resolver
 		{
 			bool progress = false;
 			foreach( UnresolvedType unresolved in context.UnresolvedTypes ) {
-				if( result.Types.ContainsKey( unresolved.Node ) )
+				if( result.IsResolvedOrInvalid( unresolved.Node ) )
 					continue;
 
 				// Types are never call sites: prefer the type over a constructor.
@@ -399,16 +396,16 @@ namespace Myll.Resolver
 
 				if( resolved == null ) {
 					if( isDependentNestedName ) {
-				unresolved.Node.isDependent = true;
-					progress = true;
+					unresolved.Node.isDependent = true;
+						progress = true;
+					}
+
+					continue;
 				}
 
-				continue;
-			}
-
-			// The name resolved but may still depend on a template parameter.
-			// IsDependentNestedName has already populated prefixDependent.
-			unresolved.Node.isDependent = isDependentNestedName;
+				// The name resolved but may still depend on a template parameter.
+				// IsDependentNestedName has already populated prefixDependent.
+				unresolved.Node.isDependent = isDependentNestedName;
 
 				IReadOnlyList<TplArg> providedArgs = unresolved.Node.idTpls.Last().tplArgs;
 				if( TemplateInference.HasTemplateArityMismatch( resolved, providedArgs )
@@ -420,6 +417,7 @@ namespace Myll.Resolver
 							GetTypeName( unresolved.Node ),
 							TemplateInference.GetTemplateParamCount( resolved ),
 							providedArgs.Count ) ) );
+					result.MarkInvalid( unresolved.Node, resolved );
 					continue;
 				}
 
@@ -691,19 +689,25 @@ namespace Myll.Resolver
 
 		private void RecordOverloadFailure( (Decl? chosen, bool ambiguous, bool noMatch) outcome, Expr callee, string name )
 		{
-			if( outcome.ambiguous && ambiguousCalls.Add( callee ) ) {
+			if( outcome.ambiguous ) {
+				if( result.IsInvalidCall( callee ) )
+					return;
+				result.MarkInvalidCall( callee, new InvalidCallInfo(
+					InvalidCallKind.Ambiguous, name, null, 0 ) );
 				diagnostics.Add( new Diagnostic(
 					GetCalleeSrcPos( callee ),
 					DiagnosticKind.Error,
 					String.Format( "Ambiguous call to '{0}'", name ) ) );
 			}
-			else if( outcome.noMatch && noMatchingCalls.Add( callee ) ) {
-				if( !templateArityMismatchCalls.Contains( callee ) ) {
-					diagnostics.Add( new Diagnostic(
-						GetCalleeSrcPos( callee ),
-						DiagnosticKind.Error,
-						String.Format( "No matching overload for '{0}'", name ) ) );
-				}
+			else if( outcome.noMatch ) {
+				if( result.IsInvalidCall( callee ) )
+					return;
+				result.MarkInvalidCall( callee, new InvalidCallInfo(
+					InvalidCallKind.NoMatchingOverload, name, null, 0 ) );
+				diagnostics.Add( new Diagnostic(
+					GetCalleeSrcPos( callee ),
+					DiagnosticKind.Error,
+					String.Format( "No matching overload for '{0}'", name ) ) );
 			}
 		}
 
@@ -1162,12 +1166,17 @@ namespace Myll.Resolver
 
 		private void ReportTemplateArityMismatch( Decl candidate, IReadOnlyList<TplArg> args, Expr callee )
 		{
-			if( !templateArityMismatchCalls.Add( callee ) )
+			if( result.IsInvalidCall( callee ) )
 				return;
 
 			int expected = TemplateInference.GetTemplateParamCount( candidate );
 			int actual   = args.Count;
 			string name  = GetTemplateCalleeName( callee );
+			result.MarkInvalidCall( callee, new InvalidCallInfo(
+				InvalidCallKind.TemplateArityMismatchSingle,
+				name,
+				candidate,
+				actual ) );
 			diagnostics.Add( new Diagnostic(
 				GetCalleeSrcPos( callee ),
 				DiagnosticKind.Error,
@@ -1178,10 +1187,15 @@ namespace Myll.Resolver
 
 		private void ReportTemplateArityMismatch( List<Decl> candidates, IReadOnlyList<TplArg> args, Expr callee )
 		{
-			if( !templateArityMismatchCalls.Add( callee ) )
+			if( result.IsInvalidCall( callee ) )
 				return;
 
 			string name = GetTemplateCalleeName( callee );
+			result.MarkInvalidCall( callee, new InvalidCallInfo(
+				InvalidCallKind.TemplateArityMismatchMultiple,
+				name,
+				null,
+				args.Count ) );
 			diagnostics.Add( new Diagnostic(
 				GetCalleeSrcPos( callee ),
 				DiagnosticKind.Error,
@@ -2424,44 +2438,35 @@ namespace Myll.Resolver
 				if( result.IsResolvedOrInvalid( unresolved.Node ) )
 					continue;
 
-				if( ambiguousCalls.Contains( unresolved.Node ) || noMatchingCalls.Contains( unresolved.Node ) )
-					continue;
-
-					IdTplArgs[] segments = new[] { unresolved.Node.idTplArgs };
-					bool isCallCallee = callCallees.Contains( unresolved.Node );
-					ReportUnresolvedPath( "identifier", unresolved.Node.srcPos, segments, module, unresolved.Scope, isCallCallee );
-				}
+				IdTplArgs[] segments = new[] { unresolved.Node.idTplArgs };
+				bool isCallCallee = callCallees.Contains( unresolved.Node );
+				ReportUnresolvedPath( "identifier", unresolved.Node.srcPos, segments, module, unresolved.Scope, isCallCallee );
+			}
 
 			foreach( UnresolvedScoped unresolved in context.UnresolvedScopeds ) {
 				if( result.IsResolvedOrInvalid( unresolved.Node ) )
 					continue;
 
-				if( ambiguousCalls.Contains( unresolved.Node ) || noMatchingCalls.Contains( unresolved.Node ) )
+				bool isCallCallee = callCallees.Contains( unresolved.Node );
+				ReportUnresolvedPath( "identifier", unresolved.Node.srcPos, unresolved.Node.idTpls, module, unresolved.Scope, isCallCallee );
+			}
+
+			foreach( UnresolvedType unresolved in context.UnresolvedTypes ) {
+				if( result.IsResolvedOrInvalid( unresolved.Node ) )
 					continue;
 
-					bool isCallCallee = callCallees.Contains( unresolved.Node );
-					ReportUnresolvedPath( "identifier", unresolved.Node.srcPos, unresolved.Node.idTpls, module, unresolved.Scope, isCallCallee );
-				}
+				if( unresolved.Node.IsDependentType() )
+					continue;
 
-				foreach( UnresolvedType unresolved in context.UnresolvedTypes ) {
-					if( result.Types.ContainsKey( unresolved.Node ) )
-						continue;
+				ReportUnresolvedPath( "type", unresolved.Node.srcPos, unresolved.Node.idTpls, module, unresolved.Scope );
+			}
 
-					if( unresolved.Node.IsDependentType() )
-						continue;
+			foreach( UnresolvedMemberAccess unresolved in context.UnresolvedMemberAccesses ) {
+				if( unresolved.Node.right is not IdExpr member )
+					continue;
 
-					ReportUnresolvedPath( "type", unresolved.Node.srcPos, unresolved.Node.idTpls, module, unresolved.Scope );
-				}
-
-				foreach( UnresolvedMemberAccess unresolved in context.UnresolvedMemberAccesses ) {
-					if( unresolved.Node.right is not IdExpr member )
-						continue;
-
-					if( result.Members.ContainsKey( member ) )
-						continue;
-
-					if( ambiguousCalls.Contains( unresolved.Node ) || noMatchingCalls.Contains( unresolved.Node ) )
-						continue;
+				if( result.Members.ContainsKey( member ) )
+					continue;
 
 					string? typeName = null;
 					if( TryGetMemberAccessBaseType(
