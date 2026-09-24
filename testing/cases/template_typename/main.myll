@@ -26,5 +26,9 @@ func main() -> int
 	if( result != 0 )
 		return result;
 
+	result = checkDependentInner();
+	if( result != 0 )
+		return result;
+
 	return 0;
 }

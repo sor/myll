@@ -1,0 +1,36 @@
+[static] var int staticGlobal = 1; // FAIL: [static] is valid only on class fields
+
+[inline, hide] var int inlineHiddenGlobal = 2; // FAIL: [inline] and [hide] are mutually exclusive
+
+[extern] var const int externConstGlobal = 3; // FAIL: [extern] cannot be used with const
+
+struct DeclAttrTest {
+[pub]:
+	[hide] var int hiddenField; // FAIL: [hide]/[hidden] is only valid at module/namespace scope
+	[inline] var int inlineNonStaticField; // FAIL: [inline] on a class field requires [static]
+	var int dupField;
+	var int dupField; // FAIL: Duplicate variable/field declaration
+}
+
+class ChainC {
+[pub]:
+	[chain]
+	method foo() -> ChainC& { return self; } // FAIL: must not declare a return type
+}
+
+[rule_of_3]
+struct RuleOfBad { // FAIL: does not satisfy the required rule-of-N
+[pub]:
+	field { int[]! _data; }
+
+	ctor() {}
+	dtor() {}
+	ctor( const RuleOfBad & other ) {
+		_data = new int[1]!;
+		_data[0] = other._data[0];
+	}
+}
+
+func main() -> int {
+	return 0;
+}

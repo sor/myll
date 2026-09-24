@@ -1,0 +1,34 @@
+class PrivateClass {
+[priv]:
+	func secret() -> void { }
+}
+
+// This failure is triggered by the C++ compiler.
+func test_private_call() -> int {
+	var PrivateClass a;
+	a.secret(); // FAIL: 'secret' is a private member
+	return 0;
+}
+
+struct MutNum {
+	field int v;
+
+	ctor( int value ) { v = value; }
+
+	// Arithmetic operators are pure (const) by default.
+	operator + ( const MutNum & other ) -> MutNum {
+		v = v + other.v; // FAIL: cannot assign to non-static data member within const member function
+		return MutNum( v );
+	}
+}
+
+func test_const_operator() -> int {
+	var MutNum a = MutNum( 1 );
+	var MutNum b = MutNum( 2 );
+	var MutNum c = a + b;
+	return 0;
+}
+
+func main() -> int {
+	return 0;
+}

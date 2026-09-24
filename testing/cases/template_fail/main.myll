@@ -1,0 +1,42 @@
+func max<T>( T a, T b ) -> T => a > b ? a : b;
+
+class Box<T> {
+[pub]:
+	field T value;
+}
+
+func identity<T>( T value ) -> T => value;
+
+const T answer<T> = (T)42;
+
+var T blah<T> = T; // FAIL: Type template parameter 'T' cannot be used as a value
+
+func add<int N>( int x ) -> int => x + N;
+
+func typeParamAsValue<T>() -> int {
+	return T; // FAIL: Type template parameter 'T' cannot be used as a value
+}
+
+func test_arg_count_mismatch() -> void {
+	max<int, float>( 1, 2 ); // FAIL: Template argument count mismatch for 'max'
+	var Box<int, float> b = Box<int, float>(); // FAIL: Template argument count mismatch for type 'Box'
+	var int a = answer<int, int>; // FAIL: Template argument count mismatch for variable 'answer'
+}
+
+func test_template_conversion_mismatch() -> int {
+	identity<int>( "hello" ); // FAIL: No matching overload for 'identity'
+	return 0;
+}
+
+func test_template_kind_mismatch() -> int {
+	var Box<42> a; // FAIL: Template argument kind mismatch for type 'Box'
+	var int b = identity<42>( 1 ); // FAIL: Template argument kind mismatch for 'identity'
+	var int c = answer<42>; // FAIL: Template argument kind mismatch for variable 'answer'
+	var int d = add<int>( 10 ); // FAIL: Template argument kind mismatch for 'add'
+	typeParamAsValue<int>();
+	return 0;
+}
+
+func main() -> int {
+	return 0;
+}

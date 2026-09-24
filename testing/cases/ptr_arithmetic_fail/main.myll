@@ -1,5 +1,3 @@
-module ptr_arithmetic_fail;
-
 func main() -> int
 {
 	var int x = 0;

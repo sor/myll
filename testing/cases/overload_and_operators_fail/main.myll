@@ -1,0 +1,51 @@
+func pick( i32 x ) -> int => 1;
+func pick( i64 x ) -> int => 2;
+
+func dispatch( int x ) -> int => 10;
+func dispatch( f32 x ) -> int => 20;
+
+func test_ambiguous_overload() -> void {
+	var i16 small = 1;
+	pick( small ); // FAIL: Ambiguous call to 'pick'
+}
+
+func test_no_matching_overload() -> void {
+	dispatch( "hello" ); // FAIL: No matching overload for 'dispatch'
+}
+
+func test_float_bitwise() -> void {
+	var f32 a = 1.0;
+	var f32 b = 2.0;
+	var f32 c = a & b; // FAIL: Operator '&' requires integer operands
+}
+
+func test_float_modulo() -> void {
+	var f32 a = 1.0;
+	var f32 b = a % 2.0; // FAIL: Operator '%' requires integer operands
+}
+
+func test_pointer_arithmetic() -> void {
+	var int * p = null;
+	var int * q = p + 1; // FAIL: Pointer arithmetic is only allowed on pointer-to-array types
+}
+
+func test_shift_by_float() -> void {
+	var int i = 1;
+	var int j = i << 1.5; // FAIL: Right operand of '<<' must be an integer type
+}
+
+func test_complement_float() -> void {
+	var f32 f = 1.0;
+	var f32 g = ~f; // FAIL: Operator '~' cannot be applied to type 'float'
+}
+
+[comp=spaceship]
+struct Widget { // FAIL: [comp=spaceship] on 'Widget' disallows comparison operator 'operator<'
+	field int value;
+
+	operator < ( const Widget & other ) -> bool => value < other.value;
+}
+
+func main() -> int {
+	return 0;
+}

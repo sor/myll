@@ -1,5 +1,3 @@
-module local_var_template_fail;
-
 func main() -> int {
 	var int value<int N> = 0; // FAIL: Local variable templates are not supported
 	return 0;

@@ -1,0 +1,48 @@
+class InitBox {
+[pub]:
+	field { int sum = 0; }
+
+	ctor initlist<int> values {
+		var const int* it   = values.begin();
+		var const int* last = values.end();
+		while( it != last ) {
+			sum += *it;
+			++it;
+		}
+	}
+
+	operator initlist<int> = values {
+		var const int* it   = values.begin();
+		var const int* last = values.end();
+		sum = 0;
+		while( it != last ) {
+			sum += *it;
+			++it;
+		}
+		return self;
+	}
+}
+
+func test_initlist_assign() -> int {
+	var InitBox box = [1, 2, 3];
+	box = [4, 5]; // FAIL: Cannot convert 'std::initializer_list<std::int32_t>' to 'InitBox'
+	return 0;
+}
+
+func takesUnique( int*! p ) -> void { }
+
+func getValue() -> int => 1;
+
+func test_discard_misuse() -> int {
+	_ += 1; // FAIL: '_' cannot be used as the target of an aggregate assignment
+	return _; // FAIL: '_' cannot be returned from a function
+	var int x = _ + 1; // FAIL: '_' cannot be used as a value
+	takesUnique( _ ); // FAIL: '_' cannot be used for smart-pointer parameters
+	var int y = 0;
+	y = _ = 1; // FAIL: '_' may only appear as the left-hand side of a simple assignment
+	return 0;
+}
+
+func main() -> int {
+	return 0;
+}

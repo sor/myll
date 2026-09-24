@@ -1,0 +1,20 @@
+module template_typename;
+
+class DependentOuter<T> {
+[pub]:
+	class Inner {
+	[pub]:
+		field T value;
+	}
+}
+
+func makeDependent<T>( T v ) -> DependentOuter<T>::Inner {
+	var DependentOuter<T>::Inner result;
+	result.value = v;
+	return result;
+}
+
+func checkDependentInner() -> int {
+	var DependentOuter<int>::Inner x = makeDependent<int>( 99 );
+	return x.value == 99 ? 0 : 1;
+}

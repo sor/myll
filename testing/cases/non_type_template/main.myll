@@ -1,4 +1,3 @@
-module non_type_template;
 import array_checks;
 
 func add<int N>( int x ) -> int {

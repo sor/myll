@@ -1,38 +1,93 @@
-module main;
-
-func test_narrowing_initializer() -> void
-{
-	// 1000 does not fit in i8; narrowing initialisation should be rejected.
-	var i8 x = 1000;  // EXPECTED: narrowing initializer (untyped integer does not fit in i8)
+func test_narrowing_initializer() -> void {
+	// 1000 does not fit in i8.
+	var i8 x = 1000; // FAIL: Cannot convert 'untyped integer' to 'std::int8_t'
 }
 
-func test_float_to_int_init() -> void
-{
+func test_float_to_int_init() -> void {
 	// No implicit float literal -> int conversion.
-	var int y = 3.0;  // EXPECTED: cannot implicitly convert untyped float to int
+	var int y = 3.0; // FAIL: Cannot convert 'untyped float' to 'int'
 }
 
-func test_typed_int_to_float_init() -> void
-{
-	// No implicit typed int -> f32 conversion (only untyped integer literals can become float).
+func test_typed_int_to_float_init() -> void {
+	// No implicit typed int -> f32 conversion.
 	var int a = 3;
-	var f32 z = a;     // EXPECTED: cannot implicitly convert int to f32
+	var f32 z = a; // FAIL: Cannot convert 'int' to 'float'
 }
 
-func test_return_type_mismatch() -> int
-{
+func test_return_type_mismatch() -> int {
 	// Function promises int, but returns an f32 literal.
-	return 1.0;        // EXPECTED: return type mismatch (f32 to int)
+	return 1.0; // FAIL: Cannot return type 'untyped float' from function 'test_return_type_mismatch' expecting 'int'
 }
 
-func test_assignment_mismatch() -> void
-{
-	// Re-assigning an int variable from an f32 expression is not allowed.
+func test_assignment_mismatch() -> void {
 	var int a = 0;
-	a = 1.0;           // EXPECTED: assignment type mismatch (f32 to int)
+	a = 1.0; // FAIL: Cannot convert 'untyped float' to 'int'
 }
 
-func main() -> int
-{
+func test_i32_to_i16_narrowing() -> void {
+	var i32 x = 100000;
+	var i16 y = x; // FAIL: Cannot convert 'std::int32_t' to 'std::int16_t'
+}
+
+func test_signed_to_unsigned() -> void {
+	var i32 a = -1;
+	var u32 b = a; // FAIL: Cannot convert 'std::int32_t' to 'std::uint32_t'
+}
+
+func test_i64_to_i32_narrowing() -> void {
+	var i64 c = -1;
+	var i32 d = c; // FAIL: Cannot convert 'std::int64_t' to 'std::int32_t'
+}
+
+func test_char_as_number() -> void {
+	var i32 e = 'x'; // FAIL: Cannot convert 'char' to 'std::int32_t'
+}
+
+func test_if_integer_condition() -> void {
+	var int i = 1;
+	if( i ) { } // FAIL: Condition of 'if' must be bool
+}
+
+func test_logical_and_non_bool() -> void {
+	var bool b = true;
+	var int i = 0;
+	if( b && i ) { } // FAIL: Condition of 'if' must be bool
+}
+
+func test_while_non_bool() -> void {
+	var int count = 3;
+	while( count ) { } // FAIL: Condition of 'while' must be bool
+}
+
+func test_do_while_non_bool() -> void {
+	do { } while( 1 ); // FAIL: Condition of 'do-while' must be bool
+}
+
+func test_for_non_bool() -> void {
+	for( var int i = 0; i; ++i ) { } // FAIL: Condition of 'for' must be bool
+}
+
+class SliceBase {
+[pub]:
+	method doSomething() -> int => 0;
+}
+
+class SliceDerived : SliceBase {
+[pub]:
+	method doSomething() -> int => 1;
+}
+
+func takeSliceBase( SliceBase b ) -> int => b.doSomething();
+
+func test_object_slicing() -> int {
+	var SliceDerived d;
+	return takeSliceBase( d ); // FAIL: Slicing is not allowed
+}
+
+func returns_auto_void() -> auto { } // FAIL: explicit '-> auto' but has no value-returning statement
+
+func no_value_return() -> int { } // FAIL: declares return type 'int' but has no return or throw statement
+
+func main() -> int {
 	return 0;
 }
