@@ -1,0 +1,13 @@
+module std_array;
+import <array>;
+
+namespace std {
+	class array<T, int N> {
+	[pub]:
+		[pure,ct,nodiscard,noexcept] func size() -> usize;
+		[pure,ct,nodiscard,noexcept] func data() -> T[*];
+
+		[pure,ct,nodiscard,noexcept] operator []( usize index ) -> const T &;
+		                  [noexcept] operator []( usize index ) -> T &;
+	};
+}

@@ -54,6 +54,7 @@ namespace Myll.Generator
 		};
 
 		internal const string TemplateKeyword = "template ";
+		internal const string TemplateTypeParameterKeyword = "typename";
 
 		public const string VarEmptyInitFormat = "{}";
 

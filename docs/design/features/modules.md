@@ -11,9 +11,16 @@ module my_module;
 ### Rules
 
 - If no module declaration is present, the filename (minus `.myll`) becomes the implicit module.
+  This means a file named `my_module.myll` can omit the `module my_module;` line.
 - Multiple `.myll` files can declare the same module; their declarations merge into one logical module.
 - A module is a translation unit, not a namespace. The module name does not create a scope.
 - Output: `my_module.h` and `my_module.cpp`.
+
+```myll
+// File: utils.myll
+// The module name is implicitly "utils"; no `module utils;` line is required.
+func helper() -> int { return 42; }
+```
 
 ## Import
 

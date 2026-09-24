@@ -9,6 +9,8 @@ namespace Myll.Resolver
 		NoMatchingOverload,
 		TemplateArityMismatchSingle,
 		TemplateArityMismatchMultiple,
+		TemplateKindMismatchSingle,
+		TemplateKindMismatchMultiple,
 	}
 
 	public sealed record InvalidCallInfo(

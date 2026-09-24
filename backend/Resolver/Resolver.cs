@@ -66,7 +66,7 @@ namespace Myll.Resolver
 			this.moduleContexts = moduleContexts;
 			this.result        = result;
 			this.diagnostics   = diagnostics;
-			this.typeResolver  = new TypeResolver( result );
+			this.typeResolver  = new TypeResolver( result, diagnostics );
 		}
 
 		private ModuleContext GetContext( GlobalNamespace module )
@@ -360,14 +360,24 @@ namespace Myll.Resolver
 					"Unexpected expression kind for variable template resolution" ),
 			};
 
-			if( TemplateInference.HasTemplateArityMismatch( varDecl, idTpl.tplArgs ) ) {
+			TemplateArgValidation validation = TemplateInference.ValidateTemplateArgs( varDecl, idTpl.tplArgs );
+			if( validation.IsMismatch ) {
+				string message = validation.MismatchKind == TemplateArgMismatchKind.Arity
+					? String.Format( "Template argument count mismatch for variable '{0}': expected {1}, got {2}",
+						varDecl.name,
+						varDecl.TplParams.Count,
+						idTpl.tplArgs.Count )
+					: String.Format( "Template argument kind mismatch for variable '{0}': parameter {1} ('{2}') expects a {3}, but argument '{4}' is a {5}",
+						varDecl.name,
+						validation.MismatchIndex!.Value,
+						validation.ParameterName,
+						validation.Expected,
+						idTpl.tplArgs[validation.MismatchIndex.Value].Gen(),
+						validation.Actual );
 				diagnostics.Add( new Diagnostic(
 					expr.srcPos,
 					DiagnosticKind.Error,
-					String.Format( "Template argument count mismatch for variable '{0}': expected {1}, got {2}",
-						varDecl.name,
-						varDecl.TplParams.Count,
-						idTpl.tplArgs.Count ) ) );
+					message ) );
 				return false;
 			}
 
@@ -407,16 +417,37 @@ namespace Myll.Resolver
 				// IsDependentNestedName has already populated prefixDependent.
 				unresolved.Node.isDependent = isDependentNestedName;
 
-				IReadOnlyList<TplArg> providedArgs = unresolved.Node.idTpls.Last().tplArgs;
-				if( TemplateInference.HasTemplateArityMismatch( resolved, providedArgs )
-				 && !IsInjectedClassName( unresolved.Node, resolved, unresolved.Scope ) ) {
+				if( resolved is TplParamDecl tplParam && tplParam.kind == TplParamKind.NonType ) {
 					diagnostics.Add( new Diagnostic(
 						unresolved.Node.srcPos,
 						DiagnosticKind.Error,
-						String.Format( "Template argument count mismatch for type '{0}': expected {1}, got {2}",
+						String.Format(
+							"Non-type template parameter '{0}' cannot be used as a type",
+							GetTypeName( unresolved.Node ) ) ) );
+					result.MarkInvalid( unresolved.Node, resolved );
+					continue;
+				}
+
+				IReadOnlyList<TplArg> providedArgs = unresolved.Node.idTpls.Last().tplArgs;
+				TemplateArgValidation typeValidation = TemplateInference.ValidateTemplateArgs( resolved, providedArgs );
+				if( typeValidation.IsMismatch
+				 && !IsInjectedClassName( unresolved.Node, resolved, unresolved.Scope ) ) {
+					string message = typeValidation.MismatchKind == TemplateArgMismatchKind.Arity
+						? String.Format( "Template argument count mismatch for type '{0}': expected {1}, got {2}",
 							GetTypeName( unresolved.Node ),
 							TemplateInference.GetTemplateParamCount( resolved ),
-							providedArgs.Count ) ) );
+							providedArgs.Count )
+						: String.Format( "Template argument kind mismatch for type '{0}': parameter {1} ('{2}') expects a {3}, but argument '{4}' is a {5}",
+							GetTypeName( unresolved.Node ),
+							typeValidation.MismatchIndex!.Value,
+							typeValidation.ParameterName,
+							typeValidation.Expected,
+							providedArgs[typeValidation.MismatchIndex.Value].Gen(),
+							typeValidation.Actual );
+					diagnostics.Add( new Diagnostic(
+						unresolved.Node.srcPos,
+						DiagnosticKind.Error,
+						message ) );
 					result.MarkInvalid( unresolved.Node, resolved );
 					continue;
 				}
@@ -862,16 +893,17 @@ namespace Myll.Resolver
 
 		IReadOnlyList<TplArg>? explicitTemplateArgs = TemplateInference.GetExplicitTemplateArgs( callee );
 		Dictionary<Decl, List<TplArg>> deducedArgsByCandidate = new();
-		bool templateArityMismatch = false;
+		bool templateMismatch = false;
 
 		// Filter candidates by template-argument availability and, when no explicit
 		// arguments are supplied, try to deduce them from the call arguments.
 		List<Decl> templateViable = new();
 		foreach( Decl candidate in sameArity ) {
 			if( explicitTemplateArgs is { Count: > 0 } ) {
-				if( TemplateInference.HasTemplateArityMismatch( candidate, explicitTemplateArgs ) ) {
-					LogOverloadResolution( "    candidate {0}: template arity mismatch", candidate.name );
-					templateArityMismatch = true;
+				TemplateArgValidation validation = TemplateInference.ValidateTemplateArgs( candidate, explicitTemplateArgs );
+				if( validation.IsMismatch ) {
+					LogOverloadResolution( "    candidate {0}: template mismatch ({1})", candidate.name, validation.MismatchKind );
+					templateMismatch = true;
 					continue;
 				}
 
@@ -955,12 +987,12 @@ namespace Myll.Resolver
 		LogOverloadResolution( "  {0} candidate(s) survived template viability" , templateViable.Count );
 		foreach( Decl c in templateViable )
 			LogOverloadResolution( "    viable: {0}{1}", c.name, FormatParamsForDebug( c ) );
-
 		if( templateViable.Count == 0 ) {
-			if( templateArityMismatch && sameArity.Count == 1 )
-				ReportTemplateArityMismatch( sameArity[0], explicitTemplateArgs!, callee );
-			else if( templateArityMismatch )
-				ReportTemplateArityMismatch( sameArity, explicitTemplateArgs!, callee );
+
+			if( templateMismatch && sameArity.Count == 1 )
+				ReportTemplateMismatch( sameArity[0], explicitTemplateArgs!, callee );
+			else if( templateMismatch )
+				ReportTemplateMismatch( sameArity, explicitTemplateArgs!, callee );
 
 			return (null, false, true);
 		}
@@ -1164,33 +1196,71 @@ namespace Myll.Resolver
 			}
 		}
 
-		private void ReportTemplateArityMismatch( Decl candidate, IReadOnlyList<TplArg> args, Expr callee )
-		{
-			if( result.IsInvalidCall( callee ) )
-				return;
-
-			int expected = TemplateInference.GetTemplateParamCount( candidate );
-			int actual   = args.Count;
-			string name  = GetTemplateCalleeName( callee );
-			result.MarkInvalidCall( callee, new InvalidCallInfo(
-				InvalidCallKind.TemplateArityMismatchSingle,
-				name,
-				candidate,
-				actual ) );
-			diagnostics.Add( new Diagnostic(
-				GetCalleeSrcPos( callee ),
-				DiagnosticKind.Error,
-				expected == 0
-					? String.Format( "'{0}' is not a template; 0 template arguments expected, {1} provided", name, actual )
-					: String.Format( "Template argument count mismatch for '{0}': expected {1}, got {2}", name, expected, actual ) ) );
-		}
-
-		private void ReportTemplateArityMismatch( List<Decl> candidates, IReadOnlyList<TplArg> args, Expr callee )
+		private void ReportTemplateMismatch( Decl candidate, IReadOnlyList<TplArg> args, Expr callee )
 		{
 			if( result.IsInvalidCall( callee ) )
 				return;
 
 			string name = GetTemplateCalleeName( callee );
+			TemplateArgValidation validation = TemplateInference.ValidateTemplateArgs( candidate, args );
+
+			string message;
+			InvalidCallKind kind;
+			if( validation.IsMismatch
+			 && validation.MismatchKind == TemplateArgMismatchKind.ArgumentKind ) {
+				kind    = InvalidCallKind.TemplateKindMismatchSingle;
+				message = String.Format(
+					"Template argument kind mismatch for '{0}': parameter {1} ('{2}') expects a {3}, but argument '{4}' is a {5}",
+					name,
+					validation.MismatchIndex!.Value,
+					validation.ParameterName,
+					validation.Expected,
+					args[validation.MismatchIndex.Value].Gen(),
+					validation.Actual );
+			}
+			else {
+				int expected = TemplateInference.GetTemplateParamCount( candidate );
+				int actual   = args.Count;
+				kind         = InvalidCallKind.TemplateArityMismatchSingle;
+				message      = expected == 0
+					? String.Format( "'{0}' is not a template; 0 template arguments expected, {1} provided", name, actual )
+					: String.Format( "Template argument count mismatch for '{0}': expected {1}, got {2}", name, expected, actual );
+			}
+
+			result.MarkInvalidCall( callee, new InvalidCallInfo( kind, name, candidate, args.Count ) );
+			diagnostics.Add( new Diagnostic( GetCalleeSrcPos( callee ), DiagnosticKind.Error, message ) );
+		}
+
+		private void ReportTemplateMismatch( List<Decl> candidates, IReadOnlyList<TplArg> args, Expr callee )
+		{
+			if( result.IsInvalidCall( callee ) )
+				return;
+
+			string name = GetTemplateCalleeName( callee );
+
+			foreach( Decl candidate in candidates ) {
+				TemplateArgValidation validation = TemplateInference.ValidateTemplateArgs( candidate, args );
+				if( !validation.IsMismatch
+				 || validation.MismatchKind != TemplateArgMismatchKind.ArgumentKind )
+					continue;
+
+				result.MarkInvalidCall( callee, new InvalidCallInfo(
+					InvalidCallKind.TemplateKindMismatchMultiple,
+					name,
+					candidate,
+					args.Count ) );
+				diagnostics.Add( new Diagnostic(
+					GetCalleeSrcPos( callee ),
+					DiagnosticKind.Error,
+					String.Format(
+						"No matching template overload for '{0}' with {1} template argument(s) (parameter '{2}' expects a {3})",
+						name,
+						args.Count,
+						validation.ParameterName,
+						validation.Expected ) ) );
+				return;
+			}
+
 			result.MarkInvalidCall( callee, new InvalidCallInfo(
 				InvalidCallKind.TemplateArityMismatchMultiple,
 				name,

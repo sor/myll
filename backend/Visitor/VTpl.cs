@@ -41,16 +41,24 @@ namespace Myll
 			=> c?.tplArg().Select( VisitTplArg ).ToList()
 			?? new List<TplArg>( 0 );
 
-		public TplParam VisitTplParam( IdContext c )
+		public TplParam VisitTplParam( TplParamContext c )
 		{
-			TplParam tp = new() {
-				name = c.Visit(),
-			};
-			return tp;
+			if( c is NonTypeTplParamContext nonType ) {
+				return new TplParam {
+					name = nonType.id().Visit(),
+					kind = TplParamKind.NonType,
+					type = VisitTypespec( nonType.typespec() ),
+				};
+			}
+
+			if( c is TypeTplParamContext type )
+				return new TplParam { name = type.id().Visit(), kind = TplParamKind.Type };
+
+			throw new Exception( "unknown template parameter kind" );
 		}
 
 		public new List<TplParam> VisitTplParams( TplParamsContext? c )
-			=> c?.id().Select( VisitTplParam ).ToList()
+			=> c?.tplParam().Select( VisitTplParam ).ToList()
 			?? new List<TplParam>();
 	}
 }

@@ -333,7 +333,10 @@ funcTypeDef	:	LPAREN	(param (COMMA param)* COMMA?)?	RPAREN;
 // can't contain expr, will fck up through idTplArgs with multiple templates (e.g. op | from enums)
 tplArg		:	lit | typespec;
 tplArgs		:	LT	tplArg	(COMMA tplArg)*	COMMA?	GT;
-tplParams	:	LT	id		(COMMA id)*		COMMA?	GT;
+tplParam	:	id						# TypeTplParam
+			|	typespec	id				# NonTypeTplParam
+			;
+tplParams	:	LT	tplParam	(COMMA tplParam)*	COMMA?	GT;
 //tplParams2	:	LT	cs[id]							GT;
 //cs[object id] returns [object[] ret]:	ret+=id (COMMA ret+=id)* COMMA?;
 

@@ -5,6 +5,39 @@ using Myll.Core;
 
 namespace Myll.Resolver
 {
+	public enum TemplateArgMismatchKind
+	{
+		None,
+		Arity,
+		ArgumentKind,
+	}
+
+	public readonly struct TemplateArgValidation
+	{
+		public readonly bool                    IsMismatch;
+		public readonly TemplateArgMismatchKind MismatchKind;
+		public readonly int?                    MismatchIndex;
+		public readonly string?                 ParameterName;
+		public readonly string?                 Expected;
+		public readonly string?                 Actual;
+
+		public TemplateArgValidation(
+			bool                    isMismatch   = false,
+			TemplateArgMismatchKind mismatchKind = TemplateArgMismatchKind.None,
+			int?                    mismatchIndex = null,
+			string?                 parameterName = null,
+			string?                 expected      = null,
+			string?                 actual        = null )
+		{
+			IsMismatch    = isMismatch;
+			MismatchKind  = mismatchKind;
+			MismatchIndex = mismatchIndex;
+			ParameterName = parameterName;
+			Expected      = expected;
+			Actual        = actual;
+		}
+	}
+
 	/// <summary>
 	/// Validation and basic type deduction for explicit template arguments.
 	/// </summary>
@@ -49,7 +82,7 @@ namespace Myll.Resolver
 			return result;
 		}
 
-		public static bool HasTemplateArityMismatch(
+		public static TemplateArgValidation ValidateTemplateArgs(
 			Decl                   candidate,
 			IReadOnlyList<TplArg>? explicitArgs )
 		{
@@ -57,16 +90,49 @@ namespace Myll.Resolver
 			int actual   = explicitArgs?.Count ?? 0;
 
 			if( expected == 0 )
-				return actual > 0;
+				return actual > 0
+					? new TemplateArgValidation( true, TemplateArgMismatchKind.Arity, null, null, null, null )
+					: new TemplateArgValidation();
 
 			if( actual == 0 ) {
 				// No explicit args on a template candidate: deduction may fill them in.
 				// Only consider this a mismatch if deduction is impossible (non-function templates).
-				return candidate is not Func;
+				return candidate is Func
+					? new TemplateArgValidation()
+					: new TemplateArgValidation( true, TemplateArgMismatchKind.Arity, null, null, null, null );
 			}
 
-			return expected != actual;
+			if( actual != expected )
+				return new TemplateArgValidation( true, TemplateArgMismatchKind.Arity, null, null, null, null );
+
+			List<TplParam> parameters = ( candidate as ITemplatedDecl )!.TplParams;
+			for( int i = 0; i < parameters.Count; i++ ) {
+				TplParam param = parameters[i];
+				TplArg   arg   = explicitArgs![i];
+
+				bool isTypeArg  = arg.IsTypeArgument;
+				bool isValueArg = arg.IsValueArgument;
+
+				switch( param.kind ) {
+					case TplParamKind.Type when !isTypeArg:
+						return new TemplateArgValidation(
+							true, TemplateArgMismatchKind.ArgumentKind, i, param.name,
+							"type", isValueArg ? "value" : "unknown" );
+
+					case TplParamKind.NonType when !isValueArg:
+						return new TemplateArgValidation(
+							true, TemplateArgMismatchKind.ArgumentKind, i, param.name,
+							"non-type value", isTypeArg ? "type" : "unknown" );
+				}
+			}
+
+			return new TemplateArgValidation();
 		}
+
+		public static bool HasTemplateArityMismatch(
+			Decl                   candidate,
+			IReadOnlyList<TplArg>? explicitArgs )
+			=> ValidateTemplateArgs( candidate, explicitArgs ).IsMismatch;
 
 		/// <summary>
 		/// Tries to deduce the candidate's own template arguments after first substituting any
@@ -87,6 +153,11 @@ namespace Myll.Resolver
 
 			if( candidate.TplParams.Count == 0 )
 				return true;
+
+			// Non-type parameters can not be deduced from call arguments; they must be
+			// supplied explicitly. Reject mixed parameter lists immediately.
+			if( candidate.TplParams.Any( p => p.kind == TplParamKind.NonType ) )
+				return false;
 
 			if( call.args.Count != candidate.paras.Count )
 				return false;
@@ -149,8 +220,10 @@ namespace Myll.Resolver
 				return type;
 
 			var substitution = new Dictionary<string, Typespec>( StringComparer.Ordinal );
-			for( int i = 0; i < Math.Min( parameters.Count, args.Count ); i++ )
-				substitution[parameters[i].name] = args[i].typespec!;
+			for( int i = 0; i < Math.Min( parameters.Count, args.Count ); i++ ) {
+				if( args[i].typespec != null )
+					substitution[parameters[i].name] = args[i].typespec!;
+			}
 
 			return Substitute( type, substitution, result ) ?? type;
 		}

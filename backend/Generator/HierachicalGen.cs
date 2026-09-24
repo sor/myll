@@ -451,6 +451,14 @@ namespace Myll.Generator
 			protoEarly.Target( obj.access ).Add( ret );
 		}
 
+		private string GenTemplateParameter( TplParam p )
+			=> p.kind == TplParamKind.NonType && p.type != null
+				? p.type.Gen( p.name )
+				: Format( "{0} {1}", TemplateTypeParameterKeyword, p.name );
+
+		private string GenTemplateParameterList( IReadOnlyList<TplParam> parameters )
+			=> parameters.Select( GenTemplateParameter ).Join( ", " );
+
 		// Those need to be kept in adding order
 		public void AddVar( VarDecl obj )
 		{
@@ -564,17 +572,12 @@ namespace Myll.Generator
 			                : VarEmptyInitFormat;
 
 			bool hasTpl = obj.TplParams.Count >= 1;
+			string tplContent  = hasTpl ? GenTemplateParameterList( obj.TplParams ) : string.Empty;
 			string tplDeclLine = hasTpl
-				? Format(
-					"{0}template <{1}>",
-					IndentDecl,
-					obj.TplParams.Select( p => "typename " + p.name ).Join( ", " ) )
+				? Format( "{0}template <{1}>", IndentDecl, tplContent )
 				: string.Empty;
 			string tplImplLine = hasTpl
-				? Format(
-					"{0}template <{1}>",
-					IndentImpl,
-					obj.TplParams.Select( p => "typename " + p.name ).Join( ", " ) )
+				? Format( "{0}template <{1}>", IndentImpl, tplContent )
 				: string.Empty;
 
 			// 0 indent, 1 extern, 2 inline, 3 static, 4 constexpr, 5 typename, 6 type & name, 7 init
@@ -701,19 +704,10 @@ namespace Myll.Generator
 			// TODO add the surrounding templates as well for tplImpl
 			string tplDecl, tplImpl;
 			if( hasTpl ) {
-				string tplContent = tplParams
-					.Select( o => "typename " + o.name )
-					.Join( ", " );
+				string tplContent = GenTemplateParameterList( tplParams );
 
-				tplDecl = Format(
-					"{0}template <{1}>",
-					indentDecl,
-					tplContent );
-
-				tplImpl = Format(
-					"{0}template <{1}>",
-					indentImpl,
-					tplContent );
+				tplDecl = Format( "{0}template <{1}>", indentDecl, tplContent );
+				tplImpl = Format( "{0}template <{1}>", indentImpl, tplContent );
 			}
 			else {
 				tplDecl = string.Empty;
@@ -865,9 +859,7 @@ namespace Myll.Generator
 
 			string tplDecl, tplImpl;
 			if( hasTpl ) {
-				string tplContent = obj.TplParams
-					.Select( o => "typename " + o.name )
-					.Join( ", " );
+				string tplContent = GenTemplateParameterList( obj.TplParams );
 
 				tplDecl = Format( "{0}template <{1}>", indentDecl, tplContent );
 				tplImpl = Format( "{0}template <{1}>", indentImpl, tplContent );
@@ -982,9 +974,7 @@ namespace Myll.Generator
 				string tpl = Format(
 					"{0}template <{1}>",
 					indent,
-					hierWithTpl.TplParams
-						.Select( o => "typename " + o.name )
-						.Join( ", " ) );
+					GenTemplateParameterList( hierWithTpl.TplParams ) );
 
 				targetProto.Add( tpl );
 				targetDecl.Add( tpl );
@@ -1300,9 +1290,7 @@ namespace Myll.Generator
 				target.Add( Format(
 					"{0}template <{1}>",
 					indent,
-					structural.TplParams
-						.Select( t => "typename " + t.name )
-						.Join( ", " ) ) );
+					GenTemplateParameterList( structural.TplParams ) ) );
 			}
 
 			target.Add( Format( "{0}{1} {2};", indent, keyword, structural.name ) );

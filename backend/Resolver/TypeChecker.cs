@@ -20,7 +20,7 @@ namespace Myll.Resolver
 		public TypeChecker( ResolutionResult result, List<Diagnostic> diagnostics )
 		{
 			this.result        = result;
-			this.typeResolver  = new TypeResolver( result );
+			this.typeResolver  = new TypeResolver( result, diagnostics );
 			this.diagnostics   = diagnostics;
 		}
 

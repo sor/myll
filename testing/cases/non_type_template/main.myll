@@ -1,0 +1,19 @@
+module non_type_template;
+import array_checks;
+
+func add<int N>( int x ) -> int {
+	return x + N;
+}
+
+const int twice<int N> = N * 2;
+
+func main() -> int {
+	if( add<5>( 10 ) != 15 )
+		return 1;
+	if( twice<21> != 42 )
+		return 2;
+	if( array_checks::checkStdArray() != 0 )
+		return 3;
+
+	return 0;
+}

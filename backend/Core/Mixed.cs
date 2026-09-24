@@ -127,14 +127,26 @@ namespace Myll.Core
 		public Typespec? typespec;
 		public Expr?     lit;
 
+		public bool IsTypeArgument  => typespec != null;
+		public bool IsValueArgument => lit      != null;
+
 		public string Gen()
 			=> lit?.Gen()
 			?? typespec?.Gen()
 			?? throw new InvalidOperationException( "TplArg has neither literal nor typespec" );
 	}
 
+	public enum TplParamKind
+	{
+		Type,
+		NonType,
+		Unknown,
+	}
+
 	public class TplParam
 	{
-		public string name = null!;
+		public string       name = null!;
+		public TplParamKind kind = TplParamKind.Type;
+		public Typespec?    type;
 	}
 }

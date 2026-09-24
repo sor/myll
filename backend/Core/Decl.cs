@@ -280,6 +280,9 @@ namespace Myll.Core
 	/// </summary>
 	public class TplParamDecl : Decl
 	{
+		public TplParamKind kind = TplParamKind.Type;
+		public Typespec?    type;
+
 		public TplParamDecl()
 		{
 			IsLocal = true;

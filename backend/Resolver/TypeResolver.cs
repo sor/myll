@@ -12,10 +12,12 @@ namespace Myll.Resolver
 	public sealed class TypeResolver
 	{
 		private readonly ResolutionResult result;
+		private readonly List<Diagnostic>? diagnostics;
 
-		public TypeResolver( ResolutionResult result )
+		public TypeResolver( ResolutionResult result, List<Diagnostic>? diagnostics = null )
 		{
-			this.result = result;
+			this.result      = result;
+			this.diagnostics = diagnostics;
 		}
 
 		/// <summary>
@@ -149,6 +151,14 @@ namespace Myll.Resolver
 			if( !result.TryGetResolved( id, out Decl? decl ) )
 				return null;
 
+			if( decl is TplParamDecl tpl ) {
+				if( tpl.kind == TplParamKind.NonType )
+					return tpl.type;
+
+				ReportDiagnostic( id.srcPos, String.Format( "Type template parameter '{0}' cannot be used as a value", tpl.name ) );
+				return null;
+			}
+
 			return ResolveDeclValueType( decl );
 		}
 
@@ -157,7 +167,20 @@ namespace Myll.Resolver
 			if( !result.TryGetResolved( scoped, out Decl? decl ) )
 				return null;
 
+			if( decl is TplParamDecl tpl ) {
+				if( tpl.kind == TplParamKind.NonType )
+					return tpl.type;
+
+				ReportDiagnostic( scoped.srcPos, String.Format( "Type template parameter '{0}' cannot be used as a value", tpl.name ) );
+				return null;
+			}
+
 			return ResolveDeclValueType( decl );
+		}
+
+		private void ReportDiagnostic( SrcPos srcPos, string message )
+		{
+			diagnostics?.Add( new Diagnostic( srcPos, DiagnosticKind.Error, message ) );
 		}
 
 		private Typespec? ResolveUnOp( UnOp unOp )
@@ -322,10 +345,12 @@ namespace Myll.Resolver
 		private Typespec? ResolveDeclValueType( Decl? decl )
 		{
 			return decl switch {
-				VarDecl vd      => vd.type,
-				Func func       => func.retType,
-				AliasDecl alias => alias.type,
-				_               => null,
+				VarDecl vd                => vd.type,
+				Func func                 => func.retType,
+				AliasDecl alias           => alias.type,
+				TplParamDecl tpl
+					when tpl.kind == TplParamKind.NonType => tpl.type,
+				_                         => null,
 			};
 		}
 

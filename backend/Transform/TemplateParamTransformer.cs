@@ -47,6 +47,8 @@ namespace Myll.Transform
 
 				var placeholder = new TplParamDecl {
 					name   = parameter.name,
+					kind   = parameter.kind,
+					type   = parameter.type,
 					srcPos = scope.decl?.srcPos ?? new SrcPos(),
 				};
 
