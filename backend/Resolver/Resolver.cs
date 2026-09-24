@@ -295,20 +295,26 @@ namespace Myll.Resolver
 			ModuleContext                           context,
 			IEnumerable<NameRef<TNode>>             refs,
 			IReadOnlyDictionary<TNode, Decl>        alreadyResolved,
-			Action<TNode, Decl>                     recordResolution )
+			Action<TNode, Decl>                     recordResolution,
+			Action<TNode, Decl?>                    markInvalid )
 			where TNode : Expr
 		{
 			bool progress = false;
 			foreach( NameRef<TNode> r in refs ) {
-				if( alreadyResolved.ContainsKey( r.Node ) )
+				if( alreadyResolved.ContainsKey( r.Node ) || result.IsResolvedOrInvalid( r.Node ) )
 					continue;
 
 				bool callSite = context.FuncCallCallees.Contains( r.Node );
 				Decl? resolved = ResolvePath( r.Segments, r.Scope, module, out _, callSite );
-				if( resolved != null ) {
-					TryResolveVariableTemplate( resolved, r.Node );
+				if( resolved == null )
+					continue;
+
+				if( TryResolveVariableTemplate( resolved, r.Node ) ) {
 					recordResolution( r.Node, resolved );
 					progress = true;
+				}
+				else {
+					markInvalid( r.Node, resolved );
 				}
 			}
 
@@ -323,7 +329,8 @@ namespace Myll.Resolver
 				context.UnresolvedIds.Select(
 					u => new NameRef<IdExpr>( u.Node, u.Scope, new[] { u.Node.idTplArgs } ) ),
 				result.Ids,
-				( node, decl ) => result.Resolve( node, decl ) );
+				( node, decl ) => result.Resolve( node, decl ),
+				( node, decl ) => result.MarkInvalid( node, decl ) );
 		}
 
 		private bool ResolveScopeds( GlobalNamespace module, ModuleContext context )
@@ -334,13 +341,15 @@ namespace Myll.Resolver
 				context.UnresolvedScopeds.Select(
 					u => new NameRef<ScopedExpr>( u.Node, u.Scope, u.Node.idTpls ) ),
 				result.Scopeds,
-				( node, decl ) => result.Resolve( node, decl ) );
+				( node, decl ) => result.Resolve( node, decl ),
+				( node, decl ) => result.MarkInvalid( node, decl ) );
 		}
 
 		/// <summary>
 		/// Performs template argument validation and type substitution for variable templates.
-		/// Emits a diagnostic on arity mismatch and leaves the expression type unset in that
-		/// case; the caller still records the resolution so the error is not re-reported.
+		/// Returns true when the reference is valid and should be recorded as a resolution.
+		/// Returns false when the template arity mismatches; the caller must then mark the
+		/// node invalid rather than recording the resolution, and must not re-process the node.
 		/// </summary>
 		private bool TryResolveVariableTemplate( Decl resolved, Expr expr )
 		{
@@ -2411,24 +2420,24 @@ namespace Myll.Resolver
 					.Select( c => c.Callee )
 					.ToHashSet();
 
-				foreach( UnresolvedId unresolved in context.UnresolvedIds ) {
-					if( result.Ids.ContainsKey( unresolved.Node ) )
-						continue;
+			foreach( UnresolvedId unresolved in context.UnresolvedIds ) {
+				if( result.IsResolvedOrInvalid( unresolved.Node ) )
+					continue;
 
-					if( ambiguousCalls.Contains( unresolved.Node ) || noMatchingCalls.Contains( unresolved.Node ) )
-						continue;
+				if( ambiguousCalls.Contains( unresolved.Node ) || noMatchingCalls.Contains( unresolved.Node ) )
+					continue;
 
 					IdTplArgs[] segments = new[] { unresolved.Node.idTplArgs };
 					bool isCallCallee = callCallees.Contains( unresolved.Node );
 					ReportUnresolvedPath( "identifier", unresolved.Node.srcPos, segments, module, unresolved.Scope, isCallCallee );
 				}
 
-				foreach( UnresolvedScoped unresolved in context.UnresolvedScopeds ) {
-					if( result.Scopeds.ContainsKey( unresolved.Node ) )
-						continue;
+			foreach( UnresolvedScoped unresolved in context.UnresolvedScopeds ) {
+				if( result.IsResolvedOrInvalid( unresolved.Node ) )
+					continue;
 
-					if( ambiguousCalls.Contains( unresolved.Node ) || noMatchingCalls.Contains( unresolved.Node ) )
-						continue;
+				if( ambiguousCalls.Contains( unresolved.Node ) || noMatchingCalls.Contains( unresolved.Node ) )
+					continue;
 
 					bool isCallCallee = callCallees.Contains( unresolved.Node );
 					ReportUnresolvedPath( "identifier", unresolved.Node.srcPos, unresolved.Node.idTpls, module, unresolved.Scope, isCallCallee );

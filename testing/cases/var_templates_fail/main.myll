@@ -1,0 +1,8 @@
+module var_templates_fail;
+
+const T answer<T> = (T)42;
+
+func main() -> int {
+	var int a = answer<int, int>;
+	return 0;
+}

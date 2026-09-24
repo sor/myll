@@ -9,10 +9,17 @@ namespace Myll.Resolver
 	/// </summary>
 	public sealed class ResolutionResult
 	{
-		private readonly Dictionary<IdExpr, Decl>          ids        = new();
-		private readonly Dictionary<TypespecNested, Decl>  types      = new();
-		private readonly Dictionary<ScopedExpr, Decl>      scopeds    = new();
-		private readonly Dictionary<IdExpr, Decl>          members    = new();
+		private readonly Dictionary<IdExpr, Decl>          ids           = new();
+		private readonly Dictionary<TypespecNested, Decl>  types         = new();
+		private readonly Dictionary<ScopedExpr, Decl>      scopeds       = new();
+		private readonly Dictionary<IdExpr, Decl>          members       = new();
+
+		// Nodes whose resolution was attempted but rejected (e.g. wrong template arity).
+		// These are not applied to the AST, but must be skipped on later resolver passes
+		// and in the unresolved-reporting phase so the original diagnostic is not drowned
+		// out by a generic "unresolved identifier" message.
+		private readonly Dictionary<IdExpr, Decl?>         invalidIds      = new();
+		private readonly Dictionary<ScopedExpr, Decl?>     invalidScopeds  = new();
 
 		public IReadOnlyDictionary<IdExpr, Decl>          Ids      => ids;
 		public IReadOnlyDictionary<TypespecNested, Decl>  Types    => types;
@@ -30,6 +37,31 @@ namespace Myll.Resolver
 
 		public void ResolveMember( IdExpr member, Decl decl )
 			=> members[member] = decl;
+
+		public void MarkInvalid( IdExpr id, Decl? attemptedDecl = null )
+			=> invalidIds[id] = attemptedDecl;
+
+		public void MarkInvalid( ScopedExpr scoped, Decl? attemptedDecl = null )
+			=> invalidScopeds[scoped] = attemptedDecl;
+
+		public bool IsInvalid( IdExpr id )
+			=> invalidIds.ContainsKey( id );
+
+		public bool IsInvalid( ScopedExpr scoped )
+			=> invalidScopeds.ContainsKey( scoped );
+
+		public bool IsResolvedOrInvalid( IdExpr id )
+			=> ids.ContainsKey( id ) || invalidIds.ContainsKey( id );
+
+		public bool IsResolvedOrInvalid( ScopedExpr scoped )
+			=> scopeds.ContainsKey( scoped ) || invalidScopeds.ContainsKey( scoped );
+
+		public bool IsResolvedOrInvalid( Expr expr )
+			=> expr switch {
+				IdExpr     id     => IsResolvedOrInvalid( id ),
+				ScopedExpr scoped => IsResolvedOrInvalid( scoped ),
+				_                 => false,
+			};
 
 		public bool TryGetResolved( IdExpr id, out Decl? decl )
 			=> ids.TryGetValue( id, out decl );
