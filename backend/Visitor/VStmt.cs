@@ -185,6 +185,14 @@ namespace Myll
 				.idAccessor()
 				.Select(
 					q => {
+						List<TplParam> localTplParams = VisitTplParams( q.tplParams() );
+						if( localTplParams.Count > 0 ) {
+							Context.Diagnostics.Add( new Diagnostic(
+								srcPos,
+								DiagnosticKind.Error,
+								"Local variable templates are not supported" ) );
+						}
+
 						Expr? init              = q.funcCall() != null
 							? new FuncCallExpr {
 								srcPos     = srcPos,

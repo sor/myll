@@ -14,7 +14,7 @@
   },
   "fixedOutput": [ "source_map" ],
     "depth": {
-    "generateFailing": [ "overload_fail", "typecheck_fail", "bool_context_fail", "decl_fail", "operator_fail", "conversion_fail", "discard_fail", "slicing_fail", "template_arg_count_fail", "template_conversion_fail", "rule_of_n_fail", "initlist_assign_fail", "chain_explicit_return_fail", "default_free_function_fail", "missing_return_fail", "explicit_auto_void_fail", "imported_namespace_unqualified_fail", "comparison_fail", "ptr_arithmetic_fail", "var_templates_fail", "non_type_template_fail" ],
+    "generateFailing": [ "overload_fail", "typecheck_fail", "bool_context_fail", "decl_fail", "operator_fail", "conversion_fail", "discard_fail", "slicing_fail", "template_arg_count_fail", "template_conversion_fail", "rule_of_n_fail", "initlist_assign_fail", "chain_explicit_return_fail", "default_free_function_fail", "missing_return_fail", "explicit_auto_void_fail", "imported_namespace_unqualified_fail", "comparison_fail", "ptr_arithmetic_fail", "var_templates_fail", "non_type_template_fail", "local_var_template_fail" ],
     "generate": [ "cpp_fail", "operator_defaults_fail" ],
     "compile": [ "extern" ],
     "link": [],
