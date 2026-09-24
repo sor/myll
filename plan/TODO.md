@@ -118,6 +118,14 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    reference for `constexpr`, `const`, `noexcept`, and `[[nodiscard]]`. Keep the bindings updated when
    adding new standard-library wrappers.
 
+8. **Target-type-driven template inference** — let the RHS of an assignment or initializer know the
+   type of the LHS so that missing template arguments can be inferred. Primary example:
+   `var f32 f = std::numbers::pi_v;` should expand to `std::numbers::pi_v<f32>`.
+   This requires propagating an expected type through expression resolution or running an inference
+   pass during `TypeChecker.CheckAssignment`. Dependency: resolver currently resolves names before
+   target types are consumed, so the design must decide between front-loading expected types into
+   the resolver or re-resolving template arguments in the type checker.
+
 ## Blocked / needs dependency
 
 (none at the moment)
