@@ -149,8 +149,7 @@ namespace Myll.Generator
 			if( !IsStdSpanType( nested ) )
 				return false;
 
-			Typespec element = nested.idTpls[1].tplArgs[0].typespec;
-			if( element == null
+			if( nested.idTpls[1].tplArgs[0].typespec is not Typespec element
 			 || element.ptrs == null
 			 || element.ptrs.Count != 1
 			 || element.ptrs[0].kind != Pointer.Kind.PtrToAry )
@@ -648,31 +647,21 @@ namespace Myll.Generator
 			                   : "";
 			bool isSpecial = specialTail != "";
 
-			if( isDefault && !isInsideStruct ) {
-				Diagnostics.Add( new Diagnostic(
-					obj.srcPos,
-					DiagnosticKind.Error,
-					String.Format(
-						"[default] is only valid on special member functions; '{0}' is a free function",
-						obj.FullyQualifiedName ) ) );
-				return;
-			}
-
-			string prefix = (obj.IsNodiscard ? "[[nodiscard]] " : "")
-		              + (obj.IsCompileTime ? "constexpr " : "")
-		              + (isStatic          ? "static "    : "")
-		              + (isExternal        ? "extern "    : "")
-		              + (obj.IsVirtual || isAbstract ? "virtual "   : "")
-		              + (isInlined         ? "inline "    : "");
+			string prefix     = (obj.IsNodiscard             ? "[[nodiscard]] " : "")
+			                  + (obj.IsCompileTime           ? "constexpr "     : "")
+			                  + (isStatic                    ? "static "        : "")
+			                  + (isExternal                  ? "extern "        : "")
+			                  + (obj.IsVirtual || isAbstract ? "virtual "       : "")
+			                  + (isInlined                   ? "inline "        : "");
 			string declSuffix = (obj.IsConstMethod ? " const"    : "")
-		              + (obj.IsNoexcept  ? " noexcept" : "")
-		              + (obj.IsOverride    ? " override" : "");
-			string implSuffix = (obj.IsConstMethod ? " const" : "")
-		              + (obj.IsNoexcept  ? " noexcept" : "");
+			                  + (obj.IsNoexcept    ? " noexcept" : "")
+			                  + (obj.IsOverride    ? " override" : "");
+			string implSuffix = (obj.IsConstMethod ? " const"    : "")
+			                  + (obj.IsNoexcept    ? " noexcept" : "");
 
 			bool isMainEntry = IsEntryPointForModule( obj );
-			string argvType = "";
-			string argName  = "";
+			string argvType  = "";
+			string argName   = "";
 			string localType = "";
 			bool isSpanMain  = isMainEntry
 			                && TryGetSpanMainInfo( obj, out argvType, out argName, out localType );

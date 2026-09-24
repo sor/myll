@@ -87,6 +87,7 @@ namespace Myll.Resolver
 				new ChainTransformer(),
 				new DiscardTransformer(),
 				new RuleOfTransformer(),
+				new SpecialMemberAttributeValidator(),
 				new ElseOnLoopTransformer(),
 				new BreakContinueTransformer(),
 				new ConfiguredAliasShadowingTransformer(),

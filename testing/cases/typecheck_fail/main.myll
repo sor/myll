@@ -81,7 +81,7 @@ func takeSliceBase( SliceBase b ) -> int => b.doSomething();
 
 func test_object_slicing() -> int {
 	var SliceDerived d;
-	return takeSliceBase( d ); // FAIL: Slicing is not allowed
+	return takeSliceBase( d ); // FAIL 2
 }
 
 func returns_auto_void() -> auto { } // FAIL: explicit '-> auto' but has no value-returning statement

@@ -1,5 +1,0 @@
-[default] func foo() -> void { }
-
-func main() -> int {
-	return 0;
-}

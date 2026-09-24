@@ -2,7 +2,9 @@
 
 [inline, hide] var int inlineHiddenGlobal = 2; // FAIL: [inline] and [hide] are mutually exclusive
 
-[extern] var const int externConstGlobal = 3; // FAIL: [extern] cannot be used with const
+[extern] var const int externConstGlobal = 3; // FAIL 2
+
+[default] func freeDefault() -> void { } // FAIL: [default] is only valid on special member functions
 
 struct DeclAttrTest {
 [pub]:
