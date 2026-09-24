@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using Myll;
 using Xunit;
 using Xunit.Abstractions;
@@ -95,6 +96,7 @@ namespace Myll.Tests
 						myllResult.ExitCode != 0 && !myllResult.TimedOut,
 						string.Format( "Expected Myll generation to fail, but it returned exit code {0}{1}.",
 							myllResult.ExitCode, myllResult.TimedOut ? " after timing out" : "" ) );
+					AssertFailingDiagnostics( caseDir, myllResult );
 					return;
 				}
 
@@ -130,6 +132,95 @@ namespace Myll.Tests
 				CleanupBuildArtifacts( generatedDir );
 				if( cleanupGeneratedDir )
 					TryDeleteDirectory( generatedDir );
+			}
+		}
+
+		private readonly struct FailMarker
+		{
+			public readonly string FileName;
+			public readonly int    Line;
+			public readonly int?   ExpectedCount;
+			public readonly string? Substring;
+
+			public FailMarker( string fileName, int line, int? expectedCount, string? substring )
+			{
+				FileName      = fileName;
+				Line          = line;
+				ExpectedCount = expectedCount;
+				Substring     = substring;
+			}
+		}
+
+		private static readonly Regex FailMarkerRegex = new(
+			@"//\s*FAIL(?:\s+(?<count>\d+))?(?:\s*:\s*(?<text>.*))?\s*$",
+			RegexOptions.Compiled | RegexOptions.IgnoreCase );
+
+		private static readonly Regex DiagnosticRegex = new(
+			@"\[(?<path>[^\]\s]+\.(?:myll|decl\.myll)):(?<line>\d+):(?<col>\d+)\]\s+(?<kind>error|warning):\s*(?<message>.*)",
+			RegexOptions.Compiled | RegexOptions.IgnoreCase );
+
+		private void AssertFailingDiagnostics( string caseDir, ProcessResult result )
+		{
+			List<FailMarker> markers = new();
+			foreach( string file in Directory.GetFiles( caseDir, "*.myll" ) ) {
+				string fileName = Path.GetFileName( file );
+				string[] lines  = File.ReadAllLines( file );
+				for( int i = 0; i < lines.Length; i++ ) {
+					Match m = FailMarkerRegex.Match( lines[i] );
+					if( !m.Success )
+						continue;
+
+					int? count = null;
+					if( m.Groups["count"].Success )
+						count = int.Parse( m.Groups["count"].Value );
+
+					string? substring = m.Groups["text"].Success
+						? m.Groups["text"].Value.Trim()
+						: null;
+
+					markers.Add( new FailMarker( fileName, i + 1, count, substring ) );
+				}
+			}
+
+			// If the case has no markers, fall back to the legacy behaviour (exit code only).
+			if( markers.Count == 0 )
+				return;
+
+			string combinedOutput = ( result.StdOut ?? "" ) + Environment.NewLine + ( result.StdErr ?? "" );
+			List<(string FileName, int Line, string Message)> diagnostics = DiagnosticRegex
+				.Matches( combinedOutput )
+				.Select( m => (
+					FileName: Path.GetFileName( m.Groups["path"].Value ),
+					Line: int.Parse( m.Groups["line"].Value ),
+					Message: m.Groups["message"].Value.Trim() ) )
+				.ToList();
+
+			foreach( FailMarker marker in markers ) {
+				List<string> matches = diagnostics
+					.Where( d => d.FileName == marker.FileName
+					          && d.Line == marker.Line
+					          && ( marker.Substring == null
+					            || d.Message.Contains( marker.Substring, StringComparison.OrdinalIgnoreCase ) ) )
+					.Select( d => d.Message )
+					.ToList();
+
+				if( matches.Count == 0 ) {
+					Assert.Fail( string.Format(
+						"Expected a diagnostic on {0}:{1} (marked with // FAIL{2}), but none was reported.",
+						marker.FileName,
+						marker.Line,
+						marker.Substring != null ? ": " + marker.Substring : "" ) );
+				}
+
+				if( marker.ExpectedCount.HasValue && matches.Count != marker.ExpectedCount.Value ) {
+					Assert.Fail( string.Format(
+						"Expected {0} diagnostic(s) on {1}:{2} (marked with // FAIL {3}), but found {4}.",
+						marker.ExpectedCount.Value,
+						marker.FileName,
+						marker.Line,
+						marker.ExpectedCount.Value,
+						matches.Count ) );
+				}
 			}
 		}
 

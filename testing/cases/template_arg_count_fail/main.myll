@@ -5,9 +5,17 @@ func max<T>(T a, T b) -> T
 	return a > b ? a : b;
 }
 
+class Box<T> {
+	field T value;
+}
+
 func main() -> int
 {
-	// Too many explicit template arguments.
-	max<int, float>( 1, 2 );
+	// Too many explicit template arguments on a function template.
+	max<int, float>( 1, 2 ); // FAIL: Template argument count mismatch
+
+	// Too many explicit template arguments on a class template.
+	var Box<int, float> b = Box<int, float>(); // FAIL: Template argument count mismatch
+
 	return 0;
 }
