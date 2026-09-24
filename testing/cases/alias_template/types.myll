@@ -1,0 +1,16 @@
+module alias_types;
+import std_vector;
+import alias_lib;
+
+namespace alias_types {
+	struct Pair<T, U> {
+	[pub]:
+		field T first;
+		field U second;
+	}
+
+	alias P<T, U> = Pair<T, U>;
+	alias IntPair<U> = Pair<int, U>;
+	alias VecAlias<T> = alias_lib::Vec<T>;
+	alias IntPtr = int*;
+}

@@ -227,9 +227,12 @@ namespace Myll.Core
 		public override void AddToGen( HierarchicalGen gen ) { gen.AddUsing( this ); }
 	}
 
-	public class AliasDecl : Decl
+	public class AliasDecl : Decl, ITemplatedDecl
 	{
-		public Typespec type = null!;
+		public Typespec       type     = null!;
+		public List<TplParam> TplParams { get; init; } = new();
+		public Scope?         aliasScope;
+		public Scope?         TemplateParamScope => aliasScope;
 
 		// Set by the resolver when the aliased type is a namespace.
 		public bool IsNamespaceAlias { get; set; }

@@ -1,0 +1,8 @@
+module alias_lib;
+import std_vector;
+import std_array;
+
+namespace alias_lib {
+	alias Vec<T> = std::vector<T>;
+	alias FixedArray<T, int N> = std::array<T, N>;
+}

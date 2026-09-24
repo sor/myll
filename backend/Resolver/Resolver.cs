@@ -1396,30 +1396,34 @@ namespace Myll.Resolver
 		private bool ResolveAliases( GlobalNamespace module, ModuleContext context )
 		{
 			bool progress = false;
-			foreach( UnresolvedAlias unresolved in context.UnresolvedAliases ) {
-				if( unresolved.Node.type is not TypespecNested path )
-					continue;
+		foreach( UnresolvedAlias unresolved in context.UnresolvedAliases ) {
+			if( unresolved.Node.type is not TypespecNested path )
+				continue;
 
-				Decl? resolved = ResolvePath( path.idTpls, unresolved.Scope, module, out _, callSite: false );
-				if( resolved == null )
-					continue;
+			// The alias body is resolved in the alias's own scope so that template
+			// parameters are visible; the alias name itself lives in the parent scope.
+			Scope aliasScope = unresolved.Scope;
+			Scope parentScope = aliasScope.parent!;
 
-				Scope scope = unresolved.Scope;
-				bool isNamespaceTarget = resolved is Namespace;
-				if( unresolved.Node.IsNamespaceAlias != isNamespaceTarget ) {
-					unresolved.Node.IsNamespaceAlias = isNamespaceTarget;
-					progress = true;
-				}
+			Decl? resolved = ResolvePath( path.idTpls, aliasScope, module, out _, callSite: false );
+			if( resolved == null )
+				continue;
 
-			if( isNamespaceTarget && !scope.importedScopes.Contains( ( (Namespace)resolved ).scope ) ) {
-				scope.importedScopes.Add( ( (Namespace)resolved ).scope );
+			bool isNamespaceTarget = resolved is Namespace;
+			if( unresolved.Node.IsNamespaceAlias != isNamespaceTarget ) {
+				unresolved.Node.IsNamespaceAlias = isNamespaceTarget;
+				progress = true;
+			}
+
+			if( isNamespaceTarget && !parentScope.importedScopes.Contains( ( (Namespace)resolved ).scope ) ) {
+				parentScope.importedScopes.Add( ( (Namespace)resolved ).scope );
 				progress = true;
 			}
 
 			// Non-namespace aliases must be registered under their AliasDecl so that uses
 			// of the alias name keep the concrete template arguments stored on the alias.
 			Decl target = isNamespaceTarget ? resolved : unresolved.Node;
-			progress |= AddImportedName( scope, unresolved.Node.name, target );
+			progress |= AddImportedName( parentScope, unresolved.Node.name, target );
 
 			if( !isNamespaceTarget
 			 && unresolved.Node.type is TypespecNested aliasPath
@@ -1427,7 +1431,7 @@ namespace Myll.Resolver
 				aliasPath.resolvedDecl = resolved;
 				progress = true;
 			}
-			}
+		}
 
 			return progress;
 		}
@@ -1770,17 +1774,20 @@ namespace Myll.Resolver
 			return null;
 		}
 
-		private static Typespec UnwrapAliasWithIndirection(
+		private Typespec UnwrapAliasWithIndirection(
 			Typespec           type,
 			HashSet<AliasDecl>? visited = null )
 		{
 			visited ??= new HashSet<AliasDecl>();
 
-			if( type is not TypespecNested { resolvedDecl: AliasDecl alias }
+			if( type is not TypespecNested useSite
+			 || ConversionRules.GetResolvedDecl( useSite, result ) is not AliasDecl alias
 			 || !visited.Add( alias ) )
 				return type;
 
-			Typespec expanded = ConversionRules.CloneTypespecBase( alias.type );
+			Typespec expanded = ConversionRules.TryExpandAliasTemplate( useSite, alias, result, out Typespec aliasExpanded )
+				? aliasExpanded
+				: ConversionRules.CloneTypespecBase( alias.type );
 
 			// Preserve the outer qualifiers and pointer/reference/smart-pointer wrappers
 			// from the use site unless the alias itself already supplies them.
@@ -1947,7 +1954,7 @@ namespace Myll.Resolver
 			if( receiverType == null )
 				return null;
 
-			Typespec baseType = StripReferenceAndPointerWrappers( ConversionRules.UnwrapAlias( receiverType ) );
+			Typespec baseType = StripReferenceAndPointerWrappers( ConversionRules.UnwrapAlias( receiverType, result ) );
 			if( baseType is TypespecNested nested ) {
 				List<TplArg>? direct = TryExtractOwnerArgsFromTypePath( nested, ownerChain );
 				if( direct != null )

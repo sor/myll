@@ -116,8 +116,9 @@ namespace Myll.Core
 
 	public class AliasStmt : Stmt
 	{
-		public Typespec type = null!;
-		public string   name = null!;
+		public Typespec       type     = null!;
+		public string         name     = null!;
+		public List<TplParam> TplParams { get; init; } = new();
 
 		public override SourceLines Gen( int level )
 		{

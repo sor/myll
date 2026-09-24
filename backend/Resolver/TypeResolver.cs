@@ -370,8 +370,8 @@ namespace Myll.Resolver
 				if( d1 is Structural s1 )
 					return ClassValueType( s1, new[] { id.idTplArgs } );
 
-				if( d1 is AliasDecl alias1
-				 && ConversionRules.UnwrapAlias( alias1.type ) is TypespecNested aliasNested1 ) {
+			if( d1 is AliasDecl alias1
+			 && ConversionRules.UnwrapAlias( alias1.type, result ) is TypespecNested aliasNested1 ) {
 					return ClassValueType( (Structural)aliasNested1.resolvedDecl!, aliasNested1.idTpls );
 				}
 			}
@@ -385,8 +385,8 @@ namespace Myll.Resolver
 				if( d2 is Structural s2 )
 					return ClassValueType( s2, scoped.idTpls );
 
-				if( d2 is AliasDecl alias2
-				 && ConversionRules.UnwrapAlias( alias2.type ) is TypespecNested aliasNested2 ) {
+			if( d2 is AliasDecl alias2
+			 && ConversionRules.UnwrapAlias( alias2.type, result ) is TypespecNested aliasNested2 ) {
 					return ClassValueType( (Structural)aliasNested2.resolvedDecl!, aliasNested2.idTpls );
 				}
 			}

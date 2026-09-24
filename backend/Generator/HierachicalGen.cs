@@ -428,27 +428,34 @@ namespace Myll.Generator
 				namespaceUsingNames.Add( obj.name );
 		}
 
-		public void AddAlias( AliasDecl obj )
-		{
-			string indent = IndentDecl;
+	public void AddAlias( AliasDecl obj )
+	{
+		string indent = IndentDecl;
 
-			string targetName;
-			if( obj.IsNamespaceAlias ) {
-				targetName = obj.type.Gen();
-				namespaceAliasTargetNames.Add( targetName );
-			}
-			else {
-				targetName = obj.type.Gen();
-			}
-
-			string ret = Format(
-				AliasFormat[obj.IsNamespaceAlias ? 1 : 0],
-				indent,
-				obj.name,
-				targetName );
-
-			protoEarly.Target( obj.access ).Add( ret );
+		string targetName;
+		if( obj.IsNamespaceAlias ) {
+			targetName = obj.type.Gen();
+			namespaceAliasTargetNames.Add( targetName );
 		}
+		else {
+			targetName = obj.type.Gen();
+		}
+
+		var target = protoEarly.Target( obj.access );
+
+		if( obj.TplParams.Count > 0 ) {
+			target.Add( Format(
+				"{0}template <{1}>",
+				indent,
+				GenTemplateParameterList( obj.TplParams ) ) );
+		}
+
+		target.Add( Format(
+			AliasFormat[obj.IsNamespaceAlias ? 1 : 0],
+			indent,
+			obj.name,
+			targetName ) );
+	}
 
 		private string GenTemplateParameter( TplParam p )
 			=> p.kind == TplParamKind.NonType && p.type != null

@@ -153,18 +153,26 @@ namespace Myll
 			return ret;
 		}
 
-		public override AliasStmt VisitDefAlias( DefAliasContext c )
-		{
-			// TODO: tplParams, multi-decl
-			List<TplParam> useMe = VisitTplParams( c.tplParams() );
+	public override AliasStmt VisitDefAlias( DefAliasContext c )
+	{
+		// TODO: multi-decl
+		List<TplParam> tplParams = VisitTplParams( c.tplParams() );
 
-			// Local aliases are emitted as C++ type aliases.
-			// Namespace aliases at function scope are not supported yet.
-			AliasStmt ret = new() {
-				srcPos = c.ToSrcPos(),
-				name   = c.id().GetText(),
-				type   = VisitTypespec( c.typespec() ),
-			};
+		// Local aliases are emitted as C++ type aliases.
+		// Namespace aliases at function scope are not supported yet.
+		AliasStmt ret = new() {
+			srcPos    = c.ToSrcPos(),
+			name      = c.id().GetText(),
+			type      = VisitTypespec( c.typespec() ),
+			TplParams = tplParams,
+		};
+
+		if( tplParams.Count > 0 ) {
+			Context.Diagnostics.Add( new Diagnostic(
+				ret.srcPos,
+				DiagnosticKind.Error,
+				"Local alias templates are not supported" ) );
+		}
 			// TODO: local scope
 			//AddChild( ret );
 			return ret;

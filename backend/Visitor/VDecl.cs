@@ -433,25 +433,86 @@ namespace Myll
 			return ret;
 		}
 
-		public override AliasDecl VisitDefAlias( DefAliasContext c )
-		{
-			// TODO: tplParams, multi-decl
-			List<TplParam> useMe = VisitTplParams( c.tplParams() );
+	public override AliasDecl VisitDefAlias( DefAliasContext c )
+	{
+		// TODO: multi-decl
+		List<TplParam> tplParams = VisitTplParams( c.tplParams() );
 
-			AliasDecl ret = new() {
-				srcPos = c.ToSrcPos(),
-				name   = c.id().GetText(),
-				type   = VisitTypespec( c.typespec() ),
-			};
+		// Alias templates need their own scope so that template parameter
+		// placeholders are visible while resolving the aliased type, while the
+		// alias name itself is registered in the enclosing scope.
+		PushScope();
+		Scope aliasScope = scopeStack.Peek();
 
-			Scope scope = scopeStack.Peek();
-			Context.UnresolvedAliases.Add( new UnresolvedAlias( ret, scope ) );
-			if( ret.type is TypespecNested nested )
-				Context.UnresolvedTypes.RemoveAll( u => u.Node == nested );
+		AliasDecl ret = new() {
+			srcPos     = c.ToSrcPos(),
+			name       = c.id().GetText(),
+			type       = VisitTypespec( c.typespec() ),
+			TplParams  = tplParams,
+			aliasScope = aliasScope,
+		};
 
-			AddChild( ret );
-			return ret;
+		List<TypespecNested> nonTypePlaceholders = NormalizeAliasTypeTemplateArgs( ret.type, tplParams );
+		foreach( TypespecNested placeholder in nonTypePlaceholders )
+			Context.UnresolvedTypes.RemoveAll( u => u.Node == placeholder );
+
+		Context.UnresolvedAliases.Add( new UnresolvedAlias( ret, aliasScope ) );
+		if( ret.type is TypespecNested nested )
+			Context.UnresolvedTypes.Add( new UnresolvedType( nested, aliasScope ) );
+
+		PopScope();
+		AddChild( ret );
+		return ret;
+	}
+
+	private static List<TypespecNested> NormalizeAliasTypeTemplateArgs( Typespec type, List<TplParam> tplParams )
+	{
+		List<TypespecNested> placeholders = new();
+
+		HashSet<string> nonTypeNames = tplParams
+			.Where( p => p.kind == TplParamKind.NonType )
+			.Select( p => p.name )
+			.ToHashSet( StringComparer.Ordinal );
+		if( nonTypeNames.Count == 0 )
+			return placeholders;
+
+		Queue<Typespec> work = new();
+		work.Enqueue( type );
+		while( work.Count > 0 ) {
+			Typespec current = work.Dequeue();
+			if( current is not TypespecNested nested )
+				continue;
+
+			foreach( IdTplArgs segment in nested.idTpls ) {
+				if( segment.tplArgs == null )
+					continue;
+				for( int i = 0; i < segment.tplArgs.Count; i++ ) {
+					TplArg arg = segment.tplArgs[i];
+					if( arg.typespec != null )
+						work.Enqueue( arg.typespec );
+
+					if( arg.typespec is not TypespecNested placeholder
+					 || placeholder.idTpls.Count != 1 )
+						continue;
+					IdTplArgs placeholderSegment = placeholder.idTpls[0];
+					if( placeholderSegment.tplArgs == null || placeholderSegment.tplArgs.Count != 0 )
+						continue;
+					if( !nonTypeNames.Contains( placeholderSegment.id ) )
+						continue;
+
+					placeholders.Add( placeholder );
+					segment.tplArgs[i] = new TplArg {
+						lit = new IdExpr {
+							idTplArgs = new IdTplArgs { id = placeholderSegment.id },
+							srcPos    = placeholder.srcPos,
+						},
+					};
+				}
+			}
 		}
+
+		return placeholders;
+	}
 
 		// TODO
 		public override Decl VisitDefAspect( DefAspectContext c )

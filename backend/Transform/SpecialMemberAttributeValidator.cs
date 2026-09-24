@@ -16,30 +16,45 @@ namespace Myll.Transform
 			ValidateDecl( ctx.Module.Module, Diagnostics );
 		}
 
-		private static void ValidateDecl( Decl decl, List<Diagnostic> diagnostics )
-		{
-			if( decl is Func func )
-				ValidateFunc( func, diagnostics );
+	private static void ValidateDecl( Decl decl, List<Diagnostic> diagnostics )
+	{
+		if( decl is Func func )
+			ValidateFunc( func, diagnostics );
+		else if( decl is AliasDecl alias )
+			ValidateAlias( alias, diagnostics );
 
-			if( decl is Hierarchical h ) {
-				foreach( Decl child in h.children )
-					ValidateDecl( child, diagnostics );
-			}
+		if( decl is Hierarchical h ) {
+			foreach( Decl child in h.children )
+				ValidateDecl( child, diagnostics );
 		}
+	}
 
-		private static void ValidateFunc( Func func, List<Diagnostic> diagnostics )
-		{
-			// [default] is only meaningful on constructors, destructors, and operator
-			// special members. Free functions (including namespace-level ones) cannot
-			// be defaulted.
-			if( func.IsDefault && !func.IsInStruct ) {
-				diagnostics.Add( new Diagnostic(
-					func.srcPos,
-					DiagnosticKind.Error,
-					string.Format(
-						"[default] is only valid on special member functions; '{0}' is a free function",
-						func.FullyQualifiedName ) ) );
-			}
+	private static void ValidateFunc( Func func, List<Diagnostic> diagnostics )
+	{
+		// [default] is only meaningful on constructors, destructors, and operator
+		// special members. Free functions (including namespace-level ones) cannot
+		// be defaulted.
+		if( func.IsDefault && !func.IsInStruct ) {
+			diagnostics.Add( new Diagnostic(
+				func.srcPos,
+				DiagnosticKind.Error,
+				string.Format(
+					"[default] is only valid on special member functions; '{0}' is a free function",
+					func.FullyQualifiedName ) ) );
 		}
+	}
+
+	private static void ValidateAlias( AliasDecl alias, List<Diagnostic> diagnostics )
+	{
+		// Alias templates are type aliases; they cannot rename namespaces.
+		if( alias.TplParams.Count > 0 && alias.IsNamespaceAlias ) {
+			diagnostics.Add( new Diagnostic(
+				alias.srcPos,
+				DiagnosticKind.Error,
+				string.Format(
+					"Namespace alias '{0}' cannot have template parameters",
+					alias.name ) ) );
+		}
+	}
 	}
 }

@@ -40,8 +40,8 @@ namespace Myll.Resolver
 			if( source == null || target == null )
 				return ConversionRank.None;
 
-			source = UnwrapAlias( source );
-			target = UnwrapAlias( target );
+		source = UnwrapAlias( source, result );
+		target = UnwrapAlias( target, result );
 
 			// Template parameters are opaque type variables. A value of a template
 			// parameter type can bind to any target and vice versa, but this is weaker
@@ -192,7 +192,7 @@ namespace Myll.Resolver
 		/// Resolves a nested type through the AST field if already applied, otherwise falls back
 		/// to the identity-based map held by the current resolution pass.
 		/// </summary>
-		private static Decl? GetResolvedDecl( TypespecNested nested, ResolutionResult? result )
+		public static Decl? GetResolvedDecl( TypespecNested nested, ResolutionResult? result )
 		{
 			if( nested.resolvedDecl != null )
 				return nested.resolvedDecl;
@@ -772,16 +772,128 @@ namespace Myll.Resolver
 			return true;
 		}
 
-		public static Typespec UnwrapAlias( Typespec type )
+		public static Typespec UnwrapAlias( Typespec type, ResolutionResult? result = null )
 		{
 			HashSet<AliasDecl> visited = new();
-			while( type is TypespecNested { resolvedDecl: AliasDecl alias }
+			while( type is TypespecNested useSite
+			    && GetResolvedDecl( useSite, result ) is AliasDecl alias
 			    && visited.Add( alias ) ) {
-				type = alias.type;
+				if( TryExpandAliasTemplate( useSite, alias, result, out Typespec expanded ) ) {
+					type = expanded;
+					continue;
+				}
+
+				type = CloneTypespecBase( alias.type );
 			}
 
 			return type;
 		}
+
+		/// <summary>
+		/// Expands an alias-template use like <c>Vec&lt;int&gt;</c> into the aliased type
+		/// with template parameters substituted. Returns false for non-template aliases
+		/// or for dependent uses where no arguments are supplied.
+		/// </summary>
+		public static bool TryExpandAliasTemplate(
+			TypespecNested    useSite,
+			AliasDecl         alias,
+			ResolutionResult? result,
+			out Typespec      expanded )
+		{
+			expanded = useSite;
+
+			if( alias.TplParams.Count == 0 )
+				return false;
+
+			IReadOnlyList<TplArg>? providedArgs = useSite.idTpls.LastOrDefault()?.tplArgs;
+			if( providedArgs == null || providedArgs.Count == 0 )
+				return false;
+
+			Dictionary<string, TplArg> paramMap = new( StringComparer.Ordinal );
+			int limit = Math.Min( alias.TplParams.Count, providedArgs.Count );
+			for( int i = 0; i < limit; i++ )
+				paramMap[alias.TplParams[i].name] = providedArgs[i];
+
+			expanded = SubstituteAliasParams( CloneTypespecDeep( alias.type ), paramMap, result );
+			return true;
+		}
+
+		private static Typespec SubstituteAliasParams(
+			Typespec                     type,
+			Dictionary<string, TplArg>   paramMap,
+			ResolutionResult?            result )
+		{
+			if( type is TypespecNested placeholder
+			 && GetResolvedDecl( placeholder, result ) is TplParamDecl tp
+			 && paramMap.TryGetValue( tp.name, out TplArg? replacement ) ) {
+				if( replacement.typespec != null ) {
+					Typespec ret = CloneTypespecDeep( replacement.typespec );
+					ret.qual = CombineQualifiers( ret.qual, placeholder.qual );
+					if( placeholder.ptrs != null && placeholder.ptrs.Count > 0 ) {
+						ret.ptrs = ( ret.ptrs ?? new List<Pointer>() )
+							.Concat( placeholder.ptrs.Select( p => new Pointer { kind = p.kind, qual = p.qual, expr = p.expr } ) )
+							.ToList();
+					}
+					return ret;
+				}
+
+				return type;
+			}
+
+			if( type is not TypespecNested nested )
+				return type;
+
+			foreach( IdTplArgs segment in nested.idTpls ) {
+				if( segment.tplArgs == null )
+					continue;
+				for( int i = 0; i < segment.tplArgs.Count; i++ ) {
+					TplArg arg = segment.tplArgs[i];
+					if( arg.typespec != null ) {
+						arg.typespec = SubstituteAliasParams( arg.typespec, paramMap, result );
+					}
+					else if( arg.lit is IdExpr id
+					      && GetResolvedDecl( id, result ) is TplParamDecl litTp
+					      && paramMap.TryGetValue( litTp.name, out TplArg? litReplacement ) ) {
+						segment.tplArgs[i] = new TplArg {
+							typespec = litReplacement.typespec,
+							lit      = litReplacement.lit,
+						};
+					}
+				}
+			}
+
+			return type;
+		}
+
+		private static Decl? GetResolvedDecl( IdExpr id, ResolutionResult? result )
+		{
+			if( id.resolvedDecl != null )
+				return id.resolvedDecl;
+			if( result != null && result.TryGetResolved( id, out Decl? decl ) )
+				return decl;
+			return null;
+		}
+
+		private static Typespec CloneTypespecDeep( Typespec source )
+		{
+			Typespec ret = CloneTypespecBase( source );
+			if( ret is TypespecNested rn && source is TypespecNested sn ) {
+			rn.idTpls = sn.idTpls.Select( it => new IdTplArgs {
+				id      = it.id,
+				tplArgs = it.tplArgs?.Select( CloneTplArgDeep ).ToList() ?? new List<TplArg>(),
+			} ).ToList();
+			}
+			return ret;
+		}
+
+		private static TplArg CloneTplArgDeep( TplArg source )
+			=> new() {
+				typespec = source.typespec == null ? null : CloneTypespecDeep( source.typespec ),
+				lit      = source.lit,
+			};
+
+		private static Qualifier CombineQualifiers( Qualifier a, Qualifier b )
+			=> a == Qualifier.None ? b : a;
 
 		/// <summary>
 		/// Allows implicit conversions along the decay chain T[N] -> T[*] -> T*.

@@ -1,0 +1,24 @@
+// This case only contains resolution/validation-time failures for alias templates.
+// Local-scope alias templates are tested separately in local_alias_template_fail,
+// because the visitor rejects them early and that would abort the whole compile
+// before the diagnostics below could be reported.
+
+import std_vector;
+import std_array;
+
+namespace fail {
+	alias Vec<T> = std::vector<T>;
+	alias FixedArray<T, int N> = std::array<T, N>;
+}
+
+func test_type_arg_for_type_param() -> void {
+	var fail::Vec<42> a; // FAIL: Template argument kind mismatch
+}
+
+func test_value_arg_for_non_type_param() -> void {
+	var fail::FixedArray<float, int> b; // FAIL: Template argument kind mismatch
+}
+
+func main() -> int {
+	return 0;
+}
