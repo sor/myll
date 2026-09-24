@@ -1,0 +1,288 @@
+#include "dyn_array_test.hpp"
+Point::Point()
+{
+}
+Point::Point(int x_, int y_)
+{
+    x = x_;
+    y = y_;
+}
+int Test::checkBasic()
+{
+    Myll::DynArray<int> arr{};
+    arr.pushBack( 10 ).pushBack( 20 ).pushBack( 30 );
+    if( arr.size() != 3 ) {
+        return 1;
+    }
+    if( arr.isEmpty() ) {
+        return 2;
+    }
+    if( arr.at( 0 ) != 10 ) {
+        return 3;
+    }
+    if( arr.at( 1 ) != 20 ) {
+        return 4;
+    }
+    if( arr.at( 2 ) != 30 ) {
+        return 5;
+    }
+    arr.at( 1 ) = 99;
+    if( arr.at( 1 ) != 99 ) {
+        return 6;
+    }
+    if( arr[0] != 10 ) {
+        return 7;
+    }
+    if( arr[2] != 30 ) {
+        return 8;
+    }
+    return 0;
+}
+int Test::checkGrowth()
+{
+    Myll::DynArray<int> arr{};
+    const int n = 100;
+    int i = 0;
+    while( i < n ) {
+        arr.pushBack( i );
+        ++i;
+    }
+    if( arr.size() != n ) {
+        return 1;
+    }
+    i = 0;
+    while( i < n ) {
+        if( arr.at( i ) != i ) {
+            return 2;
+        }
+        ++i;
+    }
+    return 0;
+}
+int Test::checkStack()
+{
+    Myll::DynArray<int> stack{};
+    stack.pushBack( 1 ).pushBack( 2 ).pushBack( 3 );
+    if( stack.top() != 3 ) {
+        return 1;
+    }
+    stack.popBack();
+    if( stack.back() != 2 ) {
+        return 2;
+    }
+    stack.clear();
+    if( !stack.isEmpty() ) {
+        return 3;
+    }
+    return 0;
+}
+int Test::checkStruct()
+{
+    Myll::DynArray<Point> arr{};
+    arr.pushBack( Point( 1, 2 ) ).pushBack( Point( 3, 4 ) );
+    if( arr.at( 0 ).x != 1 ) {
+        return 1;
+    }
+    if( arr.at( 1 ).y != 4 ) {
+        return 2;
+    }
+    arr[0].x = 10;
+    if( arr[0].x != 10 ) {
+        return 3;
+    }
+    return 0;
+}
+int Test::checkIterator()
+{
+    Myll::DynArray<int> arr{};
+    arr.pushBack( 1 ).pushBack( 2 ).pushBack( 3 ).pushBack( 4 );
+    int sum = 0;
+    Myll::DynArray<int>::Iterator it = arr.begin();
+    while( !it.equals( arr.end() ) ) {
+        sum += it.value();
+        it.next();
+    }
+    if( sum != 10 ) {
+        return 1;
+    }
+    Myll::DynArray<int>::Iterator jt = arr.begin();
+    while( jt != arr.end() ) {
+        sum += *jt;
+        ++jt;
+    }
+    if( sum != 20 ) {
+        return 2;
+    }
+    return 0;
+}
+int Test::checkShrink()
+{
+    Myll::DynArray<int> arr{};
+    arr.pushBack( 1 ).pushBack( 2 ).pushBack( 3 );
+    arr.shrinkToFit();
+    if( arr.size() != 3 ) {
+        return 1;
+    }
+    if( arr.at( 2 ) != 3 ) {
+        return 2;
+    }
+    arr.clear();
+    arr.shrinkToFit();
+    if( !arr.isEmpty() ) {
+        return 3;
+    }
+    return 0;
+}
+int Test::checkAlgorithms()
+{
+    Myll::DynArray<int> arr{};
+    arr.pushBack( 3 ).pushBack( 1 ).pushBack( 4 ).pushBack( 1 ).pushBack( 5 ).pushBack( 9 ).pushBack( 2 ).pushBack( 6 );
+    arr.sort();
+    if( arr.at( 0 ) != 1 ) {
+        return 11;
+    }
+    if( arr.at( 1 ) != 1 ) {
+        return 12;
+    }
+    if( arr.at( 2 ) != 2 ) {
+        return 13;
+    }
+    if( arr.at( 3 ) != 3 ) {
+        return 14;
+    }
+    if( arr.at( 4 ) != 4 ) {
+        return 15;
+    }
+    if( arr.at( 5 ) != 5 ) {
+        return 16;
+    }
+    if( arr.at( 6 ) != 6 ) {
+        return 17;
+    }
+    if( arr.at( 7 ) != 9 ) {
+        return 18;
+    }
+    arr.reverse();
+    if( arr.at( 0 ) != 9 ) {
+        return 21;
+    }
+    if( arr.at( 7 ) != 1 ) {
+        return 22;
+    }
+    Myll::DynArray<int>::Iterator it = arr.find( 5 );
+    if( it == arr.end() ) {
+        return 23;
+    }
+    if( *it != 5 ) {
+        return 24;
+    }
+    Myll::DynArray<int>::Iterator missing = arr.find( 42 );
+    if( missing != arr.end() ) {
+        return 25;
+    }
+    if( arr.count( 1 ) != 2 ) {
+        return 26;
+    }
+    Myll::DynArray<int> sorted{};
+    sorted.pushBack( 10 ).pushBack( 20 ).pushBack( 30 ).pushBack( 40 );
+    if( sorted.at( 2 ) != 30 ) {
+        return 27;
+    }
+    if( !sorted.binarySearch( 30 ) ) {
+        return 28;
+    }
+    if( sorted.binarySearch( 25 ) ) {
+        return 29;
+    }
+    arr.fill( 7 );
+    int i = 0;
+    while( i < arr.size() ) {
+        if( arr.at( i ) != 7 ) {
+            return 30;
+        }
+        ++i;
+    }
+    return 0;
+}
+int Test::checkImportedRefMember()
+{
+    Myll::DynArray<Other::OtherPoint> arr{};
+    arr.pushBack( Other::OtherPoint( 1, 2 ) );
+    if( arr.at( 0 ).x != 1 ) {
+        return 41;
+    }
+    arr[0].x = 10;
+    if( arr[0].x != 10 ) {
+        return 42;
+    }
+    arr.front().y = 20;
+    if( arr.back().y != 20 ) {
+        return 43;
+    }
+    return 0;
+}
+int Test::checkMove()
+{
+    Myll::DynArray<int> arr{};
+    arr.pushBack( 1 ).pushBack( 2 ).pushBack( 3 );
+    Myll::DynArray<int> moved = std::move( arr );
+    if( moved.size() != 3 ) {
+        return 1;
+    }
+    if( moved.at( 0 ) != 1 ) {
+        return 2;
+    }
+    if( !arr.isEmpty() ) {
+        return 3;
+    }
+    if( arr.size() != 0 ) {
+        return 4;
+    }
+    if( arr.capacity() != 0 ) {
+        return 5;
+    }
+    Myll::DynArray<int> other{};
+    other.pushBack( 10 );
+    other = std::move( moved );
+    if( other.size() != 3 ) {
+        return 6;
+    }
+    if( other.at( 1 ) != 2 ) {
+        return 7;
+    }
+    if( !moved.isEmpty() ) {
+        return 8;
+    }
+    return 0;
+}
+int main()
+{
+    if( Test::checkBasic() != 0 ) {
+        return 1;
+    }
+    if( Test::checkGrowth() != 0 ) {
+        return 2;
+    }
+    if( Test::checkStack() != 0 ) {
+        return 3;
+    }
+    if( Test::checkStruct() != 0 ) {
+        return 4;
+    }
+    if( Test::checkIterator() != 0 ) {
+        return 5;
+    }
+    if( Test::checkShrink() != 0 ) {
+        return 6;
+    }
+    if( Test::checkAlgorithms() != 0 ) {
+        return 7;
+    }
+    if( Test::checkImportedRefMember() != 0 ) {
+        return 8;
+    }
+    if( Test::checkMove() != 0 ) {
+        return 9;
+    }
+    return 0;
+}

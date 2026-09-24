@@ -1,0 +1,13 @@
+#pragma once
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <initializer_list>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <vector>
+int run_range_for_auto();
+int run_range_for_initlist_auto();

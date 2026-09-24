@@ -1,0 +1,15 @@
+#pragma once
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <initializer_list>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <exception>
+int check_break_continue_depth();
+int check_break_continue_switch();
+int check_loop();
+int check_try_catch();
