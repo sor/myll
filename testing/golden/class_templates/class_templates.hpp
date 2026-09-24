@@ -45,7 +45,7 @@ namespace ref_category
     class Base;
     template <typename T>
     class Derived;
-    using IntBox = Box<int>;
+    using IntBox = ref_category::Box<int>;
     using IntBox2 = ref_category::IntBox;
     template <typename T>
     class Box
@@ -82,9 +82,9 @@ namespace ref_category
         }
     };
     template <typename T>
-    class Derived : public Base<T>
+    class Derived : public ref_category::Base<T>
     {
-        using base = Base<T>;
+        using base = ref_category::Base<T>;
     };
     int run();
 }

@@ -92,6 +92,9 @@ namespace Myll.Resolver
 				new BreakContinueTransformer(),
 				new ConfiguredAliasShadowingTransformer(),
 				new RangeForAutoTypeTransformer(),
+				// ContainedNamespaceUsingInjector is disabled for now; Myll emits fully
+				// qualified names, so per-function `using namespace` injection is redundant.
+				// new ContainedNamespaceUsingInjector(),
 			};
 
 			foreach( CompiledModuleResult module in modules )
@@ -479,8 +482,6 @@ namespace Myll.Resolver
 		{
 			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
 				Dialect dialect = context.Dialect;
-				if( dialect.GlobalUsingNS == GlobalUsingNSMode.Leaky )
-					continue;
 
 				foreach( UnresolvedUsing unresolved in context.UnresolvedUsings ) {
 					UsingDecl usingDecl = unresolved.Node;
@@ -488,19 +489,55 @@ namespace Myll.Resolver
 					if( !usingDecl.IsNamespaceUsing )
 						continue;
 
-					// Scoped `using` inside a namespace is always allowed.
-					if( unresolved.Scope.decl is not GlobalNamespace )
+					Scope scope = unresolved.Scope;
+
+					// Namespace-scope `using` is always emitted in the header and is valid C++.
+					if( scope.decl is Namespace and not GlobalNamespace )
 						continue;
+
+					// Class/struct/union scope is always treated as contained because
+					// C++ does not allow `using namespace` inside a class definition.
+					if( scope.decl is Structural )
+						continue;
+
+					// Module/global scope is controlled by the dialect.
+					if( scope.decl is GlobalNamespace ) {
+						if( dialect.GlobalUsingNS != GlobalUsingNSMode.Disabled )
+							continue;
+					}
 
 					diagnostics.Add( new Diagnostic(
 						usingDecl.srcPos,
 						DiagnosticKind.Error,
-						dialect.GlobalUsingNS == GlobalUsingNSMode.Disabled
-							? "Global `using` of a namespace is disabled in this dialect."
-							: "`Dialect.GlobalUsingNSMode.Contained` is not implemented yet."
+						"Global `using` of a namespace is disabled in this dialect."
 					) );
 				}
 			}
+		}
+
+		private static void RecordContainedNamespaceUsingIfNeeded(
+			ModuleContext context,
+			UsingDecl     usingDecl,
+			Scope         scope,
+			Namespace     ns )
+		{
+			bool needsRecording = scope.decl switch {
+				Structural        => true,
+				GlobalNamespace   => context.Dialect.GlobalUsingNS == GlobalUsingNSMode.Contained,
+				_                 => false,
+			};
+
+			if( !needsRecording )
+				return;
+
+			string nsName = ns.FullyQualifiedName;
+			if( !context.ContainedNamespaceUsingsByScope.TryGetValue( scope, out List<string>? list ) ) {
+				list = new List<string>();
+				context.ContainedNamespaceUsingsByScope[scope] = list;
+			}
+
+			if( !list.Contains( nsName ) )
+				list.Add( nsName );
 		}
 
 		private bool IsDependentNestedName( TypespecNested type, Scope scope, GlobalNamespace module )
@@ -1342,6 +1379,8 @@ namespace Myll.Resolver
 						scope.importedScopes.Add( ns.scope );
 						progress = true;
 					}
+
+					RecordContainedNamespaceUsingIfNeeded( context, unresolved.Node, scope, ns );
 				}
 				else {
 					string importedName = path.idTpls.Last().id;

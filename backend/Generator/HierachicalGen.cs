@@ -112,6 +112,12 @@ namespace Myll.Generator
 		private readonly HashSet<string> namespaceUsingNames       = new();
 		private readonly HashSet<string> namespaceAliasTargetNames = new();
 
+		/// <summary>
+		/// Module-scope namespace usings that must be emitted in the .cpp instead of the header
+		/// (when the dialect is Contained) plus any structural-scope namespace usings (always).
+		/// </summary>
+		private readonly List<string> cppOnlyNamespaceUsings = new();
+
 		private readonly ModuleContext? context;
 		private Dialect Dialect => context?.Dialect ?? Dialect.Default;
 
@@ -211,6 +217,9 @@ namespace Myll.Generator
 
 			defaultAccess = obj.defaultAccess;
 		}
+
+		private bool IsModuleScope     => hierarchical is GlobalNamespace;
+		private bool IsStructuralScope => hierarchical is Structural;
 
 		public ISourceLines GenDeclGlobal()
 		{
@@ -325,6 +334,14 @@ namespace Myll.Generator
 				}
 			}
 
+			// Same-file namespaces referenced by contained usings also need a forward
+			// declaration before their qualified use in the header.
+			foreach( string ns in cppOnlyNamespaceUsings
+				.Where( n => definedNamespaces.Contains( n ) )
+				.OrderBy( n => n ) ) {
+				ret.Add( Format( "{0}namespace {1} {{}}", IndentDecl, ns ) );
+			}
+
 			IAccessSourceLines
 				listDecl = new AccessSourceLines()
 					.Concat( protoEarly )
@@ -422,40 +439,51 @@ namespace Myll.Generator
 				indent,
 				obj.type.Gen() );
 
-			protoEarly.Target( obj.access ).Add( ret );
+			if( obj.IsNamespaceUsing ) {
+				bool emitInCppOnly = IsStructuralScope
+				                  || ( IsModuleScope && Dialect.GlobalUsingNS == GlobalUsingNSMode.Contained );
 
-			if( obj.IsNamespaceUsing )
+				if( emitInCppOnly ) {
+					string nsName = obj.type.Gen();
+					if( !cppOnlyNamespaceUsings.Contains( nsName ) )
+						cppOnlyNamespaceUsings.Add( nsName );
+					return;
+				}
+
 				namespaceUsingNames.Add( obj.name );
+			}
+
+			protoEarly.Target( obj.access ).Add( ret );
 		}
 
-	public void AddAlias( AliasDecl obj )
-	{
-		string indent = IndentDecl;
+		public void AddAlias( AliasDecl obj )
+		{
+			string indent = IndentDecl;
 
-		string targetName;
-		if( obj.IsNamespaceAlias ) {
-			targetName = obj.type.Gen();
-			namespaceAliasTargetNames.Add( targetName );
-		}
-		else {
-			targetName = obj.type.Gen();
-		}
+			string targetName;
+			if( obj.IsNamespaceAlias ) {
+				targetName = obj.type.Gen();
+				namespaceAliasTargetNames.Add( targetName );
+			}
+			else {
+				targetName = obj.type.Gen();
+			}
 
-		var target = protoEarly.Target( obj.access );
+			var target = protoEarly.Target( obj.access );
 
-		if( obj.TplParams.Count > 0 ) {
+			if( obj.TplParams.Count > 0 ) {
+				target.Add( Format(
+					"{0}template <{1}>",
+					indent,
+					GenTemplateParameterList( obj.TplParams ) ) );
+			}
+
 			target.Add( Format(
-				"{0}template <{1}>",
+				AliasFormat[obj.IsNamespaceAlias ? 1 : 0],
 				indent,
-				GenTemplateParameterList( obj.TplParams ) ) );
+				obj.name,
+				targetName ) );
 		}
-
-		target.Add( Format(
-			AliasFormat[obj.IsNamespaceAlias ? 1 : 0],
-			indent,
-			obj.name,
-			targetName ) );
-	}
 
 		private string GenTemplateParameter( TplParam p )
 			=> p.kind == TplParamKind.NonType && p.type != null
@@ -677,13 +705,12 @@ namespace Myll.Generator
 			if( isSpanMain )
 				paramString = Format( "int myll_argc, {0} myll_argv[]", argvType );
 
-		if( obj.kind == Func.Kind.Convert ) {
-			AddConversionOperator( obj, prefix, declSuffix, hasTpl, isInlined, isExternal, isInsideStruct, targetDecl, targetImpl, targetProto );
-			return;
-		}
+			if( obj.kind == Func.Kind.Convert ) {
+				AddConversionOperator( obj, prefix, declSuffix, hasTpl, isInlined, isExternal, isInsideStruct, targetDecl, targetImpl, targetProto );
+				return;
+			}
 
-		string headlineDecl = Format(
-
+			string headlineDecl = Format(
 				FuncFormat[0],
 				indentDecl,
 				prefix,
@@ -745,7 +772,6 @@ namespace Myll.Generator
 				return;
 			}
 
-
 			// TODO: move inlines to bottom of header
 			if( isInlined || isExternal || hasTpl ) {
 				if( !isInsideStruct ) {
@@ -781,7 +807,7 @@ namespace Myll.Generator
 				MultiStmt bodyToGen = obj.body;
 				if( isSpanMain ) {
 					Stmt init = new FreetextStmt( Format( "{0} {1}( myll_argv, myll_argc );", localType, argName ) );
-					bodyToGen = new MultiStmt( new List<Stmt> { init }.Concat( obj.body.stmts ), true );
+					bodyToGen = new MultiStmt( new List<Stmt> { init }.Concat( bodyToGen.stmts ), true );
 				}
 
 				targetDecl.Add( headlineDecl );
@@ -821,7 +847,7 @@ namespace Myll.Generator
 				MultiStmt bodyToGen = obj.body;
 				if( isSpanMain ) {
 					Stmt init = new FreetextStmt( Format( "{0} {1}( myll_argv, myll_argc );", localType, argName ) );
-					bodyToGen = new MultiStmt( new List<Stmt> { init }.Concat( obj.body.stmts ), true );
+					bodyToGen = new MultiStmt( new List<Stmt> { init }.Concat( bodyToGen.stmts ), true );
 				}
 
 				targetImpl.Add( headlineImpl );
@@ -868,6 +894,7 @@ namespace Myll.Generator
 			string qual = obj.FullyQualifiedName;
 			if( !qual.EndsWith( "::" ) )
 				qual += "::";
+
 			string implHeadline = Format(
 				"{0}{1}operator {2}(){3}",
 				indentImpl,
@@ -899,12 +926,12 @@ namespace Myll.Generator
 						return;
 					}
 
-					PrependDeclSourceMap( targetDecl, obj );
-					if( hasTpl )
-						targetDecl.Add( tplDecl );
+				PrependDeclSourceMap( targetDecl, obj );
+				if( hasTpl )
+					targetDecl.Add( tplDecl );
 
-					targetDecl.Add( declHeadline );
-					targetDecl.AddRange( obj.body.Gen( LevelDecl ) );
+				targetDecl.Add( declHeadline );
+				targetDecl.AddRange( obj.body.Gen( LevelDecl ) );
 				}
 			}
 			else {
@@ -984,44 +1011,44 @@ namespace Myll.Generator
 				keyword = StructFormat[7];
 				bases   = "";
 			}
-		else if( gen.hierarchical is Enumeration objEnum ) {
-			keyword = StructFormat[6];
-			bases = (objEnum.baseType != null)
-				? Format( StructFormat[1], "", objEnum.baseType.GenType() )
-				: "";
-		}
-		else if( gen.hierarchical is Structural objStruct ) {
-			keyword = objStruct.kind switch {
-				Structural.Kind.Struct => StructFormat[3],
-				Structural.Kind.Class  => StructFormat[4],
-				Structural.Kind.Union  => StructFormat[5],
-				_                      => throw new Exception( Format( "no correct keyword determined: {0}", objStruct ) ),
-			};
-
-			string BasePrefix( BaseType b )
-				=> (b.isVirtual ? "virtual " : "")
-				+ b.access switch {
-					Access.Private   => "private ",
-					Access.Protected => "protected ",
-					_                => "public ",
+			else if( gen.hierarchical is Enumeration objEnum ) {
+				keyword = StructFormat[6];
+				bases = (objEnum.baseType != null)
+					? Format( StructFormat[1], "", objEnum.baseType.GenType() )
+					: "";
+			}
+			else if( gen.hierarchical is Structural objStruct ) {
+				keyword = objStruct.kind switch {
+					Structural.Kind.Struct => StructFormat[3],
+					Structural.Kind.Class  => StructFormat[4],
+					Structural.Kind.Union  => StructFormat[5],
+					_                      => throw new Exception( Format( "no correct keyword determined: {0}", objStruct ) ),
 				};
 
-			string BaseTypeName( BaseType b )
-			{
-				if( b.type is TypespecNested nested )
-					return nested.GenType( false );
+				string BasePrefix( BaseType b )
+					=> (b.isVirtual ? "virtual " : "")
+					+ b.access switch {
+						Access.Private   => "private ",
+						Access.Protected => "protected ",
+						_                => "public ",
+					};
 
-				return b.type.GenType();
+				string BaseTypeName( BaseType b )
+				{
+					if( b.type is TypespecNested nested )
+						return nested.GenType( false );
+
+					return b.type.GenType();
+				}
+
+				bases = (objStruct.basetypes.Count < 1)
+					? ""
+					: Format( StructFormat[1], BasePrefix( objStruct.basetypes[0] ), BaseTypeName( objStruct.basetypes[0] ) )
+					  + objStruct.basetypes
+						.Skip( 1 )
+						.Select( t => Format( StructFormat[2], BasePrefix( t ), BaseTypeName( t ) ) )
+						.Join( "" );
 			}
-
-			bases = (objStruct.basetypes.Count < 1)
-				? ""
-				: Format( StructFormat[1], BasePrefix( objStruct.basetypes[0] ), BaseTypeName( objStruct.basetypes[0] ) )
-				  + objStruct.basetypes
-					.Skip( 1 )
-					.Select( t => Format( StructFormat[2], BasePrefix( t ), BaseTypeName( t ) ) )
-					.Join( "" );
-		}
 			else {
 				throw new InvalidOperationException( "not an enum and not a struct" );
 			}
@@ -1051,28 +1078,28 @@ namespace Myll.Generator
 						bases ) );
 				targetDecl.Add( Format( CurlyOpen, indent ) );
 
-			if( gen.hierarchical is Structural objStruct ) {
-			if( objStruct.basetypes.Count >= 1
-			 && !String.IsNullOrEmpty( Dialect.BaseClassAliasName )
-			 && !objStruct.children.Any( c => c.name == Dialect.BaseClassAliasName ) ) {
-				targetDecl.Add(
-					Format(
-						AliasFormat[0],
-						gen.IndentDecl,
-						Dialect.BaseClassAliasName,
-						objStruct.basetypes[0].type.GenType() ) );
-			}
+				if( gen.hierarchical is Structural objStruct ) {
+					if( objStruct.basetypes.Count >= 1
+					 && !String.IsNullOrEmpty( Dialect.BaseClassAliasName )
+					 && !objStruct.children.Any( c => c.name == Dialect.BaseClassAliasName ) ) {
+						targetDecl.Add(
+							Format(
+								AliasFormat[0],
+								gen.IndentDecl,
+								Dialect.BaseClassAliasName,
+								objStruct.basetypes[0].type.GenType() ) );
+					}
 
-			if( !String.IsNullOrEmpty( Dialect.OwnClassAliasName )
-			 && !objStruct.children.Any( c => c.name == Dialect.OwnClassAliasName ) ) {
-				targetDecl.Add(
-					Format(
-						AliasFormat[0],
-						gen.IndentDecl,
-						Dialect.OwnClassAliasName,
-						objStruct.name ) );
-			}
-			}
+					if( !String.IsNullOrEmpty( Dialect.OwnClassAliasName )
+					 && !objStruct.children.Any( c => c.name == Dialect.OwnClassAliasName ) ) {
+						targetDecl.Add(
+							Format(
+								AliasFormat[0],
+								gen.IndentDecl,
+								Dialect.OwnClassAliasName,
+								objStruct.name ) );
+					}
+				}
 			}
 
 			targetDecl.AddRange( gen.GenDecl() );
@@ -1155,19 +1182,28 @@ namespace Myll.Generator
 
 		private static bool ShouldAutoUnhide( Func derived, Structural structural, Dialect dialect )
 		{
-			if( derived.IsUnshadow )
-				return true;
-			if( derived.IsShadow )
-				return false;
-			if( structural.IsUnshadow )
-				return true;
-			if( structural.IsShadow )
-				return false;
+			if( derived.IsUnshadow )    return true;
+			if( derived.IsShadow )      return false;
+			if( structural.IsUnshadow ) return true;
+			if( structural.IsShadow )   return false;
 			return dialect.AutoUnhideBaseMethods;
 		}
 
 		private static bool IsUnhidableSpecialMember( Func func )
 			=> func.name == "operator=" || func.name.StartsWith( "~" );
+
+		private static MultiStmt PrependInjectedNamespaceUsings( MultiStmt body, IReadOnlyList<string> usings )
+		{
+			if( usings.Count == 0 )
+				return body;
+
+			List<Stmt> stmts = usings
+				.Select( ns => new FreetextStmt( Format( "using namespace {0};", ns ) ) as Stmt )
+				.Concat( body.stmts )
+				.ToList();
+
+			return new MultiStmt( stmts, body.isScope );
+		}
 
 		private static bool IsCopyOrMoveConstructor( Structor ctor )
 		{
@@ -1375,6 +1411,7 @@ namespace Myll.Generator
 
 				PrependDeclSourceMap( targetImpl, obj );
 				targetImpl.Add( headlineImpl + (obj.IsNoexcept ? " noexcept" : "") );
+
 				targetImpl.AddRange( obj.body.Gen( LevelImpl ) );
 			}
 		}

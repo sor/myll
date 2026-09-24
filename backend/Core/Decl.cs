@@ -163,7 +163,7 @@ namespace Myll.Core
 	}
 
 	// functions, methods, operators, accessors (in the end)
-	public class Func : Decl, ITemplatedDecl
+	public class Func : Decl, ITemplatedDecl, IBodyOwner
 	{
 		public enum Kind
 		{
@@ -189,6 +189,13 @@ namespace Myll.Core
 
 		public Scope? TemplateParamScope => funcScope;
 
+		/// <summary>
+		/// Namespace names that must be emitted as <c>using namespace NS;</c> at the start
+		/// of this function's body because the function is inside a scope with a contained
+		/// namespace using (module-scope in Contained mode, or class/struct scope).
+		/// </summary>
+		public List<string> InjectedNamespaceUsings { get; } = new();
+
 		// TODO: analyze, for void or auto return type of funcs
 		public bool IsReturningSomething => false;
 
@@ -196,7 +203,7 @@ namespace Myll.Core
 	}
 
 	// Constructor / Destructor
-	public class Structor : Decl
+	public class Structor : Decl, IBodyOwner
 	{
 		public enum Kind
 		{
@@ -207,13 +214,28 @@ namespace Myll.Core
 		public Kind        kind;
 		public bool        isConversionCtor; // true for `convert <- T` declarations
 		public List<Param> paras = new();
-		public MultiStmt?  body; // isScope = true
+		public MultiStmt?  body;
+
+		/// <summary>
+		/// See <see cref="Func.InjectedNamespaceUsings"/>.
+		/// </summary>
+		public List<string> InjectedNamespaceUsings { get; } = new(); // isScope = true
 
 		// TODO: initlist
 
 		public override void AddToGen( HierarchicalGen gen ) { gen.AddStructor( this ); }
 	}
 
+
+	/// <summary>
+	/// Implemented by declarations that own a function-like body and therefore may need
+	/// a <c>using namespace</c> directive injected at the start of that body for
+	/// contained namespace usings.
+	/// </summary>
+	public interface IBodyOwner
+	{
+		List<string> InjectedNamespaceUsings { get; }
+	}
 
 	public class UsingDecl : Decl
 	{

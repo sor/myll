@@ -32,6 +32,14 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 
 ## Critical / next
 
+1. **Softcoded dialect configuration** — `Dialect` values are currently hardcoded as
+   `Dialect.Default` in `backend/Core/Dialect.cs`. Dialect is a per-module concept: multiple
+   modules in the same compilation may use different dialects (e.g. a header-only library that
+   ships its own settings), and missing configuration resolves to the built-in default without
+   error. Configuration should be authored in JSONC/JSON5, not strict JSON. See
+   `docs/design/softcoded-dialect.md`. This is a prerequisite for exposing `Leaky` / `Disabled`
+   `GlobalUsingNS` modes on a per-project basis instead of changing the global default.
+
 1. **Overload resolution maturity** — fill the remaining gaps in a deliberate order, adding regression tests at each step:
    1. **Simple types**: exact match, promotions, safe conversions — regression locked in `testing/cases/overload_non_template/`.
    2. **Pointers and references**: `T*`/`T&` conversions, derived-to-base pointer/reference
@@ -84,10 +92,14 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    a source-location-aware error. Minimal repro: `tmp/repro_options_clash/`.
 
 
-2. **Contained global namespace `using` mode** — `Dialect.GlobalUsingNS.Contained` is designed
-   but not implemented. Module-scope `using NS;` should emit `using namespace NS;` only in the
-   `.cpp` and fully qualify names in the `.hpp`. See `plan/contained-global-using.md` for the
-   detailed approach (track module-scope usings, emit cpp-only usings, qualify header ids).
+2. **Contained global namespace `using` mode** — DONE. Module-scope `using NS;` now emits
+    fully qualified names in both `.hpp` and `.cpp`; no `using namespace NS;` directive is emitted.
+    Class/struct-scope namespace usings are always contained because C++ does not allow
+    `using namespace` inside a class definition.
+    - *Known output change*: `TypespecNested.GenType()` now also fully qualifies unqualified
+      templated class names when they resolve to a declaration, even if no `using` is involved.
+      This is consistent with `IdExpr` behavior and only required updating the golden files for
+      `template_basics`, `class_templates`, `alias_template`, and `synthetic_sugar`.
 
 3. **Self-contained generated headers** — a generated `.hpp` must not rely on the order in which
    includes appear or on includes pulled in by other headers. Audit the generator for any
@@ -105,12 +117,7 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    number in Myll, this should be rejected; use `type == '\0'`. Files:
    `backend/Resolver/TypeChecker.cs` and `backend/Resolver/ConversionRules.cs`.
 
-6. **Softcoded dialect configuration** — `Dialect` values are currently hardcoded as
-   `Dialect.Default` in `backend/Core/Dialect.cs`. Dialect is a per-module concept: multiple
-   modules in the same compilation may use different dialects (e.g. a header-only library that
-   ships its own settings), and missing configuration resolves to the built-in default or a
-   folder-level default without error. Configuration should be authored in JSONC/JSON5, not
-   strict JSON. See `docs/design/softcoded-dialect.md`.
+6. **Softcoded dialect configuration** — see Critical / next #1.
 
 7. **Standard-library declaration attributes** — finish populating `std/*.decl.myll` and `c_*.decl.myll`
    with `[pure]`, `[ct]`, `[nodiscard]`, and `[noexcept]` to match the installed C++23 standard-library
@@ -213,9 +220,10 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    - Auto-property / combined private-field + public-getter syntax.
 
 5. **Cleanup**
-   - Remove `oldParser/` and `oldCodeGen/` once nothing references them.
-   - Triage the TODO/FIXME/HACK markers across backend/frontend/testing.
-   - Clean up the `= null!` initializers by introducing real constructors or nullable annotations.
+    - Remove `oldParser/` and `oldCodeGen/` once nothing references them.
+    - Triage the TODO/FIXME/HACK markers across backend/frontend/testing.
+    - Clean up the `= null!` initializers by introducing real constructors or nullable annotations.
+    - Rename `backend/Core/Decl.cs` `Structor` to something less ambiguous (e.g. `ConDestructor` or split into `CtorDecl`/`DtorDecl`).
 
 6. **Partial/broken generators**
    - Complete `VisitScopedExpr` (`backend/Visitor/VExpr.cs`).
@@ -259,12 +267,13 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    - Generate ANTLR output during build; do not commit the generated files.
 
 10. **Open language design questions**
-   - Should `return _` mean "return default"?
-   - Should `switch` support `else:` as an alias for `default:`?
-   - Should `(copy)(expr)` be allowed on prvalues?
-   - **Switch-case fallthrough dialect**: allow the user/program to select whether cases implicitly `break`, implicitly fall through, or require an explicit `break`/`fallthrough` annotation per case. The mode is modeled in `backend/Core/Dialect.cs` (`SwitchFallthroughMode`) but is not wired through the parser/generator yet.
+    - Should `return _` mean "return default"?
+    - Should `switch` support `else:` as an alias for `default:`?
+    - Should `(copy)(expr)` be allowed on prvalues?
+    - **Switch-case fallthrough dialect**: allow the user/program to select whether cases implicitly `break`, implicitly fall through, or require an explicit `break`/`fallthrough` annotation per case. The mode is modeled in `backend/Core/Dialect.cs` (`SwitchFallthroughMode`) but is not wired through the parser/generator yet.
     - **Linkage model**: work in progress on another machine. Decide which declarations get internal/external/module linkage and how it interacts with cross-module imports.
-   - **Export control**: is `[hide]`/`[hidden]` the only module-export mechanism, or will there be explicit `export`?
+    - **Export control**: is `[hide]`/`[hidden]` the only module-export mechanism, or will there be explicit `export`?
+    - **Class/struct defaults**: should classes get a default `[rule_of_n=...]` or other default attributes, and should structs get an attribute that requires/encourages POD-like behavior? This needs a decision before wiring into `Dialect` defaults.
 
 ## Recently completed
 

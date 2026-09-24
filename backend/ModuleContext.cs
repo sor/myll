@@ -84,6 +84,15 @@ namespace Myll
 		public List<UnresolvedMemberAccess>   UnresolvedMemberAccesses  { get; } = new();
 
 		/// <summary>
+		/// Maps a scope to the list of namespace names introduced by a namespace `using`
+		/// in that scope. Only scopes that need function-body injection are tracked:
+		/// module scope (when <see cref="Dialect.GlobalUsingNS"/> is <c>Contained</c>)
+		/// and class/struct/union scope (always). Namespace-scope usings are emitted in the
+		/// header and are not injected.
+		/// </summary>
+		public Dictionary<Scope, List<string>> ContainedNamespaceUsingsByScope { get; } = new();
+
+		/// <summary>
 		/// Callee expressions used in function/constructor calls. The resolver uses this to prefer
 		/// constructors or classes over non-callable declarations at call sites.
 		/// </summary>

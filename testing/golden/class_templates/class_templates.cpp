@@ -5,7 +5,7 @@ int operators::Widget::value() const
 }
 int operators::run()
 {
-    Ptr<operators::Widget> p{};
+    operators::Ptr<operators::Widget> p{};
     if( p->value() != 42 ) {
         return 1;
     }
@@ -20,7 +20,7 @@ int operators::run()
 }
 int ref_category::run()
 {
-    Box<int> b{};
+    ref_category::Box<int> b{};
     int x = 5;
     b.assign( x );
     if( b.retrieve() != 5 ) {
@@ -34,7 +34,7 @@ int ref_category::run()
     if( b.retrieve() != 7 ) {
         return 3;
     }
-    Derived<int> d{};
+    ref_category::Derived<int> d{};
     d.baseAssign( x );
     d.baseAssign( 20 );
     ref_category::IntBox ab{};
@@ -56,7 +56,7 @@ int ref_category::run()
 }
 int template_call::run()
 {
-    Wrapper<int> w{};
+    template_call::Wrapper<int> w{};
     return w.bar();
 }
 int main()

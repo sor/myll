@@ -64,7 +64,7 @@ namespace Myll.Core
 		/// emitted. Defaults to <see cref="GlobalUsingNSMode.Leaky"/> for backward
 		/// compatibility.
 		/// </summary>
-		public GlobalUsingNSMode GlobalUsingNS { get; init; } = GlobalUsingNSMode.Leaky;
+		public GlobalUsingNSMode GlobalUsingNS { get; init; } = GlobalUsingNSMode.Contained;
 
 		// Name of the implicit alias for the first base class inside a class/struct.
 		// If empty or null, no alias is created and the name is treated as an ordinary identifier.

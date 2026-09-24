@@ -235,8 +235,21 @@ namespace Myll.Core
 
 			if( resolvedDecl != null
 			 && resolvedDecl.name != "<builtin>"
-			 && idTpls.TrueForAll( it => it.tplArgs.Count == 0 ) ) {
+			 && ( idTpls.Count == 0 || idTpls.TrueForAll( it => it.tplArgs.Count == 0 ) ) ) {
 				string name = resolvedDecl.FullyQualifiedName;
+				return needsTypename ? VarFormat[5] + name : name;
+			}
+
+			if( resolvedDecl != null
+			 && resolvedDecl.name != "<builtin>"
+			 && idTpls.Count == 1 ) {
+				string name = resolvedDecl.ReferenceName;
+
+				if( idTpls[0].tplArgs.Count > 0 )
+					name += "<" + idTpls[0].tplArgs
+						.Select( t => t.Gen() )
+						.Join( ", " ) + ">";
+
 				return needsTypename ? VarFormat[5] + name : name;
 			}
 
