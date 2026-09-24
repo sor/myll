@@ -12,9 +12,14 @@ func identity<T>( T x ) -> T {
 }
 
 const T answer<T> = (T)42;
+var T blah<T> = T; // FAIL: Type template parameter 'T' cannot be used as a value
 
 func add<int N>( int x ) -> int {
 	return x + N;
+}
+
+func typeParamAsValue<T>() -> int {
+	return T; // FAIL: Type template parameter 'T' cannot be used as a value
 }
 
 func main() -> int {
@@ -22,5 +27,6 @@ func main() -> int {
 	var int b = identity<42>( 1 ); // FAIL: expects a type
 	var int c = answer<42>;        // FAIL: expects a type
 	var int d = add<int>( 10 );    // FAIL: expects a non-type value
+	typeParamAsValue<int>();
 	return 0;
 }

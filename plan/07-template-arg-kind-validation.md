@@ -1,26 +1,26 @@
 # Plan: template argument kind validation
 
+> Status: **Implemented**. This plan is kept for reference; see commit `c62beb8` and earlier for the actual changes.
+
 This plan describes how to extend Myll's template-argument checking so that it rejects obvious mismatches between what a template parameter expects (a type or a non-type value) and what the call site provided.
 The immediate goal is to catch mistakes such as `Box<42>` for a type parameter `T`, not to implement full C++ template semantics.
 
-The related variables and entry points are in `/home/sor/myll/backend/Resolver/TemplateInference.cs` (`HasTemplateArityMismatch`, `TplArg`, `TplParam`).
-The main call sites are in `/home/sor/myll/backend/Resolver/Resolver.cs`, with follow-up touches in the generator and, optionally, the grammar/visitor.
+The related variables and entry points are in `/home/sor/myll/backend/Resolver/TemplateInference.cs` (`ValidateTemplateArgs`, `TplArg`, `TplParam`).
+The main call sites are in `/home/sor/myll/backend/Resolver/Resolver.cs`, with follow-up touches in the generator, visitor, and `std/` bindings.
 
-## 1. Current state
+## 1. Current state (implemented)
 
-- `TplArg` (`/home/sor/myll/backend/Core/Mixed.cs`) already carries either a `Typespec` (`typespec`) or an expression literal (`lit`).
-- `TplParam` only stores a `name`; there is no field that says whether the parameter is a type parameter or a non-type parameter.
-- `TemplateInference.HasTemplateArityMismatch` (`/home/sor/myll/backend/Resolver/TemplateInference.cs:61`) compares counts only.
-It returns `true` as soon as the provided argument count differs from the declared parameter count.
-- The check is invoked for:
-  - variable templates (`Resolver.TryResolveVariableTemplate`, `/home/sor/myll/backend/Resolver/Resolver.cs:334`);
-  - type names (`Resolver.ResolveTypes`, `/home/sor/myll/backend/Resolver/Resolver.cs:382`);
-  - function/structor overloads with explicit template arguments (`Resolver.TryResolveOverload`, `/home/sor/myll/backend/Resolver/Resolver.cs:836`).
-- `TemplateInference.TryDeduceTemplateArgs` (`/home/sor/myll/backend/Resolver/TemplateInference.cs:86`) only knows how to bind type parameters from function-call arguments.
-- The C++ generator currently hard-codes `typename ` before every template parameter (`/home/sor/myll/backend/Generator/HierachicalGen.cs` lines ~571, ~577, ~985, ~1303).
+- `TplArg` (`/home/sor/myll/backend/Core/Mixed.cs`) carries either a `Typespec` (`typespec`) or an expression literal (`lit`).
+- `TplParam` now carries a `kind` (`Type`, `NonType`, or `Unknown`) and, for non-type parameters, a `type`.
+- `TemplateInference.ValidateTemplateArgs` checks both arity and argument kind. `HasTemplateArityMismatch` is a thin wrapper that returns `ValidateTemplateArgs(...).IsMismatch`.
+- The validation is invoked for:
+  - variable templates (`Resolver.TryResolveVariableTemplate`);
+  - type names (`Resolver.ResolveTypes`);
+  - function/structor overloads with explicit template arguments (`Resolver.TryResolveOverload`).
+- `TemplateInference.TryDeduceTemplateArgs` only binds `Type`/`Unknown` parameters; candidates containing `NonType` parameters must have those supplied explicitly.
+- The C++ generator uses a shared `GenTemplateParameter` helper that emits `typename T` for type parameters and `int N` for non-type parameters.
 
-Because Myll's grammar currently declares template parameters as a plain comma-separated identifier list (`tplParams : LT id (COMMA id)* GT`), the compiler has no way to express a non-type parameter such as `int N`.
-The first milestone below therefore catches the mismatches Myll can already reason about without changing the grammar.
+The grammar now supports both type parameters (`T`) and non-type parameters (`int N`) via the `tplParam` rule, and the standard library binding `std/std_array.decl.myll` declares `std::array<T, int N>`.
 
 ## 2. Data-model changes
 
@@ -252,12 +252,12 @@ The same principle applies to kind validation:
 5. Verify that diagnostics point at the template argument, not at the declaration, by checking `GetCalleeSrcPos` behavior.
 6. Run `dotnet test testing/ --filter "DisplayName~template"` to isolate template-related tests.
 
-## 10. Migration order
+## 10. Migration order (all completed)
 
-1. Add `TplParamKind` and default all existing parameters to `Type`.
-2. Implement `ValidateTemplateArgs` and make `HasTemplateArityMismatch` delegate to it.
-3. Migrate the three resolver call sites (`TryResolveVariableTemplate`, `ResolveTypes`, `TryResolveOverload`) to emit kind-specific diagnostics.
-4. Harden `SubstituteTemplateParams` and update `TryDeduceTemplateArgs` for mixed parameter lists.
-5. Replace the generator's hard-coded `typename` with a `TplParam`-aware helper.
-6. Add regression tests.
-7. Optionally implement the grammar/visitor changes for explicit non-type parameters.
+1. ✅ Add `TplParamKind` and default all existing parameters to `Type`.
+2. ✅ Implement `ValidateTemplateArgs` and make `HasTemplateArityMismatch` delegate to it.
+3. ✅ Migrate the three resolver call sites (`TryResolveVariableTemplate`, `ResolveTypes`, `TryResolveOverload`) to emit kind-specific diagnostics.
+4. ✅ Harden `SubstituteTemplateParams` and update `TryDeduceTemplateArgs` for mixed parameter lists.
+5. ✅ Replace the generator's hard-coded `typename` with a `TplParam`-aware helper.
+6. ✅ Add regression tests (`non_type_template`, `non_type_template_fail`, `local_var_template_fail`).
+7. ✅ Implement the grammar/visitor changes for explicit non-type parameters.
