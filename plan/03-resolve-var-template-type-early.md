@@ -1,5 +1,7 @@
 # Resolve variable-template parameter types before substitution
 
+**Status:** Implemented.
+
 ## Background
 
 Myll recently gained variable templates. A declaration such as `const T answer<T> = (T)42;` produces a `VarDecl` that owns its own template parameters. When a use site is resolved, e.g. `answer<int>`, the resolver computes the expression's type by substituting the provided template arguments into the variable template's declared type.

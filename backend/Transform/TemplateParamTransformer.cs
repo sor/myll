@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Myll.Core;
@@ -24,6 +25,9 @@ namespace Myll.Transform
 			 && templated.TplParams.Count >= 1
 			 && templated.TemplateParamScope != null ) {
 				InjectParameters( templated.TemplateParamScope, templated.TplParams, context );
+
+				if( decl is VarDecl varDecl )
+					LinkVariableTemplateParamTypes( varDecl );
 			}
 
 			if( decl is Hierarchical h ) {
@@ -54,6 +58,56 @@ namespace Myll.Transform
 
 				scope.children.Add( parameter.name, new List<ScopeLeaf> { leaf } );
 				context.LocalDecls.Add( (placeholder, scope) );
+			}
+		}
+
+		/// <summary>
+		/// Pre-links simple template-parameter references inside a variable template's
+		/// declared type to the matching injected <see cref="TplParamDecl"/>. This lets
+		/// <see cref="TemplateInference.SubstituteTemplateParams"/> rely on
+		/// <c>resolvedDecl is TplParamDecl</c> instead of a plain-name fallback.
+		/// </summary>
+		private static void LinkVariableTemplateParamTypes( VarDecl varDecl )
+		{
+			if( varDecl.varScope == null || varDecl.TplParams.Count == 0 )
+				return;
+
+			Dictionary<string, TplParamDecl> paramMap = varDecl.varScope.children
+				.Where( kvp => kvp.Value.Any( leaf => leaf.decl is TplParamDecl ) )
+				.ToDictionary(
+					kvp => kvp.Key,
+					kvp => (TplParamDecl)kvp.Value.Single( leaf => leaf.decl is TplParamDecl ).decl!,
+					StringComparer.Ordinal );
+
+			LinkType( varDecl.type, paramMap );
+		}
+
+		private static void LinkType( Typespec? type, Dictionary<string, TplParamDecl> paramMap )
+		{
+			if( type == null )
+				return;
+
+			switch( type ) {
+				case TypespecNested n
+				  when n.idTpls.Count == 1
+				    && ( n.idTpls[0].tplArgs == null || n.idTpls[0].tplArgs.Count == 0 )
+				    && paramMap.TryGetValue( n.idTpls[0].id, out TplParamDecl? tp ): {
+					n.resolvedDecl = tp!;
+					break;
+				}
+
+				case TypespecNested n: {
+					foreach( IdTplArgs segment in n.idTpls ) {
+						if( segment.tplArgs == null )
+							continue;
+						foreach( TplArg arg in segment.tplArgs ) {
+							if( arg.typespec != null )
+								LinkType( arg.typespec, paramMap );
+						}
+					}
+
+					break;
+				}
 			}
 		}
 	}

@@ -1,6 +1,17 @@
 module var_templates;
 
 const T answer<T> = (T)42;
+const T * ptrValue<T> = null;
+
+class Pair<T, U> {
+[pub]:
+field {
+	T first;
+	U second;
+}
+}
+
+const Pair<T, T> pairDup<T> = Pair<T, T>();
 
 func main() -> int {
 	var int a = answer<int>;
@@ -10,6 +21,14 @@ func main() -> int {
 	var f32 b = answer<f32>;
 	if( b < 41.9 || b > 42.1 )
 		return 2;
+
+	var const int * p = ptrValue<int>;
+	if( p != null )
+		return 3;
+
+	var Pair<int, int> pair = pairDup<int>;
+	if( pair.first != 0 || pair.second != 0 )
+		return 4;
 
 	return 0;
 }

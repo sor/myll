@@ -178,21 +178,8 @@ namespace Myll.Resolver
 				? GetResolvedDecl( nestedType, result )
 				: null;
 
-			// Template parameter types may not have been resolved yet (e.g. variable
-			// template types that reference their own parameter). Also match by the
-			// plain identifier name in that case.
-			TypespecNested? plainTplParam = resolved == null
-				&& type is TypespecNested nestedTypeNoResolve
-				&& nestedTypeNoResolve.idTpls.Count == 1
-				&& ( nestedTypeNoResolve.idTpls[0].tplArgs == null
-				  || nestedTypeNoResolve.idTpls[0].tplArgs.Count == 0 )
-				? nestedTypeNoResolve
-				: null;
-
-			if( ( resolved is TplParamDecl tpl
-			   && substitution.TryGetValue( tpl.name, out Typespec? replacement ) )
-			 || ( plainTplParam != null
-			   && substitution.TryGetValue( plainTplParam.idTpls[0].id, out replacement ) ) ) {
+			if( resolved is TplParamDecl tpl
+			 && substitution.TryGetValue( tpl.name, out Typespec? replacement ) ) {
 				Typespec ret = Substitute( replacement, substitution, result )
 				            ?? CloneTypespec( replacement );
 				ret.qual = CombineQualifiers( ret.qual, type.qual );
