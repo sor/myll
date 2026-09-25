@@ -14,6 +14,12 @@ namespace Myll.Resolver
 		private readonly ResolutionResult result;
 		private readonly List<Diagnostic>? diagnostics;
 
+		/// <summary>
+		/// The active dialect for type resolution. Callers must set this to the dialect
+		/// of the module currently being resolved.
+		/// </summary>
+		public Dialect Dialect { get; set; } = Myll.Core.Dialect.Default;
+
 		public TypeResolver( ResolutionResult result, List<Diagnostic>? diagnostics = null )
 		{
 			this.result      = result;
@@ -136,7 +142,7 @@ namespace Myll.Resolver
 				if( basic.kind == TypespecBasic.Kind.UntypedInteger )
 					return new TypespecBasic { kind = TypespecBasic.Kind.Integer, size = 4 };
 				if( basic.kind == TypespecBasic.Kind.UntypedFloat )
-					return new TypespecBasic { kind = TypespecBasic.Kind.Float, size = Dialect.Default.DefaultFloatSize() };
+					return new TypespecBasic { kind = TypespecBasic.Kind.Float, size = this.Dialect.DefaultFloatSize() };
 			}
 			return type;
 		}
@@ -428,7 +434,7 @@ namespace Myll.Resolver
 			return null;
 		}
 
-		private static Typespec? CommonArithmeticType( Typespec? left, Typespec? right )
+		private Typespec? CommonArithmeticType( Typespec? left, Typespec? right )
 		{
 			if( left == null || right == null )
 				return null;
@@ -462,7 +468,7 @@ namespace Myll.Resolver
 			return CommonIntegerType( left, right );
 		}
 
-		private static Typespec? CommonIntegerType( Typespec? left, Typespec? right )
+		private Typespec? CommonIntegerType( Typespec? left, Typespec? right )
 		{
 			if( left == null || right == null )
 				return null;
@@ -479,7 +485,7 @@ namespace Myll.Resolver
 			return UsualArithmeticConversions( lb, rb );
 		}
 
-		private static Typespec? UsualArithmeticConversions( TypespecBasic left, TypespecBasic right )
+		private Typespec? UsualArithmeticConversions( TypespecBasic left, TypespecBasic right )
 		{
 			if( left.kind == right.kind )
 				return new TypespecBasic { kind = left.kind, size = System.Math.Max( left.size, right.size ) };
@@ -491,9 +497,9 @@ namespace Myll.Resolver
 			return MixedIntegerResult( left, right );
 		}
 
-		private static Typespec? MixedIntegerResult( TypespecBasic signedType, TypespecBasic unsignedType )
+		private Typespec? MixedIntegerResult( TypespecBasic signedType, TypespecBasic unsignedType )
 		{
-			return Dialect.Default.MixedSignedness switch {
+			return Dialect.MixedSignedness switch {
 				MixedSignednessMode.SignedPreferred
 					=> SignedPreferredIntegerResult( signedType, unsignedType ),
 				_ => CStyleIntegerResult( signedType, unsignedType ),
@@ -554,7 +560,7 @@ namespace Myll.Resolver
 			return 0;
 		}
 
-		internal static Typespec? CommonType( Typespec? a, Typespec? b )
+		internal Typespec? CommonType( Typespec? a, Typespec? b )
 		{
 			if( a == null ) return b;
 			if( b == null ) return a;

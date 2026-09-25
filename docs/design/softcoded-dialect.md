@@ -2,184 +2,55 @@
 
 ## Status
 
-Design note. No implementation yet. Tracked in `plan/TODO.md` under
-"Short-term consistency fixes".
+Implemented. Dialects are selected in source and resolved from JSONC files in a `dialect/` directory.
 
-## Problem
+## Selecting a dialect
 
-`backend/Core/Dialect.cs` exposes every Myll language switch as a C# property on a
-record, and the compiler starts from the hardcoded `Dialect.Default` instance. If a
-project or a library wants a different default — e.g. `StrictNew = true`,
-`GlobalUsingNS = Contained`, or a custom `StringClassName` — it currently has to edit
-and rebuild Myll. That is fine for bootstrapping but not for users, and it prevents
-shipping a header-only Myll library that internally uses its own dialect.
-
-## Goal
-
-Dialect settings must be configurable from outside the compiler, and **dialect is a
-per-module concept**. A single compilation can contain many modules with different
-dialects, so a library can keep its own idioms while the consuming project keeps
-theirs. Missing dialect configuration for a module is perfectly legal: it simply
-means "auto", which resolves to the built-in default or a folder-level default.
-
-Sources of dialect configuration, from most specific to least specific:
-
-1. A module attribute pointing to a JSONC file (most specific).
-2. A module attribute with inline key/value pairs (convenience for one-off tweaks).
-3. The nearest folder-level `.myll-dialect.jsonc` file, searched upward from the
-   module's source files.
-4. Per-compilation CLI flags (`--dialect KEY=VALUE`).
-5. Per-compilation CLI dialect file (`--dialect-file PATH`).
-6. The built-in `Dialect.Default` fallback.
-
-Each `ModuleContext` already stores its own `Dialect` instance, so the architecture
-already supports per-module dialects.
-
-## Scope of settings that should be softcoded
-
-All scalar, enum, and string properties of `Dialect` should be overridable:
-
-- `StringClassName`
-- Pointer templates (`UniquePtrTemplate`, `SharedPtrTemplate`, etc.) and their
-  `make_*` variants
-- `StrictNew`
-- `Shadowing`
-- `SwitchFallthrough`
-- `AutoUnhideBaseMethods`
-- `GlobalUsingNS`
-- `BaseClassAliasName`, `OwnClassAliasName`, `AutoReturnName`
-- `DefaultAttributesClass/Struct/Union/Enum`
-- `FloatKeyword`
-- `MixedSignedness`
-- `DefaultInt`, `DefaultUInt`, `DefaultFloat`, `DefaultBint`
-
-Derived helpers such as `GetPointerTemplate` and `DefaultFloatSize()` keep reading
-from the configured properties, so no API churn is needed beyond construction.
-
-## Configuration format: JSONC
-
-Pure JSON is unfriendly to hand-edited configuration. We use **JSON with comments**
-(JSONC): `//` line comments, `/* */` block comments, and trailing commas. `System.Text.Json`
-natively supports this with `JsonCommentHandling.Skip` and `AllowTrailingCommas = true`.
-Booleans, numbers, strings, and enum names follow the C# property names in camelCase
-or PascalCase.
-
-Example `.myll-dialect.jsonc`:
-
-```jsonc
-{
-  // This library never wants implicit raw pointers from `new`.
-  "strictNew": true,
-
-  "globalUsingNS": "Contained",
-
-  /*
-   * Bundle an alternative string type so this module is self-describing
-   * when imported into projects that do not use std::string.
-   */
-  "stringClassName": "std::string",
-
-  "defaultInt": "Size32",
-}
-```
-
-Inline module attribute example:
+A module declares its dialect with a top-level statement placed after `module` and before imports:
 
 ```myll
 module mylib;
-[dialect(strictNew = true, globalUsingNS = "Contained")]
+dialect myll;
 
-namespace Mylib:
+import std_something;
 // ...
 ```
 
-## Per-module discovery and validation rules
+The statement is optional. When it is omitted the module uses the `myll` dialect, which is also the internal default.
 
-- A module is the unit identified by the `module NAME;` declaration, not by the
-  source file name.
-- If multiple source files of the same module carry a `[dialect(...)]` attribute,
-  their effective dialect settings must be identical. A mismatch is a compile-time
-  error. The compiler should report which files disagree and on which keys.
-- If none of the module's files declare a dialect, the compiler searches upward for
-  `.myll-dialect.jsonc` starting from each source file directory. The first one found
-  wins; directories higher in the hierarchy are fallbacks.
-- If no folder-level file is found, the module uses the CLI/global default, which
-  itself falls back to `Dialect.Default`.
-- The special value "auto" (or simply omitting a key) means "inherit from the next
-  less-specific source". It is never an error for a module to have no explicit
-  dialect.
+## Dialect files
 
-Example project layout:
+Dialects are stored as files in a `dialect/` directory. For now the compiler searches the repository-root `dialect/` directory; project-local dialect directories and explicit search paths are planned later.
 
-```text
-project/
-  .myll-dialect.jsonc          # project-wide default
-  src/
-    app.myll                    # module app; uses project default
-    lib1/
-      .myll-dialect.jsonc       # lib1 default
-      lib1_a.myll               # module lib1_a; uses lib1 default
-      lib1_b.myll               # module lib1_b; uses lib1 default
-    lib2/
-      lib2_a.myll               # module lib2_a; uses project default
-      lib2_b.myll               # module lib2_b; [dialect(...)] override
+- `dialect/myll.jsonc` is the default dialect. It is fully populated so users can copy it as a base.
+- A custom dialect is `dialect/<name>.jsonc` and is selected with `dialect <name>;`.
+- The file format is JSONC: comments (`//` and `/* */`) and trailing commas are allowed.
+
+A minimal custom dialect could look like this:
+
+```jsonc
+{
+	"strictNew": true,
+	"globalUsingNS": "Contained",
+	"stringClassName": "std::string",
+	"defaultAttributesClass": "rule_of_n=5",
+}
 ```
 
-This allows `lib1` to be a header-only Myll library that ships its own dialect
-without forcing that dialect on the rest of the project.
+Files do not have to specify every key. Missing keys fall back to the internal default, but the loader emits one warning per dialect listing the missing keys so dialect authors can make their files exhaustive. Unknown keys also produce one warning per dialect and are ignored; this keeps old dialect files working when properties are renamed or removed.
 
-## Proposed CLI surface
+## Validation rules
 
-```bash
-# Single flag, applied globally to modules that do not override it
---dialect strict_new=true
---dialect global_using_ns=contained
---dialect string_class_name=std::string
---dialect default_int=size32
---dialect switch_fallthrough=explicit
+- Dialect is a per-module concept, not per-file, so all source files of a module must resolve to the same effective dialect.
+- If one file of a module says `dialect myll;` and another file of the same module omits the statement, both resolve to `myll` and no error is emitted.
+- If files of the same module name different dialects, the compiler reports a source-located mismatch error.
 
-# Global dialect file
---dialect-file project.dialect.jsonc
-```
+## Future work
 
-CLI flags act as the global default, not as a forced override, so per-module and
-per-folder configurations still win.
-
-## Proposed implementation path
-
-1. Parse dialect files with `System.Text.Json` using `ReadCommentHandling =
-   JsonCommentHandling.Skip` and `AllowTrailingCommas = true`. No custom tokenizer
-   is needed for JSONC.
-2. Add `Dialect.ParseOverrides(string jsoncText)` or similar that maps JSON keys to
-   `Dialect` properties. Unknown keys error; invalid enum or type values error.
-3. Add a `ModuleContext.Dialect` resolution step that, after files are grouped by
-   module, collects `[dialect(...)]` attributes and folder-level config files in the
-   priority order above, validates consistency across files of the same module, and
-   stores the resulting `Dialect` on the `ModuleContext`.
-4. Replace remaining direct reads of `Dialect.Default` with reads from the active
-   `ModuleContext.Dialect`.
-5. Add regression tests:
-   - A module that uses a folder-level `.myll-dialect.jsonc`.
-   - A compilation with two modules that deliberately use different dialects and
-     both compile.
-   - A negative test where two files of the same module declare conflicting
-     dialects and produce a clear error.
-
-## Open questions
-
-- Should a CLI `--force-dialect` switch exist to override even per-module settings?
-  Useful for quick experiments, but dangerous for library code. Defer until needed.
-- Should folder-level config be called `.myll-dialect.jsonc`, `myll.dialect.jsonc`, or
-  something else? `.myll-dialect.jsonc` is less likely to collide with user files and
-  signals "all Myll modules here".
-- Should dialect settings ever affect the parser/lexer? Currently they do not; all
-  keywords are fixed. Keep it that way unless a concrete need arises.
-- Do we want named dialect presets (`--dialect-preset strict`, `--dialect-preset cpp23`)?
-  Deferred to a follow-up.
+- Inheritance between dialect files (`"basedOn": "myll"`) so a dialect can store only the differences from a base dialect.
+- Project-local `dialect/` directories and an explicit compiler search path.
 
 ## Relationship to other work
 
-- `plan/contained-global-using.md` depends on softcoded dialects: libraries will want
-  to select `GlobalUsingNS = Contained` without recompiling Myll.
-- The `string` keyword backing (`StringClassName`) is already a dialect property; once
-  softcoded, libraries can choose a different string implementation per module.
+- `plan/contained-global-using.md`: libraries can now select `GlobalUsingNS = Contained` without recompiling Myll by shipping their own dialect file.
+- `backend/Core/Dialect.cs` still owns the property model; the loader builds `Dialect` instances from JSONC instead of relying solely on the hardcoded `Dialect.Default`.

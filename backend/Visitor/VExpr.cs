@@ -109,6 +109,7 @@ namespace Myll
 					? VisitFuncCall( c.funcCall() )
 					: new FuncCall(),
 			};
+			ret.Dialect = Context.Dialect;
 			return ret;
 		}
 

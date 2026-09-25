@@ -5,6 +5,7 @@ options { tokenVocab = MyllLexer; }
 comment		:	COMMENT;
 
 prog		:	module?
+				dialectDecl?
 				imports*
 			//	rule?
 			//	defines?
@@ -12,6 +13,8 @@ prog		:	module?
 				EOF;
 
 module		:	MODULE id SEMI;
+
+dialectDecl	:	DIALECT id SEMI;
 
 imports		:	IMPORT importName (COMMA importName)* COMMA? SEMI;
 importName	:	namedImport

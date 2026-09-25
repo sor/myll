@@ -32,13 +32,12 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 
 ## Critical / next
 
-1. **Softcoded dialect configuration** — `Dialect` values are currently hardcoded as
-   `Dialect.Default` in `backend/Core/Dialect.cs`. Dialect is a per-module concept: multiple
-   modules in the same compilation may use different dialects (e.g. a header-only library that
-   ships its own settings), and missing configuration resolves to the built-in default without
-   error. Configuration should be authored in JSONC/JSON5, not strict JSON. See
-   `docs/design/softcoded-dialect.md`. This is a prerequisite for exposing `Leaky` / `Disabled`
-   `GlobalUsingNS` modes on a per-project basis instead of changing the global default.
+1. **Softcoded dialect configuration** — DONE. Dialects are selected per module with a
+   `dialect <name>;` statement and resolved from JSONC files in `dialect/`. `dialect/myll.jsonc`
+   ships as the default and as a copy-paste base. Missing/unknown keys produce one warning per
+   dialect. All files of a module must agree on the effective dialect. Files without a dialect
+   statement default to `myll`. See `docs/design/softcoded-dialect.md`.
+   - Future: inheritance (`"basedOn": "myll"`) and project-local `dialect/` directories.
 
 1. **Overload resolution maturity** — fill the remaining gaps in a deliberate order, adding regression tests at each step:
    1. **Simple types**: exact match, promotions, safe conversions — regression locked in `testing/cases/overload_non_template/`.
@@ -117,9 +116,7 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    number in Myll, this should be rejected; use `type == '\0'`. Files:
    `backend/Resolver/TypeChecker.cs` and `backend/Resolver/ConversionRules.cs`.
 
-6. **Softcoded dialect configuration** — see Critical / next #1.
-
-7. **Standard-library declaration attributes** — finish populating `std/*.decl.myll` and `c_*.decl.myll`
+6. **Standard-library declaration attributes** — finish populating `std/*.decl.myll` and `c_*.decl.myll`
    with `[pure]`, `[ct]`, `[nodiscard]`, and `[noexcept]` to match the installed C++23 standard-library
    headers. Use `/usr/include/c++/15/` (or the highest version under `/usr/include/c++/`) as the
    reference for `constexpr`, `const`, `noexcept`, and `[[nodiscard]]`. Keep the bindings updated when

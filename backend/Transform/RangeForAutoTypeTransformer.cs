@@ -18,7 +18,9 @@ namespace Myll.Transform
 
 		protected override void PostTransform( TransformContext ctx )
 		{
-			typeResolver = new TypeResolver( ctx.ResolutionResult! );
+			typeResolver = new TypeResolver( ctx.ResolutionResult! ) {
+				Dialect = ctx.Module.Context.Dialect,
+			};
 			InferInDecl( ctx.Module.Module! );
 		}
 

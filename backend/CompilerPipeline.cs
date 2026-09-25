@@ -73,20 +73,26 @@ namespace Myll
 
 		public static CompiledModuleResult CompileModule(
 			IGrouping<string, MyllParser.ProgContext> progContext,
-			bool                                      isPrototypeFile )
+			bool                                      isPrototypeFile,
+			DialectLoader                             dialectLoader )
 		{
 			ModuleContext context = new() {
 				IsPrototypeFile = isPrototypeFile,
-				Dialect         = Dialect.Default,
+				Dialect         = ResolveDialect( progContext, dialectLoader, out List<Diagnostic> dialectDiagnostics ),
 			};
+			context.Diagnostics.AddRange( dialectDiagnostics );
 
 			GlobalNamespace module = context.DeclVisitor.VisitProgs( progContext );
 			context.Module = module;
 			return new( context );
 		}
 
-		public static List<CompiledModuleResult> CompileModules( IEnumerable<ParseResult> parseResults )
+		public static List<CompiledModuleResult> CompileModules(
+			IEnumerable<ParseResult> parseResults,
+			DialectLoader?           dialectLoader = null )
 		{
+			DialectLoader loader = dialectLoader ?? new DialectLoader( Array.Empty<string>() );
+
 			return parseResults
 				.Select( r => r.Prog )
 				.OrderBy( p => p.Start.InputStream.SourceName )	// deterministically order files before grouping so multi-file modules emit stable output
@@ -94,8 +100,48 @@ namespace Myll
 				.AsParallel()
 				.Select( g => CompileModule(
 					g,
-					g.All( p => IsPrototypeFile( p.Start.InputStream.SourceName ) ) ) )
+					g.All( p => IsPrototypeFile( p.Start.InputStream.SourceName ) ),
+					loader ) )
 				.ToList();
+		}
+
+		private static Dialect ResolveDialect(
+			IGrouping<string, MyllParser.ProgContext> progContext,
+			DialectLoader                             loader,
+			out List<Diagnostic>                      dialectDiagnostics )
+		{
+			dialectDiagnostics = new List<Diagnostic>();
+
+			string? selectedName = null;
+			SrcPos? selectedPos  = null;
+
+			foreach( MyllParser.ProgContext c in progContext ) {
+				string name = c.dialectDecl()?.id().GetText() ?? "myll";
+				SrcPos  pos = c.dialectDecl()?.ToSrcPos()
+				           ?? c.module()?.ToSrcPos()
+				           ?? new SrcPos { file = c.Start.InputStream.SourceName };
+
+				if( selectedName == null ) {
+					selectedName = name;
+					selectedPos  = pos;
+					continue;
+				}
+
+				if( name != selectedName ) {
+					dialectDiagnostics.Add( new Diagnostic(
+						pos,
+						DiagnosticKind.Error,
+						String.Format(
+							"Dialect mismatch in module '{0}': this file uses dialect '{1}', but another file already declared '{2}'.",
+							progContext.Key,
+							name,
+							selectedName ) ) );
+				}
+			}
+
+			Dialect dialect = loader.Load( selectedName ?? "myll", out IReadOnlyList<Diagnostic> loaderDiagnostics );
+			dialectDiagnostics.AddRange( loaderDiagnostics );
+			return dialect;
 		}
 
 		public static bool IsPrototypeFile( string path )

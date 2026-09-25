@@ -130,6 +130,7 @@ F16			: 'f16';	// (opt) half prec. float
 NAMESPACE	: 'namespace';
 MODULE		: 'module';
 IMPORT		: 'import';
+DIALECT		: 'dialect';
 VOLATILE	: 'volatile';
 // remove
 STABLE		: 'stable';			// antonym to volatile

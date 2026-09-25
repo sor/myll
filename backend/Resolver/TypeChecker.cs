@@ -29,7 +29,8 @@ namespace Myll.Resolver
 			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
 				if( context.IsPrototypeFile )
 					continue;
-				currentDialect = context.Dialect;
+				currentDialect       = context.Dialect;
+				typeResolver.Dialect = context.Dialect;
 				ValidateCalls( context );
 				ValidateShadowing( context );
 				ValidateDecl( module );
@@ -448,7 +449,7 @@ namespace Myll.Resolver
 					continue;
 				}
 
-				Typespec? combined = TypeResolver.CommonType( inferred, t );
+				Typespec? combined = typeResolver.CommonType( inferred, t );
 				if( combined != null ) {
 					inferred = combined;
 				}

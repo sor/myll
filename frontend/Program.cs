@@ -82,6 +82,17 @@ namespace Myll
 				yield return file;
 		}
 
+		private static IEnumerable<string> GetDialectSearchDirectories()
+		{
+			string? repoRoot = TryGetRepoRoot();
+			if( repoRoot == null )
+				yield break;
+
+			string dialectDir = Path.Combine( repoRoot, "dialect" );
+			if( Directory.Exists( dialectDir ) )
+				yield return dialectDir;
+		}
+
 		private static bool IsArtifact( string path )
 		{
 			string name = Path.GetFileName( path );
@@ -241,7 +252,8 @@ namespace Myll
 			List<ParseResult> parseResults = CompilerPipeline.ParseFiles( inputFiles );
 			PrintDiagnosticsAndBail( opt, parseResults.SelectMany( r => r.Diagnostics ) );
 
-			List<CompiledModuleResult> modules = CompilerPipeline.CompileModules( parseResults );
+			DialectLoader dialectLoader = new( GetDialectSearchDirectories() );
+			List<CompiledModuleResult> modules = CompilerPipeline.CompileModules( parseResults, dialectLoader );
 			PrintDiagnosticsAndBail( opt, modules.SelectMany( m => m.Context.Diagnostics ) );
 
 			List<Diagnostic> resolutionDiagnostics = CompilerPipeline.ResolveModules( modules );

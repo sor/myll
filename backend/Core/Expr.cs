@@ -597,6 +597,12 @@ namespace Myll.Core
 		public Typespec type = null!;
 		public FuncCall funcCall = null!;
 
+		/// <summary>
+		/// The dialect that supplies smart-pointer make templates. Set from the module
+		/// context during visiting; falls back to <see cref="Dialect.Default"/> when not set.
+		/// </summary>
+		public Dialect Dialect { get; set; } = Myll.Core.Dialect.Default;
+
 		public override string Gen( bool doBrace = false )
 		{
 			string      ret;
@@ -619,7 +625,7 @@ namespace Myll.Core
 						DiagnosticKind.Error,
 						"weak_ptr can not be new'ed" ) );
 
-				string ptrFmt = Dialect.Default.GetPointerMakeTemplate( ptr.kind );
+				string ptrFmt = Dialect.GetPointerMakeTemplate( ptr.kind );
 
 				// remove the outermost smart pointer from the type without mutating the AST
 				type.ptrs = savedPtrs.Take( savedPtrs.Count - 1 ).ToList();

@@ -1,0 +1,57 @@
+{
+	// Myll default dialect. Copy this file as a base for other dialects.
+	"stringClassName": "std::string",
+
+	"uniquePtrTemplate":      "std::unique_ptr<{0}>",
+	"uniqueArrayPtrTemplate": "std::unique_ptr<{0}[]>",
+	"sharedPtrTemplate":      "std::shared_ptr<{0}>",
+	"sharedArrayPtrTemplate": "std::shared_ptr<{0}[]>",
+	"weakPtrTemplate":        "std::weak_ptr<{0}>",
+	"weakArrayPtrTemplate":   "std::weak_ptr<{0}[]>",
+
+	"uniquePtrMakeTemplate":      "std::make_unique<{0}>({1})",
+	"uniqueArrayPtrMakeTemplate": "std::make_unique<{0}[]>({1})",
+	"sharedPtrMakeTemplate":      "std::make_shared<{0}>({1})",
+	"sharedArrayPtrMakeTemplate": "std::make_shared<{0}[]>({1})",
+
+	"strictNew":                     false,
+	"allowPointerToArrayArithmetic": true,
+
+	"shadowing":             "WarnLocalShadowing, WarnLocalMemberCollision",
+	"switchFallthrough":     "ImplicitBreak",
+	"autoUnhideBaseMethods": true,
+	"globalUsingNS":         "Contained",
+
+	"baseClassAliasName": "base",
+	"ownClassAliasName":  "",
+	"autoReturnName":     "ret",
+
+	"comparisonOperators": "Any",
+
+	"defaultAttributesClass":  "",
+	"defaultAttributesStruct": "",
+	"defaultAttributesUnion":  "",
+	"defaultAttributesEnum":   "",
+
+	"defaultAttributesFunction":  "pure",
+	"defaultAttributesProcedure": "mutable",
+	"defaultAttributesMethod":    "",
+
+	"defaultAttributesConvertTo":   "pure",
+	"defaultAttributesConvertFrom": "",
+
+	"defaultAttributesOperatorCategory": {
+		"Comparison":   "pure",
+		"Arithmetic":   "pure",
+		"Assignment":   "mutable",
+		"IncDecrement": "mutable",
+	},
+
+	"floatKeyword": "Unspecified",
+	"mixedSignedness": "CStyle",
+
+	"defaultInt":   "SizeIndeterminate",
+	"defaultUInt":  "SizeIndeterminate",
+	"defaultFloat": "SizeIndeterminate",
+	"defaultBint":  "SizeIndeterminate",
+}

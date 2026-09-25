@@ -176,6 +176,7 @@ Shared external declarations in `lib/` are auto-discovered by the frontend, alon
 - The default harness includes `CoreutilAppsTests.GenerateCoreutilApps`, which generates C++ for every utility in `frontend/coreutil/`. The full C++ build (`bash frontend/coreutil/make_coreutil.sh`) should run in pre-submit/CI; it takes about 30 seconds from a clean state.
 - Manual testing: compile `.myll` files via the CLI and inspect generated `.cpp`/`.h` output. Also pass generated C++ code to a C++ compiler with sane warnings.
 - `testing/golden/` contains only Myll-generated `.cpp` and `.hpp` output. Support files such as `helper.hpp` or `inner.hpp` that live in `testing/cases/` are copied into the generated directory at test time after the golden comparison, so they must not be added to the golden baseline.
+- `dialect/` contains JSONC dialect definitions. `dialect/myll.jsonc` is the default and a copy-paste base for custom dialects. A module selects a dialect with `dialect <name>;` after the `module` declaration.
 - See `docs/analysis/06-test-coverage.md` for test inventory and earlier harness design notes.
 
 ## Container / CI Notes

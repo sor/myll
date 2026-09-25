@@ -133,6 +133,7 @@ namespace Myll
 			else throw new Exception( "unknown ptr type" );
 
 			ret.qual = c.qual().Visit();
+			ret.Dialect = Context.Dialect;
 			return ret;
 		}
 

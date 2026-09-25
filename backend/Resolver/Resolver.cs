@@ -69,6 +69,9 @@ namespace Myll.Resolver
 			this.typeResolver  = new TypeResolver( result, diagnostics );
 		}
 
+		public void SetDialect( Dialect dialect )
+			=> typeResolver.Dialect = dialect;
+
 		private ModuleContext GetContext( GlobalNamespace module )
 			=> moduleContexts[module];
 
@@ -110,6 +113,7 @@ namespace Myll.Resolver
 		do {
 			progress = false;
 			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
+				resolver.SetDialect( context.Dialect );
 				progress |= resolver.ResolveUsings( module, context );
 				progress |= resolver.ResolveAliases( module, context );
 				progress |= resolver.ResolveIds( module, context );
@@ -124,6 +128,9 @@ namespace Myll.Resolver
 			// made later will be committed again in the final Apply() below.
 			result.Apply();
 
+			foreach( (GlobalNamespace module, ModuleContext context) in modules )
+				resolver.SetDialect( context.Dialect );
+
 			// Infer the concrete type of range-based for loop variables declared with
 			// 'auto' as soon as the range expression type is known. This must happen
 			// before overload resolution so that uses of the loop variable inside the
@@ -136,8 +143,10 @@ namespace Myll.Resolver
 					new TransformContext( module, result ) ) );
 			}
 
-			foreach( (GlobalNamespace module, ModuleContext context) in modules )
+			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
+				resolver.SetDialect( context.Dialect );
 				progress |= resolver.ResolveCalls( module, context );
+			}
 		} while( progress );
 
 			// Commit resolved declarations to the AST so that type checking can use

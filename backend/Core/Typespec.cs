@@ -310,8 +310,14 @@ namespace Myll.Core
 			NoNeedForParens_End,
 		}
 
+		/// <summary>
+		/// The dialect that supplies pointer template strings. Set from the module context
+		/// during visiting; falls back to <see cref="Dialect.Default"/> when not set.
+		/// </summary>
+		public Dialect Dialect { get; set; } = Myll.Core.Dialect.Default;
+
 		public string GetTemplate()
-			=> Dialect.Default.GetPointerTemplate( kind );
+			=> Dialect.GetPointerTemplate( kind );
 
 		public Qualifier qual;
 		public Kind      kind;
