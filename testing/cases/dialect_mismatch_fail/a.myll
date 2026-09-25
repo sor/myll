@@ -1,0 +1,5 @@
+module dialect_mismatch;
+dialect myll;
+
+func answer() -> i32
+	=> 42;

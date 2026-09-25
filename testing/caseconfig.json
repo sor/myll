@@ -14,7 +14,7 @@
   },
   "fixedOutput": [ "source_map" ],
     "depth": {
-    "generateFailing": [ "overload_and_operators_fail", "typecheck_fail", "decl_and_attributes_fail", "template_fail", "special_features_fail", "imported_namespace_unqualified_fail", "ptr_arithmetic_fail", "local_var_template_fail", "alias_template_fail", "local_alias_template_fail" ],
+    "generateFailing": [ "overload_and_operators_fail", "typecheck_fail", "decl_and_attributes_fail", "template_fail", "special_features_fail", "imported_namespace_unqualified_fail", "ptr_arithmetic_fail", "local_var_template_fail", "alias_template_fail", "local_alias_template_fail", "dialect_mismatch_fail" ],
     "generate": [ "cpp_backend_fail" ],
     "compile": [ "extern" ],
     "link": [],

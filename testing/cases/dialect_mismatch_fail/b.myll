@@ -1,0 +1,5 @@
+module dialect_mismatch;
+dialect missing; // FAIL
+
+func main() -> i32
+	=> answer();

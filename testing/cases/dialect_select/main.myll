@@ -1,0 +1,7 @@
+module dialect_select;
+dialect myll;
+
+func main() -> i32
+{
+	return 0;
+}
