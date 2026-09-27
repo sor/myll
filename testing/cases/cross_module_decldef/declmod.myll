@@ -1,0 +1,11 @@
+// Signature-only module: declares Split::foo without defining it. The
+// definition lives in defmod. This models shipping a library's signatures
+// separately from its implementation; using both in one translation must
+// be legal and is treated as one function (not a redefinition, not an
+// ambiguous overload).
+module declmod;
+
+[extern] namespace Split
+{
+	func foo() -> int;
+}

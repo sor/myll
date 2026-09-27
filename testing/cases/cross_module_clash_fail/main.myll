@@ -1,0 +1,10 @@
+module main;
+
+import options_a, options_b;
+
+namespace Test:
+
+func main() -> int
+{
+	return foo();
+}

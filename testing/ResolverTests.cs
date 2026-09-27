@@ -525,7 +525,7 @@ func main() -> int { return fromB() + fromC(); }
 		}
 
 		[Fact]
-		public void AmbiguousImport_ProducesDiagnostic()
+		public void ImportedRedefinition_ProducesDiagnostic()
 		{
 			var (moduleB, contextB) = CompileModule( @"
 module B;
@@ -549,10 +549,15 @@ func main() -> int { return clash(); }
 				(moduleB, contextB),
 				(moduleC, contextC) );
 
-			Assert.Single( diagnostics );
-			Assert.Equal( DiagnosticKind.Error, diagnostics[0].Kind );
-			Assert.Contains( "Ambiguous", diagnostics[0].Message );
-			Assert.Contains( "clash", diagnostics[0].Message );
+			// Two same-signature definitions from two imported modules are a C++ ODR
+			// violation, not an overload: report the later definition as the error and
+			// the earlier one as the note.
+			Assert.Single( diagnostics, d => d.Kind == DiagnosticKind.Error
+			                               && d.Message.Contains( "Redefinition of 'clash'" )
+			                               && d.Message.Contains( "module 'B'" ) );
+			Assert.Contains( diagnostics, d =>
+				d.Kind == DiagnosticKind.Note
+				&& d.Message.Contains( "clash" ) );
 		}
 
 		[Fact]

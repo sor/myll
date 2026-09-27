@@ -1,0 +1,8 @@
+module defmod;
+
+namespace Split:
+
+func foo() -> int
+{
+	return 7;
+}

@@ -1,0 +1,13 @@
+module options_b;
+
+namespace Test:
+
+struct Options // FAIL: Redefinition of 'Test::Options'
+{
+	field int b = 2;
+}
+
+func foo() -> int // FAIL: Redefinition of 'Test::foo'
+{
+	return 1;
+}

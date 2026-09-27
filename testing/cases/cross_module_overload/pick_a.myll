@@ -1,0 +1,8 @@
+module pick_a;
+
+namespace Pick:
+
+func pick( i32 v ) -> int
+{
+	return v;
+}

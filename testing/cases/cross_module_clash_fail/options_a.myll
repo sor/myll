@@ -1,0 +1,13 @@
+module options_a;
+
+namespace Test:
+
+struct Options
+{
+	field int a = 1;
+}
+
+func foo() -> int
+{
+	return 0;
+}
