@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Myll.Core;
 using Myll.Transform;
@@ -160,6 +161,7 @@ namespace Myll.Resolver
 			resolver.UpdateDependentNestedNames( modules );
 
 			resolver.ValidateGlobalUsings( modules );
+			resolver.ValidateCrossModuleDecls( modules );
 
 			foreach( CompiledModuleResult module in modules )
 				foreach( Transformer t in transformers )
@@ -521,6 +523,262 @@ namespace Myll.Resolver
 						"Global `using` of a namespace is disabled in this dialect."
 					) );
 				}
+			}
+		}
+
+		/// <summary>
+		/// Rejects declarations from two different modules that merge into a single
+		/// translation unit and collide, mirroring what C++ would reject:
+		/// redefined classes/structs/enums/aliases, duplicate variables, and
+		/// same-signature function definitions (ODR violations). Declarations and
+		/// definitions with different signatures (cross-module overloads) stay legal.
+		/// Only real modules participate; prototype (.decl.myll) modules are replaced
+		/// by their raw C++ includes and never contribute their own definitions.
+		/// </summary>
+		private void ValidateCrossModuleDecls( IReadOnlyList<CompiledModuleResult> modules )
+		{
+			// Key: (enclosing namespace fqn, name) → declarations from real modules.
+			Dictionary<(string Ns, string Name), List<ModuleDecl>> declsByKey = new();
+			Dictionary<string, HashSet<string>> visibleByModule = new( StringComparer.Ordinal );
+
+			foreach( CompiledModuleResult m in modules ) {
+				GlobalNamespace module = m.Module;
+				if( m.Context.IsPrototypeFile )
+					continue;
+
+				HashSet<string> visible = new( StringComparer.Ordinal ) { module.module };
+				Queue<string> pending = new( module.imports.OfType<NamedImportSpec>().Select( s => s.name ) );
+				while( pending.Count > 0 ) {
+					string next = pending.Dequeue();
+					if( !visible.Add( next ) )
+						continue;
+					foreach( CompiledModuleResult candidate in modules ) {
+						if( candidate.Module.module != next )
+							continue;
+						foreach( string imp in candidate.Module.imports.OfType<NamedImportSpec>().Select( s => s.name ) )
+							pending.Enqueue( imp );
+						break;
+					}
+				}
+
+				foreach( string imp in StdBuiltins.ImplicitStdImports )
+					visible.Add( imp );
+
+				visibleByModule[module.module] = visible;
+				CollectModuleDecls( module.scope, "", m, declsByKey );
+			}
+
+			foreach( ((string ns, string name), List<ModuleDecl> decls) in declsByKey ) {
+				List<ModuleDecl> distinct = decls
+					.GroupBy( d => d.Decl, ReferenceEqualityComparer.Instance )
+					.Select( g => g.First() )
+					.ToList();
+				if( distinct.Count < 2 )
+					continue;
+
+				ReportCrossModuleCollisions( ns, name, distinct, visibleByModule );
+			}
+		}
+
+		private static void CollectModuleDecls(
+			Scope                                      scope,
+			string                                     nsPrefix,
+			CompiledModuleResult                       module,
+			Dictionary<(string, string), List<ModuleDecl>> declsByKey )
+		{
+			foreach( (string name, List<ScopeLeaf> leaves) in scope.children ) {
+				foreach( ScopeLeaf leaf in leaves ) {
+					Decl? decl = leaf.decl;
+					if( decl == null || decl.IsHidden )
+						continue;
+
+					if( decl is Namespace ns ) {
+						CollectModuleDecls(
+							ns.scope,
+							nsPrefix.Length == 0 ? name : nsPrefix + "::" + name,
+							module,
+							declsByKey );
+						continue;
+					}
+
+					// Only declarations that live in namespace scope reach the C++
+					// namespace; class/struct/union members are accessed through the type.
+					if( !IsNamespaceScoped( scope ) )
+						continue;
+
+					if( !declsByKey.TryGetValue( (nsPrefix, name), out List<ModuleDecl>? list ) ) {
+						list = new List<ModuleDecl>();
+						declsByKey[(nsPrefix, name)] = list;
+					}
+
+					list.Add( new ModuleDecl( decl, module.Module.module ) );
+				}
+			}
+		}
+
+		private static bool IsNamespaceScoped( Scope scope )
+		{
+			for( Scope? cur = scope; cur != null; cur = cur.parent ) {
+				if( cur.decl is GlobalNamespace )
+					return true;
+				if( cur.decl is Structural or Enumeration )
+					return false;
+			}
+
+			return false;
+		}
+
+		private void ReportCrossModuleCollisions(
+			string                             ns,
+			string                             name,
+			List<ModuleDecl>                  decls,
+			Dictionary<string, HashSet<string>> visibleByModule )
+		{
+			string fqn = ns.Length == 0 ? name : ns + "::" + name;
+
+			for( int i = 0; i < decls.Count; i++ ) {
+				for( int j = i + 1; j < decls.Count; j++ ) {
+					ModuleDecl a = decls[i];
+					ModuleDecl b = decls[j];
+					if( a.Module == b.Module )
+						continue;
+					if( !IsCollidingPair( a.Decl, b.Decl ) )
+						continue;
+					if( !HasCommonVisibleModule( a.Module, b.Module, visibleByModule ) )
+						continue;
+
+					// Anchor the error on the later declaration; note points to the earlier one.
+					ModuleDecl later   = IsLater( a.Decl, b.Decl ) ? a : b;
+					ModuleDecl earlier = later == a ? b : a;
+
+					diagnostics.Add( new Diagnostic(
+						later.Decl.srcPos,
+						DiagnosticKind.Error,
+						String.Format(
+							"Redefinition of '{0}' (first defined in module '{1}').",
+							fqn,
+							earlier.Module ) ) );
+					diagnostics.Add( new Diagnostic(
+						earlier.Decl.srcPos,
+						DiagnosticKind.Note,
+						String.Format( "Previous definition of '{0}' here.", fqn ) ) );
+				}
+			}
+		}
+
+		private static bool IsCollidingPair( Decl a, Decl b )
+		{
+			if( !SameKind( a, b ) )
+				return true;
+
+			if( a is Func fa && b is Func fb ) {
+				bool aDef = !fa.IsForwardDeclaration && !fa.IsExternal;
+				bool bDef = !fb.IsForwardDeclaration && !fb.IsExternal;
+				if( !aDef || !bDef )
+					return false;
+				return FunctionSignaturesEqual( fa, fb );
+			}
+
+			if( a is VarDecl va && b is VarDecl vb )
+				return !IsLinkSafeVar( va ) && !IsLinkSafeVar( vb );
+
+			return true; // Structural, Enumeration, AliasDecl, Structor
+		}
+
+		private static bool SameKind( Decl a, Decl b )
+			=> ( a is Func ) == ( b is Func )
+			&& ( a is Structor ) == ( b is Structor )
+			&& ( a is VarDecl ) == ( b is VarDecl )
+			&& ( a is Structural ) == ( b is Structural )
+			&& ( a is Enumeration ) == ( b is Enumeration )
+			&& ( a is AliasDecl ) == ( b is AliasDecl );
+
+		private static bool IsLinkSafeVar( VarDecl v )
+			=> v.IsHidden          // emitted as `static` (internal linkage) only
+			 || v.IsCompileTime   // emitted as `constexpr`, no symbol
+			 || v.IsExternal      // declaration only, no definition
+			 || ( v.type.qual & Qualifier.Const ) != 0; // const global: no symbol
+
+		private static bool FunctionSignaturesEqual( Func a, Func b )
+		{
+			if( TemplateInference.GetTemplateParamCount( a ) != TemplateInference.GetTemplateParamCount( b ) )
+				return false;
+			if( a.paras.Count != b.paras.Count )
+				return false;
+			if( a.retType.Gen() != b.retType.Gen() )
+				return false;
+			for( int i = 0; i < a.paras.Count; i++ ) {
+				if( a.paras[i].type.Gen() != b.paras[i].type.Gen() )
+					return false;
+			}
+
+			return true;
+		}
+
+		private static bool IsSameSignatureCandidate( Decl a, Decl b )
+			=> ( a is Func fa && b is Func fb )
+			 ? FunctionSignaturesEqual( fa, fb )
+			 : ( a is Structor sa && b is Structor sb ) && StructorSignaturesEqual( sa, sb );
+
+		private static bool StructorSignaturesEqual( Structor a, Structor b )
+		{
+			if( a.paras.Count != b.paras.Count )
+				return false;
+			for( int i = 0; i < a.paras.Count; i++ ) {
+				if( a.paras[i].type.Gen() != b.paras[i].type.Gen() )
+					return false;
+			}
+
+			return true;
+		}
+
+		// When merging the same signature, prefer the real definition over the
+		// declaration/forward variant.
+		private static bool PrefersCandidate( Decl a, Decl b )
+			=> IsDefinition( a ) && !IsDefinition( b );
+
+		private static bool IsDefinition( Decl d )
+		{
+			if( d is Func f )
+				return !f.IsForwardDeclaration && !f.IsExternal;
+			return true;
+		}
+
+		private static bool HasCommonVisibleModule(
+			string                             a,
+			string                             b,
+			Dictionary<string, HashSet<string>> visibleByModule )
+		{
+			foreach( HashSet<string> visible in visibleByModule.Values ) {
+				if( visible.Contains( a ) && visible.Contains( b ) )
+					return true;
+			}
+
+			return false;
+		}
+
+		// Order declarations by file name first, then by line. The input file list
+		// arrives sorted by file name (the harness and the driver both do this),
+		// which matches the order a reader encounters the sources.
+		private static bool IsLater( Decl a, Decl b )
+		{
+			int fileCompare = StringComparer.Ordinal.Compare(
+				Path.GetFileName( a.srcPos.file ),
+				Path.GetFileName( b.srcPos.file ) );
+			if( fileCompare != 0 )
+				return fileCompare > 0;
+			return a.srcPos.from.line > b.srcPos.from.line;
+		}
+
+		private sealed class ModuleDecl
+		{
+			public readonly Decl   Decl;
+			public readonly string Module;
+
+			public ModuleDecl( Decl decl, string module )
+			{
+				Decl   = decl;
+				Module = module;
 			}
 		}
 
@@ -1029,6 +1287,31 @@ namespace Myll.Resolver
 			else {
 				LogOverloadResolution( "    candidate {0}: template deduction failed", candidate.name );
 			}
+		}
+
+		// Merge candidates that are the same declaration (a declaration and its
+		// definition, e.g. from different modules, or two identical definitions).
+		// C++ treats them as one overload; Myll must not read them as ambiguous.
+		if( templateViable.Count > 1 ) {
+			List<Decl> deduplicated = new( templateViable.Count );
+			foreach( Decl candidate in templateViable ) {
+				int index = -1;
+				for( int i = 0; i < deduplicated.Count; i++ ) {
+					if( IsSameSignatureCandidate( candidate, deduplicated[i] ) ) {
+						index = i;
+						break;
+					}
+				}
+
+				if( index < 0 ) {
+					deduplicated.Add( candidate );
+				}
+				else if( PrefersCandidate( candidate, deduplicated[index] ) ) {
+					deduplicated[index] = candidate;
+				}
+			}
+
+			templateViable = deduplicated;
 		}
 
 		LogOverloadResolution( "  {0} candidate(s) survived template viability" , templateViable.Count );
