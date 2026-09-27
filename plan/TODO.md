@@ -82,13 +82,26 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 
 ## Short-term consistency fixes (next few sessions)
 
-1. **Cross-module declaration collisions** — Two imported modules can legitimately export
-   declarations with the same fully-qualified name (e.g. `Options` in two different helper
-   modules). Myll only needs to reject the collision when a *single* module imports both and
-   they end up in the same generated translation unit. Today Myll is silent and the C++ compiler
-   reports a redefinition; the diagnostic is readable but points at generated files. Once we have
-   `#line` source mapping the urgency drops, but Myll should still detect the conflict and emit
-   a source-location-aware error. Minimal repro: `tmp/repro_options_clash/`.
+1. **Cross-module declaration collisions** — DONE. `backend/Resolver/Resolver.cs`
+   (`ValidateCrossModuleDecls`, called after `ValidateGlobalUsings`) detects, per
+   (namespace-FQN, name), when two different real modules export declarations that merge
+   into one translation unit and collide, mirroring what C++ would reject: redefined
+   class/struct/union/enum/alias, duplicate non-link-safe variables, and same-signature
+    function definitions (ODR violations). Decl+def splits and different-signature
+    cross-module overloads stay legal. The decl+def split is a supported pattern, not
+    an accident: Myll needs forward declarations *only* for external libraries (the
+    `.decl.myll` bindings in `std/`/`lib/`), and a signature-only module plus a
+    definition module models shipping a library's signatures separately from its
+    implementation; using both in one translation must compile and act as one function.
+    Prototype (`.decl.myll`) modules are skipped because
+   they are replaced by their raw C++ includes. A matching change in `TryResolveOverload`
+   merges same-signature candidates (declaration + definition) so they are not read as
+   ambiguous. Diagnostics anchor the error on the later declaration and a note on the
+   earlier one, naming the other module. Tests: `testing/cases/cross_module_clash_fail/`
+   (negative, registered in `generateFailing`), `testing/cases/cross_module_overload/` and
+   `testing/cases/cross_module_decldef/` (positive, with goldens). The pre-existing
+   `ResolverTests.AmbiguousImport_ProducesDiagnostic` was retargeted to the new
+   redefinition diagnostic.
 
 
 2. **Contained global namespace `using` mode** — DONE. Module-scope `using NS;` now emits

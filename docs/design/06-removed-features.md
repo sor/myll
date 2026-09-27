@@ -11,7 +11,7 @@ This document lists features from C and C++ that Myll deliberately drops. Functi
 - **`typedef`** — replaced by `using`.
 - **Inline object declarations after a type definition** — e.g. `struct B{} b;` is not valid.
 - **Local classes, structs, enums, and functions inside functions** — lambdas replace local functions; types live at module or namespace scope.
-- **Forward declarations** — declaration order is irrelevant within a module; import what you need from other modules.
+- **User-written forward declarations** — a definition suffices and declaration order is irrelevant within a module; the compiler emits C++ prototypes and class forward declarations automatically. The only hand-written forward declarations are the external library bindings in `std/` and `lib/` (`.decl.myll` files), `[extern]` declarations, and OOP special members (`[abstract]`/`[default]`/`[delete]`).
 - **Assignment inside expressions** — avoids the classic `if (a = b)` bug.
 - **`throw` inside expressions** — exception throwing is statement-level.
 - **`goto`** — replaced by structured control flow.

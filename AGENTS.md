@@ -14,6 +14,14 @@ Myll is an experimental programming language that compiles to C++. It aims to pr
 - `plan/` — living design and implementation plans.
 - `REASONS.md` — decision log for deferred and rejected features.
 
+## Language invariants
+
+- Myll needs no separate declarations. A definition suffices; there is no C-style declaration-then-definition in user code.
+- Order in a file or module does not matter. `main` may come first and call functions or use classes defined later in the same module.
+- The C++ generator injects the required prototypes and class forward declarations into the top of each module's generated `.hpp`. Every generated `.cpp` includes its own `.hpp`, so the generated C++ is order-independent as well.
+- Hand-written forward declarations exist only for external library bindings: the `.decl.myll` files in `std/` and `lib/` (auto-discovered), `[extern]` declarations, and OOP special members (`[abstract]`/`[default]`/`[delete]`). `VDecl.ValidateForwardDeclaration` enforces this.
+- Splitting a declaration from its definition across modules is legal. It models shipping a library's signatures separately from its implementation (signature-only distribution). A same-signature declaration plus definition is one function: overload resolution merges them and `ValidateCrossModuleDecls` does not report a redefinition. Different signatures are ordinary cross-module overloads. See `testing/cases/cross_module_decldef/` and `testing/cases/cross_module_overload/`.
+
 ## Build & Run
 
 - Build: `dotnet build myll.sln`

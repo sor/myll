@@ -227,7 +227,8 @@ func later() { cout << "called\n"; }
 ```
 
 > **Changed because:** C++ forces the user to write declarations twice or worry about ordering.  
-> In Myll there is only one declaration; the compiler emits C++ prototypes automatically when the generated order requires them.
+> In Myll there is only one declaration; the compiler emits C++ prototypes automatically when the generated order requires them.  
+> The only hand-written forward declarations are the external library bindings in `std/` and `lib/` (`.decl.myll` files), `[extern]` declarations, and OOP special members. Splitting a declaration from its definition across modules is legal and models shipping a library's signatures separately from its implementation.
 
 ## Parameter passing
 
