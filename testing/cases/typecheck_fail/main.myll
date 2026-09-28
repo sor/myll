@@ -43,6 +43,27 @@ func test_char_as_number() -> void {
 	var i32 e = 'x'; // FAIL: Cannot convert 'char' to 'std::int32_t'
 }
 
+func test_char_vs_int_literal_eq() -> void {
+	var char c = 'a';
+	if( c == 0 ) { } // FAIL: Cannot compare 'char' with 'untyped integer'
+}
+
+func test_char_vs_int_literal_order() -> void {
+	var char c = 'a';
+	if( c < 5 ) { } // FAIL: Cannot compare 'char' with 'untyped integer'
+}
+
+func test_char_vs_typed_int() -> void {
+	var char c = 'a';
+	var int n = 3;
+	if( c == n ) { } // FAIL: Cannot compare 'char' with 'int'
+}
+
+func test_compound_constant_overflow() -> void {
+	// The folded value 1048576 does not fit in u8.
+	var u8 small = 1024 * 1024; // FAIL: Cannot convert 'untyped integer' to 'std::uint8_t'
+}
+
 func test_if_integer_condition() -> void {
 	var int i = 1;
 	if( i ) { } // FAIL: Condition of 'if' must be bool

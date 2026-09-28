@@ -39,7 +39,8 @@ namespace Myll.Resolver
 		public static bool IsScalarNumber( Typespec? t )
 			=> IsScalarInteger( t ) || IsScalarFloat( t );
 
-		// May participate in comparisons and equality. Char is comparable but not arithmetic.
+		// May participate in comparisons and equality. Char is only comparable with char
+		// (enforced in TypeChecker.ValidateComparisonOperator) and never arithmetic.
 		public static bool IsScalarComparable( Typespec? t )
 			=> t is TypespecBasic b && HasNoPointer( t )
 			 && b.kind is TypespecBasic.Kind.Integer

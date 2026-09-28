@@ -561,6 +561,7 @@ namespace Myll.Resolver
 					align            = b.align,
 					isDefaultSized   = b.isDefaultSized,
 					literalText      = b.literalText,
+					literalValue     = b.literalValue,
 				},
 				TypespecNested n => new TypespecNested {
 					resolvedDecl = n.resolvedDecl,
@@ -677,6 +678,9 @@ namespace Myll.Resolver
 							FormatType( type ) ) ) );
 				}
 
+				// Conditions are expressions too: run the built-in operator checks
+				// (comparisons, arithmetic, bitwise, ...) on them as well.
+				ValidateExpression( expr );
 				break;
 			}
 			}
@@ -979,6 +983,10 @@ namespace Myll.Resolver
 		private static bool IsNullLiteralType( Typespec? type )
 			=> type is TypespecBasic { kind: TypespecBasic.Kind.ExplicitAuto };
 
+		private static bool IsPlainChar( Typespec? type )
+			=> type is TypespecBasic { kind: TypespecBasic.Kind.Char }
+			&& ( type.ptrs == null || type.ptrs.Count == 0 );
+
 		private void ValidateComparisonOperator( BinOp binOp )
 		{
 			Typespec? leftType  = typeResolver.Resolve( binOp.left );
@@ -1017,6 +1025,21 @@ namespace Myll.Resolver
 					binOp.right = BindToBitType( binOp.right, target );
 				}
 
+				return;
+			}
+
+			// Char is not a number in Myll: a plain char is comparable only with other
+			// plain chars. Pointer comparisons (e.g. char* vs char*) are unaffected
+			// because they carry pointers and are not plain chars.
+			bool leftChar  = IsPlainChar( leftType );
+			bool rightChar = IsPlainChar( rightType );
+			if( leftChar || rightChar ) {
+				if( leftChar && rightChar )
+					return;
+
+				AddError( binOp, String.Format(
+					"Cannot compare 'char' with '{0}'; char is only comparable with char. Use a character literal such as '\\0' to test for the null character.",
+					FormatType( leftChar ? rightType : leftType ) ) );
 				return;
 			}
 
