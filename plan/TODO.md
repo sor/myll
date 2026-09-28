@@ -117,17 +117,28 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    includes appear or on includes pulled in by other headers. Audit the generator for any
    remaining cases where an include is omitted because another header happens to provide it.
 
-4. **Untyped integer compound constants** — `1024 * 1024 * 1024` resolves as an `UntypedInteger`
-   without a `literalText`, so `ConversionRules.GetUntypedLiteralRank` cannot verify that it fits
-   and rejects assignments to `u64`/etc. Decide whether to evaluate the constant during resolution
-   or preserve/forward `literalText` for compound expressions. Files:
-   `backend/Resolver/TypeResolver.cs` (`CommonArithmeticType`) and
-   `backend/Resolver/ConversionRules.cs` (`GetUntypedLiteralRank`).
+4. **Untyped integer compound constants** — DONE. Untyped integer constants carry their exact
+   value in `TypespecBasic.literalValue` (`BigInteger`): literals are parsed at type resolution,
+   and compound expressions are constant-folded by `FoldUntypedIntegerResult` in
+   `backend/Resolver/TypeResolver.cs` for `+ - * % & | ^ << >>` (a fresh typespec is returned;
+   operand types are never mutated). `ConversionRules.GetUntypedLiteralRank`/`IntegerFits` now
+   check the value against the target's exact min/max, so `var u64 x = 1024 * 1024 * 1024;` and
+   `var u64 x = 18446744073709551615;` work and non-fitting values are rejected (also for plain
+   literals above `long.MaxValue`, which the old `long`-based parse could not see). The int target
+   no longer short-circuits to Exact without a fit check. Tests:
+   `testing/cases/new_in_myll/compound_constants.myll` (positive) and
+   `testing/cases/typecheck_fail/main.myll` (`test_compound_constant_overflow`).
+   Remaining: `/` (`Operand.Divide`) still resolves to a null type (left to C++); ternaries of
+   folded constants are not folded; unary minus on literals is not folded.
 
-5. **`char` compared with integer literals** — `char` values currently compare with integer
-   literals like `type == 0` because C++ integral promotion leaks through. Since `char` is not a
-   number in Myll, this should be rejected; use `type == '\0'`. Files:
-   `backend/Resolver/TypeChecker.cs` and `backend/Resolver/ConversionRules.cs`.
+5. **`char` compared with integer literals** — DONE. `char` is not a number in Myll:
+   `ValidateComparisonOperator` (`backend/Resolver/TypeChecker.cs`) rejects a plain `char`
+   compared with any other built-in scalar type; use character literals such as
+   `type == '\0'`. Pointer comparisons (`char*` vs `char*`) are unaffected. This also closed a
+   validation gap: `if`/`while`/`for` conditions now run the built-in operator checks
+   (`CheckBooleanOperand` calls `ValidateExpression`), so comparisons in conditions are validated
+   like comparisons in expression position. Tests: `testing/cases/typecheck_fail/main.myll`
+   (`test_char_vs_int_literal_eq`, `test_char_vs_int_literal_order`, `test_char_vs_typed_int`).
 
 6. **Standard-library declaration attributes** — finish populating `std/*.decl.myll` and `c_*.decl.myll`
    with `[pure]`, `[ct]`, `[nodiscard]`, and `[noexcept]` to match the installed C++23 standard-library
