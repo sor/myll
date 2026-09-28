@@ -17,5 +17,8 @@ func main() -> int
 	r = check_compound_constants();
 	if( r != 0 ) return r;
 
+	r = check_char_casts();
+	if( r != 0 ) return r;
+
 	return 0;
 }

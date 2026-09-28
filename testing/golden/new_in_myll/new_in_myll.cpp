@@ -60,6 +60,23 @@ int check_bint()
     }
     return 0;
 }
+int check_char_casts()
+{
+    char c = 'A';
+    int n = static_cast<int>( c );
+    if( n != 65 ) {
+        return 1;
+    }
+    char d = static_cast<char>( 66 );
+    if( d != 'B' ) {
+        return 2;
+    }
+    std::uint8_t u = static_cast<std::uint8_t>( 'Z' );
+    if( u != 90 ) {
+        return 3;
+    }
+    return 0;
+}
 int check_compound_constants()
 {
     std::uint64_t gb = 1024 * 1024 * 1024;
@@ -158,6 +175,10 @@ int main()
         return r;
     }
     r = check_compound_constants();
+    if( r != 0 ) {
+        return r;
+    }
+    r = check_char_casts();
     if( r != 0 ) {
         return r;
     }

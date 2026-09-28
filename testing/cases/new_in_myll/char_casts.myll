@@ -1,0 +1,21 @@
+module new_in_myll;
+
+func check_char_casts() -> int
+{
+	// Explicit casts between char and integer remain available;
+	// implicit conversions are rejected by the type checker.
+	var char c = 'A';
+	var int n = (int)c;
+	if( n != 65 )
+		return 1;
+
+	var char d = (char)66;
+	if( d != 'B' )
+		return 2;
+
+	var u8 u = (u8)'Z';
+	if( u != 90 )
+		return 3;
+
+	return 0;
+}
