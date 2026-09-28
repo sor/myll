@@ -1,0 +1,29 @@
+module new_in_myll;
+
+func check_compound_constants() -> int
+{
+	// Compound untyped-integer expressions are constant-folded during
+	// resolution, so their value is range-checked against the target type.
+	var u64 gb = 1024 * 1024 * 1024;
+	if( gb != 1073741824 )
+		return 1;
+
+	var u64 shifted = 0xFF << 8;
+	if( shifted != 65280 )
+		return 2;
+
+	var u64 mixed = 0xF0 | 0x0F;
+	if( mixed != 255 )
+		return 3;
+
+	var u64 remainder = 100 % 7;
+	if( remainder != 2 )
+		return 4;
+
+	// Values above long.MaxValue must fit-check as well.
+	var u64 max = 18446744073709551615;
+	if( max != 18446744073709551615 )
+		return 5;
+
+	return 0;
+}

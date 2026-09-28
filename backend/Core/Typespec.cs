@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 
 using static System.String;
@@ -132,6 +133,13 @@ namespace Myll.Core
 		/// check whether the value fits in the target type before committing to a concrete size.
 		/// </summary>
 		public string? literalText;
+
+		/// <summary>
+		/// For UntypedInteger types, the exact constant value: the parsed literal for a plain
+		/// integer literal, or the folded result for a compound untyped-integer expression
+		/// (e.g. <c>1024 * 1024 * 1024</c>). Null when the value is not a compile-time constant.
+		/// </summary>
+		public BigInteger? literalValue;
 
 		/// <summary>
 		/// True when this type is a default-sized type (<c>int</c>, <c>uint</c>, <c>float</c>,

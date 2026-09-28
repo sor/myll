@@ -14,5 +14,8 @@ func main() -> int
 	r = check_return_type_inference();
 	if( r != 0 ) return r;
 
+	r = check_compound_constants();
+	if( r != 0 ) return r;
+
 	return 0;
 }

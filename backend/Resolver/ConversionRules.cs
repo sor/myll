@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using Myll.Core;
 
 namespace Myll.Resolver
@@ -390,16 +391,20 @@ namespace Myll.Resolver
 				return ConversionRank.None;
 
 			if( srcBasic.kind == TypespecBasic.Kind.UntypedInteger ) {
-				if( !TryParseInteger( srcBasic.literalText, out long value ) )
+				// Prefer the exact constant value (parsed literal or folded compound
+				// expression); fall back to parsing the original literal text.
+				BigInteger value;
+				if( srcBasic.literalValue is BigInteger folded )
+					value = folded;
+				else if( !TryParseInteger( srcBasic.literalText, out value ) )
 					return ConversionRank.None;
 
-				// Default-sized `int` / `float` is the natural target for an unannotated literal.
-				if( tgtBasic.kind == TypespecBasic.Kind.Integer && tgtBasic.isDefaultSized )
-					return ConversionRank.Exact;
-
-				// Integer literal defaults to the platform int size when the target is int.
-				if( tgtBasic.kind == TypespecBasic.Kind.Integer && tgtBasic.size == 4 )
-					return ConversionRank.Exact;
+				// An unannotated literal is naturally a platform int when it fits;
+				// anything that does not fit cannot bind to int at all.
+				if( tgtBasic.kind == TypespecBasic.Kind.Integer && ( tgtBasic.isDefaultSized || tgtBasic.size == 4 ) )
+					return IntegerFits( value, TypespecBasic.Kind.Integer, 4 )
+						? ConversionRank.Exact
+						: ConversionRank.None;
 
 				// Fits into another integer type? (value range check)
 				if( ( tgtBasic.kind == TypespecBasic.Kind.Integer
@@ -577,30 +582,33 @@ namespace Myll.Resolver
 			return type is TypespecBasic { kind: TypespecBasic.Kind.Char, size: 1 };
 		}
 
-		private static bool IntegerFits( long value, TypespecBasic.Kind kind, int size )
+		private static bool IntegerFits( BigInteger value, TypespecBasic.Kind kind, int size )
 		{
 			return kind switch {
 				TypespecBasic.Kind.Integer => size switch {
-					1 => value >= sbyte.MinValue && value <= sbyte.MaxValue,
-					2 => value >= short.MinValue && value <= short.MaxValue,
-					4 => value >= int.MinValue && value <= int.MaxValue,
-					8 => true,
+					1 => FitsIn( value, sbyte.MinValue, sbyte.MaxValue ),
+					2 => FitsIn( value, short.MinValue, short.MaxValue ),
+					4 => FitsIn( value, int.MinValue, int.MaxValue ),
+					8 => FitsIn( value, long.MinValue, long.MaxValue ),
 					_ => false,
 				},
-				TypespecBasic.Kind.Unsigned => value >= 0 && size switch {
-					1 => value <= byte.MaxValue,
-					2 => value <= ushort.MaxValue,
-					4 => value <= uint.MaxValue,
-					8 => true,
+				TypespecBasic.Kind.Unsigned => size switch {
+					1 => FitsIn( value, 0, byte.MaxValue ),
+					2 => FitsIn( value, 0, ushort.MaxValue ),
+					4 => FitsIn( value, 0, uint.MaxValue ),
+					8 => FitsIn( value, 0, ulong.MaxValue ),
 					_ => false,
 				},
 				_ => false,
 			};
 		}
 
-		private static bool TryParseInteger( string? text, out long value )
+		private static bool FitsIn( BigInteger value, BigInteger min, BigInteger max )
+			=> value >= min && value <= max;
+
+		internal static bool TryParseInteger( string? text, out BigInteger value )
 		{
-			value = 0;
+			value = BigInteger.Zero;
 			if( string.IsNullOrEmpty( text ) )
 				return false;
 
@@ -609,23 +617,40 @@ namespace Myll.Resolver
 			try {
 				if( span.Length >= 2 && span[0] == '0' ) {
 					if( span[1] == 'x' || span[1] == 'X' )
-						value = Convert.ToInt64( span[2..].ToString(), 16 );
-					else if( span[1] == 'o' || span[1] == 'O' )
-						value = Convert.ToInt64( span[2..].ToString(), 8 );
-					else if( span[1] == 'b' || span[1] == 'B' )
-						value = Convert.ToInt64( span[2..].ToString(), 2 );
-					else
-						value = long.Parse( span.ToString(), System.Globalization.NumberStyles.None );
-				}
-				else {
-					value = long.Parse( span.ToString(), System.Globalization.NumberStyles.None );
+						return TryParseRadix( span[2..].ToString(), 16, out value );
+					if( span[1] == 'o' || span[1] == 'O' )
+						return TryParseRadix( span[2..].ToString(), 8, out value );
+					if( span[1] == 'b' || span[1] == 'B' )
+						return TryParseRadix( span[2..].ToString(), 2, out value );
 				}
 
+				value = BigInteger.Parse( span.ToString(), System.Globalization.NumberStyles.None );
 				return true;
 			}
 			catch {
 				return false;
 			}
+		}
+
+		private static bool TryParseRadix( string digits, int radix, out BigInteger value )
+		{
+			value = BigInteger.Zero;
+			if( digits.Length == 0 )
+				return false;
+
+			foreach( char c in digits ) {
+				int digit = c switch {
+					>= '0' and <= '9' => c - '0',
+					>= 'a' and <= 'f' => c - 'a' + 10,
+					>= 'A' and <= 'F' => c - 'A' + 10,
+					_                 => -1,
+				};
+				if( digit < 0 || digit >= radix )
+					return false;
+				value = value * radix + digit;
+			}
+
+			return true;
 		}
 
 		private static bool TryParseFloat( string? text, out double value )

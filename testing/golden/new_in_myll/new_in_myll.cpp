@@ -60,6 +60,30 @@ int check_bint()
     }
     return 0;
 }
+int check_compound_constants()
+{
+    std::uint64_t gb = 1024 * 1024 * 1024;
+    if( gb != 1073741824 ) {
+        return 1;
+    }
+    std::uint64_t shifted = 0xFF << 8;
+    if( shifted != 65280 ) {
+        return 2;
+    }
+    std::uint64_t mixed = 0xF0 | 0x0F;
+    if( mixed != 255 ) {
+        return 3;
+    }
+    std::uint64_t remainder = 100 % 7;
+    if( remainder != 2 ) {
+        return 4;
+    }
+    std::uint64_t max = 18446744073709551615;
+    if( max != 18446744073709551615 ) {
+        return 5;
+    }
+    return 0;
+}
 int check_default_init()
 {
     int i{};
@@ -130,6 +154,10 @@ int main()
         return r;
     }
     r = check_return_type_inference();
+    if( r != 0 ) {
+        return r;
+    }
+    r = check_compound_constants();
     if( r != 0 ) {
         return r;
     }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using Myll.Core;
 
 namespace Myll.Resolver
@@ -94,11 +95,14 @@ namespace Myll.Resolver
 				};
 
 			// Integer literals without a concrete-size suffix are untyped until bound to a target.
-			return new TypespecBasic {
+			TypespecBasic integer = new() {
 				kind        = TypespecBasic.Kind.UntypedInteger,
 				size        = TypespecBasic.SizeUndetermined,
 				literalText = t,
 			};
+			if( ConversionRules.TryParseInteger( t, out BigInteger literalValue ) )
+				integer.literalValue = literalValue;
+			return integer;
 		}
 
 		private Typespec? ResolveInitList( InitListExpr initList )
@@ -271,11 +275,11 @@ namespace Myll.Resolver
 				}
 
 				if( binOp.op == Operand.Modulo )
-					return CommonIntegerType( left, right );
+					return FoldUntypedIntegerResult( binOp.op, left, right, CommonIntegerType( left, right ) );
 				if( binOp.op == Operand.FractionalDivide )
 					return new TypespecBasic { kind = TypespecBasic.Kind.Float, size = 8 };
 
-				return CommonArithmeticType( left, right );
+				return FoldUntypedIntegerResult( binOp.op, left, right, CommonArithmeticType( left, right ) );
 			}
 
 			if( IsComparisonOperation( binOp.op ) || IsLogicalOperation( binOp.op ) )
@@ -285,10 +289,10 @@ namespace Myll.Resolver
 				return leftType;
 
 			if( IsBitwiseOperation( binOp.op ) )
-				return CommonIntegerType( leftType, rightType );
+				return FoldUntypedIntegerResult( binOp.op, leftType, rightType, CommonIntegerType( leftType, rightType ) );
 
 			if( IsShiftOperation( binOp.op ) )
-				return PromoteInteger( leftType );
+				return FoldUntypedIntegerResult( binOp.op, leftType, rightType, PromoteInteger( leftType ) );
 
 			return null;
 		}
@@ -548,6 +552,81 @@ namespace Myll.Resolver
 			return null;
 		}
 
+		/// <summary>
+		/// When both operands of a binary operator are untyped-integer constants, constant-folds
+		/// the result so the exact value is available for target-fit checks (e.g.
+		/// <c>var u64 x = 1024 * 1024 * 1024;</c>). A fresh typespec is returned; operand
+		/// types are never mutated (shift results in particular reuse the left operand's type).
+		/// </summary>
+		private static Typespec? FoldUntypedIntegerResult( Operand op, Typespec? left, Typespec? right, Typespec? result )
+		{
+			if( result is not TypespecBasic { kind: TypespecBasic.Kind.UntypedInteger } )
+				return result;
+
+			if( left is not TypespecBasic { kind: TypespecBasic.Kind.UntypedInteger, literalValue: { } leftValue } )
+				return result;
+
+			if( right is not TypespecBasic { kind: TypespecBasic.Kind.UntypedInteger, literalValue: { } rightValue } )
+				return result;
+
+			if( !TryFoldUntypedInteger( op, leftValue, rightValue, out BigInteger folded ) )
+				return result;
+
+			return new TypespecBasic { kind = TypespecBasic.Kind.UntypedInteger, size = TypespecBasic.SizeUndetermined, literalValue = folded };
+		}
+
+		private static bool TryFoldUntypedInteger( Operand op, BigInteger left, BigInteger right, out BigInteger result )
+		{
+			result = BigInteger.Zero;
+
+			switch( op ) {
+				case Operand.Add:
+					result = left + right;
+					return true;
+
+				case Operand.Subtract:
+					result = left - right;
+					return true;
+
+				case Operand.Multiply:
+					result = left * right;
+					return true;
+
+				case Operand.Modulo:
+					if( right.IsZero )
+						return false;
+					result = left % right;
+					return true;
+
+				case Operand.BitAnd:
+					result = left & right;
+					return true;
+
+				case Operand.BitOr:
+					result = left | right;
+					return true;
+
+				case Operand.BitXor:
+					result = left ^ right;
+					return true;
+
+				case Operand.LeftShift:
+					if( right.Sign < 0 || right > int.MaxValue )
+						return false;
+					result = left << (int) right;
+					return true;
+
+				case Operand.RightShift:
+					if( right.Sign < 0 || right > int.MaxValue )
+						return false;
+					result = left >> (int) right;
+					return true;
+
+				default:
+					return false;
+			}
+		}
+
 		private static bool IsUntyped( Typespec? type )
 			=> type is TypespecBasic basic
 			 && ( basic.kind == TypespecBasic.Kind.UntypedInteger
@@ -625,6 +704,7 @@ namespace Myll.Resolver
 					size           = b.size,
 					align          = b.align,
 					literalText    = b.literalText,
+					literalValue   = b.literalValue,
 					isDefaultSized = b.isDefaultSized,
 				},
 				TypespecNested n  => new TypespecNested {

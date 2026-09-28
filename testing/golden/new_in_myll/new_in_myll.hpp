@@ -33,6 +33,7 @@ public:
     int retrieve();
 };
 int check_bint();
+int check_compound_constants();
 int check_default_init();
 void setPtr(int* x);
 void setRef(int& x);
