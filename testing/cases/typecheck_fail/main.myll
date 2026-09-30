@@ -59,6 +59,23 @@ func test_char_vs_typed_int() -> void {
 	if( c == n ) { } // FAIL: Cannot compare 'char' with 'int'
 }
 
+func test_char_vs_int_literal_mirrored() -> void {
+	var char c = 'a';
+	if( 0 == c ) { } // FAIL: Cannot compare 'char' with 'untyped integer'
+}
+
+func test_char_vs_typed_int_order_ops() -> void {
+	var char c = 'a';
+	var int n = 3;
+	if( c >= n ) { } // FAIL: Cannot compare 'char' with 'int'
+}
+
+func test_char_vs_typed_float() -> void {
+	var char c = 'a';
+	var f32 f = 1.5;
+	if( c == f ) { } // FAIL: Cannot compare 'char' with 'float'
+}
+
 func test_compound_constant_overflow() -> void {
 	// The folded value 1048576 does not fit in u8.
 	var u8 small = 1024 * 1024; // FAIL: Cannot convert 'untyped integer' to 'std::uint8_t'

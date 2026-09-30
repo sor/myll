@@ -1038,9 +1038,14 @@ namespace Myll.Resolver
 				if( leftChar && rightChar )
 					return;
 
-				AddError( binOp, String.Format(
-					"Cannot compare 'char' with '{0}'; char is only comparable with char. Use a character literal such as '\\0' to test for the null character.",
-					FormatType( leftChar ? rightType : leftType ) ) );
+				// The character-literal hint only makes sense against an untyped
+				// literal (the `type == 0` pattern); for typed operands the fix is
+				// a cast or a proper comparison, not a literal.
+				Typespec otherType = leftChar ? rightType : leftType;
+				string message     = otherType is TypespecBasic { kind: TypespecBasic.Kind.UntypedInteger or TypespecBasic.Kind.UntypedFloat }
+				                   ? "Cannot compare 'char' with '{0}'; char is only comparable with char. Use a character literal such as '\\0' to test for the null character."
+				                   : "Cannot compare 'char' with '{0}'; char is only comparable with char.";
+				AddError( binOp, String.Format( message, FormatType( otherType ) ) );
 				return;
 			}
 
