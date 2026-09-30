@@ -161,7 +161,7 @@ namespace Myll.Resolver
 			resolver.UpdateDependentNestedNames( modules );
 
 			resolver.ValidateGlobalUsings( modules );
-			resolver.ValidateCrossModuleDecls( modules );
+			resolver.ValidateModuleDecls( modules );
 
 			foreach( CompiledModuleResult module in modules )
 				foreach( Transformer t in transformers )
@@ -527,15 +527,19 @@ namespace Myll.Resolver
 		}
 
 		/// <summary>
-		/// Rejects declarations from two different modules that merge into a single
-		/// translation unit and collide, mirroring what C++ would reject:
-		/// redefined classes/structs/enums/aliases, duplicate variables, and
-		/// same-signature function definitions (ODR violations). Declarations and
-		/// definitions with different signatures (cross-module overloads) stay legal.
-		/// Only real modules participate; prototype (.decl.myll) modules are replaced
-		/// by their raw C++ includes and never contribute their own definitions.
+		/// Rejects declarations that merge into a single translation unit and collide,
+		/// mirroring what C++ would reject: redefined classes/structs/enums/aliases,
+		/// duplicate variables, and same-signature function definitions (ODR
+		/// violations). Applies to two declarations from different modules that are
+		/// visible from one module, and to duplicate declarations within one module.
+		/// Declarations and definitions with different signatures (overloads) stay
+		/// legal, as does a same-signature declaration plus its definition; functions
+		/// that differ only in return type are rejected because C++ cannot overload
+		/// on return type. Only real modules participate; prototype (.decl.myll)
+		/// modules are replaced by their raw C++ includes and never contribute their
+		/// own definitions.
 		/// </summary>
-		private void ValidateCrossModuleDecls( IReadOnlyList<CompiledModuleResult> modules )
+		private void ValidateModuleDecls( IReadOnlyList<CompiledModuleResult> modules )
 		{
 			// Key: (enclosing namespace fqn, name) → declarations from real modules.
 			Dictionary<(string Ns, string Name), List<ModuleDecl>> declsByKey = new();
@@ -576,7 +580,7 @@ namespace Myll.Resolver
 				if( distinct.Count < 2 )
 					continue;
 
-				ReportCrossModuleCollisions( ns, name, distinct, visibleByModule );
+				ReportModuleCollisions( ns, name, distinct, visibleByModule );
 			}
 		}
 
@@ -628,7 +632,7 @@ namespace Myll.Resolver
 			return false;
 		}
 
-		private void ReportCrossModuleCollisions(
+		private void ReportModuleCollisions(
 			string                             ns,
 			string                             name,
 			List<ModuleDecl>                  decls,
@@ -640,50 +644,84 @@ namespace Myll.Resolver
 				for( int j = i + 1; j < decls.Count; j++ ) {
 					ModuleDecl a = decls[i];
 					ModuleDecl b = decls[j];
-					if( a.Module == b.Module )
+					// A module always sees its own declarations; only cross-module pairs
+					// need a module that imports (transitively) both sides.
+					bool crossModule = a.Module != b.Module;
+					if( crossModule && !HasCommonVisibleModule( a.Module, b.Module, visibleByModule ) )
 						continue;
-					if( !IsCollidingPair( a.Decl, b.Decl ) )
-						continue;
-					if( !HasCommonVisibleModule( a.Module, b.Module, visibleByModule ) )
+					CollisionKind kind = ClassifyCollision( a.Decl, b.Decl );
+					if( kind == CollisionKind.None )
 						continue;
 
 					// Anchor the error on the later declaration; note points to the earlier one.
 					ModuleDecl later   = IsLater( a.Decl, b.Decl ) ? a : b;
 					ModuleDecl earlier = later == a ? b : a;
 
-					diagnostics.Add( new Diagnostic(
-						later.Decl.srcPos,
-						DiagnosticKind.Error,
-						String.Format(
-							"Redefinition of '{0}' (first defined in module '{1}').",
-							fqn,
-							earlier.Module ) ) );
-					diagnostics.Add( new Diagnostic(
-						earlier.Decl.srcPos,
-						DiagnosticKind.Note,
-						String.Format( "Previous definition of '{0}' here.", fqn ) ) );
+					string error = crossModule
+					             ? ( kind == CollisionKind.Redefinition       ? String.Format( "Redefinition of '{0}' (first defined in module '{1}').", fqn, earlier.Module )
+					               : kind == CollisionKind.ReturnTypeMismatch ? String.Format( "Function '{0}' differs only in return type (first defined in module '{1}').", fqn, earlier.Module )
+					               :                                            String.Format( "Name '{0}' is used for both a {1} and a {2} (the {2} is defined in module '{3}').", fqn, KindName( later.Decl ), KindName( earlier.Decl ), earlier.Module ) )
+					             : ( kind == CollisionKind.Redefinition       ? String.Format( "Redefinition of '{0}' in this module.", fqn )
+					               : kind == CollisionKind.ReturnTypeMismatch ? String.Format( "Function '{0}' differs only in return type in this module.", fqn )
+					               :                                            String.Format( "Name '{0}' is used for both a {1} and a {2} in this module.", fqn, KindName( later.Decl ), KindName( earlier.Decl ) ) );
+
+					string note = kind == CollisionKind.KindMismatch
+					            ? String.Format( "The {0} declaration of '{1}' is here.", KindName( earlier.Decl ), fqn )
+					            : String.Format( "Previous definition of '{0}' here.",    fqn );
+
+					diagnostics.Add( new Diagnostic( later.Decl.srcPos,   DiagnosticKind.Error, error ) );
+					diagnostics.Add( new Diagnostic( earlier.Decl.srcPos, DiagnosticKind.Note,  note  ) );
 				}
 			}
 		}
 
-		private static bool IsCollidingPair( Decl a, Decl b )
+		private enum CollisionKind
+		{
+			None,
+			Redefinition,
+			ReturnTypeMismatch,
+			KindMismatch,
+		}
+
+		/// <summary>
+		/// Classifies how two declarations of the same name collide when merged into one
+		/// translation unit. Mirrors what C++ rejects: redefinitions, same-parameter
+		/// functions that differ only in return type (C++ cannot overload on return
+		/// type), and name sharing between different declaration kinds (Myll has no
+		/// elaborated type specifiers). A declaration plus its matching definition is
+		/// not a collision; different parameters are ordinary overloads.
+		/// </summary>
+		private static CollisionKind ClassifyCollision( Decl a, Decl b )
 		{
 			if( !SameKind( a, b ) )
-				return true;
+				return CollisionKind.KindMismatch;
 
 			if( a is Func fa && b is Func fb ) {
+				if( !FunctionParamsEqual( fa, fb ) )
+					return CollisionKind.None;
+				if( fa.retType.Gen() != fb.retType.Gen() )
+					return CollisionKind.ReturnTypeMismatch;
+
 				bool aDef = !fa.IsForwardDeclaration && !fa.IsExternal;
 				bool bDef = !fb.IsForwardDeclaration && !fb.IsExternal;
-				if( !aDef || !bDef )
-					return false;
-				return FunctionSignaturesEqual( fa, fb );
+				return aDef && bDef ? CollisionKind.Redefinition : CollisionKind.None;
 			}
 
 			if( a is VarDecl va && b is VarDecl vb )
-				return !IsLinkSafeVar( va ) && !IsLinkSafeVar( vb );
+				return !IsLinkSafeVar( va ) && !IsLinkSafeVar( vb )
+				 ? CollisionKind.Redefinition
+				 : CollisionKind.None;
 
-			return true; // Structural, Enumeration, AliasDecl, Structor
+			return CollisionKind.Redefinition; // Structural, Enumeration, AliasDecl, Structor
 		}
+
+		private static string KindName( Decl d )
+			=> d is Structural or Enumeration ? "type"
+			 : d is Func                     ? "function"
+			 : d is Structor                 ? "constructor"
+			 : d is VarDecl                  ? "variable"
+			 : d is AliasDecl                ? "alias"
+			 :                                 "declaration";
 
 		private static bool SameKind( Decl a, Decl b )
 			=> ( a is Func ) == ( b is Func )
@@ -699,13 +737,11 @@ namespace Myll.Resolver
 			 || v.IsExternal      // declaration only, no definition
 			 || ( v.type.qual & Qualifier.Const ) != 0; // const global: no symbol
 
-		private static bool FunctionSignaturesEqual( Func a, Func b )
+		private static bool FunctionParamsEqual( Func a, Func b )
 		{
 			if( TemplateInference.GetTemplateParamCount( a ) != TemplateInference.GetTemplateParamCount( b ) )
 				return false;
 			if( a.paras.Count != b.paras.Count )
-				return false;
-			if( a.retType.Gen() != b.retType.Gen() )
 				return false;
 			for( int i = 0; i < a.paras.Count; i++ ) {
 				if( a.paras[i].type.Gen() != b.paras[i].type.Gen() )
@@ -714,6 +750,12 @@ namespace Myll.Resolver
 
 			return true;
 		}
+
+		// Full signature equality (parameters plus return type). Used for merging a
+		// declaration with its definition; only a fully equal pair is one function.
+		private static bool FunctionSignaturesEqual( Func a, Func b )
+			=> FunctionParamsEqual( a, b )
+			 && a.retType.Gen() == b.retType.Gen();
 
 		private static bool IsSameSignatureCandidate( Decl a, Decl b )
 			=> ( a is Func fa && b is Func fb )
