@@ -331,7 +331,7 @@ Use `tmp/` inside the project root for any temporary files or scratch tests. Do 
 
    - else-on-loop — DONE. Loop `else` clauses (run only when the loop body never executes) are lowered to an entry flag plus an `if (!flag)` guard by `backend/Transform/ElseOnLoopTransformer.cs`, which runs inside `backend/Resolver/Resolver.Resolve`. Regression test at `testing/cases/synthetic_sugar/else_on_loop.myll` covers `for ... else` and `while ... else`.
    - **NOT** aspect, concept, defer — see `REASONS.md` (2026-06-10)
-   - Note: the `myll_tmp_` name prefix is reserved for the compiler; add it to the list of user-unusable identifiers in the lexer/grammar.
+   - Note: the whole `myll_` name prefix is reserved for the compiler; add it to the list of user-unusable identifiers in the lexer/grammar.
 5. Cleanup — `oldParser`/`oldCodeGen` removal, TODO triage, HACK resolution.
  6. `.idea/` misc.xml shared ANTLR config added to `.gitignore` exception.
  7. Cross-kind name sharing dialect (`AllowCpp`) — planned, see `plan/cross-kind-name-sharing.md`. Strict Myll rejects a name naming both a type and a function/variable; the dialect switch allows the C++-legal pairs (tag vs value), resolves call positions to the function and type positions to the type, and emits C++ elaborated type specifiers (`struct X`/`class X`/`enum E`) for shadowed names in generated type positions.

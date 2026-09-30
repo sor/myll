@@ -1,4 +1,7 @@
-# Bug: reserved `myll_tmp_` prefix is not enforced
+# Bug: the reserved `myll_` prefix is not enforced
+
+**Scope widened 2026-09-30**: the whole `myll_` prefix is reserved, not just `myll_tmp_`. All
+user-created identifiers starting with `myll_` must be rejected.
 
 Status: **open**. Found in the 2026-09-29 review. Reproduced.
 
@@ -33,10 +36,10 @@ vice versa).
 
 Prefer a lexer-level reservation:
 
-1. Add a lexer rule that matches identifiers starting with `myll_tmp_` (e.g.
-   `RESERVED_MYLL_TMP : 'myll_tmp_' [a-zA-Z0-9_]* ;` placed **before** `ID`).
+1. Add a lexer rule that matches identifiers starting with `myll_` (e.g.
+   `RESERVED_MYLL : 'myll_' [a-zA-Z0-9_]* ;` placed **before** `ID`).
 2. Reject the token with a dedicated parser error or a visitor diagnostic:
-   `identifier prefix 'myll_tmp_' is reserved for the compiler`.
+   `identifier prefix 'myll_' is reserved for the compiler`.
 3. Grep `std/`, `lib/`, `myll/`, `testing/`, `frontend/` to confirm nothing legitimate uses the
    prefix (the review found none; re-verify at implementation time).
 

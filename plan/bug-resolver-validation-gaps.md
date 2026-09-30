@@ -27,6 +27,12 @@ return (`typespecFunc : funcTypeDef? (RARROW typespec)?`) gets an `auto` return 
 C++ performs no deduction — wrong semantics. Same hole for `new` with an omitted typespec
 (`backend/Visitor/VExpr.cs:107`).
 
+**Decision (2026-09-30):** there is no legitimate position where a passed null should silently
+become `auto`. `VisitTypespec(null)` should **crash** (internal invariant), and call sites that
+legitimately have no type must handle that explicitly before calling. Finish the "what can be null"
+nullable-annotation effort (`plan/code-health.md` records the `= null!` audit) so the C# side
+documents where null is possible at all.
+
 Fix: return `null` and let each caller decide: `Void` for a function-pointer return, an explicit
 diagnostic for `new`.
 
@@ -43,14 +49,17 @@ Fix: thread the dialect (or just `DefaultFloatSize()`) into `GetRank`/`GetUntype
 ## Finding 4: `self` / `this` have no type outside receiver position
 
 `ResolveCore` (`backend/Resolver/TypeResolver.cs:51-52`) returns `SelfExpr.Type` / `ThisExpr.Type`,
-but those are only populated by `TryGetMemberAccessBaseType`. A bare `self` used as a value or call
-argument stays null-typed, so any template deduction involving it is deferred every fixed-point pass
-and silently delegated to C++ with no Myll-side checking.
+but those are only populated by `TryGetMemberAccessBaseType`. A **bare `self`** — a `self` used
+outside receiver position, i.e. as a value or a call argument rather than the left side of a member
+access (`self.x`) — stays null-typed, so any template deduction involving it is deferred every
+fixed-point pass and silently delegated to C++ with no Myll-side checking.
 
 Fix: fall back to building the self type from the enclosing structural (reuse the
 `NameResolver.BuildSelfType` logic) when the stored type is null.
 
 ## Finding 5: local multi-declarations share one Typespec instance
+
+**Priority (2026-09-30): fix soon — completely broken semantics.**
 
 Local `var T a, b, c;` visits the shared `typespec` context exactly once, and every `VarStmt` gets
 the **same** `Typespec` instance (`backend/Visitor/VStmt.cs:187,218`). The field-scope visitor
@@ -61,15 +70,18 @@ conversion error (or a silently wrong element type).
 
 Fix: re-visit `c.typedIdAcors().typespec()` per `idAccessor`, exactly like the field-scope visitor.
 
-## Finding 6: chained relational flattening loses source positions
+## Finding 6: chained relational flattening loses source positions — and evaluates the middle operand twice
 
 `FlattenRelational.VisitWithAnd` builds the inner comparison `BinOp`s of `a < b < c`
 (→ `(a<b) && (b<c)`) without any `srcPos` (`backend/Visitor/VExpr.cs:303-326`); only the outer `And`
 gets a location. Type-checker diagnostics on the inner comparisons (for example the char-vs-int rule)
 print with no `[file:line:col]` header.
 
-Fix: carry the `IRelEqExprContext` through the descent and stamp each synthetic `BinOp` with its
-context span.
+Additionally, the flattening **evaluates the middle operand twice**: in `a < b < c`, `b` is visited
+into both synthetic comparisons, so if `b` is `myNum++` it is incremented twice (the flattening was
+a quick hack-in, per the owner's note). Fix: carry the `IRelEqExprContext` through the descent,
+stamp each synthetic `BinOp` with its context span, and either re-evaluate once into a temporary or
+reject chained relational operators whose middle operand has side effects.
 
 ## Verification
 

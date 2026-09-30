@@ -1,6 +1,12 @@
 # Bug: `ctor convert T x` drops its parameter; `VisitDefConvert` text-parsing
 
-Status: **open**. Found in the 2026-09-29 review. One repro verified, one finding refuted.
+Status: **open — explore first** (2026-09-30). Found in the 2026-09-29 review. One repro verified, one
+finding refuted.
+
+Before fixing anything here, decide whether the `ctor convert T x` / `op convert ...` spellings
+should stay at all: the raw `convert` forms (`convert -> T`, `convert <- T`) are up and running. If
+the ctor/op variants are dropped from the grammar, finding 1 disappears with the rule, and finding 2
+(text-parsing hardening) only matters for the spellings that remain.
 
 ## Finding 1 (verified): `defCtor` convert alternatives drop the parameter
 

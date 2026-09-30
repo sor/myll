@@ -1,6 +1,17 @@
 # Bug: property accessors are silently dropped
 
-Status: **open**. Found in the 2026-09-29 review. Reproduced.
+Status: **postponed** (2026-09-30). Found in the 2026-09-29 review. Reproduced.
+
+The accessor syntax may change soon, so nothing is implemented now — not even the
+stage-1 rejection diagnostic — because it would have to change either way.
+
+## Design notes for when it returns
+
+The backing store naming must be dialect-configurable, not hard-coded: a dialect
+setting offering predefined choices or a format-string pattern, e.g. `"{0}"` (plain
+`x`), `"_{0}"` (emits `_x` for accessor `x`), or `"myll_prop_{0}"`. The end user
+controls what is emitted, in the same spirit as the `myll_tmp_` prefix being reserved
+for the compiler — whichever form is used, it must not collide with user names.
 
 ## Symptom
 

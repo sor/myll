@@ -43,11 +43,16 @@ lookup (so Myll-side resolution is fine) but not C++ inheritance, which needs a 
 
 Topologically sort the `hierarchicalDecl` children by base-class dependency before concatenation:
 
-1. Build the dependency graph among the module's own structurals (edge: `Derived` depends on `Base`
-   when the base names a class/struct defined in the same module; namespace-qualified bases are
+1. Build the dependency graph among the module's own structurals (edge: `Derived` depends on
+   `Base` when the base names a class/struct defined in the same module; namespace-qualified bases are
    matched by fully qualified name).
-2. Stable topological sort (preserve source order among independent classes, so goldens do not churn).
+2. Stable topological sort **with minimal churn** (decided 2026-09-30): the generated C++ must
+   stay recognizable as the Myll source — only move a declaration when a same-module base actually
+   requires it, and preserve source order for everything else. Do not sort more than necessary.
 3. Cycle (`A : B` and `B : A`) → diagnostic, do not emit.
+
+Note (2026-09-30): forward declarations / prototypes do not solve this — C++ inheritance needs a
+complete type, not a name. The invariant really requires ordering the definitions.
 
 Rejected alternative: diagnose "base class must be defined before derived". That would break the
 invariant the language advertises.

@@ -41,7 +41,16 @@ are never prepended. The TODO at `:727` acknowledges the gap. Untested: no case,
 coreutil app has this combination (`[static, inline]` / `[static, ct]` work because they become
 inline variables).
 
-Fix: prepend the enclosing templated class's parameters to the impl template line.
+**Decision (2026-09-30):** do not emit the `template <typename T>` out-of-line definition at all.
+Static members of a class template should be **`inline` by default** (inline variables), so the
+in-class definition suffices and no out-of-line template header is needed — same as the working
+`[static, inline]` / `[static, ct]` combinations above, just applied automatically when the
+enclosing structural is a template.
+
+**Far-future intent:** an attribute to opt into out-of-line generation for a static member (e.g.
+`[outline]`). Only then does the generator need to prepend the enclosing template's `template
+<typename T>` header to the out-of-line definition; the current bug disappears with the inline
+default and would return only for that opt-in.
 
 ## Finding 3 (code-verified): nested namespace alias/using stubs are missed
 

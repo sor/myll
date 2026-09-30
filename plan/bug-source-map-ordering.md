@@ -33,6 +33,9 @@ them, so manual and automatic directives share one counter.
 mode the whole lambda body maps to the enclosing statement's line. See also
 `bug-lambda-holes.md` (finding 4).
 
+**Accepted for now (2026-09-30)**: lambda bodies sticking to their first line is considered fine
+until the other source-map issues matter.
+
 ## Verification
 
 - Regenerate `testing/golden/source_map/` and review the diff: every `#line` must appear **before**

@@ -1,30 +1,44 @@
 # Bug: frontend CLI defects
 
-Status: **open**. Found in the 2026-09-29 review. Code-verified.
+Status: **open** (findings 1-3 fixed 2026-09-30). Found in the 2026-09-29 review. Code-verified.
 
-## Finding 1 (high confidence): `-O<level>` is emitted with a space
+## Finding 1 (high confidence): `-O<level>` is emitted with a space — FIXED 2026-09-30
 
-`frontend/Program.cs:328-330` builds the flag as `"-O " + opt.OptimizationLevel + " "`. `-O2`
-therefore becomes `clang++ -std=c++23 -O 2 file.cpp`, and the C++ compiler treats `2` as an input
-file. The documented `-O` option breaks every `-c`/`-cr` run that uses it.
+`frontend/Program.cs` built the flag as `"-O " + opt.OptimizationLevel + " "`, so `-O2` became
+`clang++ -std=c++23 -O 2 file.cpp` and the C++ compiler treated `2` as an input file. The flag is
+now emitted as one token (`-O2`), verified with a full `-Ccr -O2` run compiling, linking, and
+running cleanly.
 
-Fix: emit `-O{level}` without the space.
+Clarification (2026-09-30): the `-O<level>` flag is the **C++ compiler's** optimization level —
+built into the `cxxFlags` string that `CppCompiler` appends to the `clang++`/`g++`/`cl` invocation
+(alongside `-std=c++23`); the MSVC side needs the `/O2` spelling (finding 2).
 
-## Finding 2: MSVC flags are not translated
+## Finding 2: MSVC flags are not translated — FIXED 2026-09-30
 
-`-g` and `-O2` are passed through unmodified for `cl`; only `/std:c++23` is translated
-(`frontend/CppCompiler.cs:139-156`). `/Zi` and `/O2` are the MSVC spellings.
+`-g` and `-O2` were passed through unmodified for `cl`; only `/std:c++23` was translated.
+`CppCompiler.TranslateFlags` now translates the frontend's own flags (`-g` → `/Zi`,
+`-O<level>` → `/O<level>`) whenever the detected compiler is `cl`; custom `MYLL_CXXFLAGS`/`CXXFLAGS`
+tokens pass through untouched. Not runtime-verified (no MSVC on the current system) — re-check on
+a Windows build.
 
-Fix: translate flags per detected compiler in `CppCompiler.CreateInvocation`.
+## Finding 3: `-C` leaves stale generated C++ behind — FIXED 2026-09-30
 
-## Finding 3: `-C` leaves stale generated C++ behind
+`-C` deletes object files and the executable, but not previously generated `*.cpp`/`*.h`/`*.hpp`,
+and the `-c` step compiled **every** `*.cpp` in the output directory, so a module removed from the
+sources was silently compiled back into the binary (verified: the stale `extra.cpp` re-linked the
+`extraValue` symbol into the final executable). The test harness never caught this because it
+deletes/recreates its generated dir itself.
 
-`-C` deletes object files and the executable, but not previously generated `*.cpp`/`*.h`/`*.hpp`.
-The `-c` step compiles **every** `*.cpp` in the output directory. After removing a module from the
-sources, `-Ccr` still compiles its stale translation unit — duplicate symbols or resurrected code.
-
-Fix: also delete generated `*.cpp`/`*.h`/`*.hpp` under `-C` (or track generated file names and delete
-exactly those).
+**Fix (no state written to the output dir):** the CLI's compile step now compiles **exactly the
+`.cpp` files this run generated** (from the in-memory generation results, no directory glob, no
+manifest). Stale files remain on disk — **intentionally**: `-C` only removes artifacts and Myll
+overwrites its own files in place, so an IDE holding a generated file open keeps its session and
+sees the new version without a delete/reopen cycle — but stale code is never compiled again,
+silently (no notice). Hand-written helper `.cpp` files (arbitrary names, not renameable) are
+compiled by the **test harness**, which knows the files it copies into its clean generated dir;
+the CLI only compiles its own output. If a future `myllCompileRun` case needs helper `.cpp`, the
+support-file copy must move before the compile and the golden comparer must tolerate them —
+known limitation, not implemented.
 
 ## Finding 4: warnings abort the post-compile gate
 

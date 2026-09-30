@@ -1,6 +1,6 @@
 # Bug: attribute plumbing — shared state, ordering, missing validation
 
-Status: **open**. Found in the 2026-09-29 review. Two repros verified.
+Status: **open**; decisions recorded 2026-09-30. Found in the 2026-09-29 review. Two repros verified.
 
 ## Findings
 
@@ -12,6 +12,15 @@ Status: **open**. Found in the 2026-09-29 review. Two repros verified.
    - `var int a, b;` under one `[priv]` block: the first var consumes `priv`, the second silently
      falls back to the section default.
    - Any later `MergeAttribs` on one child mutates all siblings.
+
+   **Verified 2026-09-30** (repro under `tmp/collision_check/attr_priv/`): in a `struct`, the block
+   form `[priv] var int a, b;` emits `private: int a; public: int b;` — `priv` is silently lost on
+   `b` — while the section form `[priv]:` correctly keeps both private. The `field { int a; int b; }`
+   block form shows the **same corruption** (only the first field is private).
+
+   Intended semantics (2026-09-30): an attribute block applies to the **whole following
+   declaration** and then reverts to the previous access mode. A multi-name declaration
+   (`var int a, b;`, `field { … }`) is one declaration, so every name must receive the attribute.
 
 2. **`[implicit]` clobber on `ctor initlist`.** `BuildSpecialConstructor` merges `[implicit]` into the
    special ctor (`backend/Visitor/VDecl.cs:834`). If the user also writes an attribute block, the
@@ -39,6 +48,16 @@ Status: **open**. Found in the 2026-09-29 review. Two repros verified.
    (`backend/Visitor/VDecl.cs:623-644`) throws "Unsupported attribute on base class: access" for
    `[access=priv]`, which `Decl.ExtractAccessAttribs` accepts for other declarations.
 
+## Decisions (2026-09-30)
+
+- **Finding 3** (`[default]`/`[delete]` ctor with a body): must complain — the body is silently
+  dropped today.
+- **Finding 4** (duplicate attribute, e.g. `[pure, pure]`): must not crash; emit a **warning**
+  (not an error).
+- **Finding 5** (multiple access attributes in one section): error when more than one is given.
+  The same rule applies to **mutually exclusive attribute groups in general**, e.g.
+  `virtual`/`final`, or `pure`/`mutable` — at most one per group.
+
 ## Fix plan
 
 1. Copy the dictionary in `AssignAttribs` (or hand each `MultiDecl` child a fresh copy). Make
@@ -46,9 +65,9 @@ Status: **open**. Found in the 2026-09-29 review. Two repros verified.
 2. Move the `[default]`/`[delete]` body check to after attribute assignment (the `switch (ret)` in
    `VisitDecl` is the natural home), or add the equivalent diagnostic in `AddStructor` next to the
    `AddFunc` one.
-3. Replace the `ToDictionary` with a manual loop that reports duplicate attributes as a diagnostic.
-4. `[a, b]:` sections: honor all listed access attributes or diagnose the extras — pick one, document
-   it in the spec.
+3. Replace the `ToDictionary` with a manual loop that reports duplicate attributes as a warning.
+4. `[a, b]:` sections: more than one access attribute is an error (see decisions); extend the same
+   mutually-exclusive-group rule to attribute sets like `virtual`/`final` and `pure`/`mutable`.
 5. Route base-spec attributes through `ExtractAccessAttribs` so both paths agree.
 
 ## Verification

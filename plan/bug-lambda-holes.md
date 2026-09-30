@@ -2,6 +2,15 @@
 
 Status: **open**. Found in the 2026-09-29 review. Code-verified.
 
+## Current state (verified 2026-09-30)
+
+Lambdas work **partially**: the lambda expression itself emits correctly (`[&]` capture specifier
+plus body, correct even for `[&]`-by-reference locals). But binding one via `var auto` is broken —
+`var auto add = func( int a, int b ) -> int { … };` deduces **the return type** (`int add = [&](…)`
+→ clang: no conversion from lambda to int), and an unannotated lambda deduces **void**
+(`void twice = …`). Lambdas currently only work in positions where a typed callable parameter
+provides the target type.
+
 ## Finding 1: capture list is parsed and then ignored
 
 The grammar parses a capture list (`capture : LBRACK args? RBRACK`,
