@@ -4,7 +4,7 @@ Myll is an experimental programming language that compiles to C++. It aims to pr
 
 ## Overview / Architecture
 
-- `backend/` — compiler library. ANTLR grammar, parser, visitor pattern, AST (`Core/`), and C++ code generator (`Generator/`).
+- `backend/` — compiler library. ANTLR grammar, parser, visitor pattern, AST (`Core/`), name/type resolution and validation (`Resolver/`), AST transforms (`Transform/`), and C++ code generator (`Generator/`).
 - `frontend/` — CLI executable. Parses `.myll` files, invokes backend, outputs `.h`/`.cpp` files.
 - `frontend/tests/` — original `.myll` test cases (enums, game of life, thesis, mixed, etc.). Some are being ported to `testing/cases/`.
 - `testing/` — xUnit integration-test harness that compiles and runs the ported `.myll` cases.
@@ -96,16 +96,27 @@ dotnet run --project frontend/frontend.csproj -- \
 
 ```
 myll/
-├── backend/          # Compiler library (lexer, parser, AST, generator)
+├── backend/          # Compiler library (lexer, parser, AST, resolver, generator)
+│   ├── CompilerPipeline.cs    # Orchestration: parse → compile modules → resolve → generate
+│   ├── ModuleContext.cs       # Per-module compiler state (module AST, dialect)
 │   ├── Core/         # AST nodes, symbols, types, scope
 │   ├── Grammar/      # ANTLR4 lexer/parser + generated C# code
-│   ├── Generator/    # C++ code generation
-│   └── Visitor/      # ANTLR4 visitors building the AST
+│   ├── Visitor/      # ANTLR4 visitors building the AST
+│   ├── Resolver/     # Name/type resolution, overload resolution, validation, diagnostics
+│   ├── Transform/    # Pre/post-resolution AST transforms
+│   └── Generator/    # C++ code generation
 ├── frontend/         # CLI driver
 │   ├── Program.cs            # Pipeline orchestration
 │   ├── CommandLineOptions.cs # CLI argument parsing
+│   ├── CppCompiler.cs        # Invokes the C++ compiler for the -c / -g / -O / -r path
+│   ├── coreutil/             # Sample utility apps built via make_coreutil.sh
+│   ├── sdl-asteroids/        # SDL3 sample game in Myll
+│   ├── sdl-pong/             # SDL3 sample game in Myll
 │   └── tests/                # Original .myll test files (copied to output on build)
 ├── testing/          # xUnit integration-test harness and ported cases
+│   ├── IntegrationTests.cs   # Case auto-discovery, golden compare, // FAIL markers
+│   ├── ResolverTests.cs      # Unit tests for the resolver
+│   ├── caseconfig.json       # Per-case depths/flags (generateFailing/compile/run/...)
 │   ├── cases/                # Ported .myll test sources
 │   └── golden/               # Expected generated C++ output
 ├── docs/             # Living design & analysis documentation
@@ -115,7 +126,10 @@ myll/
 ├── Documentation/    # Thesis PDF and design notes from thesis era
 ├── oldParser/        # Earlier ANTLR grammar iteration (reference only)
 ├── oldCodeGen/       # Earlier code generator (reference only)
+├── std/              # C++ standard-library bindings (.decl.myll prototype modules)
 ├── lib/              # Shared external-library .decl.myll bindings
+├── myll/             # Myll's own library bindings (e.g. dyn_array)
+├── dialect/          # JSONC dialect definitions; myll.jsonc is the default
 ├── run/              # Rider IDE run configurations
 └── myll.sln          # Solution file
 ```
