@@ -79,10 +79,10 @@ AST, dialect loading) → `ResolveModules` (name/type resolution) →
    `ResolveScopeds` / `ResolveTypes` / `ResolveMemberAccesses`, then
    `result.Apply()`, `RangeForAutoTypeTransformer`, `ResolveCalls`
 4. post: `Apply`, `UpdateDependentNestedNames`, `ValidateGlobalUsings`
-   (line 490), `ValidateCrossModuleDecls` (line ~538, cross-module ODR
-   redefinition check), post transforms, `RejectRequiresClauses`,
-   `ValidateTypes` (runs `TypeChecker`), `ResolveSyntheticInitListTypes`,
-   `ReportUnresolved`
+   (line 490), `ValidateModuleDecls` (line ~538, module-scope redefinition /
+   return-type / cross-kind name collision check), post transforms,
+   `RejectRequiresClauses`, `ValidateTypes` (runs `TypeChecker`),
+   `ResolveSyntheticInitListTypes`, `ReportUnresolved`
 
 Resolution results live in `ResolutionResult` (`resolvedDecl` maps + invalid
 markers); `Apply()` commits them onto AST nodes (`resolvedDecl`, `Type`).
@@ -238,17 +238,19 @@ review before committing — do NOT commit. Repro that motivated it:
 `tmp/repro_options_clash/`.
 
 What was added:
-- `backend/Resolver/Resolver.cs` — `ValidateCrossModuleDecls` (called right
-  after `ValidateGlobalUsings` in `Resolve`). For each real module it builds a
-  visible-module closure (transitive named imports + implicit std imports),
-  keys top-level (namespace-scoped) declarations by (namespace-FQN, name), and
-  reports a C++-style redefinition when two different modules both define a
-  colliding symbol that some module can see from one TU. Matrix: different
-  kinds → error; class/enum/alias → error; var → error unless link-safe
-  ([hide]/[ct]/[extern]/const); func → error only when both are real
-  definitions with equal signatures (decl+def and different-signature
-  overloads stay legal). Error on the later decl + note on the earlier, naming
-  the other module. Prototype modules skipped.
+- `backend/Resolver/Resolver.cs` — `ValidateModuleDecls` (called right
+   after `ValidateGlobalUsings` in `Resolve`; renamed from
+   `ValidateCrossModuleDecls` in the 2026-09-30 follow-up). For each real module it
+   builds a visible-module closure (transitive named imports + implicit std imports),
+   keys top-level (namespace-scoped) declarations by (namespace-FQN, name), and
+   reports a C++-style collision when colliding declarations land in one TU,
+   including same-module pairs. Matrix: different kinds → error (strict Myll,
+   `AllowCpp` dialect planned, `plan/cross-kind-name-sharing.md`); class/enum/alias →
+   error; var → error unless link-safe ([hide]/[ct]/[extern]/const); func → error
+   when parameters are equal and either both are definitions (ODR) or the return
+   types differ (C++ cannot overload on return type); decl+def and
+   different-signature overloads stay legal. Error on the later decl + note on the
+   earlier, naming the other module when cross-module. Prototype modules skipped.
 - Companion fix in `TryResolveOverload`: same-signature candidates (a decl +
   its def) are merged before ranking so they are not misread as ambiguous
   (`IsSameSignatureCandidate` / `StructorSignaturesEqual` / `PrefersCandidate`
@@ -266,6 +268,16 @@ What was added:
   retargeted to the new redefinition diagnostic (same-signature imports are an
   ODR redefinition, not an ambiguity).
 - `plan/TODO.md` item 1 marked DONE.
+
+2026-09-30 follow-up (same session as the code review): `IsCollidingPair` became
+`ClassifyCollision` returning `CollisionKind` (`Redefinition` / `ReturnTypeMismatch` /
+`KindMismatch`), `FunctionParamsEqual` split off `FunctionSignaturesEqual` (the
+decl+def merge still requires full signature equality), and the same-module skip was
+dropped so intra-module duplicates are rejected with "... in this module" message
+variants. New tests: `same_module_redefinition_fail/` (negative),
+`same_module_decldef/` (positive, goldens), `cross_module_clash_fail/` extended
+(ret mismatch + cross-module kind clash), plus `ResolverTests` unit tests. The
+`AllowCpp` cross-kind dialect is planned: `plan/cross-kind-name-sharing.md`.
 
 If asked to commit: small focused messages (impl, then tests, then docs),
 no push.

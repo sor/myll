@@ -83,23 +83,29 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
 ## Short-term consistency fixes (next few sessions)
 
 1. **Cross-module declaration collisions** — DONE. `backend/Resolver/Resolver.cs`
-   (`ValidateCrossModuleDecls`, called after `ValidateGlobalUsings`) detects, per
-   (namespace-FQN, name), when two different real modules export declarations that merge
-   into one translation unit and collide, mirroring what C++ would reject: redefined
-   class/struct/union/enum/alias, duplicate non-link-safe variables, and same-signature
-    function definitions (ODR violations). Decl+def splits and different-signature
-    cross-module overloads stay legal. The decl+def split is a supported pattern, not
-    an accident: Myll needs forward declarations *only* for external libraries (the
-    `.decl.myll` bindings in `std/`/`lib/`), and a signature-only module plus a
-    definition module models shipping a library's signatures separately from its
-    implementation; using both in one translation must compile and act as one function.
-    Prototype (`.decl.myll`) modules are skipped because
+   (`ValidateModuleDecls`, called after `ValidateGlobalUsings`) detects, per
+   (namespace-FQN, name), when declarations that merge into one translation unit
+   collide, mirroring what C++ would reject: redefined class/struct/union/enum/alias,
+   duplicate non-link-safe variables, and same-signature function definitions (ODR
+   violations), both across real modules and within one module. Functions that differ
+   only in return type are rejected too, because C++ cannot overload on return type.
+   Cross-kind name sharing (a type and a function/variable sharing a name) is rejected
+   in strict Myll: Myll has no elaborated type specifiers; an `AllowCpp` dialect is
+   planned (`plan/cross-kind-name-sharing.md`). Decl+def splits and different-signature
+   overloads stay legal. The decl+def split is a supported pattern, not
+   an accident: Myll needs forward declarations *only* for external libraries (the
+   `.decl.myll` bindings in `std/`/`lib/`), and a signature-only module plus a
+   definition module models shipping a library's signatures separately from its
+   implementation; using both in one translation must compile and act as one function.
+   Prototype (`.decl.myll`) modules are skipped because
    they are replaced by their raw C++ includes. A matching change in `TryResolveOverload`
    merges same-signature candidates (declaration + definition) so they are not read as
    ambiguous. Diagnostics anchor the error on the later declaration and a note on the
    earlier one, naming the other module. Tests: `testing/cases/cross_module_clash_fail/`
-   (negative, registered in `generateFailing`), `testing/cases/cross_module_overload/` and
-   `testing/cases/cross_module_decldef/` (positive, with goldens). The pre-existing
+   and `testing/cases/same_module_redefinition_fail/` (negative, registered in
+   `generateFailing`), `testing/cases/cross_module_overload/`,
+   `testing/cases/cross_module_decldef/` and `testing/cases/same_module_decldef/`
+   (positive, with goldens). The pre-existing
    `ResolverTests.AmbiguousImport_ProducesDiagnostic` was retargeted to the new
    redefinition diagnostic.
 

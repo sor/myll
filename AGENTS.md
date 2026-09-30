@@ -20,7 +20,9 @@ Myll is an experimental programming language that compiles to C++. It aims to pr
 - Order in a file or module does not matter. `main` may come first and call functions or use classes defined later in the same module.
 - The C++ generator injects the required prototypes and class forward declarations into the top of each module's generated `.hpp`. Every generated `.cpp` includes its own `.hpp`, so the generated C++ is order-independent as well.
 - Hand-written forward declarations exist only for external library bindings: the `.decl.myll` files in `std/` and `lib/` (auto-discovered), `[extern]` declarations, and OOP special members (`[abstract]`/`[default]`/`[delete]`). `VDecl.ValidateForwardDeclaration` enforces this.
-- Splitting a declaration from its definition across modules is legal. It models shipping a library's signatures separately from its implementation (signature-only distribution). A same-signature declaration plus definition is one function: overload resolution merges them and `ValidateCrossModuleDecls` does not report a redefinition. Different signatures are ordinary cross-module overloads. See `testing/cases/cross_module_decldef/` and `testing/cases/cross_module_overload/`.
+- Splitting a declaration from its definition is legal, within one module and across modules. It models shipping a library's signatures separately from its implementation (signature-only distribution). A same-signature declaration plus definition is one function: overload resolution merges them and `ValidateModuleDecls` does not report a redefinition. Different signatures are ordinary overloads. See `testing/cases/cross_module_decldef/`, `testing/cases/cross_module_overload/`, and `testing/cases/same_module_decldef/`.
+- `ValidateModuleDecls` (`backend/Resolver/Resolver.cs`) rejects redefinitions that C++ would reject, both across imported modules and within one module: duplicate types, duplicate non-link-safe variables, and same-signature function definitions (ODR violations). Functions that differ only in return type are rejected too, because C++ cannot overload on return type. See `testing/cases/cross_module_clash_fail/` and `testing/cases/same_module_redefinition_fail/`.
+- Strict Myll rejects cross-kind name sharing: a name may not name both a type (class/struct/union/enum) and a function/variable in the same namespace, even though C++ allows it via elaborated type specifiers. Myll has no elaborated type specifier syntax; rename instead. A dialect option to allow C++-style sharing is planned (`plan/cross-kind-name-sharing.md`).
 
 ## Build & Run
 
@@ -317,7 +319,8 @@ Use `tmp/` inside the project root for any temporary files or scratch tests. Do 
    - **NOT** aspect, concept, defer — see `REASONS.md` (2026-06-10)
    - Note: the `myll_tmp_` name prefix is reserved for the compiler; add it to the list of user-unusable identifiers in the lexer/grammar.
 5. Cleanup — `oldParser`/`oldCodeGen` removal, TODO triage, HACK resolution.
-6. `.idea/` misc.xml shared ANTLR config added to `.gitignore` exception.
+ 6. `.idea/` misc.xml shared ANTLR config added to `.gitignore` exception.
+ 7. Cross-kind name sharing dialect (`AllowCpp`) — planned, see `plan/cross-kind-name-sharing.md`. Strict Myll rejects a name naming both a type and a function/variable; the dialect switch allows the C++-legal pairs (tag vs value), resolves call positions to the function and type positions to the type, and emits C++ elaborated type specifiers (`struct X`/`class X`/`enum E`) for shadowed names in generated type positions.
 
 ## Documentation Index
 
