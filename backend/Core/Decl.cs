@@ -110,8 +110,9 @@ namespace Myll.Core
 
 		public override void AssignAttribs( Attribs inAttribs )
 		{
-			ExtractAccessAttribs( inAttribs );
+			// Extract from the node's own copy, never from the caller's dictionary.
 			base.AssignAttribs( inAttribs );
+			ExtractAccessAttribs( attribs );
 		}
 
 		private void ExtractAccessAttribs( Attribs inAttribs )

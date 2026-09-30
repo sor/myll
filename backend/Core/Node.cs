@@ -31,7 +31,7 @@ namespace Myll.Core
 
 	public abstract class AttributedNode : Node
 	{
-		private Attribs attribs = new();
+		protected Attribs attribs = new();
 
 		public bool IsStatic      => HasAttrib( "static" );
 		public bool IsCompileTime => HasAttrib( "ct" );
@@ -66,7 +66,12 @@ namespace Myll.Core
 
 		public virtual void AssignAttribs( Attribs inAttribs )
 		{
-			attribs = inAttribs;
+			// Ownership by copy: fan-out consumers (MultiDecl, MultiStmt) must not share
+			// the same dictionary, and later mutations (ExtractAccessAttribs) must not
+			// leak into the caller's dictionary.
+			attribs = new Attribs( inAttribs );
+			foreach( KeyValuePair<string, List<string>> kv in attribs )
+				attribs[kv.Key] = new List<string>( kv.Value );
 		}
 
 		public void MergeAttribs( Attribs incoming )

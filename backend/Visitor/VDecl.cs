@@ -136,6 +136,7 @@ namespace Myll
 		public override Decl VisitDecl( DeclContext c )
 		{
 			Attribs? attribs = c.attribBlk()?.Visit();
+			ReportDuplicateAttribs( c.attribBlk() );
 
 			if( c.COLON() != null ) {
 				VisitAttrColon( attribs );
@@ -179,6 +180,22 @@ namespace Myll
 
 			return ret;
 		}
+		private void ReportDuplicateAttribs( AttribBlkContext? c )
+		{
+			if( c == null )
+				return;
+
+			HashSet<string> seen = new( StringComparer.Ordinal );
+			foreach( AttribContext a in c.attrib() ) {
+				string name = a.attribId().GetText();
+				if( !seen.Add( name ) )
+					Context.Diagnostics.Add( new Diagnostic(
+						a.ToSrcPos(),
+						DiagnosticKind.Warning,
+						String.Format( "Duplicate attribute '{0}' ignored; the first one applies.", name ) ) );
+			}
+		}
+
 		private void ValidateForwardDeclaration( Decl decl )
 		{
 			if( !decl.IsForwardDeclaration )
@@ -751,14 +768,6 @@ namespace Myll
 
 			MultiStmt body = c.funcBody().Visit( Context );
 			ret.body = IsEmptyFunctionBody( body ) ? null : body;
-
-			if( (ret.IsDefault || ret.IsDisabled) && ret.body != null ) {
-				Context.Diagnostics.Add( new Diagnostic(
-					ret.srcPos,
-					DiagnosticKind.Error,
-					"Defaulted or deleted constructors must be declared with ';', not a body." ) );
-				ret.body = null;
-			}
 
 			PopScope();
 			AddChild( ret );

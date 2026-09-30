@@ -114,12 +114,16 @@ namespace Myll.Resolver
 				}
 				break;
 
-				case Structor stc:
-					if( stc.isConversionCtor )
-						ValidateConvertAttributes( stc );
-					if( stc.body != null )
-						ValidateStmt( stc.body, null );
-					break;
+case Structor stc:
+				if( stc.isConversionCtor )
+					ValidateConvertAttributes( stc );
+				if( ( stc.IsDefault || stc.IsDisabled ) && stc.body != null )
+					// The generator skips bodies of defaulted/deleted ctors, so a body
+					// would be silently dropped (mirrors the AddFunc special-function check).
+					AddError( stc, "Defaulted or deleted constructors must be declared with ';', not a body." );
+				if( stc.body != null )
+					ValidateStmt( stc.body, null );
+				break;
 
 			case VarDecl vd:
 				ValidateVarAttributes( vd );

@@ -323,10 +323,14 @@ namespace Myll
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		public static Attribs Visit( this Parser.AttribBlkContext c )
 		{
-			Attribs attribs = c.attrib()
-				.ToDictionary(
-					a => a.attribId().GetText(),
-					a => a.idOrLit().Visit() );
+			Attribs attribs = new();
+			foreach( Parser.AttribContext a in c.attrib() ) {
+				string key = a.attribId().GetText();
+				if( !attribs.ContainsKey( key ) )
+					attribs.Add( key, a.idOrLit().Visit() );
+				// Duplicate attribute names keep the first occurrence; visitors with a
+				// diagnostics channel report them (see VDecl.ReportDuplicateAttribs).
+			}
 
 			return attribs;
 		}
