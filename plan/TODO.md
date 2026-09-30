@@ -149,6 +149,9 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    (`CheckBooleanOperand` calls `ValidateExpression`), so comparisons in conditions are validated
    like comparisons in expression position. Tests: `testing/cases/typecheck_fail/main.myll`
    (`test_char_vs_int_literal_eq`, `test_char_vs_int_literal_order`, `test_char_vs_typed_int`).
+   Follow-up 2026-09-30: the "use a character literal" hint is scoped to untyped literals, and
+   mirrored/order/typed-float negatives were added (commit `482b05a`); switch-subject validation
+   remains tracked in `plan/bug-resolver-validation-gaps.md`.
 
 6. **Standard-library declaration attributes** — finish populating `std/*.decl.myll` and `c_*.decl.myll`
    with `[pure]`, `[ct]`, `[nodiscard]`, and `[noexcept]` to match the installed C++23 standard-library
