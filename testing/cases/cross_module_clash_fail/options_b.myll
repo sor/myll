@@ -11,3 +11,16 @@ func foo() -> int // FAIL: Redefinition of 'Test::foo'
 {
 	return 1;
 }
+
+func bar( int x ) -> void // FAIL: Function 'Test::bar' differs only in return type
+{
+}
+
+func baz( int x ) -> void // FAIL: Function 'Test::baz' differs only in return type
+{
+}
+
+func Kind() -> int // FAIL: Name 'Test::Kind' is used for both a function and a type
+{
+	return 4;
+}

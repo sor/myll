@@ -1,0 +1,59 @@
+// Intra-module redefinitions: duplicate struct, enum, and alias, same-signature
+// function, cross-kind name sharing, and a duplicate variable. All are rejected
+// in strict Myll: a definition suffices, so a second definition of the same
+// name is always an error, and a name may not name both a type and a
+// function/variable (no elaborated type specifiers).
+module main;
+
+namespace Test:
+
+struct Options
+{
+	field int a = 1;
+}
+
+struct Options // FAIL: Redefinition of 'Test::Options' in this module.
+{
+	field int b = 2;
+}
+
+func dup( int x ) -> int
+{
+	return x;
+}
+
+func dup( int x ) -> int // FAIL: Redefinition of 'Test::dup' in this module.
+{
+	return x + 1;
+}
+
+struct Pick
+{
+	field int p = 3;
+}
+
+func Pick() -> int // FAIL: Name 'Test::Pick' is used for both a function and a type
+{
+	return 4;
+}
+
+var int clash = 5;
+var int clash = 6; // FAIL: clash
+
+enum Color
+{
+	Red = 1, Green = 2
+}
+
+enum Color // FAIL: Redefinition of 'Test::Color' in this module.
+{
+	Blue = 3
+}
+
+alias Pair = i32[2];
+alias Pair = f32[2]; // FAIL: Redefinition of 'Test::Pair' in this module.
+
+func main() -> int
+{
+	return 0;
+}

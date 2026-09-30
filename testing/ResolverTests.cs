@@ -561,6 +561,138 @@ func main() -> int { return clash(); }
 		}
 
 		[Fact]
+		public void ImportedReturnTypeMismatch_ProducesDiagnostic()
+		{
+			var (moduleB, contextB) = CompileModule( @"
+module B;
+func f( int x ) -> int { return x; }
+", "B" );
+
+			var (moduleC, contextC) = CompileModule( @"
+module C;
+func f( int x ) -> void { }
+", "C" );
+
+			var (moduleA, contextA) = CompileModule( @"
+module A;
+import B;
+import C;
+func main() -> int { return 0; }
+", "A" );
+
+			var (result, diagnostics) = Resolve(
+				(moduleA, contextA),
+				(moduleB, contextB),
+				(moduleC, contextC) );
+
+			// C++ cannot overload on return type: same parameters with different
+			// return types collide, whether both are definitions or a declaration
+			// plus a definition.
+			Assert.Single( diagnostics, d => d.Kind == DiagnosticKind.Error
+			                               && d.Message.Contains( "'f'" )
+			                               && d.Message.Contains( "differs only in return type" )
+			                               && d.Message.Contains( "module 'B'" ) );
+			Assert.Contains( diagnostics, d =>
+				d.Kind == DiagnosticKind.Note
+				&& d.Message.Contains( "f" ) );
+		}
+
+		[Fact]
+		public void ImportedKindMismatch_ProducesDiagnostic()
+		{
+			var (moduleB, contextB) = CompileModule( @"
+module B;
+struct K { }
+", "B" );
+
+			var (moduleC, contextC) = CompileModule( @"
+module C;
+func K() -> int { return 1; }
+", "C" );
+
+			var (moduleA, contextA) = CompileModule( @"
+module A;
+import B;
+import C;
+func main() -> int { return 0; }
+", "A" );
+
+			var (result, diagnostics) = Resolve(
+				(moduleA, contextA),
+				(moduleB, contextB),
+				(moduleC, contextC) );
+
+			// Strict Myll has no elaborated type specifiers: a name may not name
+			// both a type and a function/variable, even though C++ allows hiding.
+			Assert.Single( diagnostics, d => d.Kind == DiagnosticKind.Error
+			                               && d.Message.Contains( "Name 'K' is used for both a function and a type" )
+			                               && d.Message.Contains( "module 'B'" ) );
+			Assert.Contains( diagnostics, d =>
+				d.Kind == DiagnosticKind.Note
+				&& d.Message.Contains( "The type declaration" ) );
+		}
+
+		[Fact]
+		public void SameModuleRedefinition_ProducesDiagnostic()
+		{
+			var (module, context) = CompileModule( @"
+module test;
+struct S { field int a; }
+struct S { field int b; }
+func main() -> int { return 0; }
+" );
+
+			var (result, diagnostics) = Resolve( (module, context) );
+
+			Assert.Single( diagnostics, d => d.Kind == DiagnosticKind.Error
+			                               && d.Message.Contains( "Redefinition of 'S'" )
+			                               && d.Message.Contains( "in this module" ) );
+			Assert.Contains( diagnostics, d =>
+				d.Kind == DiagnosticKind.Note
+				&& d.Message.Contains( "Previous definition of 'S'" ) );
+		}
+
+		[Fact]
+		public void SameModuleKindMismatch_ProducesDiagnostic()
+		{
+			var (module, context) = CompileModule( @"
+module test;
+struct Pick { field int p; }
+func Pick() -> int { return 1; }
+func main() -> int { return 0; }
+" );
+
+			var (result, diagnostics) = Resolve( (module, context) );
+
+			Assert.Single( diagnostics, d => d.Kind == DiagnosticKind.Error
+			                               && d.Message.Contains( "Name 'Pick' is used for both a function and a type" )
+			                               && d.Message.Contains( "in this module" ) );
+		}
+
+		[Fact]
+		public void SameModuleDeclDef_NoDiagnostic()
+		{
+			var (module, context) = CompileModule( @"
+module test;
+[extern] namespace Test
+{
+	func foo() -> int;
+}
+namespace Test
+{
+	func foo() -> int { return 7; }
+}
+func main() -> int { return Test::foo(); }
+" );
+
+			var (result, diagnostics) = Resolve( (module, context) );
+
+			// A declaration plus its definition in the same module is one function,
+			// not a redefinition.
+			Assert.Empty( diagnostics );
+		}
+
+		[Fact]
 		public void InvalidVarAttributes_ProduceDiagnostics()
 		{
 			var (module, context) = CompileModule( @"

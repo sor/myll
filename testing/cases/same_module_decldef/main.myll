@@ -1,0 +1,23 @@
+// A declaration plus its definition in the same module is one function, not
+// a redefinition: it models a signature-only split shipped with the module.
+module same_module_decldef;
+
+[extern] namespace Test
+{
+	func foo() -> int;
+}
+
+namespace Test
+{
+	func foo() -> int
+	{
+		return 7;
+	}
+}
+
+func main() -> int
+{
+	if( Test::foo() != 7 )
+		return 1;
+	return 0;
+}

@@ -11,3 +11,15 @@ func foo() -> int
 {
 	return 0;
 }
+
+func bar( int x ) -> int
+{
+	return x;
+}
+
+[extern] func baz( int x ) -> int;
+
+struct Kind
+{
+	field int k = 3;
+}
