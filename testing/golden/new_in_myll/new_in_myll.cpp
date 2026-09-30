@@ -99,6 +99,31 @@ int check_compound_constants()
     if( max != 18446744073709551615 ) {
         return 5;
     }
+    std::uint64_t hugeShift = 4611686018427387904;
+    if( hugeShift != 4611686018427387904 ) {
+        return 6;
+    }
+    std::uint64_t hugeProduct = 8589934592;
+    if( hugeProduct != 8589934592 ) {
+        return 7;
+    }
+    std::uint64_t chained = 4000000000 - 2000000000;
+    if( chained != 2000000000 ) {
+        return 8;
+    }
+    std::uint64_t divided = 17179869184 / 1024;
+    if( divided != 16777216 ) {
+        return 9;
+    }
+    std::int8_t negated = -128;
+    if( negated != -128 ) {
+        return 10;
+    }
+    bool pick = true;
+    std::uint64_t picked = pick ? 4611686018427387904 : 1;
+    if( picked != 4611686018427387904 ) {
+        return 11;
+    }
     return 0;
 }
 int check_default_init()

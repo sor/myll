@@ -36,3 +36,8 @@ struct RuleOfBad { // FAIL: does not satisfy the required rule-of-N
 func main() -> int {
 	return 0;
 }
+
+[flags]
+enum FlagsNegative {
+	A = -3 // FAIL: '[flags]enum' value must be a non-negative integer
+}

@@ -154,6 +154,15 @@ int check_enum()
     if( static_cast<int>( (TestFlagsNumberedPartially::B) ) != 8 || static_cast<int>( (TestFlagsNumberedPartially::C) ) != 16 ) {
         return 8;
     }
+    if( static_cast<int>( (TestFlagsHex::A) ) != 4 || static_cast<int>( (TestFlagsHex::B) ) != 16 || static_cast<int>( (TestFlagsHex::C) ) != 32 ) {
+        return 9;
+    }
+    if( static_cast<int>( (TestFlagsComposite::Red) ) != 1 || static_cast<int>( (TestFlagsComposite::Green) ) != 2 || static_cast<int>( (TestFlagsComposite::Blue) ) != 4 ) {
+        return 10;
+    }
+    if( static_cast<int>( (TestFlagsComposite::Yellow) ) != 3 || static_cast<int>( (TestFlagsComposite::Mask) ) != 7 || static_cast<int>( (TestFlagsComposite::Extra) ) != 8 ) {
+        return 11;
+    }
     return 0;
 }
 int takesInt(int)

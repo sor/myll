@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using Antlr4.Runtime;
 using Myll;
 using Myll.Core;
@@ -690,6 +691,25 @@ func main() -> int { return Test::foo(); }
 			// A declaration plus its definition in the same module is one function,
 			// not a redefinition.
 			Assert.Empty( diagnostics );
+		}
+
+		[Fact]
+		public void CloneTypespec_PreservesUntypedConstantValues()
+		{
+			TypespecBasic source = new() {
+				kind          = TypespecBasic.Kind.UntypedInteger,
+				size          = TypespecBasic.SizeUndetermined,
+				literalText   = "1024 * 1024",
+				literalValue  = 1048576,
+				literalValues = new List<BigInteger> { 5, 7 },
+			};
+
+			Typespec clone = ConversionRules.CloneTypespecBase( source );
+
+			TypespecBasic basic = Assert.IsType<TypespecBasic>( clone! );
+			Assert.Equal( "1024 * 1024", basic.literalText );
+			Assert.Equal( new BigInteger( 1048576 ), basic.literalValue );
+			Assert.Equal( new BigInteger[] { 5, 7 }, basic.literalValues );
 		}
 
 		[Fact]

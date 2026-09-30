@@ -51,6 +51,23 @@ enum TestFlagsNumberedPartially {
 	C
 }
 
+[flags]
+enum TestFlagsHex {
+	A = 0x4,
+	B = 0x10,
+	C
+}
+
+[flags]
+enum TestFlagsComposite {
+	Red,
+	Green,
+	Blue,
+	Yellow = Red | Green,
+	Mask = Red | Green | Blue,
+	Extra
+}
+
 func check_enum() -> int
 {
 	var Test basic = Test::A;
@@ -80,6 +97,16 @@ func check_enum() -> int
 	// especially test the offsetted auto-numbered flag values: A=4, B=8, C=16
 	if( (int)(TestFlagsNumberedPartially::B) != 8 || (int)(TestFlagsNumberedPartially::C) != 16 )
 		return 8;
+
+	// hex flag values parse, and auto numbering continues after them: C = 32
+	if( (int)(TestFlagsHex::A) != 4 || (int)(TestFlagsHex::B) != 16 || (int)(TestFlagsHex::C) != 32 )
+		return 9;
+
+	// composite flag values are emitted as-is and leave the auto chain transparent
+	if( (int)(TestFlagsComposite::Red) != 1 || (int)(TestFlagsComposite::Green) != 2 || (int)(TestFlagsComposite::Blue) != 4 )
+		return 10;
+	if( (int)(TestFlagsComposite::Yellow) != 3 || (int)(TestFlagsComposite::Mask) != 7 || (int)(TestFlagsComposite::Extra) != 8 )
+		return 11;
 
 	return 0;
 }

@@ -19,6 +19,8 @@ enum class TestNumberedPartially;
 enum class TestFlags;
 enum class TestFlagsNumbered;
 enum class TestFlagsNumberedPartially;
+enum class TestFlagsHex;
+enum class TestFlagsComposite;
 enum class Test
 {
     A,
@@ -66,6 +68,21 @@ enum class TestFlagsNumberedPartially
     A = 4,
     B = 8,
     C = 16,
+};
+enum class TestFlagsHex
+{
+    A = 0x4,
+    B = 0x10,
+    C = 32,
+};
+enum class TestFlagsComposite
+{
+    Red = 1,
+    Green = 2,
+    Blue = 4,
+    Yellow = (TestFlagsComposite::Red) | (TestFlagsComposite::Green),
+    Mask = (TestFlagsComposite::Red) | (TestFlagsComposite::Green) | (TestFlagsComposite::Blue),
+    Extra = 8,
 };
 int check_byte();
 std::uint32_t takes_u32(std::uint32_t x);

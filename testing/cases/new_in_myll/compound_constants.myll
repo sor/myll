@@ -25,5 +25,38 @@ func check_compound_constants() -> int
 	if( max != 18446744073709551615 )
 		return 5;
 
+	// Constants whose plain C++ emission would be undefined (a shift count beyond
+	// the operand type width, or a result that overflows the operand type) are
+	// emitted as the exact folded constant instead.
+	var u64 hugeShift = 1 << 62;
+	if( hugeShift != 4611686018427387904 )
+		return 6;
+
+	var u64 hugeProduct = 1024 * 1024 * 1024 * 8;
+	if( hugeProduct != 8589934592 )
+		return 7;
+
+	// Intermediate overflow: only the inner sum exceeds int, so only the inner
+	// expression is replaced.
+	var u64 chained = 2000000000 + 2000000000 - 2000000000;
+	if( chained != 2000000000 )
+		return 8;
+
+	// Division folds like the other operators.
+	var u64 divided = 17179869184 / 1024;
+	if( divided != 16777216 )
+		return 9;
+
+	// Unary minus folds to the exact negative constant.
+	var i8 negated = -128;
+	if( negated != -128 )
+		return 10;
+
+	// A ternary of untyped constants binds when the target can hold both values.
+	var bool pick = true;
+	var u64 picked = pick ? 4611686018427387904 : 1;
+	if( picked != 4611686018427387904 )
+		return 11;
+
 	return 0;
 }
