@@ -321,12 +321,24 @@ namespace Myll
 					return -1;
 				}
 
-				string[] cppFiles = Directory.GetFiles( opt.OutPath, "*.cpp" );
+				// Compile exactly what this run generated. Stale outputs from removed
+				// modules stay on disk (an IDE holding them open keeps its session;
+				// Myll overwrites its own files in place) but are never compiled, so
+				// removed code cannot be silently resurrected into the binary.
+				// Hand-written helper .cpp files are compiled by the test harness,
+				// which knows the files it copies; the CLI only compiles its own output.
+				string[] cppFiles = output
+					.Where( o => o.Item1.EndsWith( ".cpp", StringComparison.OrdinalIgnoreCase ) )
+					.Select( o => Path.Combine( opt.OutPath, o.Item1 ) )
+					.ToArray();
+				if( cppFiles.Length == 0 )
+					return 0; // nothing generated to compile
+
 				string envFlags = Environment.GetEnvironmentVariable( "MYLL_CXXFLAGS" )
 				               ?? Environment.GetEnvironmentVariable( "CXXFLAGS" )
 				               ?? "";
 				string cxxFlags = (opt.IsDebug ? "-g " : "")
-				                + (opt.OptimizationLevel > 0 ? "-O " + opt.OptimizationLevel + " " : "")
+				                + (opt.OptimizationLevel > 0 ? "-O" + opt.OptimizationLevel + " " : "")
 				                + envFlags;
 
 				// NOTE: We intentionally do not pass an absolute output path here.

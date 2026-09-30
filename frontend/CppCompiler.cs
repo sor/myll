@@ -128,12 +128,33 @@ namespace Myll
 			return compiler;
 		}
 
+		// The frontend passes unix-style debug/optimization flags (-g, -O<level>); MSVC
+		// needs its own spellings. Custom MYLL_CXXFLAGS tokens pass through untouched.
+		private static string TranslateFlags( string compiler, string? flags )
+		{
+			if( string.IsNullOrWhiteSpace( flags ) || !IsCl( compiler ) )
+				return flags ?? "";
+
+			List<string> translated = new();
+			foreach( string token in flags.Split( ' ', StringSplitOptions.RemoveEmptyEntries ) ) {
+				if( token == "-g" )
+					translated.Add( "/Zi" );
+				else if( token.Length > 2 && token.StartsWith( "-O" ) )
+					translated.Add( "/O" + token[2..] );
+				else
+					translated.Add( token );
+			}
+
+			return string.Join( " ", translated );
+		}
+
 		private static string BuildArguments(
 			string compiler,
 			IReadOnlyCollection<string> cppFiles,
 			string? flags,
 			string? outputPath )
 		{
+			flags = TranslateFlags( compiler, flags );
 			string quotedFiles = string.Join( " ", cppFiles.Select( Quote ) );
 
 			if( IsCl( compiler ) ) {
@@ -162,6 +183,7 @@ namespace Myll
 			string? flags,
 			string? outputObject )
 		{
+			flags = TranslateFlags( compiler, flags );
 			if( IsCl( compiler ) ) {
 				var parts = new List<string> { "/nologo", "/std:c++23", "/EHsc", "/c" };
 				if( !string.IsNullOrWhiteSpace( flags ) )
@@ -188,6 +210,7 @@ namespace Myll
 			string?                     flags,
 			string                      outputPath )
 		{
+			flags = TranslateFlags( compiler, flags );
 			string quotedFiles = string.Join( " ", objectFiles.Select( Quote ) );
 
 			if( IsCl( compiler ) ) {
