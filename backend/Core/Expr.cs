@@ -244,7 +244,23 @@ namespace Myll.Core
 
 		public override string Gen( bool doBrace = false )
 		{
-			// An untyped-integer compound constant is normally emitted as written: C++
+			// Parsed-but-unimplemented operators must never emit placeholder text;
+			// ModuleGenerator turns this into a clean diagnostic.
+			if( op is Operand.NullCoalesce
+			 || op is Operand.NCMemberAccess
+			 || op is Operand.NCMemberAccessPtr
+			 || op is Operand.MemberAccessPtr
+			 || op is Operand.MemberPtrAccessPtr )
+				throw new DiagnosticException( new Diagnostic(
+					srcPos,
+					DiagnosticKind.Error,
+					String.Format( "the {0} is not implemented yet",
+						op is Operand.NullCoalesce         ? "null-coalescing operator '?:'"
+					: op is Operand.MemberAccessPtr
+					|| op is Operand.MemberPtrAccessPtr ? "pointer-to-member access"
+					:                                    "null-coalescing member access '?.'" ) ) );
+
+			// A untyped-integer compound constant is normally emitted as written: C++
 			// evaluates it in the operand types and the value matches the Myll-side fold.
 			// When that C++ evaluation would be undefined or produce a different value
 			// (shift count out of range, result outside the operand type, mixed

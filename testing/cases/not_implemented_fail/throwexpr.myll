@@ -1,0 +1,8 @@
+// Throw expressions parse but are not implemented yet.
+module throwexpr;
+
+func main() -> int
+{
+	var int x = throw make(); // FAIL: throw expressions are not implemented yet
+	return 0;
+}

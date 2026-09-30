@@ -1,0 +1,9 @@
+// Multiple initializers in a for header parse and resolve, but the generator
+// rejects them instead of emitting broken C++.
+module forinit;
+
+func main() -> int
+{
+	for( var int a = 1, b = 2; a < 10; a++ ) { } // FAIL: initializers in a for header are not implemented yet
+	return 0;
+}

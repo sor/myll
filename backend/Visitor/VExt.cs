@@ -31,13 +31,15 @@ namespace Myll
 		protected new IEnumerable<Arg> VisitArgs( ArgsContext? cs )
 			=> cs?.arg().Select(
 				   c => new Arg {
-					   name = c.id()?.Visit(),
-					   expr = c.expr().Visit( Context ),
+					   srcPos = c.ToSrcPos(),
+					   name   = c.id()?.Visit(),
+					   expr   = c.expr().Visit( Context ),
 				   } )
 			?? Enumerable.Empty<Arg>();
 
 		protected new FuncCall VisitIndexCall( IndexCallContext c )
 			=> new() {
+				srcPos   = c.ToSrcPos(),
 				args     = VisitArgs( c.args() ).ToList(),
 				nullCoal = c.ary.Type == QM_LBRACK,
 				indexer  = true,
@@ -45,6 +47,7 @@ namespace Myll
 
 		protected new FuncCall VisitFuncCall( FuncCallContext c )
 			=> new() {
+				srcPos   = c.ToSrcPos(),
 				args     = VisitArgs( c.args() ).ToList(),
 				nullCoal = c.ary.Type == QM_LPAREN,
 				indexer  = false,

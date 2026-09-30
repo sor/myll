@@ -1,0 +1,13 @@
+// Named function arguments parse and resolve, but the generator rejects them.
+module namedarg;
+
+func take( int a ) -> int
+{
+	return a;
+}
+
+func main() -> int
+{
+	take( a: 5 ); // FAIL: named function arguments are not implemented yet
+	return 0;
+}

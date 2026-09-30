@@ -124,7 +124,10 @@ namespace Myll
 				Typespec type;
 				if( c.COPY() != null ) {
 					op = Operand.CopyCast;
-					throw new NotImplementedException( "copy-cast might need to introduce a new local to work" );
+					throw new DiagnosticException( new Diagnostic(
+						c.ToSrcPos(),
+						DiagnosticKind.Error,
+						"the (copy) cast is not implemented yet" ) );
 				}
 				else if( c.MOVE() != null ) {
 					op = Operand.MoveCast;
@@ -547,13 +550,21 @@ namespace Myll
 		}
 
 		public override Expr VisitRangeExpr( RangeExprContext c )
-			=> throw new NotImplementedException( "range expressions are not implemented yet" );
+			=> throw new DiagnosticException( new Diagnostic(
+				c.ToSrcPos(),
+				DiagnosticKind.Error,
+				"range expressions are not implemented yet" ) );
 
 		public override Expr VisitThrowExpr( ThrowExprContext c )
-			=> throw new NotImplementedException( "throw expressions are not implemented yet" );
+			=> throw new DiagnosticException( new Diagnostic(
+				c.ToSrcPos(),
+				DiagnosticKind.Error,
+				"throw expressions are not implemented yet" ) );
 
 		public override Expr VisitThreeWayConditionalExpr( ThreeWayConditionalExprContext c )
-			=> throw new NotImplementedException(
-				"three-way conditional expressions are not implemented yet" );
+			=> throw new DiagnosticException( new Diagnostic(
+				c.ToSrcPos(),
+				DiagnosticKind.Error,
+				"three-way conditional expressions are not implemented yet" ) );
 	}
 }

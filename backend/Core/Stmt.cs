@@ -366,11 +366,17 @@ namespace Myll.Core
 		public override SourceLines Gen( int level )
 		{
 			if( init is MultiStmt )
-				throw new NotImplementedException( "A MultiStmt can not be used in for-loop as init" );
+				throw new DiagnosticException( new Diagnostic(
+					srcPos,
+					DiagnosticKind.Error,
+					"multiple initializers in a for header are not implemented yet" ) );
 
 			SourceLines inits = init.GenWithoutCurly( 0 );
 			if( inits.Count > 1 )
-				throw new NotImplementedException( "for statement does not support more than one initializer yet" );
+				throw new DiagnosticException( new Diagnostic(
+					srcPos,
+					DiagnosticKind.Error,
+					"multi-statement for initializers are not implemented yet" ) );
 
 			SourceLines ret     = new();
 			string  indent  = IndentString.Repeat( level );

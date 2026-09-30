@@ -1,0 +1,8 @@
+// Range expressions parse but are not implemented yet.
+module range;
+
+func main() -> int
+{
+	var int r = 1 ... 2; // FAIL: range expressions are not implemented yet
+	return 0;
+}

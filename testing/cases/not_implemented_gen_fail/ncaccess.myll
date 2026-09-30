@@ -1,0 +1,14 @@
+// Null-coalescing member access parses and resolves, but the generator rejects it.
+module ncaccess;
+
+class Holder
+{
+	field int x = 1;
+}
+
+func main() -> int
+{
+	var Holder p = Holder();
+	p?.x; // FAIL: null-coalescing member access
+	return 0;
+}

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Myll.Resolver;
 
 namespace Myll.Core
 {
@@ -53,13 +54,17 @@ namespace Myll.Core
 	//      \ name expr /
 	public class Arg // Decl
 	{
-		public string? name;
-		public Expr    expr = null!;
+		public SrcPos?  srcPos;
+		public string?  name;
+		public Expr     expr = null!;
 
 		public string Gen()
 		{
 			if( !IsNullOrEmpty( name ) )
-				throw new NotImplementedException( "named function arguments needs to be implemented" );
+				throw new DiagnosticException( new Diagnostic(
+					srcPos ?? new SrcPos { file = "<unknown>" },
+					DiagnosticKind.Error,
+					"named function arguments are not implemented yet" ) );
 
 			return expr.Gen();
 		}
@@ -70,14 +75,18 @@ namespace Myll.Core
 	//     \      args       / indexer \args/
 	public class FuncCall
 	{
-		public List<Arg> args = new();
-		public bool      indexer;
-		public bool      nullCoal;
+		public SrcPos?    srcPos;
+		public List<Arg>  args = new();
+		public bool       indexer;
+		public bool       nullCoal;
 
 		public string Gen()
 		{
 			if( nullCoal ) {
-				throw new NotImplementedException( "null coalescing for function calls needs to be implemented" );
+				throw new DiagnosticException( new Diagnostic(
+					srcPos ?? new SrcPos { file = "<unknown>" },
+					DiagnosticKind.Error,
+					"null coalescing on calls and indexing is not implemented yet" ) );
 			}
 			else if( indexer ) {
 				// TODO: call a different method that can handle more than one parameter

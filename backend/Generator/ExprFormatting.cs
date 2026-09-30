@@ -13,8 +13,6 @@ namespace Myll.Generator
 				{ Operand.IndexCall, "{0}[{1}]" },     // 0 = FuncCallExpr.left, 1 = FuncCallExpr.funcCall
 				{ Operand.MemberAccess, "{0}.{1}" },
 				{ Operand.MemberPtrAccess, "{0}->{1}" },
-				{ Operand.MemberAccessPtr, "TODO MAP .*" },     // TODO
-				{ Operand.MemberPtrAccessPtr, "TODO MPAP ->*" }, // TODO
 				{ Operand.PreIncr, "++{0}" },
 				{ Operand.PreDecr, "--{0}" },
 				{ Operand.PrePlus, "+{0}" },

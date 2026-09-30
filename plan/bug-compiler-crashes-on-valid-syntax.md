@@ -1,12 +1,31 @@
 # Bug: valid syntax crashes the compiler or emits TODO text
 
-Status: **open**. Found in the 2026-09-29 review. One repro verified.
+Status: **fixed 2026-09-30** (all table rows; the `[flags]` row earlier). Found in the 2026-09-29 review. One repro verified.
 
 ## Principle
 
 The compiler must never print a stack trace for user input, and it must never emit placeholder text
 into generated C++. Parsed-but-unimplemented constructs need a clean diagnostic
 (`not implemented yet: <feature>` with file:line:col), not a crash.
+
+## How it was fixed (no new machinery)
+
+The existing channels were reused — no new helper was introduced:
+
+- **Visitor-stage constructs** (`(copy)`, ranges, throw expressions, three-way conditionals, defer,
+  aspect, concept) throw a `DiagnosticException` (the existing mechanism); `VDecl.VisitProgs` catches
+  it, drains the scope stack, and records the diagnostic in `Context.Diagnostics` — the frontend
+  already bails on those before resolution (and keeps going under `-k` with the partial AST).
+- **Generator-stage constructs** (null-coalescing `?:`, `?.` member access, `?.`-calls/indexing,
+  pointer-to-member access, multi-initializer `for` headers, named call arguments) throw
+  `DiagnosticException` from `BinOp.Gen`/`ForStmt.Gen`/`Arg.Gen`/`FuncCall.Gen`; `ModuleGenerator`
+  already catches it. `Arg`/`FuncCall` gained a `srcPos` field (wired in `VExt.VisitArgs`/
+  `VisitFuncCall`/`VisitIndexCall`) so these diagnostics carry a real location instead of
+  `<unknown>`.
+- The `"TODO MAP .*"` / `"TODO MPAP ->*"` format entries were deleted outright.
+
+Tests: `testing/cases/not_implemented_fail/` (visitor-stage, one construct per module) and
+`testing/cases/not_implemented_gen_fail/` (generation-stage), both registered in `generateFailing`.
 
 ## Findings
 

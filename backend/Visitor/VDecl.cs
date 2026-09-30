@@ -78,45 +78,54 @@ namespace Myll
 		{
 			GlobalNamespace global = GenerateGlobalScope( cs.Key );
 
-			foreach( ProgContext c in cs ) {
-				foreach( ImportsContext importCtx in c.imports() ) {
-					foreach( ImportNameContext nameCtx in importCtx.importName() ) {
-						if( nameCtx.namedImport() is NamedImportContext namedCtx ) {
-							global.imports.Add( new NamedImportSpec {
-								name   = namedCtx.id().GetText(),
-								srcPos = namedCtx.ToSrcPos(),
-							} );
-						}
-						else if( nameCtx.systemImport() is SystemImportContext sysCtx ) {
-							string raw  = sysCtx.GetText();
-							string path = raw.Substring( 1, raw.Length - 2 );
-							global.imports.Add( new RawImportSpec {
-								raw = new RawImport {
-									kind   = RawImportKind.System,
-									path   = path,
+			try {
+				foreach( ProgContext c in cs ) {
+					foreach( ImportsContext importCtx in c.imports() ) {
+						foreach( ImportNameContext nameCtx in importCtx.importName() ) {
+							if( nameCtx.namedImport() is NamedImportContext namedCtx ) {
+								global.imports.Add( new NamedImportSpec {
+									name   = namedCtx.id().GetText(),
+									srcPos = namedCtx.ToSrcPos(),
+								} );
+							}
+							else if( nameCtx.systemImport() is SystemImportContext sysCtx ) {
+								string raw  = sysCtx.GetText();
+								string path = raw.Substring( 1, raw.Length - 2 );
+								global.imports.Add( new RawImportSpec {
+									raw = new RawImport {
+										kind   = RawImportKind.System,
+										path   = path,
+										srcPos = sysCtx.ToSrcPos(),
+									},
 									srcPos = sysCtx.ToSrcPos(),
-								},
-								srcPos = sysCtx.ToSrcPos(),
-							} );
-						}
-						else if( nameCtx.localImport() is LocalImportContext localCtx ) {
-							string raw  = localCtx.STRING_LIT().GetText();
-							string path = raw.Substring( 1, raw.Length - 2 );
-							global.imports.Add( new RawImportSpec {
-								raw = new RawImport {
-									kind   = RawImportKind.Local,
-									path   = path,
+								} );
+							}
+							else if( nameCtx.localImport() is LocalImportContext localCtx ) {
+								string raw  = localCtx.STRING_LIT().GetText();
+								string path = raw.Substring( 1, raw.Length - 2 );
+								global.imports.Add( new RawImportSpec {
+									raw = new RawImport {
+										kind   = RawImportKind.Local,
+										path   = path,
+										srcPos = localCtx.ToSrcPos(),
+									},
 									srcPos = localCtx.ToSrcPos(),
-								},
-								srcPos = localCtx.ToSrcPos(),
-							} );
+								} );
+							}
 						}
 					}
+
+					c.decl().Select( Visit ).Exec();
+
+					CleanBodylessNamespace();
 				}
-
-				c.decl().Select( Visit ).Exec();
-
-				CleanBodylessNamespace();
+			}
+			catch( DiagnosticException ex ) {
+				Context.Diagnostics.Add( ex.Diagnostic );
+				// Open scopes from the aborted visitation (class bodies, functions)
+				// must be drained so closing the global scope stays consistent.
+				while( scopeStack.Count > 1 )
+					PopScope();
 			}
 
 			CloseGlobalScope();
@@ -516,11 +525,17 @@ namespace Myll
 
 		// TODO
 		public override Decl VisitDefAspect( DefAspectContext c )
-			=> throw new NotSupportedException( "aspect is not supported; see REASONS.md" );
+			=> throw new DiagnosticException( new Diagnostic(
+				c.ToSrcPos(),
+				DiagnosticKind.Error,
+				"aspect is not supported; see REASONS.md" ) );
 
 		// TODO
 		public override Decl VisitDefConcept( DefConceptContext c )
-			=> throw new NotSupportedException( "concept is not supported; see REASONS.md" );
+			=> throw new DiagnosticException( new Diagnostic(
+				c.ToSrcPos(),
+				DiagnosticKind.Error,
+				"concept is not supported; see REASONS.md" ) );
 
 		public override Enumeration VisitDefEnum( DefEnumContext c )
 		{

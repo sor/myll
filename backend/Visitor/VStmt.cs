@@ -7,6 +7,7 @@ using Antlr4.Runtime;
 using Antlr4.Runtime.Tree;
 using Myll.Core;
 using Myll.Resolver;
+using Myll.Resolver;
 
 namespace Myll
 {
@@ -316,7 +317,10 @@ namespace Myll
 				"continue case/default/else is not implemented yet" );
 
 		public override Stmt VisitStmtDefer( StmtDeferContext c )
-			=> throw new NotImplementedException( "defer is not implemented yet" );
+			=> throw new DiagnosticException( new Diagnostic(
+				c.ToSrcPos(),
+				DiagnosticKind.Error,
+				"defer is not supported; see REASONS.md" ) );
 
 		public override Stmt VisitStmtFlowIf( StmtFlowIfContext c )
 		{

@@ -1,0 +1,8 @@
+// defer parses but is rejected; a clean diagnostic instead of a stack trace.
+module deferstmt;
+
+func main() -> int
+{
+	defer cleanup(); // FAIL: defer is not supported
+	return 0;
+}

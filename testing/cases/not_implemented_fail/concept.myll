@@ -1,0 +1,4 @@
+// concept parses but is rejected; a clean diagnostic instead of a stack trace.
+module conceptdecl;
+
+concept NotYet { } // FAIL: concept is not supported

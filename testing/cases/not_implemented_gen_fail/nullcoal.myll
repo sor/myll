@@ -1,0 +1,10 @@
+// The null-coalescing operator parses and resolves, but the generator rejects it.
+module nullcoal;
+
+func main() -> int
+{
+	var int a = 1;
+	var int b = 2;
+	a ?: b; // FAIL: null-coalescing operator
+	return 0;
+}

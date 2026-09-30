@@ -1,0 +1,4 @@
+// aspect parses but is rejected; a clean diagnostic instead of a stack trace.
+module aspectdecl;
+
+aspect NotYet // FAIL: aspect is not supported

@@ -1,0 +1,10 @@
+// The (copy) cast parses but is not implemented; it must fail with a clean
+// diagnostic, not a stack trace.
+module copycast;
+
+func main() -> int
+{
+	var int a = 1;
+	var int b = (copy)a; // FAIL: the (copy) cast is not implemented yet
+	return 0;
+}
