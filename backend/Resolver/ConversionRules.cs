@@ -309,10 +309,10 @@ namespace Myll.Resolver
 			if( !IsInheritancePointerKind( srcKind ) || srcKind != tgtKind )
 				return false;
 
-			Typespec sourceInner = CloneTypespecBase( source );
+			Typespec sourceInner = source.Clone();
 			sourceInner.ptrs = new();
 
-			Typespec targetInner = CloneTypespecBase( target );
+			Typespec targetInner = target.Clone();
 			targetInner.ptrs = new();
 
 			TypespecNested? sourceNested = sourceInner as TypespecNested;
@@ -701,38 +701,9 @@ namespace Myll.Resolver
 			if( last.kind != Pointer.Kind.LVRef && last.kind != Pointer.Kind.RVRef )
 				return false;
 
-			stripped = CloneTypespecBase( target );
+			stripped = target.Clone();
 			stripped.ptrs = target.ptrs.Take( target.ptrs.Count - 1 ).ToList();
 			return true;
-		}
-
-		public static Typespec CloneTypespecBase( Typespec source )
-		{
-			Typespec ret = source switch {
-				TypespecBasic b   => new TypespecBasic {
-					kind            = b.kind,
-					size            = b.size,
-					literalText     = b.literalText,
-					literalValue    = b.literalValue,
-					literalValues   = b.literalValues,
-					isDefaultSized  = b.isDefaultSized,
-				},
-				TypespecNested n  => new TypespecNested {
-					resolvedDecl = n.resolvedDecl,
-					isInitList   = n.isInitList,
-					idTpls       = n.idTpls.Select( it => new IdTplArgs { id = it.id, tplArgs = it.tplArgs } ).ToList(),
-				},
-				TypespecFunc f    => new TypespecFunc {
-					paras   = f.paras,
-					retType = f.retType,
-				},
-				_                 => throw new InvalidOperationException( "unknown Typespec variant" ),
-			};
-
-			ret.srcPos = source.srcPos;
-			ret.qual   = source.qual;
-			ret.ptrs   = source.ptrs?.ToList();
-			return ret;
 		}
 
 		private static bool HaveSamePointers( List<Pointer>? a, List<Pointer>? b )
@@ -839,7 +810,7 @@ namespace Myll.Resolver
 					continue;
 				}
 
-				type = CloneTypespecBase( alias.type );
+				type = alias.type.Clone();
 			}
 
 			return type;
@@ -870,7 +841,7 @@ namespace Myll.Resolver
 			for( int i = 0; i < limit; i++ )
 				paramMap[alias.TplParams[i].name] = providedArgs[i];
 
-			expanded = SubstituteAliasParams( CloneTypespecDeep( alias.type ), paramMap, result );
+			expanded = SubstituteAliasParams( alias.type.Clone( true ), paramMap, result );
 			return true;
 		}
 
@@ -883,7 +854,7 @@ namespace Myll.Resolver
 			 && GetResolvedDecl( placeholder, result ) is TplParamDecl tp
 			 && paramMap.TryGetValue( tp.name, out TplArg? replacement ) ) {
 				if( replacement.typespec != null ) {
-					Typespec ret = CloneTypespecDeep( replacement.typespec );
+					Typespec ret = replacement.typespec.Clone( true );
 					ret.qual = CombineQualifiers( ret.qual, placeholder.qual );
 					if( placeholder.ptrs != null && placeholder.ptrs.Count > 0 ) {
 						ret.ptrs = ( ret.ptrs ?? new List<Pointer>() )
@@ -930,24 +901,6 @@ namespace Myll.Resolver
 			return null;
 		}
 
-		private static Typespec CloneTypespecDeep( Typespec source )
-		{
-			Typespec ret = CloneTypespecBase( source );
-			if( ret is TypespecNested rn && source is TypespecNested sn ) {
-			rn.idTpls = sn.idTpls.Select( it => new IdTplArgs {
-				id      = it.id,
-				tplArgs = it.tplArgs?.Select( CloneTplArgDeep ).ToList() ?? new List<TplArg>(),
-			} ).ToList();
-			}
-			return ret;
-		}
-
-		private static TplArg CloneTplArgDeep( TplArg source )
-			=> new() {
-				typespec = source.typespec == null ? null : CloneTypespecDeep( source.typespec ),
-				lit      = source.lit,
-			};
-
 		private static Qualifier CombineQualifiers( Qualifier a, Qualifier b )
 			=> a == Qualifier.None ? b : a;
 
@@ -976,7 +929,7 @@ namespace Myll.Resolver
 
 			// Normalize the outer pointer to RawPtr so exact-match/qualifier logic applies
 			// to the same kind on both sides.
-			Typespec modSource = CloneTypespecBase( source );
+			Typespec modSource = source.Clone();
 			modSource.ptrs = source.ptrs.ToList();
 			Pointer srcPtr = modSource.ptrs[ modSource.ptrs.Count - 1 ];
 			modSource.ptrs[ modSource.ptrs.Count - 1 ] = new() {
@@ -984,7 +937,7 @@ namespace Myll.Resolver
 				qual  = srcPtr.qual,
 			};
 
-			Typespec modTarget = CloneTypespecBase( target );
+			Typespec modTarget = target.Clone();
 			modTarget.ptrs = target.ptrs.ToList();
 			Pointer tgtPtr = modTarget.ptrs[ modTarget.ptrs.Count - 1 ];
 			modTarget.ptrs[ modTarget.ptrs.Count - 1 ] = new() {
@@ -1015,11 +968,11 @@ namespace Myll.Resolver
 			if( srcArray == tgtArray )
 				return false;
 
-			Typespec modSource = CloneTypespecBase( source );
+			Typespec modSource = source.Clone();
 			modSource.ptrs = source.ptrs.ToList();
 			modSource.ptrs[ modSource.ptrs.Count - 1 ] = new() { kind = Pointer.Kind.RawPtr };
 
-			Typespec modTarget = CloneTypespecBase( target );
+			Typespec modTarget = target.Clone();
 			modTarget.ptrs = target.ptrs.ToList();
 			modTarget.ptrs[ modTarget.ptrs.Count - 1 ] = new() { kind = Pointer.Kind.RawPtr };
 

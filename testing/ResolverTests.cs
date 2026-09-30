@@ -704,7 +704,7 @@ func main() -> int { return Test::foo(); }
 				literalValues = new List<BigInteger> { 5, 7 },
 			};
 
-			Typespec clone = ConversionRules.CloneTypespecBase( source );
+			Typespec clone = source.Clone();
 
 			TypespecBasic basic = Assert.IsType<TypespecBasic>( clone! );
 			Assert.Equal( "1024 * 1024", basic.literalText );

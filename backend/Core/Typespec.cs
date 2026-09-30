@@ -43,6 +43,27 @@ namespace Myll.Core
 
 		public abstract string GenType();
 
+		/// <summary>
+		/// Returns a copy of this typespec with every field preserved: base scalars,
+		/// qualifiers, source position, literal values, nested flags, and the per-module
+		/// pointer dialects. In deep mode the pointer decorations and the nested template
+		/// arguments are copied recursively, so later mutations of either copy cannot
+		/// affect the other.
+		/// </summary>
+		public abstract Typespec Clone( bool deep = false );
+
+		protected List<Pointer>? ClonePointers( bool deep )
+			=> ptrs == null
+				? null
+				: deep
+					? ptrs.Select( p => new Pointer {
+						kind    = p.kind,
+						qual    = p.qual,
+						expr    = p.expr,
+						Dialect = p.Dialect,
+					} ).ToList()
+					: new List<Pointer>( ptrs );
+
 		public virtual bool IsDependentType()
 			=> false;
 
@@ -154,6 +175,20 @@ namespace Myll.Core
 		/// </summary>
 		public bool isDefaultSized;
 
+		public override Typespec Clone( bool deep = false )
+			=> new TypespecBasic {
+				kind            = kind,
+				size            = size,
+				align           = align,
+				literalText     = literalText,
+				literalValue    = literalValue,
+				literalValues   = literalValues,
+				isDefaultSized  = isDefaultSized,
+				srcPos          = srcPos,
+				qual            = qual,
+				ptrs            = ClonePointers( deep ),
+			};
+
 		public override string GenType()
 		{
 			if( isDefaultSized ) {
@@ -181,6 +216,16 @@ namespace Myll.Core
 	{
 		public List<Param> paras   = new();
 		public Typespec    retType = new TypespecBasic { kind = TypespecBasic.Kind.Void }; // opt
+
+		public override Typespec Clone( bool deep = false )
+			=> new TypespecFunc {
+				// Parameter lists are shared: signatures are not mutated after cloning.
+				paras    = new List<Param>( paras ),
+				retType  = deep ? retType.Clone( true ) : retType,
+				srcPos   = srcPos,
+				qual     = qual,
+				ptrs     = ClonePointers( deep ),
+			};
 
 		public override string GenType()
 			=> retType.Gen();
@@ -223,6 +268,40 @@ namespace Myll.Core
 		/// separately so the compiler can special-case it.
 		/// </summary>
 		public bool isInitList;
+
+		public override Typespec Clone( bool deep = false )
+		{
+			TypespecNested ret = new() {
+				resolvedDecl    = resolvedDecl,
+				isDependent     = isDependent,
+				prefixDependent = new List<bool>( prefixDependent ),
+				isInitList      = isInitList,
+				srcPos          = srcPos,
+				qual            = qual,
+				ptrs            = ClonePointers( deep ),
+			};
+			ret.idTpls = deep
+				? idTpls.Select( CloneIdTplArgsDeep ).ToList()
+				: idTpls.Select( CloneIdTplArgs ).ToList();
+			return ret;
+		}
+
+		private IdTplArgs CloneIdTplArgs( IdTplArgs it )
+			=> new() {
+				id      = it.id,
+				tplArgs = it.tplArgs,
+			};
+
+		private IdTplArgs CloneIdTplArgsDeep( IdTplArgs it )
+			=> new() {
+				id = it.id,
+				tplArgs = it.tplArgs == null
+					? new List<TplArg>()
+					: it.tplArgs.Select( a => new TplArg {
+						typespec = a.typespec == null ? null : a.typespec.Clone( true ),
+						lit      = a.lit,
+					} ).ToList(),
+			};
 
 		public override bool IsDependentType()
 		{

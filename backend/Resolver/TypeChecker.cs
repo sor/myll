@@ -445,7 +445,7 @@ namespace Myll.Resolver
 				t = InferAutoType( t )!;
 
 				if( inferred == null ) {
-					inferred = CloneTypespec( t );
+					inferred = t.Clone();
 					continue;
 				}
 
@@ -550,43 +550,6 @@ namespace Myll.Resolver
 						CollectReturns( ls.body, output );
 					break;
 			}
-		}
-
-		private static Typespec CloneTypespec( Typespec source )
-		{
-			Typespec ret = source switch {
-				TypespecBasic b => new TypespecBasic {
-					kind             = b.kind,
-					size             = b.size,
-					align            = b.align,
-					isDefaultSized   = b.isDefaultSized,
-					literalText      = b.literalText,
-					literalValue     = b.literalValue,
-					literalValues    = b.literalValues,
-				},
-				TypespecNested n => new TypespecNested {
-					resolvedDecl = n.resolvedDecl,
-					idTpls       = n.idTpls
-						.Select( it => new IdTplArgs { id = it.id, tplArgs = it.tplArgs } )
-						.ToList(),
-				},
-				TypespecFunc f => new TypespecFunc {
-					paras   = f.paras,
-					retType = f.retType,
-				},
-				_ => throw new InvalidOperationException(
-					String.Format( "unknown Typespec variant: {0}", source.GetType().Name ) ),
-			};
-
-			ret.srcPos = source.srcPos;
-			ret.qual   = source.qual;
-			ret.ptrs   = source.ptrs?.Select( p => new Pointer {
-				kind = p.kind,
-				qual = p.qual,
-				expr = p.expr,
-			} ).ToList();
-
-			return ret;
 		}
 
 		private void ValidateMultiAssign( MultiAssign multiAssign )
@@ -1072,7 +1035,7 @@ namespace Myll.Resolver
 			 && checkType.ptrs[checkType.ptrs.Count - 1].kind
 			    is Pointer.Kind.LVRef or Pointer.Kind.RVRef ) {
 				List<Pointer> ptrs = checkType.ptrs;
-				checkType = ConversionRules.CloneTypespecBase( checkType );
+				checkType = checkType.Clone();
 				checkType.ptrs = ptrs.Take( ptrs.Count - 1 ).ToList();
 			}
 

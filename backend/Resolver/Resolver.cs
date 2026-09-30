@@ -2087,7 +2087,7 @@ namespace Myll.Resolver
 			 && kind != Pointer.Kind.Vector )
 				return null;
 
-			Typespec ret = ConversionRules.CloneTypespecBase( type );
+			Typespec ret = type.Clone();
 			ret.ptrs = type.ptrs.Take( type.ptrs.Count - 1 ).ToList();
 			return ret;
 		}
@@ -2160,7 +2160,7 @@ namespace Myll.Resolver
 
 			Typespec expanded = ConversionRules.TryExpandAliasTemplate( useSite, alias, result, out Typespec aliasExpanded )
 				? aliasExpanded
-				: ConversionRules.CloneTypespecBase( alias.type );
+				: alias.type.Clone();
 
 			// Preserve the outer qualifiers and pointer/reference/smart-pointer wrappers
 			// from the use site unless the alias itself already supplies them.
@@ -2216,11 +2216,7 @@ namespace Myll.Resolver
 				 || outer.kind == Pointer.Kind.LVRef
 				 || outer.kind == Pointer.Kind.RVRef
 				 || outer.kind.Between( Pointer.Kind.SmartPtr_Begin, Pointer.Kind.SmartPtr_End ) ) {
-					Typespec inner = type switch {
-						TypespecNested n => new TypespecNested { idTpls = n.idTpls, qual = n.qual, resolvedDecl = n.resolvedDecl, ptrs = new( ptrs ) },
-						TypespecBasic b  => new TypespecBasic { kind = b.kind, size = b.size, align = b.align, qual = b.qual, ptrs = new( ptrs ) },
-						_                => throw new NotSupportedException( "unsupported typespec in member access" ),
-					};
+					Typespec inner = type.Clone();
 					if( inner.ptrs == null )
 						return false;
 				inner.ptrs.RemoveAt( inner.ptrs.Count - 1 );
@@ -2441,7 +2437,7 @@ namespace Myll.Resolver
 
 		private static Typespec StripReferenceAndPointerWrappers( Typespec type )
 		{
-			Typespec current = ConversionRules.CloneTypespecBase( type );
+			Typespec current = type.Clone();
 
 			while( current.ptrs is { Count: > 0 } ) {
 				Pointer last = current.ptrs[current.ptrs.Count - 1];

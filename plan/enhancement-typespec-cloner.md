@@ -1,6 +1,45 @@
 # Enhancement: one shared Typespec cloner
 
-Status: **open**, partially addressed 2026-09-30. Found in the 2026-09-29 review. Field drift verified.
+Status: **implemented 2026-09-30**. Found in the 2026-09-29 review. Field drift verified.
+
+## How it was done
+
+`Typespec.Clone(bool deep)` lives on the AST (`backend/Core/Typespec.cs`), one abstract method
+implemented by `TypespecBasic`/`TypespecNested`/`TypespecFunc` (a new Typespec subclass must
+implement it — the compiler enforces coverage). It copies **every** field: base scalars, `qual`,
+`srcPos`, `align`, `literalText`/`literalValue`/`literalValues`, the nested flags
+(`isInitList`, `isDependent`, a copied `prefixDependent` list), and the per-module
+`Pointer.Dialect`. Deep mode additionally rebuilds the pointer decorations and the nested template
+arguments (and a `TypespecFunc` return type) recursively, so mutations of either copy cannot leak.
+All five clone helpers (`ConversionRules.CloneTypespecBase` + `CloneTypespecDeep` + `CloneTplArgDeep`,
+`TemplateInference.CloneTypespec` + `CloneTypespecBase`, `TypeChecker.CloneTypespec`,
+`TypeResolver.CloneTypespecBase`, `DiscardTransformer.CloneTypespecBase`) were deleted and every
+call site rewired; the `TryGetBaseHierarchical` ad-hoc inline clone became a `Clone()` (closing its
+`isDefaultSized` drop).
+
+Verification: the const-deduction repro now deduces (`tmp/review/const_deduce.myll`), the
+`template_typename` cases still pass, the full suite is green with **unchanged** goldens (the
+dropped fields had no observable effect on previously covered paths), and the return-type
+substitution of `bug-template-return-substitution.md` rides on it. Pointer dialects are preserved
+structurally in deep clones (no dedicated dialect case yet).
+
+## Provenance (verified 2026-09-30 via git pickaxe)
+
+Each helper was introduced by a *different* feature commit within twelve days, none of which
+touched the others — the drift is by construction, not by decay:
+
+| Clone | Introduced by | Date |
+|---|---|---|
+| `TypeResolver.CloneTypespecBase` | `cf5fa1a` "add Expr.Type, TypeResolver, ConversionRules" | 2026-08-28 |
+| `Resolver.TryGetBaseHierarchical` (ad-hoc inline clone) | `e94e225` "member access resolution and constructor-call disambiguation" | 2026-08-28 |
+| `ConversionRules.CloneTypespecBase` (+ its `CloneTypespecDeep` wrapper) | `ea4b564` "primitive reference binding and pre-increment on references" | 2026-09-07 |
+| `TemplateInference.CloneTypespecBase` | `64b1d4a` "Phase 1 template hardening" | 2026-09-03 |
+| `TypeChecker.CloneTypespec` | `cdf9563` "return-type inference, [chain], chained member calls" | 2026-09-03 |
+| `DiscardTransformer.CloneTypespecBase` | `43ae69a` "Implement discard lowering" (moved to backend/Transform in `18e1ae7`) | 2026-08-30 |
+
+The drift kept reproducing afterwards: `literalValue` (2026-09-29, `47cb86e`/`931c5e0`) was added to
+only three of the helpers, and the `literalValues` field (2026-09-30) again required a five-site
+patch — see `plan/untyped-constant-followups.md`.
 
 ## Problem
 
@@ -28,7 +67,7 @@ Plus ad-hoc hand-written clones on top:
 ## Consequences (verified or traced)
 
 - **Const deduction**: `TemplateInference.CloneTypespecBase` drops `qual`; `StripOutermostPointers`
-  never restores it. `f(c)` with `c : const int*` and `func f<T>(T* p)` fails with "No matching
+  never restores it. `var const int * c = &x;` then `f(c)` with `func f<T>(T* p)` fails with "No matching
   overload" instead of deducing `T = const int` (repro: `tmp/review/const_deduce.myll`).
 - **Dependent types**: a `T::Nested` stored after substitution loses its dependent flags, so
   `GenType` omits the `typename`/`template` disambiguators

@@ -722,7 +722,7 @@ namespace Myll.Resolver
 			if( type?.ptrs == null || type.ptrs.Count == 0 )
 				return null;
 
-			Typespec ret = CloneTypespecBase( type );
+			Typespec ret = type.Clone();
 			ret.ptrs = type.ptrs.Take( type.ptrs.Count - 1 ).ToList();
 			return ret;
 		}
@@ -747,7 +747,7 @@ namespace Myll.Resolver
 			 && kind != Pointer.Kind.Vector )
 				return null;
 
-			Typespec ret = CloneTypespecBase( type );
+			Typespec ret = type.Clone();
 			ret.ptrs = type.ptrs.Take( type.ptrs.Count - 1 ).ToList();
 			return ret;
 		}
@@ -757,39 +757,11 @@ namespace Myll.Resolver
 			if( type == null )
 				return null;
 
-			Typespec ret = CloneTypespecBase( type );
+			Typespec ret = type.Clone();
 			ret.ptrs = type.ptrs != null
 				? new List<Pointer>( type.ptrs )
 				: new List<Pointer>();
 			ret.ptrs.Add( new() { kind = Pointer.Kind.RawPtr } );
-			return ret;
-		}
-
-		private static Typespec CloneTypespecBase( Typespec source )
-		{
-			Typespec ret = source switch {
-				TypespecBasic b   => new TypespecBasic {
-					kind           = b.kind,
-					size           = b.size,
-					align          = b.align,
-					literalText    = b.literalText,
-					literalValue   = b.literalValue,
-					literalValues  = b.literalValues,
-					isDefaultSized = b.isDefaultSized,
-				},
-				TypespecNested n  => new TypespecNested {
-					resolvedDecl = n.resolvedDecl,
-					idTpls       = n.idTpls.Select( it => new IdTplArgs { id = it.id, tplArgs = it.tplArgs } ).ToList(),
-				},
-				TypespecFunc f    => new TypespecFunc {
-					paras   = f.paras,
-					retType = f.retType,
-				},
-				_                 => throw new InvalidOperationException( "unknown Typespec variant" ),
-			};
-
-			ret.srcPos = source.srcPos;
-			ret.qual   = source.qual;
 			return ret;
 		}
 

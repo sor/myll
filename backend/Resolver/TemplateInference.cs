@@ -184,7 +184,7 @@ namespace Myll.Resolver
 				return false;
 
 			deduced = candidate.TplParams
-				.Select( p => new TplArg { typespec = CloneTypespec( NormalizeDeducedType( bindings[p.name] ) ) } )
+				.Select( p => new TplArg { typespec = NormalizeDeducedType( bindings[p.name] ).Clone( true ) } )
 				.ToList();
 			return true;
 		}
@@ -232,19 +232,7 @@ namespace Myll.Resolver
 		{
 			Typespec CloneAndRecurseBase()
 			{
-				Typespec ret = CloneTypespecBase( type );
-				ret.srcPos = type.srcPos;
-				ret.qual   = type.qual;
-				if( type.ptrs != null ) {
-				ret.ptrs = type.ptrs
-					.Select( p => new Pointer {
-						kind = p.kind,
-						qual = p.qual,
-						expr = p.expr,
-					} )
-					.ToList();
-				}
-				return ret;
+				return type.Clone( true );
 			}
 
 			Decl? resolved = type is TypespecNested nestedType
@@ -254,7 +242,7 @@ namespace Myll.Resolver
 			if( resolved is TplParamDecl tpl
 			 && substitution.TryGetValue( tpl.name, out Typespec? replacement ) ) {
 				Typespec ret = Substitute( replacement, substitution, result )
-				            ?? CloneTypespec( replacement );
+				            ?? replacement.Clone( true );
 				ret.qual = CombineQualifiers( ret.qual, type.qual );
 				if( type.ptrs != null && type.ptrs.Count > 0 ) {
 					ret.ptrs = (ret.ptrs ?? new List<Pointer>())
@@ -431,52 +419,12 @@ namespace Myll.Resolver
 
 		private static Typespec StripOutermostPointers( Typespec source, int count )
 		{
-			Typespec ret = CloneTypespecBase( source );
+			Typespec ret = source.Clone();
 			ret.ptrs = source.ptrs?.Take( source.ptrs.Count - count ).ToList();
 			return ret;
 		}
 
 		private static bool IsSameType( Typespec a, Typespec b )
 			=> ConversionRules.IsExactMatch( a, b );
-
-		private static Typespec CloneTypespec( Typespec source )
-		{
-			Typespec ret = CloneTypespecBase( source );
-			ret.srcPos = source.srcPos;
-			ret.qual   = source.qual;
-			ret.ptrs   = source.ptrs?.Select( p => new Pointer {
-				kind = p.kind,
-				qual = p.qual,
-				expr = p.expr,
-			} ).ToList();
-			return ret;
-		}
-
-		private static Typespec CloneTypespecBase( Typespec source )
-		{
-			return source switch {
-				TypespecBasic b => new TypespecBasic {
-					kind             = b.kind,
-					size             = b.size,
-					align            = b.align,
-					isDefaultSized   = b.isDefaultSized,
-					literalText      = b.literalText,
-					literalValue     = b.literalValue,
-					literalValues    = b.literalValues,
-				},
-				TypespecNested n => new TypespecNested {
-					resolvedDecl = n.resolvedDecl,
-					idTpls       = n.idTpls
-						.Select( it => new IdTplArgs { id = it.id, tplArgs = it.tplArgs } )
-						.ToList(),
-				},
-				TypespecFunc f => new TypespecFunc {
-					paras   = f.paras,
-					retType = f.retType,
-				},
-				_ => throw new InvalidOperationException(
-					String.Format( "unknown Typespec variant: {0}", source.GetType().Name ) ),
-			};
-		}
 	}
 }

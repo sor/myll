@@ -414,7 +414,7 @@ namespace Myll.Transform
 
 			// Value or reference parameter: introduce a hidden local.
 			// Drop any const/reference qualifiers; the temp must be default-initializable.
-			Typespec tempType = CloneTypespecBase( paramType );
+			Typespec tempType = paramType.Clone();
 			tempType.qual = Qualifier.None;
 			if( tempType.ptrs is { Count: > 0 } )
 				tempType.ptrs.RemoveAt( tempType.ptrs.Count - 1 );
@@ -473,37 +473,6 @@ namespace Myll.Transform
 					size = TypespecBasic.SizeUndetermined,
 				},
 			};
-		}
-
-		private static Typespec CloneTypespecBase( Typespec source )
-		{
-			Typespec ret = source switch {
-				TypespecBasic b  => new TypespecBasic {
-					kind            = b.kind,
-					size            = b.size,
-					align           = b.align,
-					literalText     = b.literalText,
-					literalValue    = b.literalValue,
-					literalValues   = b.literalValues,
-					isDefaultSized  = b.isDefaultSized,
-				},
-				TypespecNested n => new TypespecNested {
-					resolvedDecl = n.resolvedDecl,
-					idTpls = n.idTpls
-						.Select( it => new IdTplArgs { id = it.id, tplArgs = it.tplArgs } )
-						.ToList(),
-				},
-				TypespecFunc f   => new TypespecFunc {
-					paras   = f.paras,
-					retType = f.retType,
-				},
-				_                => throw new InvalidOperationException(
-					"unknown Typespec variant" ),
-			};
-
-			ret.srcPos = source.srcPos;
-			ret.qual   = source.qual;
-			return ret;
 		}
 
 		private void Error( SrcPos? srcPos, string message )
