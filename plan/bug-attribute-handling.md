@@ -1,6 +1,8 @@
 # Bug: attribute plumbing — shared state, ordering, missing validation
 
-Status: **open**; decisions recorded 2026-09-30. Found in the 2026-09-29 review. Two repros verified.
+Status: **open** — findings 1, 3, and 4 fixed 2026-09-30 by Stage 0 of `plan/attribute-system-rework.md`;
+findings 2, 5, and 6 are scheduled for the rework (stages 2-3). Found in the 2026-09-29 review.
+Two repros verified.
 
 ## Findings
 
@@ -12,6 +14,12 @@ Status: **open**; decisions recorded 2026-09-30. Found in the 2026-09-29 review.
    - `var int a, b;` under one `[priv]` block: the first var consumes `priv`, the second silently
      falls back to the section default.
    - Any later `MergeAttribs` on one child mutates all siblings.
+
+   **FIXED 2026-09-30 (Stage 0):** `AttributedNode.AssignAttribs` now copies on ownership (deep copy
+   of the dictionary and its value lists), and `Decl.AssignAttribs` extracts access attributes from
+   the node's own copy instead of the caller's. Verified by
+   `testing/cases/attribute_multi_decl/`: both block form (`[priv] var int a, b;`) and section form
+   keep `priv` on every member. The `field { int a; int b; }` variant is fixed with the same change.
 
    **Verified 2026-09-30** (repro under `tmp/collision_check/attr_priv/`): in a `struct`, the block
    form `[priv] var int a, b;` emits `private: int a; public: int b;` — `priv` is silently lost on
@@ -36,10 +44,20 @@ Status: **open**; decisions recorded 2026-09-30. Found in the 2026-09-29 review.
    body. The function path is covered generator-side (`AddFunc`,
    `backend/Generator/HierachicalGen.cs:740-747`); the constructor path is not.
 
+   **FIXED 2026-09-30 (Stage 0):** the check moved to the resolver stage (`TypeChecker.ValidateDecl`'s
+   `Structor` arm, after attributes are applied). Visitor/generator-stage placements bail the
+   compilation before resolver-stage diagnostics can print, so the same case can carry all its
+   markers. Negative case in `testing/cases/decl_and_attributes_fail/`.
+
 4. **Duplicate attribute crashes the compiler.** `Visit(AttribBlkContext)` builds the dictionary with
    `ToDictionary` (`backend/Visitor/VExt.cs:321-329`). `[pure, pure] func f() -> int { ... }`
    (`tmp/review/attr_dup.myll`) throws an unhandled `ArgumentException` inside
    `CompilerPipeline.CompileModules` (parallel LINQ) — the compiler dies with a stack trace.
+
+   **FIXED 2026-09-30 (Stage 0):** `Visit(AttribBlkContext)` is a manual loop that keeps the first
+   occurrence, and `VDecl.ReportDuplicateAttribs` emits a warning per duplicate (statement-side
+   blocks warn via the same parser change; only the decl path has a diagnostics channel). Unit test:
+   `ResolverTests.DuplicateAttributes_Warn`.
 
 5. **`[a, b]:` access sections ignore extra attributes.** `VisitAttrColon`
    (`backend/Visitor/VDecl.cs:288-290`) honors only the first key and silently drops the rest.
