@@ -134,8 +134,12 @@ See `docs/analysis/01-architecture.md` (static mutable state, `Decl`→`Stmt` in
    no longer short-circuits to Exact without a fit check. Tests:
    `testing/cases/new_in_myll/compound_constants.myll` (positive) and
    `testing/cases/typecheck_fail/main.myll` (`test_compound_constant_overflow`).
-   Remaining: `/` (`Operand.Divide`) still resolves to a null type (left to C++); ternaries of
-   folded constants are not folded; unary minus on literals is not folded.
+   Remaining follow-ups done 2026-09-30 (`plan/untyped-constant-followups.md`): `/` folds
+   (division by zero left to C++); unary minus folds to the negated constant; ternaries of
+   untyped constants carry all possible values (`TypespecBasic.literalValues`) so a target
+   must hold every branch; and folded constants whose plain C++ emission would be undefined
+   (shift count out of range, operand-type overflow) are emitted as the exact folded
+   constant by `BinOp.Gen()`.
 
 5. **`char` compared with integer literals** — DONE. `char` is not a number in Myll:
    `ValidateComparisonOperator` (`backend/Resolver/TypeChecker.cs`) rejects a plain `char`
