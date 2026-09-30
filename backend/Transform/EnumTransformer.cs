@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using Myll.Core;
+using Myll.Resolver;
 
 namespace Myll.Transform
 {
@@ -55,16 +57,17 @@ namespace Myll.Transform
 
 		private static void NumberFlags( Enumeration enumeration, List<Diagnostic> diagnostics )
 		{
-			uint index = 1;
+			// Auto numbering only applies to entries without a value. A literal value
+			// advances the doubling chain (validated to the u32 range). Computed
+			// values (e.g. `Yellow = Red | Green`) are left untouched and emitted
+			// as-is; they are transparent to the chain and C++ validates them as
+			// constant expressions.
+			BigInteger index = 1;
 			foreach( Decl child in enumeration.children ) {
 				if( child is not EnumEntry ee )
 					continue;
 
-				if( ee.value is Literal lit ) {
-					uint readIndex = uint.Parse( lit.text );
-					index = readIndex == 0 ? 1 : readIndex * 2;
-				}
-				else {
+				if( ee.value == null ) {
 					if( !IsPowerOfTwo( index ) ) {
 						diagnostics.Add( new Diagnostic(
 							ee.srcPos,
@@ -76,8 +79,36 @@ namespace Myll.Transform
 					}
 
 					ee.value = new Literal { op = Operand.Literal, text = index.ToString() };
-					index   *= 2;
+					index *= 2;
+					continue;
 				}
+
+				// A negative literal is spelled as a unary minus over a literal.
+				string? literalText = null;
+				if( ee.value is Literal lit )
+					literalText = lit.text;
+				else if( ee.value is UnOp { op: Operand.PreMinus, expr: Literal negated } )
+					literalText = "-" + negated.text;
+
+				// Computed values are left untouched; the chain keeps doubling.
+				if( literalText == null )
+					continue;
+
+				// Hex and binary literals are legal here; anything unparsable,
+				// negative, or above the u32 range is a clean diagnostic, not a crash.
+				if( !ConversionRules.TryParseInteger( literalText, out BigInteger readValue )
+				 || readValue.Sign < 0
+				 || readValue > (BigInteger) uint.MaxValue ) {
+					diagnostics.Add( new Diagnostic(
+						ee.srcPos,
+						DiagnosticKind.Error,
+						String.Format(
+							"'[flags]enum' value must be a non-negative integer that fits in a u32: {0}",
+							literalText ) ) );
+					return;
+				}
+
+				index = readValue == 0 ? 1 : readValue * 2;
 			}
 		}
 
@@ -207,7 +238,7 @@ namespace Myll.Transform
 		private static void AddToNamespace( Scope namespaceScope, Func func )
 			=> namespaceScope.AddChild( new ScopeLeaf { parent = namespaceScope, decl = func } );
 
-		private static bool IsPowerOfTwo( uint x )
-			=> (x & (x - 1)) == 0;
+		private static bool IsPowerOfTwo( BigInteger x )
+			=> x > 0 && ( x & ( x - 1 ) ).IsZero;
 	}
 }
