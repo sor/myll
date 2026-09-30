@@ -142,6 +142,13 @@ namespace Myll.Core
 		public BigInteger? literalValue;
 
 		/// <summary>
+		/// For an UntypedInteger type of a ternary over untyped-integer constants: every
+		/// possible branch value. A target type must be able to hold all of them. Null for
+		/// plain and folded constants, which carry a single <see cref="literalValue"/>.
+		/// </summary>
+		public List<BigInteger>? literalValues;
+
+		/// <summary>
 		/// True when this type is a default-sized type (<c>int</c>, <c>uint</c>, <c>float</c>,
 		/// <c>bint</c>). Its backing C++ name is emitted without a fixed-width prefix.
 		/// </summary>

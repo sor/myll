@@ -479,10 +479,13 @@ namespace Myll.Transform
 		{
 			Typespec ret = source switch {
 				TypespecBasic b  => new TypespecBasic {
-					kind           = b.kind,
-					size           = b.size,
-					align          = b.align,
-					isDefaultSized = b.isDefaultSized,
+					kind            = b.kind,
+					size            = b.size,
+					align           = b.align,
+					literalText     = b.literalText,
+					literalValue    = b.literalValue,
+					literalValues   = b.literalValues,
+					isDefaultSized  = b.isDefaultSized,
 				},
 				TypespecNested n => new TypespecNested {
 					resolvedDecl = n.resolvedDecl,

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using Myll.Generator;
 using Myll.Resolver;
@@ -243,6 +244,15 @@ namespace Myll.Core
 
 		public override string Gen( bool doBrace = false )
 		{
+			// An untyped-integer compound constant is normally emitted as written: C++
+			// evaluates it in the operand types and the value matches the Myll-side fold.
+			// When that C++ evaluation would be undefined or produce a different value
+			// (shift count out of range, result outside the operand type, mixed
+			// signed/unsigned operand classes), the exact folded constant is emitted
+			// instead.
+			if( TryGetFoldedConstantEmission( out string? folded, doBrace ) )
+				return folded!;
+
 			// only look downward
 			// myll: a * b | c == d
 			// c++: (a * b | c) == d
@@ -306,6 +316,80 @@ namespace Myll.Core
 				opFormat,
 				leftStr,
 				rightStr );
+		}
+
+		/// <summary>
+		/// When the resolved type of this operator is an untyped-integer constant whose
+		/// plain C++ emission is undefined or wraps (<c>1 &lt;&lt; 62</c>, <c>1024 * 1024 *
+		/// 1024 * 8</c>), <paramref name="folded"/> receives the exact decimal constant to
+		/// emit instead.
+		/// </summary>
+		private bool TryGetFoldedConstantEmission( out string? folded, bool doBrace )
+		{
+			folded = null;
+			if( Type is not TypespecBasic { kind: TypespecBasic.Kind.UntypedInteger, literalValue: { } value } )
+				return false;
+
+			// The fold exists only when both operands were untyped integer constants.
+			if( left.Type is not TypespecBasic { kind: TypespecBasic.Kind.UntypedInteger, literalValue: { } leftValue } )
+				return false;
+			if( right.Type is not TypespecBasic { kind: TypespecBasic.Kind.UntypedInteger, literalValue: { } rightValue } )
+				return false;
+
+			if( IsFoldedEmissionUnsafe( op, value, leftValue, rightValue ) )
+				folded = value.ToString().Brace( doBrace || value.Sign < 0 );
+
+			return folded != null;
+		}
+
+		// The C++ type a decimal literal gets: int, then long long, then (clang++/g++
+		// extension past long long) unsigned long long. Negative values come from a
+		// folded unary minus and are always signed.
+		private enum NaturalKind { Int32, Int64, Uint64 }
+
+		private static NaturalKind NaturalOf( BigInteger value )
+			=> value >= int.MinValue && value <= int.MaxValue    ? NaturalKind.Int32
+			 : value >= long.MinValue && value <= long.MaxValue ? NaturalKind.Int64
+			 : value >= 0 && value <= ulong.MaxValue            ? NaturalKind.Uint64
+			 :                                                    NaturalKind.Int64;
+
+		private static bool FitsNatural( BigInteger value, NaturalKind kind )
+			=> kind == NaturalKind.Int32 ? value >= int.MinValue && value <= int.MaxValue
+			 : kind == NaturalKind.Int64 ? value >= long.MinValue && value <= long.MaxValue
+			 : value >= 0 && value <= ulong.MaxValue;
+
+		private static bool IsSignedNatural( NaturalKind kind )
+			=> kind != NaturalKind.Uint64;
+
+		private static NaturalKind WiderNatural( NaturalKind a, NaturalKind b )
+			=> a == NaturalKind.Uint64 || b == NaturalKind.Uint64 ? NaturalKind.Uint64
+			 : a == NaturalKind.Int64 || b == NaturalKind.Int64 ? NaturalKind.Int64
+			 :                                                       NaturalKind.Int32;
+
+		private static bool IsFoldedEmissionUnsafe(
+			Operand op,
+			BigInteger value,     // folded result of this operator
+			BigInteger leftValue, // folded left operand
+			BigInteger rightValue ) // folded right operand
+		{
+			NaturalKind leftNatural  = NaturalOf( leftValue );
+			NaturalKind rightNatural = NaturalOf( rightValue );
+
+			if( op is Operand.LeftShift or Operand.RightShift ) {
+				// Shift counts are bounded by the width of the left operand's type.
+				int width = leftNatural == NaturalKind.Int32 ? 32 : 64;
+				if( rightValue.Sign < 0 || rightValue >= width )
+					return true;
+				// Negative left operands are not worth reasoning about, and C++20 left
+				// shifts wrap rather than saturate when the result leaves the type.
+				return leftValue.Sign < 0 || !FitsNatural( value, leftNatural );
+			}
+
+			// Mixed signed/unsigned operand classes convert the signed side by
+			// wrap-around in C++; anything else needs the result to stay in the
+			// common operand type.
+			return IsSignedNatural( leftNatural ) != IsSignedNatural( rightNatural )
+				|| !FitsNatural( value, WiderNatural( leftNatural, rightNatural ) );
 		}
 
 		private static string? GetBitOperatorFormat( Operand op )

@@ -562,6 +562,7 @@ namespace Myll.Resolver
 					isDefaultSized   = b.isDefaultSized,
 					literalText      = b.literalText,
 					literalValue     = b.literalValue,
+					literalValues    = b.literalValues,
 				},
 				TypespecNested n => new TypespecNested {
 					resolvedDecl = n.resolvedDecl,

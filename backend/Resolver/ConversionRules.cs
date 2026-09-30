@@ -382,6 +382,23 @@ namespace Myll.Resolver
 			};
 		}
 
+		// The exact constant value(s) behind an untyped-integer type: the value set of a
+		// ternary of constants, the folded compound constant, or the parsed literal.
+		// Empty when the value cannot be determined.
+		private static List<BigInteger> CollectUntypedValues( TypespecBasic srcBasic )
+		{
+			if( srcBasic.literalValues is { Count: > 0 } valueList )
+				return valueList;
+
+			if( srcBasic.literalValue is BigInteger folded )
+				return new List<BigInteger> { folded };
+
+			if( TryParseInteger( srcBasic.literalText, out BigInteger parsed ) )
+				return new List<BigInteger> { parsed };
+
+			return new List<BigInteger>();
+		}
+
 		private static ConversionRank GetUntypedLiteralRank( Typespec source, Typespec target )
 		{
 			if( source is not TypespecBasic srcBasic || target is not TypespecBasic tgtBasic )
@@ -391,18 +408,24 @@ namespace Myll.Resolver
 				return ConversionRank.None;
 
 			if( srcBasic.kind == TypespecBasic.Kind.UntypedInteger ) {
-				// Prefer the exact constant value (parsed literal or folded compound
-				// expression); fall back to parsing the original literal text.
-				BigInteger value;
-				if( srcBasic.literalValue is BigInteger folded )
-					value = folded;
-				else if( !TryParseInteger( srcBasic.literalText, out value ) )
+				// Prefer the exact constant value(s): the parsed literal, the folded
+				// compound expression, or the value set of a ternary of constants;
+				// fall back to parsing the original literal text.
+				List<BigInteger> values = CollectUntypedValues( srcBasic );
+				if( values.Count == 0 )
 					return ConversionRank.None;
+
+				// Bitwise/byte targets fit-check as unsigned.
+				TypespecBasic.Kind checkKind
+					= tgtBasic.kind == TypespecBasic.Kind.Bitwise
+					|| tgtBasic.kind == TypespecBasic.Kind.Byte
+					 ? TypespecBasic.Kind.Unsigned
+					 : tgtBasic.kind;
 
 				// An unannotated literal is naturally a platform int when it fits;
 				// anything that does not fit cannot bind to int at all.
 				if( tgtBasic.kind == TypespecBasic.Kind.Integer && ( tgtBasic.isDefaultSized || tgtBasic.size == 4 ) )
-					return IntegerFits( value, TypespecBasic.Kind.Integer, 4 )
+					return values.All( v => IntegerFits( v, TypespecBasic.Kind.Integer, 4 ) )
 						? ConversionRank.Exact
 						: ConversionRank.None;
 
@@ -411,10 +434,7 @@ namespace Myll.Resolver
 				   || tgtBasic.kind == TypespecBasic.Kind.Unsigned
 				   || tgtBasic.kind == TypespecBasic.Kind.Bitwise
 				   || tgtBasic.kind == TypespecBasic.Kind.Byte )
-				 && IntegerFits( value, tgtBasic.kind == TypespecBasic.Kind.Bitwise
-					|| tgtBasic.kind == TypespecBasic.Kind.Byte
-					? TypespecBasic.Kind.Unsigned
-					: tgtBasic.kind, tgtBasic.size ) )
+				 && values.All( v => IntegerFits( v, checkKind, tgtBasic.size ) ) )
 					return ConversionRank.Promotion;
 
 				// Integer literal can be used to initialize a float.
@@ -614,22 +634,30 @@ namespace Myll.Resolver
 
 			ReadOnlySpan<char> span = text.AsSpan();
 
-			try {
-				if( span.Length >= 2 && span[0] == '0' ) {
-					if( span[1] == 'x' || span[1] == 'X' )
-						return TryParseRadix( span[2..].ToString(), 16, out value );
-					if( span[1] == 'o' || span[1] == 'O' )
-						return TryParseRadix( span[2..].ToString(), 8, out value );
-					if( span[1] == 'b' || span[1] == 'B' )
-						return TryParseRadix( span[2..].ToString(), 2, out value );
-				}
+			// Optional leading sign; the lexer never produces one, manual callers may.
+			char first = span.Length > 0 ? span[0] : '\0';
+			if( first == '+' || first == '-' )
+				span = span[1..];
 
-				value = BigInteger.Parse( span.ToString(), System.Globalization.NumberStyles.None );
-				return true;
+			bool parsed;
+			if( span.Length >= 2 && span[0] == '0' ) {
+				if( span[1] == 'x' || span[1] == 'X' )
+					parsed = TryParseRadix( span[2..].ToString(), 16, out value );
+				else if( span[1] == 'o' || span[1] == 'O' )
+					parsed = TryParseRadix( span[2..].ToString(), 8, out value );
+				else if( span[1] == 'b' || span[1] == 'B' )
+					parsed = TryParseRadix( span[2..].ToString(), 2, out value );
+				else
+					parsed = TryParseRadix( span.ToString(), 10, out value );
 			}
-			catch {
-				return false;
+			else {
+				parsed = TryParseRadix( span.ToString(), 10, out value );
 			}
+
+			if( parsed && first == '-' )
+				value = -value;
+
+			return parsed;
 		}
 
 		private static bool TryParseRadix( string digits, int radix, out BigInteger value )
@@ -682,9 +710,12 @@ namespace Myll.Resolver
 		{
 			Typespec ret = source switch {
 				TypespecBasic b   => new TypespecBasic {
-					kind           = b.kind,
-					size           = b.size,
-					isDefaultSized = b.isDefaultSized,
+					kind            = b.kind,
+					size            = b.size,
+					literalText     = b.literalText,
+					literalValue    = b.literalValue,
+					literalValues   = b.literalValues,
+					isDefaultSized  = b.isDefaultSized,
 				},
 				TypespecNested n  => new TypespecNested {
 					resolvedDecl = n.resolvedDecl,

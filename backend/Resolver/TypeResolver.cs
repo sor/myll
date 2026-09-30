@@ -202,7 +202,13 @@ namespace Myll.Resolver
 					return operandType;
 
 				case Operand.PrePlus:
+					return operandType;
+
 				case Operand.PreMinus:
+					// Negating an untyped-integer constant keeps the exact negated value,
+					// so fit checks and the generator's folded-constant emission see -value.
+					return FoldUntypedNegation( operandType ) ?? operandType;
+
 				case Operand.PreIncr:
 				case Operand.PreDecr:
 				case Operand.PostIncr:
@@ -279,6 +285,8 @@ namespace Myll.Resolver
 				if( binOp.op == Operand.FractionalDivide )
 					return new TypespecBasic { kind = TypespecBasic.Kind.Float, size = 8 };
 
+				// Divide uses the common arithmetic type (floats divide as floats); the
+				// fold only applies when both operands are untyped integer constants.
 				return FoldUntypedIntegerResult( binOp.op, left, right, CommonArithmeticType( left, right ) );
 			}
 
@@ -312,7 +320,49 @@ namespace Myll.Resolver
 		{
 			Typespec? thenType = Resolve( ternOp.mid );
 			Typespec? elseType = Resolve( ternOp.right );
+
+			// A ternary over two untyped-integer constants can produce either value,
+			// so it keeps the untyped type with the union of the possible values: a
+			// target type must be able to hold both (mirroring how a plain constant
+			// binds to any type that can hold it).
+			if( TryCollectTernaryValues( thenType, elseType, out List<BigInteger> values ) )
+				return new TypespecBasic {
+					kind         = TypespecBasic.Kind.UntypedInteger,
+					size         = TypespecBasic.SizeUndetermined,
+					literalValues = values,
+				};
+
 			return CommonType( thenType, elseType );
+		}
+
+		private static bool TryCollectTernaryValues(
+			Typespec? thenType,
+			Typespec? elseType,
+			out List<BigInteger> values )
+		{
+			values = new List<BigInteger>();
+			return AppendUntypedValues( thenType, values )
+				&& AppendUntypedValues( elseType, values );
+		}
+
+		// Appends the constant value(s) of an untyped-integer type; a nested ternary
+		// contributes its whole value set.
+		private static bool AppendUntypedValues( Typespec? type, List<BigInteger> values )
+		{
+			if( type is not TypespecBasic { kind: TypespecBasic.Kind.UntypedInteger } basic )
+				return false;
+
+			if( basic.literalValues is { Count: > 0 } valueList ) {
+				values.AddRange( valueList );
+				return true;
+			}
+
+			if( basic.literalValue is { } value ) {
+				values.Add( value );
+				return true;
+			}
+
+			return false;
 		}
 
 		private Typespec? ResolveFuncCall( FuncCallExpr call )
@@ -592,6 +642,14 @@ namespace Myll.Resolver
 					result = left * right;
 					return true;
 
+				case Operand.Divide:
+					// Both C++ and BigInteger integer division truncate toward zero;
+					// division by zero is left to the C++ compiler.
+					if( right.IsZero )
+						return false;
+					result = left / right;
+					return true;
+
 				case Operand.Modulo:
 					if( right.IsZero )
 						return false;
@@ -626,6 +684,17 @@ namespace Myll.Resolver
 					return false;
 			}
 		}
+
+		// Returns the negated untyped-integer constant type, or null when the operand
+		// is not an untyped-integer constant.
+		private static Typespec? FoldUntypedNegation( Typespec? operandType )
+			=> operandType is TypespecBasic { kind: TypespecBasic.Kind.UntypedInteger, literalValue: { } value }
+			 ? new TypespecBasic {
+					kind        = TypespecBasic.Kind.UntypedInteger,
+					size        = TypespecBasic.SizeUndetermined,
+					literalValue = -value,
+				}
+				: null;
 
 		private static bool IsUntyped( Typespec? type )
 			=> type is TypespecBasic basic
@@ -705,6 +774,7 @@ namespace Myll.Resolver
 					align          = b.align,
 					literalText    = b.literalText,
 					literalValue   = b.literalValue,
+					literalValues  = b.literalValues,
 					isDefaultSized = b.isDefaultSized,
 				},
 				TypespecNested n  => new TypespecNested {
@@ -820,7 +890,7 @@ namespace Myll.Resolver
 
 		private static bool IsArithmeticOperation( Operand op )
 			=> op is Operand.Add or Operand.Subtract or Operand.Multiply
-			|| op is Operand.FractionalDivide or Operand.Modulo;
+			|| op is Operand.Divide or Operand.FractionalDivide or Operand.Modulo;
 
 		private static bool IsComparisonOperation( Operand op )
 			=> op is Operand.Equal or Operand.NotEqual or Operand.LessThan
