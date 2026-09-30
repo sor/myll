@@ -418,7 +418,7 @@ namespace Myll.Resolver
 		{
 			if( callee is IdExpr id && result.TryGetResolved( id, out Decl? d1 ) ) {
 				if( d1 is Func f1 )
-					return f1.retType;
+					return SubstituteCallTemplateArgs( f1, callee );
 
 				// Constructor call: the resolved declaration is a Structor inside a class.
 				// The expression's value type is the surrounding class by value.
@@ -438,7 +438,7 @@ namespace Myll.Resolver
 
 			if( callee is ScopedExpr scoped && result.TryGetResolved( scoped, out Decl? d2 ) ) {
 				if( d2 is Func f2 )
-					return f2.retType;
+					return SubstituteCallTemplateArgs( f2, callee );
 				if( d2 is Structor stc2 )
 					return StructorParentType( stc2 );
 
@@ -455,7 +455,7 @@ namespace Myll.Resolver
 			 && binOp.right is IdExpr member
 			 && result.TryGetResolvedMember( member, out Decl? d3 ) ) {
 				if( d3 is Func f3 )
-					return f3.retType;
+					return SubstituteCallTemplateArgs( f3, callee );
 				if( d3 is Structor stc3 )
 					return StructorParentType( stc3 );
 
@@ -464,6 +464,22 @@ namespace Myll.Resolver
 			}
 
 			return null;
+		}
+
+		// A call to a function template keeps the raw template parameter in the callee's
+		// return type; substitute the resolved template arguments so the call's own type
+		// is concrete (var auto, chained calls, overload ranking).
+		private Typespec SubstituteCallTemplateArgs( Func func, Expr callee )
+		{
+			Typespec retType = func.retType;
+			if( func.TplParams.Count == 0 )
+				return retType;
+
+			IReadOnlyList<TplArg>? args = TemplateInference.GetExplicitTemplateArgs( callee );
+			if( args == null || args.Count == 0 )
+				return retType;
+
+			return TemplateInference.SubstituteTemplateParams( retType, func.TplParams, new List<TplArg>( args ), result );
 		}
 
 		private static Typespec? ClassValueType( Structural structural, IReadOnlyList<IdTplArgs> nameSegments )

@@ -1,6 +1,29 @@
 # Bug: template call return type is never substituted
 
-Status: **open**. Found in the 2026-09-29 review. Reproduced.
+Status: **fixed 2026-09-30**. Found in the 2026-09-29 review. Reproduced. See
+`plan/enhancement-typespec-cloner.md` for the cloner groundwork this rode on.
+
+## How it was fixed
+
+1. One shared `Typespec.Clone(bool deep)` in `backend/Core/Typespec.cs` replaced the five drifted
+   clone helpers (see the cloner doc), so substitution clones preserve `qual`, `srcPos`, the
+   literal values, and the nested dependent flags.
+2. `TypeResolver.ResolveCallReturnType` routes all three `Func` arms through
+   `SubstituteCallTemplateArgs`: when the callee resolves to a function template and carries
+   resolved template arguments (recorded on the callee expression by `ApplyTemplateArgs`, both
+   explicit and deduced), the callee's return type goes through
+   `TemplateInference.SubstituteTemplateParams` with the function's own `TplParams`. The
+   fixed-point loop re-resolves the call after `ResolveCalls` stores the arguments, so it converges.
+
+**Verified:** `tmp/review/tpl_ret.myll` (`int m = max<int>( 1, 2 );`), `tmp/review/const_deduce.myll`
+(`const int* r = f<const int>( c );`), `tmp/review/const_deduce4.myll` (`int* r2 = f<int>( c );`).
+Regression case: `testing/cases/template_return/` (deduction, explicit args, pointer returns,
+chained calls).
+
+**Known edge:** for methods of class templates only the method's own template parameters are
+substituted; enclosing class parameters appearing in a return type are not yet (future refinement).
+
+## The original report is recorded below.
 
 ## Symptom
 
@@ -48,7 +71,7 @@ After deduction or explicit argument application, the callee's `retType` is not 
 resolved arguments. The call expression's type stays the return typespec from the original definition,
 still containing the template parameter reference.
 
-Related symptom (const): `f(c)` with `c : const int*` fails with "No matching overload" instead of
+Related symptom (const): `var const int * c = &x;` then `f(c)` with `func f<T>(T* p)` fails with "No matching overload" instead of
 deducing `T = const int` (`tmp/review/const_deduce.myll`). `TemplateInference.CloneTypespecBase`
 (`backend/Resolver/TemplateInference.cs:455`) drops `qual` when stripping the `T*` wrapper, so the
 binding check compares unqualified `int` against `const int`. This is a clone-drift symptom; the fix
