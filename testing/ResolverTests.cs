@@ -694,6 +694,24 @@ func main() -> int { return Test::foo(); }
 		}
 
 		[Fact]
+		public void DuplicateAttributes_Warn()
+		{
+			var (module, context) = CompileModule( @"
+module test;
+[pure, pure] func f() -> int { return 1; }
+func main() -> int { return 0; }
+" );
+
+			var (result, diagnostics) = Resolve( (module, context) );
+
+			// Duplicates warn and keep the first occurrence; compilation itself succeeds.
+			Assert.Contains( context.Diagnostics, d =>
+				d.Kind == DiagnosticKind.Warning
+				&& d.Message.Contains( "pure" ) );
+			Assert.True( context.Diagnostics.All( d => d.Kind != DiagnosticKind.Error ) );
+		}
+
+		[Fact]
 		public void CloneTypespec_PreservesUntypedConstantValues()
 		{
 			TypespecBasic source = new() {

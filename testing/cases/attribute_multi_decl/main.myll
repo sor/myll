@@ -1,0 +1,28 @@
+// Attributes on a multi-declaration apply to every member: the attribute dictionary
+// is copied per declaration, so the access attribute is not consumed by the first one.
+module attribute_multi_decl;
+
+struct Block
+{
+[priv]
+	var int a, b;
+}
+
+struct Section
+{
+[priv]:
+	var int a, b;
+}
+
+struct Mixed
+{
+[priv]:
+	var int a, b, c;
+[pub]
+	var int d;
+}
+
+func main() -> int
+{
+	return 0;
+}

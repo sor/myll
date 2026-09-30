@@ -41,3 +41,9 @@ func main() -> int {
 enum FlagsNegative {
 	A = -3 // FAIL: '[flags]enum' value must be a non-negative integer
 }
+
+class DefaultCtorBody
+{
+[default]
+	ctor() { } // FAIL: Defaulted or deleted constructors must be declared with ';'
+}
