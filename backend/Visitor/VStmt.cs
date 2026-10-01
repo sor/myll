@@ -185,15 +185,18 @@ namespace Myll
 		{
 			Scope  scope  = scopeStack.Peek();
 			SrcPos srcPos = c.ToSrcPos();
-			Typespec type = VisitTypespec( c.typedIdAcors().typespec() );
-			if( kind.ToQualifier() == Qualifier.Const ) {
-				type.qual |= Qualifier.Const;
-			}
+			bool   isConst = kind.ToQualifier() == Qualifier.Const;
+			TypespecContext typeCtx = c.typedIdAcors().typespec();
+
 			List<Stmt> stmts = c.typedIdAcors()
 				.idAccessors()
 				.idAccessor()
 				.Select(
 					q => {
+						Typespec type = VisitTypespec( typeCtx );
+						if( isConst ) {
+							type.qual |= Qualifier.Const;
+						}
 						List<TplParam> localTplParams = VisitTplParams( q.tplParams() );
 						if( localTplParams.Count > 0 ) {
 							Context.Diagnostics.Add( new Diagnostic(
