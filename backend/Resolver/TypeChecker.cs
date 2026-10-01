@@ -114,7 +114,7 @@ namespace Myll.Resolver
 				}
 				break;
 
-case Structor stc:
+			case Structor stc:
 				if( stc.isConversionCtor )
 					ValidateConvertAttributes( stc );
 				if( ( stc.IsDefault || stc.IsDisabled ) && stc.body != null )
