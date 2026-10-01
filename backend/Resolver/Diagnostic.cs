@@ -17,8 +17,9 @@ namespace Myll
 		string Message );
 
 	public sealed record ParserResult(
-		MyllParser Parser,
-		List<Diagnostic> Diagnostics );
+		MyllParser      Parser,
+		List<Diagnostic> Diagnostics,
+		bool            IsCompilerOwned );
 
 	public sealed record ParseResult(
 		MyllParser.ProgContext Prog,

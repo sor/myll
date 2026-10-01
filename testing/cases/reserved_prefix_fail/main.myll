@@ -1,0 +1,7 @@
+module reserved_prefix;
+
+func main() -> int
+{
+	var int myll_tmp_0 = 1; // FAIL: Identifier prefix 'myll_' is reserved for the compiler
+	return myll_tmp_0; // FAIL: Identifier prefix 'myll_' is reserved for the compiler
+}

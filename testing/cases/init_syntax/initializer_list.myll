@@ -1,6 +1,6 @@
 module init_syntax;
 
-import dyn_array;
+import myll_dyn_array;
 import std_vector;
 
 func takes( initlist<int> values ) -> int {

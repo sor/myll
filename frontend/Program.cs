@@ -137,7 +137,9 @@ namespace Myll
 			Func<T, IEnumerable<Diagnostic>> selector )
 			=> PrintDiagnosticsAndBailOnErrors( opt, items.SelectMany( selector ) );
 
-		private static IEnumerable<string> CollectMyllLibraryFiles( IEnumerable<string> importedModules )
+		private static IEnumerable<string> CollectMyllLibraryFiles(
+			IEnumerable<string> importedModules,
+			ISet<string>        compilerOwnedFiles )
 		{
 			string? repoRoot = TryGetRepoRoot();
 			if( repoRoot == null )
@@ -150,8 +152,10 @@ namespace Myll
 			HashSet<string> wanted = new( importedModules );
 			foreach( string file in Directory.EnumerateFiles( myllDir, "*.myll" ) ) {
 				string moduleName = Path.GetFileNameWithoutExtension( file );
-				if( wanted.Contains( moduleName ) )
+				if( wanted.Contains( moduleName ) ) {
+					compilerOwnedFiles.Add( file );
 					yield return file;
+				}
 			}
 		}
 
@@ -246,10 +250,13 @@ namespace Myll
 
 			HashSet<string> importedModules = new(
 				inputFiles.SelectMany( ExtractImportedModules ) );
-			inputFiles.AddRange( CollectMyllLibraryFiles( importedModules ) );
+			// myll/ is the language's own standard library, so it is exempt
+			// from the reserved 'myll_' identifier prefix.
+			HashSet<string> compilerOwnedFiles = new();
+			inputFiles.AddRange( CollectMyllLibraryFiles( importedModules, compilerOwnedFiles ) );
 			inputFiles = inputFiles.Distinct().ToList();
 
-			List<ParseResult> parseResults = CompilerPipeline.ParseFiles( inputFiles );
+			List<ParseResult> parseResults = CompilerPipeline.ParseFiles( inputFiles, compilerOwnedFiles );
 			PrintDiagnosticsAndBail( opt, parseResults.SelectMany( r => r.Diagnostics ) );
 
 			DialectLoader dialectLoader = new( GetDialectSearchDirectories() );

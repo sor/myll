@@ -1,6 +1,6 @@
 module dyn_array_test;
 
-import dyn_array;
+import myll_dyn_array;
 import other_point;
 
 struct Point {

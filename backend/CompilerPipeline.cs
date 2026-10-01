@@ -12,16 +12,24 @@ namespace Myll
 {
 	public static class CompilerPipeline
 	{
-		public static List<ParseResult> ParseFiles( IEnumerable<string> inputFiles )
+		private const string ReservedIdentifierPrefix = "myll_";
+
+		public static List<ParseResult> ParseFiles(
+			IEnumerable<string> inputFiles,
+			IReadOnlyCollection<string>? compilerOwnedFiles = null )
 		{
+			HashSet<string> ownedFiles = compilerOwnedFiles != null
+				? new HashSet<string>( compilerOwnedFiles )
+				: new HashSet<string>();
+
 			return inputFiles
-				.Select( CreateParser )
+				.Select( f => CreateParser( f, ownedFiles.Contains( f ) ) )
 				.AsParallel()
 				.Select( ParseCST )
 				.ToList();
 		}
 
-		private static ParserResult CreateParser( string filename )
+		private static ParserResult CreateParser( string filename, bool isCompilerOwned )
 		{
 			string            text        = File.ReadAllText( filename );
 			AntlrInputStream  inputStream = new( text ) { name = filename };
@@ -37,7 +45,7 @@ namespace Myll
 			parser.RemoveErrorListeners();
 			parser.AddErrorListener( new ParserDiagnosticListener( diagnostics ) );
 
-			return new( parser, diagnostics );
+			return new( parser, diagnostics, isCompilerOwned );
 		}
 
 		private static ParseResult ParseCST( ParserResult pd )
@@ -47,9 +55,9 @@ namespace Myll
 
 			parser.Interpreter.PredictionMode = PredictionMode.LL_EXACT_AMBIG_DETECTION;
 
+			MyllParser.ProgContext prog;
 			try {
-				MyllParser.ProgContext prog = parser.prog();
-				return new( prog, diagnostics ); // STAGE 1
+				prog = parser.prog();
 			}
 			// This might never be reached since the error handling above
 			catch( Exception ex ) { // STAGE 2
@@ -60,7 +68,48 @@ namespace Myll
 				((CommonTokenStream) parser.TokenStream).Reset(); // rewind input stream
 				parser.Reset();
 				parser.Interpreter.PredictionMode = PredictionMode.LL;
-				return new( parser.prog(), diagnostics );
+				prog = parser.prog();
+			}
+
+			// The reserved prefix protects compiler-injected helper names in
+			// generated code, so compiler-shipped files may use it.
+			if( !pd.IsCompilerOwned )
+				ScanReservedIdentifierPrefix( prog, parser, diagnostics );
+			return new( prog, diagnostics ); // STAGE 1
+		}
+
+		private static void ScanReservedIdentifierPrefix( MyllParser.ProgContext prog, MyllParser parser, List<Diagnostic> diagnostics )
+		{
+			CommonTokenStream tokenStream = (CommonTokenStream) parser.TokenStream;
+			tokenStream.Fill();
+
+			// imported module names may carry the reserved prefix, they name
+			// compiler-shipped modules (e.g. myll_dyn_array from the myll/ dir)
+			HashSet<int> importTokenIndexes = new();
+			foreach( MyllParser.ImportsContext import in prog.imports() ) {
+				if( import.Stop == null )
+					continue;
+				for( int i = import.Start.TokenIndex; i <= import.Stop.TokenIndex; ++i )
+					importTokenIndexes.Add( i );
+			}
+
+			foreach( IToken token in tokenStream.GetTokens() ) {
+				if( importTokenIndexes.Contains( token.TokenIndex ) )
+					continue;
+				if( !token.Text.StartsWith( ReservedIdentifierPrefix, StringComparison.Ordinal ) )
+					continue;
+
+				diagnostics.Add( new Diagnostic(
+					new SrcPos {
+						file = token.InputStream?.SourceName ?? parser.SourceName,
+						from = new SrcPos.LineCol { line = token.Line, col = token.Column },
+						to   = new SrcPos.LineCol { line = token.Line, col = token.Column + token.Text.Length },
+					},
+					DiagnosticKind.Error,
+					String.Format(
+						"Identifier prefix '{0}' is reserved for the compiler: '{1}'",
+						ReservedIdentifierPrefix,
+						token.Text ) ) );
 			}
 		}
 

@@ -1,0 +1,6 @@
+module myll_helper; // FAIL: Identifier prefix 'myll_' is reserved for the compiler
+
+func helper() -> int
+{
+	return 1;
+}
