@@ -3,7 +3,9 @@
 **Scope widened 2026-09-30**: the whole `myll_` prefix is reserved, not just `myll_tmp_`. All
 user-created identifiers starting with `myll_` must be rejected.
 
-Status: **open**. Found in the 2026-09-29 review. Reproduced.
+Status: **fixed 2026-10-02** — token-scan in `CompilerPipeline.ParseCST`
+(`ScanReservedIdentifierPrefix`), no grammar change. Regression case:
+`testing/cases/reserved_prefix_fail/`.
 
 ## Symptom
 
@@ -34,24 +36,34 @@ vice versa).
 
 ## Fix plan
 
-Prefer a lexer-level reservation:
+Implemented as a parse-time token scan (no grammar change, so no ANTLR regeneration):
 
-1. Add a lexer rule that matches identifiers starting with `myll_` (e.g.
-   `RESERVED_MYLL : 'myll_' [a-zA-Z0-9_]* ;` placed **before** `ID`).
-2. Reject the token with a dedicated parser error or a visitor diagnostic:
-   `identifier prefix 'myll_' is reserved for the compiler`.
-3. Grep `std/`, `lib/`, `myll/`, `testing/`, `frontend/` to confirm nothing legitimate uses the
-   prefix (the review found none; re-verify at implementation time).
+1. After parsing, `ScanReservedIdentifierPrefix` walks every token of the file and reports
+   `identifier prefix 'myll_' is reserved for the compiler` for any text starting with `myll_`.
+   String and comment literals cannot trigger it (their token text starts with quotes/comment
+   markers).
+2. **Import exemption**: tokens inside an `import` statement are skipped, so user code can name
+   compiler-shipped modules like `import myll_dyn_array;`. Module names and definitions are not
+   exempt.
+3. **Standard-library exemption**: files auto-discovered from the `myll/` directory (the language's
+   own standard library) skip the scan entirely (`ParserResult.IsCompilerOwned`), so the stdlib may
+   freely use `myll_`-prefixed names. `std/` and `lib/` bindings and user `extern/` dirs are not
+   exempt.
+4. The frontend marks those files while collecting inputs (`CollectMyllLibraryFiles` fills the
+   compiler-owned set passed to `CompilerPipeline.ParseFiles`).
 
-Alternative: a parse-time check in the ID-visit path (keeps the grammar untouched, fires later).
+Rejected alternative: a lexer rule for `myll_*` — it would also flag import statements, so the
+import positions would need lexer-context awareness anyway; the token scan is simpler and keeps the
+grammar untouched.
 
 ## Verification
 
 - The repro produces a clean diagnostic with file:line:col, no generated output.
-- Add a negative case under `testing/cases/` (e.g. extend `typecheck_fail` or add
-  `reserved_identifier_fail/`).
+- Negative case `testing/cases/reserved_prefix_fail/` (variable and module-name violations).
+- Positive coverage via the stdlib rename `myll/dyn_array.myll` → `myll/myll_dyn_array.myll`
+  (`module myll_dyn_array;`), imported by `testing/cases/dyn_array/` and
+  `testing/cases/init_syntax/`; goldens regenerated.
 - Full test suite green — this is the check that no legitimate code uses the prefix.
-- Regenerate the ANTLR output during `dotnet build`; do not commit generated files.
 
 ## Risk
 

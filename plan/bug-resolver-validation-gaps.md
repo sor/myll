@@ -59,6 +59,10 @@ Fix: fall back to building the self type from the enclosing structural (reuse th
 
 ## Finding 5: local multi-declarations share one Typespec instance
 
+Status: **fixed 2026-10-02** — `VisitDefVar` re-visits the shared `typespec` context per
+`idAccessor` (mirrors the field-scope visitor), each local gets a fresh `Typespec`. Regression
+case: `testing/cases/local_multi_decl/`.
+
 **Priority (2026-09-30): fix soon — completely broken semantics.**
 
 Local `var T a, b, c;` visits the shared `typespec` context exactly once, and every `VarStmt` gets
