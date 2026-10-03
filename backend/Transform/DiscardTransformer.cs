@@ -20,467 +20,455 @@ namespace Myll.Transform
 	/// </summary>
 	public sealed class DiscardTransformer : Transformer
 	{
-		private ResolutionResult? _resolutionResult;
-
 		protected override void PostTransform( TransformContext ctx )
 		{
-			_resolutionResult = ctx.ResolutionResult;
-			TransformDecl( ctx.Module.Module, ctx.Module.Context );
+			Rewriter walker = new( ctx.ResolutionResult, ctx.Module.Context, Diagnostics );
+			walker.WalkModule( ctx.Module.Module );
 		}
 
-		private void TransformDecl( Decl decl, ModuleContext context )
+		private sealed class Rewriter : DeclWalker
 		{
-			switch( decl ) {
-				case Func func:
-					if( func.body != null )
-						TransformBlock( func.body, context );
-					break;
+			private readonly ResolutionResult? resolutionResult;
+			private readonly ModuleContext context;
+			private readonly List<Diagnostic> diagnostics;
 
-				case Structor stc:
-					if( stc.body != null )
-						TransformBlock( stc.body, context );
-					break;
+			// Temporaries introduced by the statement currently being walked; the
+			// block hook inserts them before that statement.
+			private List<Stmt> preStmts = new();
 
-				case Hierarchical h:
-					foreach( Decl child in h.children )
-						TransformDecl( child, context );
-					break;
+			public Rewriter( ResolutionResult? resolutionResult, ModuleContext context, List<Diagnostic> diagnostics )
+			{
+				this.resolutionResult = resolutionResult;
+				this.context          = context;
+				this.diagnostics      = diagnostics;
 			}
-		}
 
-		private void TransformBlock( MultiStmt block, ModuleContext context )
-		{
-			List<Stmt> stmts = block.stmts;
-			int        i     = 0;
+			protected override MultiStmt TransformBlock( MultiStmt block )
+			{
+				List<Stmt> outer = preStmts;
 
-			while( i < stmts.Count ) {
-				Stmt       stmt     = stmts[i];
-				List<Stmt> preStmts = new();
+				List<Stmt> stmts = block.stmts;
+				int        i     = 0;
 
-				Stmt replacement = TransformTopLevelStmt( stmt, preStmts, context );
+				while( i < stmts.Count ) {
+					Stmt stmt = stmts[i];
+					preStmts = new List<Stmt>();
 
-				if( preStmts.Count > 0 ) {
-					stmts.InsertRange( i, preStmts );
-					i += preStmts.Count;
+					Stmt replacement = WalkStmt( stmt );
+
+					if( preStmts.Count > 0 ) {
+						stmts.InsertRange( i, preStmts );
+						i += preStmts.Count;
+					}
+
+					if( replacement != stmt )
+						stmts[i] = replacement;
+
+					++i;
 				}
 
-				if( replacement != stmt )
-					stmts[i] = replacement;
-
-				i++;
+				preStmts = outer;
+				return block;
 			}
-		}
 
-		private Stmt TransformTopLevelStmt( Stmt stmt, List<Stmt> preStmts, ModuleContext context )
-		{
-			switch( stmt ) {
-				case MultiStmt multi:
-					TransformBlock( multi, context );
-					return multi;
+			protected override Stmt TransformStmt( Stmt stmt )
+			{
+				switch( stmt ) {
+					case MultiAssign multiAssign:
+						return TransformMultiAssign( multiAssign );
 
-				case MultiAssign multiAssign:
-					return TransformMultiAssign( multiAssign, preStmts, context );
+					case AggrAssign aggr:
+						if( aggr.leftExpr is Discard )
+							Error( aggr.leftExpr.srcPos,
+								"'_' cannot be used as the target of an aggregate assignment" );
+						else
+							WalkExpr( aggr.leftExpr );
 
-				case AggrAssign aggr:
-					if( aggr.leftExpr is Discard )
-						Error( aggr.leftExpr.srcPos,
-							"'_' cannot be used as the target of an aggregate assignment" );
-					else
-						TransformExpr( aggr.leftExpr, preStmts, context );
+						if( aggr.rightExpr is Discard )
+							Error( aggr.rightExpr.srcPos,
+								"'_' cannot be used as a value" );
+						else
+							WalkExpr( aggr.rightExpr );
 
-					if( aggr.rightExpr is Discard )
-						Error( aggr.rightExpr.srcPos,
-							"'_' cannot be used as a value" );
-					else
-						TransformExpr( aggr.rightExpr, preStmts, context );
+						return aggr;
 
-					return aggr;
+					case ExprStmt exprStmt:
+						if( exprStmt.expr is Discard )
+							Error( exprStmt.expr.srcPos,
+								"'_' cannot be used as a value" );
+						else
+							WalkExpr( exprStmt.expr );
 
-				case ExprStmt exprStmt:
-					if( exprStmt.expr is Discard ) {
-						Error( exprStmt.expr.srcPos,
-							"'_' cannot be used as a value" );
+						return exprStmt;
+
+					case VarStmt varStmt:
+						if( varStmt.init != null ) {
+							if( varStmt.init is Discard )
+								Error( varStmt.init.srcPos,
+									"'_' initializer should have been lowered earlier" );
+							else
+								WalkExpr( varStmt.init );
+						}
+
+						return varStmt;
+
+					case ReturnStmt ret:
+						if( ret.expr is Discard )
+							Error( ret.expr.srcPos,
+								"'_' cannot be returned from a function" );
+						else if( ret.expr != null )
+							WalkExpr( ret.expr );
+
+						return ret;
+
+					case IfStmt ifStmt:
+						foreach( IfStmt.CondThen ct in ifStmt.ifThens ) {
+							WalkExpr( ct.cond );
+							ct.then = WalkNested( ct.then );
+						}
+
+						if( ifStmt.els != null )
+							ifStmt.els = WalkNested( ifStmt.els );
+
+						return ifStmt;
+
+					case ForStmt forStmt:
+						if( forStmt.init != null )
+							forStmt.init = WalkStmt( forStmt.init );
+
+						if( forStmt.cond != null )
+							WalkExpr( forStmt.cond );
+
+						if( forStmt.iter != null ) {
+							int before = preStmts.Count;
+							WalkExpr( forStmt.iter );
+							if( preStmts.Count > before )
+								Error( forStmt.iter.srcPos,
+									"discard temporaries are not supported in a for-loop iterator" );
+						}
+
+						if( forStmt.body != null )
+							forStmt.body = WalkNested( forStmt.body );
+
+						if( forStmt.els != null )
+							forStmt.els = WalkNested( forStmt.els );
+
+						return forStmt;
+
+					case RangeForStmt rangeForStmt:
+						WalkExpr( rangeForStmt.range );
+
+						if( rangeForStmt.body != null )
+							rangeForStmt.body = WalkNested( rangeForStmt.body );
+
+						if( rangeForStmt.els != null )
+							rangeForStmt.els = WalkNested( rangeForStmt.els );
+
+						return rangeForStmt;
+
+					case WhileStmt whileStmt:
+						WalkExpr( whileStmt.cond );
+						whileStmt.body = WalkNested( whileStmt.body );
+
+						if( whileStmt.els != null )
+							whileStmt.els = WalkNested( whileStmt.els );
+
+						return whileStmt;
+
+					case DoWhileStmt doWhile:
+						WalkExpr( doWhile.cond );
+						doWhile.body = WalkNested( doWhile.body );
+						return doWhile;
+
+					case TimesStmt times:
+						WalkExpr( times.count );
+						times.body = WalkNested( times.body );
+						return times;
+
+					case SwitchStmt sw:
+						WalkExpr( sw.cond );
+
+						foreach( SwitchStmt.CaseBlock cb in sw.cases )
+							cb.then = (MultiStmt)WalkNested( cb.then );
+
+						if( sw.els != null )
+							sw.els = (MultiStmt)WalkNested( sw.els );
+
+						return sw;
+
+					case TryCatchStmt tryCatch:
+						tryCatch.tryBody = WalkNested( tryCatch.tryBody );
+
+						foreach( CatchClause cc in tryCatch.catches )
+							cc.body = WalkNested( cc.body );
+
+						return tryCatch;
+
+					default:
+						return base.TransformStmt( stmt );
+				}
+			}
+
+			/// <summary>
+			/// Nested bodies always become blocks, with their temporaries wrapped inside
+			/// so they run within the branch rather than before it.
+			/// </summary>
+			private Stmt WalkNested( Stmt stmt )
+			{
+				if( stmt is MultiStmt )
+					return WalkStmt( stmt );
+
+				List<Stmt> outer = preStmts;
+				preStmts = new List<Stmt>();
+				Stmt processed = WalkStmt( stmt );
+				List<Stmt> pre = preStmts;
+				preStmts = outer;
+
+				pre.Add( processed );
+				return new MultiStmt( pre, true );
+			}
+
+			private Stmt TransformMultiAssign( MultiAssign multiAssign )
+			{
+				// _ = expr  =>  static_cast<void>( expr );
+				if( multiAssign.exprs.Count == 2 && multiAssign.exprs[0] is Discard ) {
+					Expr right = multiAssign.exprs[1];
+					WalkExpr( right );
+
+					return new ExprStmt {
+						srcPos = multiAssign.srcPos,
+						expr   = MakeVoidCast( right ),
+					};
+				}
+
+				for( int i = 0; i < multiAssign.exprs.Count; i++ ) {
+					Expr expr = multiAssign.exprs[i];
+
+					if( expr is Discard ) {
+						Error( expr.srcPos,
+							"'_' may only appear as the left-hand side of a simple assignment" );
 					}
 					else {
-						TransformExpr( exprStmt.expr, preStmts, context );
+						WalkExpr( expr );
 					}
+				}
 
-					return exprStmt;
-
-				case VarStmt varStmt:
-					if( varStmt.init != null ) {
-						if( varStmt.init is Discard )
-							Error( varStmt.init.srcPos,
-								"'_' initializer should have been lowered earlier" );
-						else
-							TransformExpr( varStmt.init, preStmts, context );
-					}
-
-					return varStmt;
-
-				case ReturnStmt ret:
-					if( ret.expr is Discard ) {
-						Error( ret.expr.srcPos,
-							"'_' cannot be returned from a function" );
-					}
-					else if( ret.expr != null ) {
-						TransformExpr( ret.expr, preStmts, context );
-					}
-
-					return ret;
-
-				case IfStmt ifStmt:
-					foreach( IfStmt.CondThen ct in ifStmt.ifThens ) {
-						TransformExpr( ct.cond, preStmts, context );
-						ct.then = ProcessNestedBlockStmt( ct.then, context );
-					}
-
-					if( ifStmt.els != null )
-						ifStmt.els = ProcessNestedBlockStmt( ifStmt.els, context );
-
-					return ifStmt;
-
-				case ForStmt forStmt:
-					if( forStmt.init != null ) {
-						var initPreStmts = new List<Stmt>();
-						forStmt.init = TransformTopLevelStmt( forStmt.init, initPreStmts, context );
-						preStmts.AddRange( initPreStmts );
-					}
-
-					if( forStmt.cond != null )
-						TransformExpr( forStmt.cond, preStmts, context );
-
-					if( forStmt.iter != null ) {
-						var iterPreStmts = new List<Stmt>();
-						TransformExpr( forStmt.iter, iterPreStmts, context );
-						if( iterPreStmts.Count > 0 )
-							Error( forStmt.iter.srcPos,
-								"discard temporaries are not supported in a for-loop iterator" );
-					}
-
-					if( forStmt.body != null )
-						forStmt.body = ProcessNestedBlockStmt( forStmt.body, context );
-
-					if( forStmt.els != null )
-						forStmt.els = ProcessNestedBlockStmt( forStmt.els, context );
-
-					return forStmt;
-
-				case RangeForStmt rangeForStmt:
-					TransformExpr( rangeForStmt.range, preStmts, context );
-
-					if( rangeForStmt.body != null )
-						rangeForStmt.body = ProcessNestedBlockStmt( rangeForStmt.body, context );
-
-					if( rangeForStmt.els != null )
-						rangeForStmt.els = ProcessNestedBlockStmt( rangeForStmt.els, context );
-
-					return rangeForStmt;
-
-				case WhileStmt whileStmt:
-					TransformExpr( whileStmt.cond, preStmts, context );
-					whileStmt.body = ProcessNestedBlockStmt( whileStmt.body, context );
-
-					if( whileStmt.els != null )
-						whileStmt.els = ProcessNestedBlockStmt( whileStmt.els, context );
-
-					return whileStmt;
-
-				case DoWhileStmt doWhile:
-					TransformExpr( doWhile.cond, preStmts, context );
-					doWhile.body = ProcessNestedBlockStmt( doWhile.body, context );
-					return doWhile;
-
-				case TimesStmt times:
-					TransformExpr( times.count, preStmts, context );
-					times.body = ProcessNestedBlockStmt( times.body, context );
-					return times;
-
-				case SwitchStmt sw:
-					TransformExpr( sw.cond, preStmts, context );
-
-					foreach( SwitchStmt.CaseBlock cb in sw.cases )
-						cb.then = ProcessNestedBlockStmt( cb.then, context );
-
-					if( sw.els != null )
-						sw.els = ProcessNestedBlockStmt( sw.els, context );
-
-					return sw;
-
-				case TryCatchStmt tryCatch:
-					tryCatch.tryBody = ProcessNestedBlockStmt( tryCatch.tryBody, context );
-
-					foreach( CatchClause cc in tryCatch.catches ) {
-						if( cc.body != null )
-							cc.body = ProcessNestedBlockStmt( cc.body, context );
-					}
-
-					return tryCatch;
-
-				default:
-					return stmt;
-			}
-		}
-
-		private MultiStmt ProcessNestedBlockStmt( Stmt stmt, ModuleContext context )
-		{
-			if( stmt is MultiStmt multi ) {
-				TransformBlock( multi, context );
-				return multi;
+				return multiAssign;
 			}
 
-			var preStmts   = new List<Stmt>();
-			Stmt processed = TransformTopLevelStmt( stmt, preStmts, context );
+			protected override void TransformExpr( Expr expr )
+			{
+				switch( expr ) {
+					case FuncCallExpr callExpr:
+						TransformFuncCallExpr( callExpr );
+						break;
 
-			var block = new List<Stmt>();
-			block.AddRange( preStmts );
-			block.Add( processed );
-			return new MultiStmt( block, true );
-		}
+					case BinOp binOp:
+						WalkExpr( binOp.left );
+						WalkExpr( binOp.right );
+						break;
 
-		private Stmt TransformMultiAssign(
-			MultiAssign multiAssign, List<Stmt> preStmts, ModuleContext context )
-		{
-			// _ = expr  =>  static_cast<void>( expr );
-			if( multiAssign.exprs.Count == 2 && multiAssign.exprs[0] is Discard ) {
-				Expr right = multiAssign.exprs[1];
-				TransformExpr( right, preStmts, context );
+					case TernOp ternOp:
+						WalkExpr( ternOp.left );
+						WalkExpr( ternOp.mid );
+						WalkExpr( ternOp.right );
+						break;
 
-				return new ExprStmt {
-					srcPos = multiAssign.srcPos,
-					expr   = MakeVoidCast( right ),
+					case CastExpr cast:
+						WalkExpr( cast.expr );
+						break;
+
+					case NewExpr newExpr:
+						foreach( Arg arg in newExpr.funcCall.args ) {
+							if( arg.expr is Discard )
+								Error( arg.expr.srcPos,
+									"'_' cannot be used as a value" );
+							else
+								WalkExpr( arg.expr );
+						}
+
+						break;
+
+					case Lambda lambda:
+						if( lambda.func.body != null )
+							WalkBlock( lambda.func.body );
+
+						break;
+
+					case InitListExpr initList:
+						foreach( Arg arg in initList.args ) {
+							if( arg.expr is Discard )
+								Error( arg.expr.srcPos,
+									"'_' cannot be used as an initializer-list element" );
+							else
+								WalkExpr( arg.expr );
+						}
+
+						break;
+
+					case UnOp unOp:
+						WalkExpr( unOp.expr );
+						break;
+
+					case Discard:
+						Error( expr.srcPos, "'_' cannot be used as a value" );
+						break;
+
+					default:
+						break;
+				}
+			}
+
+			private void TransformFuncCallExpr( FuncCallExpr callExpr )
+			{
+				Decl? calleeDecl = ResolveCallCallee( callExpr );
+				List<Param> parameters = calleeDecl switch {
+					Func func      => func.paras,
+					Structor stc   => stc.paras,
+					_              => new List<Param>(),
+				};
+
+				for( int i = 0; i < callExpr.funcCall.args.Count; i++ ) {
+					Arg arg = callExpr.funcCall.args[i];
+					Expr replacement;
+
+					if( arg.expr is Discard ) {
+						Typespec? paramType = i < parameters.Count ? parameters[i].type : null;
+
+						if( paramType == null ) {
+							Error( arg.expr.srcPos,
+								"Cannot infer parameter type for '_'; overload resolution did not choose a single candidate" );
+							replacement = MakeNullptrLiteral( arg.expr.srcPos );
+						}
+						else {
+							replacement = ReplaceDiscardArg( paramType, arg.expr.srcPos );
+						}
+					}
+					else {
+						WalkExpr( arg.expr );
+						continue;
+					}
+
+					arg.expr = replacement;
+				}
+
+				// Member access / scoped callees may contain nested discards.
+				WalkExpr( callExpr.expr );
+			}
+
+			private Decl? ResolveCallCallee( FuncCallExpr callExpr )
+			{
+				UnresolvedCall? unresolved = context.UnresolvedCalls
+					.FirstOrDefault( uc => uc.Call == callExpr.funcCall );
+
+				if( unresolved != null )
+					return ResolveCalleeDecl( unresolved.Callee );
+
+				return null;
+			}
+
+			private Decl? ResolveCalleeDecl( Expr callee )
+			{
+				return callee switch {
+					IdExpr id when resolutionResult != null && resolutionResult.TryGetResolved( id, out Decl? d )
+						=> d,
+					ScopedExpr scoped when resolutionResult != null && resolutionResult.TryGetResolved( scoped, out Decl? d )
+						=> d,
+					BinOp binOp when binOp.right is IdExpr m
+						&& resolutionResult != null && resolutionResult.TryGetResolvedMember( m, out Decl? d )
+						=> d,
+					_ => null,
 				};
 			}
 
-			for( int i = 0; i < multiAssign.exprs.Count; i++ ) {
-				Expr expr = multiAssign.exprs[i];
+			private Expr ReplaceDiscardArg( Typespec paramType, SrcPos srcPos )
+			{
+				List<Pointer>? ptrs = paramType.ptrs;
 
-				if( expr is Discard ) {
-					Error( expr.srcPos,
-						"'_' may only appear as the left-hand side of a simple assignment" );
-				}
-				else {
-					TransformExpr( expr, preStmts, context );
-				}
-			}
+				if( ptrs is { Count: > 0 } ) {
+					Pointer.Kind kind = ptrs[ptrs.Count - 1].kind;
 
-			return multiAssign;
-		}
+					if( kind == Pointer.Kind.RawPtr )
+						return MakeNullptrCast( paramType, srcPos );
 
-		private void TransformExpr( Expr expr, List<Stmt> preStmts, ModuleContext context )
-		{
-			switch( expr ) {
-				case FuncCallExpr callExpr:
-					TransformFuncCallExpr( callExpr, preStmts, context );
-					break;
+					if( kind.Between( Pointer.Kind.SmartPtr_Begin, Pointer.Kind.SmartPtr_End ) ) {
+						Error( srcPos,
+							"'_' cannot be used for smart-pointer parameters" );
 
-				case BinOp binOp:
-					TransformExpr( binOp.left, preStmts, context );
-					TransformExpr( binOp.right, preStmts, context );
-					break;
-
-				case TernOp ternOp:
-					TransformExpr( ternOp.left, preStmts, context );
-					TransformExpr( ternOp.mid, preStmts, context );
-					TransformExpr( ternOp.right, preStmts, context );
-					break;
-
-				case CastExpr cast:
-					TransformExpr( cast.expr, preStmts, context );
-					break;
-
-				case NewExpr newExpr:
-					foreach( Arg arg in newExpr.funcCall.args ) {
-						if( arg.expr is Discard )
-							Error( arg.expr.srcPos,
-								"'_' cannot be used as a value" );
-						else
-							TransformExpr( arg.expr, preStmts, context );
-					}
-
-					break;
-
-				case Lambda lambda:
-					if( lambda.func.body != null )
-						TransformBlock( lambda.func.body, context );
-
-					break;
-
-				case InitListExpr initList:
-					foreach( Arg arg in initList.args ) {
-						if( arg.expr is Discard )
-							Error( arg.expr.srcPos,
-								"'_' cannot be used as an initializer-list element" );
-						else
-							TransformExpr( arg.expr, preStmts, context );
-					}
-
-					break;
-
-				case UnOp unOp:
-					TransformExpr( unOp.expr, preStmts, context );
-					break;
-
-				case Discard:
-					Error( expr.srcPos, "'_' cannot be used as a value" );
-					break;
-
-				default:
-					break;
-			}
-		}
-
-		private void TransformFuncCallExpr(
-			FuncCallExpr callExpr, List<Stmt> preStmts, ModuleContext context )
-		{
-			Decl? calleeDecl = ResolveCallCallee( callExpr, context );
-			List<Param> parameters = calleeDecl switch {
-				Func func      => func.paras,
-				Structor stc   => stc.paras,
-				_              => new List<Param>(),
-			};
-
-			for( int i = 0; i < callExpr.funcCall.args.Count; i++ ) {
-				Arg  arg = callExpr.funcCall.args[i];
-				Expr replacement;
-
-				if( arg.expr is Discard ) {
-					Typespec? paramType = i < parameters.Count ? parameters[i].type : null;
-
-					if( paramType == null ) {
-						Error( arg.expr.srcPos,
-							"Cannot infer parameter type for '_'; overload resolution did not choose a single candidate" );
-						replacement = MakeNullptrLiteral( arg.expr.srcPos );
-					}
-					else {
-						replacement = ReplaceDiscardArg( paramType, arg.expr.srcPos, preStmts, context );
+						return MakeNullptrCast( paramType, srcPos );
 					}
 				}
-				else {
-					TransformExpr( arg.expr, preStmts, context );
-					continue;
-				}
 
-				arg.expr = replacement;
+				// Value or reference parameter: introduce a hidden local.
+				// Drop any const/reference qualifiers; the temp must be default-initializable.
+				Typespec tempType = paramType.Clone();
+				tempType.qual = Qualifier.None;
+				if( tempType.ptrs is { Count: > 0 } )
+					tempType.ptrs.RemoveAt( tempType.ptrs.Count - 1 );
+
+				string tempName = context.NextTempName();
+
+				preStmts.Add( new VarStmt {
+					srcPos = srcPos,
+					name   = tempName,
+					kind   = VarDecl.Kind.Var,
+					type   = tempType,
+				} );
+
+				return new IdExpr {
+					srcPos    = srcPos,
+					op        = Operand.Id,
+					idTplArgs = new IdTplArgs { id = tempName },
+				};
 			}
 
-			// Member access / scoped callees may contain nested discards.
-			TransformExpr( callExpr.expr, preStmts, context );
-		}
-
-		private Decl? ResolveCallCallee( FuncCallExpr callExpr, ModuleContext context )
-		{
-			UnresolvedCall? unresolved = context.UnresolvedCalls
-				.FirstOrDefault( uc => uc.Call == callExpr.funcCall );
-
-			if( unresolved != null )
-				return ResolveCalleeDecl( unresolved.Callee );
-
-			return null;
-		}
-
-		private Decl? ResolveCalleeDecl( Expr callee )
-		{
-			return callee switch {
-				IdExpr id when _resolutionResult != null && _resolutionResult.TryGetResolved( id, out Decl? d )
-					=> d,
-				ScopedExpr scoped when _resolutionResult != null && _resolutionResult.TryGetResolved( scoped, out Decl? d )
-					=> d,
-				BinOp binOp when binOp.right is IdExpr m
-					&& _resolutionResult != null && _resolutionResult.TryGetResolvedMember( m, out Decl? d )
-					=> d,
-				_ => null,
-			};
-		}
-
-		private Expr ReplaceDiscardArg(
-			Typespec paramType, SrcPos srcPos, List<Stmt> preStmts, ModuleContext context )
-		{
-			List<Pointer>? ptrs = paramType.ptrs;
-
-			if( ptrs is { Count: > 0 } ) {
-				Pointer.Kind kind = ptrs[ptrs.Count - 1].kind;
-
-				if( kind == Pointer.Kind.RawPtr )
-					return MakeNullptrCast( paramType, srcPos );
-
-				if( kind.Between( Pointer.Kind.SmartPtr_Begin, Pointer.Kind.SmartPtr_End ) ) {
-					Error( srcPos,
-						"'_' cannot be used for smart-pointer parameters" );
-
-					return MakeNullptrCast( paramType, srcPos );
-				}
+			private static Expr MakeNullptrCast( Typespec targetType, SrcPos srcPos )
+			{
+				return new CastExpr {
+					op     = Operand.StaticCast,
+					type   = targetType,
+					expr   = MakeNullptrLiteral( srcPos ),
+					Type   = targetType,
+					srcPos = srcPos,
+				};
 			}
 
-			// Value or reference parameter: introduce a hidden local.
-			// Drop any const/reference qualifiers; the temp must be default-initializable.
-			Typespec tempType = paramType.Clone();
-			tempType.qual = Qualifier.None;
-			if( tempType.ptrs is { Count: > 0 } )
-				tempType.ptrs.RemoveAt( tempType.ptrs.Count - 1 );
+			private static Expr MakeVoidCast( Expr expr )
+			{
+				Typespec voidType = new TypespecBasic {
+					kind = TypespecBasic.Kind.Void,
+					size = TypespecBasic.SizeInvalid,
+				};
 
-			string tempName = context.NextTempName();
+				return new CastExpr {
+					op     = Operand.StaticCast,
+					type   = voidType,
+					expr   = expr,
+					Type   = voidType,
+					srcPos = expr.srcPos,
+				};
+			}
 
-			preStmts.Add( new VarStmt {
-				srcPos = srcPos,
-				name   = tempName,
-				kind   = VarDecl.Kind.Var,
-				type   = tempType,
-			} );
+			private static Literal MakeNullptrLiteral( SrcPos srcPos )
+			{
+				return new Literal {
+					op     = Operand.Literal,
+					text   = "nullptr",
+					srcPos = srcPos,
+					Type   = new TypespecBasic {
+						kind = TypespecBasic.Kind.ExplicitAuto,
+						size = TypespecBasic.SizeUndetermined,
+					},
+				};
+			}
 
-			return new IdExpr {
-				srcPos    = srcPos,
-				op        = Operand.Id,
-				idTplArgs = new IdTplArgs { id = tempName },
-			};
-		}
-
-		private static Expr MakeNullptrCast( Typespec targetType, SrcPos srcPos )
-		{
-			return new CastExpr {
-				op     = Operand.StaticCast,
-				type   = targetType,
-				expr   = MakeNullptrLiteral( srcPos ),
-				Type   = targetType,
-				srcPos = srcPos,
-			};
-		}
-
-		private static Expr MakeVoidCast( Expr expr )
-		{
-			Typespec voidType = new TypespecBasic {
-				kind = TypespecBasic.Kind.Void,
-				size = TypespecBasic.SizeInvalid,
-			};
-
-			return new CastExpr {
-				op     = Operand.StaticCast,
-				type   = voidType,
-				expr   = expr,
-				Type   = voidType,
-				srcPos = expr.srcPos,
-			};
-		}
-
-		private static Literal MakeNullptrLiteral( SrcPos srcPos )
-		{
-			return new Literal {
-				op     = Operand.Literal,
-				text   = "nullptr",
-				srcPos = srcPos,
-				Type   = new TypespecBasic {
-					kind = TypespecBasic.Kind.ExplicitAuto,
-					size = TypespecBasic.SizeUndetermined,
-				},
-			};
-		}
-
-		private void Error( SrcPos? srcPos, string message )
-		{
-			Diagnostics.Add( new Diagnostic(
-				srcPos ?? new SrcPos { file = "<unknown>" },
-				DiagnosticKind.Error,
-				message ) );
+			private void Error( SrcPos? srcPos, string message )
+			{
+				diagnostics.Add( new Diagnostic(
+					srcPos ?? new SrcPos { file = "<unknown>" },
+					DiagnosticKind.Error,
+					message ) );
+			}
 		}
 	}
 }
