@@ -17,26 +17,30 @@ namespace Myll.Transform
 	{
 		protected override void PreTransform( TransformContext ctx )
 		{
-			foreach( Decl decl in ctx.Module.Module.children )
-				ApplyDefaults( decl, ctx.Module.Context.Dialect );
+			Applier walker = new( ctx.Module.Context.Dialect );
+			walker.WalkModule( ctx.Module.Module );
 		}
 
-		private static void ApplyDefaults( Decl decl, Dialect dialect )
+		private sealed class Applier : DeclWalker
 		{
-			if( decl is Func func
-			 && func.kind == Func.Kind.Operator
-			 && !func.IsExternal
-			 && !HasEffectAttribute( func ) ) {
-				Dialect.OperatorCategory category = Categorize( func.name );
-				if( dialect.DefaultAttributesOperatorCategory.TryGetValue( category, out string? source )
-				 && !string.IsNullOrEmpty( source ) ) {
-					func.MergeAttribs( AttributeStringParser.Parse( source ) );
-				}
-			}
+			private readonly Dialect dialect;
 
-			if( decl is Hierarchical h ) {
-				foreach( Decl child in h.children )
-					ApplyDefaults( child, dialect );
+			public Applier( Dialect dialect ) => this.dialect = dialect;
+
+			protected override void TransformDecl( Decl decl )
+			{
+				if( decl is Func func
+				 && func.kind == Func.Kind.Operator
+				 && !func.IsExternal
+				 && !HasEffectAttribute( func ) ) {
+					Dialect.OperatorCategory category = Categorize( func.name );
+					if( dialect.DefaultAttributesOperatorCategory.TryGetValue( category, out string? source )
+					 && !string.IsNullOrEmpty( source ) ) {
+						func.MergeAttribs( AttributeStringParser.Parse( source ) );
+					}
+				}
+
+				base.TransformDecl( decl );
 			}
 		}
 
