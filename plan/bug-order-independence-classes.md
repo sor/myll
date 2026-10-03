@@ -1,6 +1,7 @@
 # Bug: class before base breaks the order-independence invariant
 
-Status: **open**. Found in the 2026-09-29 review. Reproduced.
+Status: **fixed 2026-10-02**. Regression case: `testing/cases/order_independence/`;
+cycle case: `testing/cases/order_independence_fail/`.
 
 ## Symptom
 
@@ -41,15 +42,23 @@ lookup (so Myll-side resolution is fine) but not C++ inheritance, which needs a 
 
 ## Fix plan
 
-Topologically sort the `hierarchicalDecl` children by base-class dependency before concatenation:
+Implemented as a two-part change (no generator-side sorting):
 
-1. Build the dependency graph among the module's own structurals (edge: `Derived` depends on
-   `Base` when the base names a class/struct defined in the same module; namespace-qualified bases are
-   matched by fully qualified name).
-2. Stable topological sort **with minimal churn** (decided 2026-09-30): the generated C++ must
-   stay recognizable as the Myll source — only move a declaration when a same-module base actually
-   requires it, and preserve source order for everything else. Do not sort more than necessary.
-3. Cycle (`A : B` and `B : A`) → diagnostic, do not emit.
+1. **`StructuralOrderTransformer`** (`backend/Transform/StructuralOrderTransformer.cs`, post-resolution
+   in `Resolver.Resolve`): collects all defined structurals of the module and their hierarchical
+   parents, resolves each base via `TypespecNested.resolvedDecl` (plus `TryGetResolved` fallback),
+   and records a child edge at the lowest common ancestor for every same-module base. Each affected
+   parent gets a stable topological sort of its children (Kahn, ready set scanned in original
+   order), so only declarations whose subtree really holds a base are moved. Cross-module bases are
+   left to the includes. Special cases diagnosed: self-inheritance, inheritance of an enclosing
+   class, inheritance of a class nested inside the derived one, and cycles (sort cannot drain), all
+   as errors.
+2. **Nested-type emission in source order** (`HierachicalGen`): the `hierarchicalDecl` bucket became
+   an `OrderedAccessSourceLines` — nested classes/structs/unions/enums emit in declaration order
+   with access specifiers at change points instead of priv/prot/pub groups. This is what makes
+   mixed-access-section inheritance (`[priv]` derived after `[pub]` base in one class) orderable at
+   all, so the child reorder covers everything and no cross-section diagnostic is needed. Same
+   golden byte-stability is kept for same-access sequences.
 
 Note (2026-09-30): forward declarations / prototypes do not solve this — C++ inheritance needs a
 complete type, not a name. The invariant really requires ordering the definitions.
@@ -57,13 +66,17 @@ complete type, not a name. The invariant really requires ordering the definition
 Rejected alternative: diagnose "base class must be defined before derived". That would break the
 invariant the language advertises.
 
+Follow-up (out of scope here): module-scope `var D x;` before D's definition still needs the
+complete type too; same-module value declarations are not reordered yet.
+
 ## Verification
 
-- The repro compiles: generated C++ passes `clang++ -std=c++23 -Wall -Wextra`.
-- Add a case (`testing/cases/order_independence/`) with: derived before base, diamond bases, and a
-  base inside a namespace; update goldens.
-- Existing goldens must not change (stable sort keeps independent classes in source order).
-- `dotnet test testing/` green.
+- The repro compiles: generated C++ passes `clang++ -std=c++23 -Wall -Wextra` via the case's compile depth.
+- `testing/cases/order_independence/` covers: derived before base, diamond bases, a base inside a
+  later namespace, a template base defined later, and mixed access sections. Goldens recorded.
+- `testing/cases/order_independence_fail/` covers the inheritance cycle.
+- Existing goldens stayed byte-identical (full suite green), proving the sort moves nothing without
+  need and the ordered nested-type emission preserves same-access order.
 
 ## Risk
 
