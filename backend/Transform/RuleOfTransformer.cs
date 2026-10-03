@@ -20,20 +20,24 @@ namespace Myll.Transform
 	{
 		protected override void PostTransform( TransformContext ctx )
 		{
-			foreach( Decl decl in ctx.Module.Module.children )
-				CheckDecl( decl, Diagnostics );
+			Checker walker = new( Diagnostics );
+			walker.WalkModule( ctx.Module.Module );
 		}
 
-		private static void CheckDecl( Decl decl, List<Diagnostic> diagnostics )
+	private sealed class Checker : DeclWalker
+	{
+		private readonly List<Diagnostic> diagnostics;
+
+		public Checker( List<Diagnostic> diagnostics ) => this.diagnostics = diagnostics;
+
+		protected override void TransformDecl( Decl decl )
 		{
 			if( decl is Structural structural && !structural.IsForwardDeclaration && !structural.IsExternal )
 				CheckStructural( structural, diagnostics );
 
-			if( decl is Hierarchical h ) {
-				foreach( Decl child in h.children )
-					CheckDecl( child, diagnostics );
-			}
+			base.TransformDecl( decl );
 		}
+	}
 
 		private static void CheckStructural( Structural structural, List<Diagnostic> diagnostics )
 		{
