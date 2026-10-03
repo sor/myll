@@ -26,28 +26,31 @@ namespace Myll.Transform
 
 		protected override void PreTransform( TransformContext ctx )
 		{
-			GlobalNamespace module  = ctx.Module.Module;
-			ModuleContext   context = ctx.Module.Context;
-			TransformDecl( module, module, context, Diagnostics );
+			Rewriter walker = new( ctx.Module.Module, ctx.Module.Context, Diagnostics );
+			walker.WalkModule( ctx.Module.Module );
 		}
 
-		private static void TransformDecl(
-			Decl decl,
-			GlobalNamespace module,
-			ModuleContext context,
-			List<Diagnostic> diagnostics )
+	private sealed class Rewriter : DeclWalker
+	{
+		private readonly GlobalNamespace module;
+		private readonly ModuleContext context;
+		private readonly List<Diagnostic> diagnostics;
+
+		public Rewriter( GlobalNamespace module, ModuleContext context, List<Diagnostic> diagnostics )
 		{
-			switch( decl ) {
-				case Func func:
-					TryTransformFunc( func, module, context, diagnostics );
-					break;
-
-				case Hierarchical h:
-					foreach( Decl child in h.children )
-						TransformDecl( child, module, context, diagnostics );
-					break;
-			}
+			this.module     = module;
+			this.context    = context;
+			this.diagnostics = diagnostics;
 		}
+
+		protected override void TransformDecl( Decl decl )
+		{
+			if( decl is Func func )
+				TryTransformFunc( func, module, context, diagnostics );
+
+			base.TransformDecl( decl );
+		}
+	}
 
 		private static void TryTransformFunc(
 			Func func,
@@ -206,88 +209,38 @@ namespace Myll.Transform
 			return false;
 		}
 
-		private static bool UsesAutoReturnName( Stmt stmt, string alias )
-			=> ContainsAutoReturnName( stmt, alias );
+/// <summary>
+		/// Scans a statement tree for a plain, non-template use of the alias name.
+		/// Lambda bodies are not entered: the alias must be used in the function
+		/// itself for the return-variable generation to kick in.
+		/// </summary>
+	private sealed class NameFinder : DeclWalker
+	{
+		private readonly string alias;
+		private bool found;
 
-		private static bool ContainsAutoReturnName( Stmt stmt, string alias )
+		public NameFinder( string alias ) => this.alias = alias;
+
+		public bool Find( Stmt? stmt )
 		{
-			return stmt switch {
-				MultiStmt ms => ms.stmts.Any( s => ContainsAutoReturnName( s, alias ) ),
-				IfStmt ifs
-					=> ifs.ifThens.Any( ct => ContainsAutoReturnName( ct.cond, alias )
-					                       || ContainsAutoReturnName( ct.then, alias ) )
-					|| ( ifs.els != null && ContainsAutoReturnName( ifs.els, alias ) ),
-				SwitchStmt sw
-					=> ContainsAutoReturnName( sw.cases.SelectMany( cb => cb.compare ), alias )
-					|| sw.cases.Any( cb => ContainsAutoReturnName( cb.then, alias ) )
-					|| ( sw.els != null && ContainsAutoReturnName( sw.els, alias ) ),
-				ForStmt fs
-					=> ( fs.init != null && ContainsAutoReturnName( fs.init, alias ) )
-					|| ContainsAutoReturnName( fs.cond, alias )
-					|| ContainsAutoReturnName( fs.iter, alias )
-					|| ( fs.body != null && ContainsAutoReturnName( fs.body, alias ) )
-					|| ( fs.els != null && ContainsAutoReturnName( fs.els, alias ) ),
-				RangeForStmt rfs
-					=> ContainsAutoReturnName( rfs.range, alias )
-					|| ( rfs.body != null && ContainsAutoReturnName( rfs.body, alias ) )
-					|| ( rfs.els != null && ContainsAutoReturnName( rfs.els, alias ) ),
-				WhileStmt ws
-					=> ContainsAutoReturnName( ws.cond, alias )
-					|| ContainsAutoReturnName( ws.body, alias )
-					|| ( ws.els != null && ContainsAutoReturnName( ws.els, alias ) ),
-				DoWhileStmt dws
-					=> ContainsAutoReturnName( dws.body, alias )
-					|| ContainsAutoReturnName( dws.cond, alias ),
-				LoopStmt ls => ContainsAutoReturnName( ls.body, alias ),
-				TimesStmt ts
-					=> ContainsAutoReturnName( ts.count, alias )
-					|| ContainsAutoReturnName( ts.body, alias ),
-				TryCatchStmt tcs
-					=> ContainsAutoReturnName( tcs.tryBody, alias )
-					|| tcs.catches.Any( cc => ContainsAutoReturnName( cc.body, alias ) ),
-				VarStmt vs => ContainsAutoReturnName( vs.init, alias ),
-				ReturnStmt rs => ContainsAutoReturnName( rs.expr, alias ),
-				ThrowStmt ths => ContainsAutoReturnName( ths.expr, alias ),
-				ExprStmt es => ContainsAutoReturnName( es.expr, alias ),
-				AggrAssign aa
-					=> ContainsAutoReturnName( aa.leftExpr, alias )
-					|| ContainsAutoReturnName( aa.rightExpr, alias ),
-				MultiAssign ma => ma.exprs.Any( e => ContainsAutoReturnName( e, alias ) ),
-				_ => false,
-			};
+			if( stmt != null )
+				WalkStmt( stmt );
+			return found;
 		}
 
-		private static bool ContainsAutoReturnName( IEnumerable<Expr?> exprs, string alias )
-			=> exprs.Any( e => ContainsAutoReturnName( e, alias ) );
-
-		private static bool ContainsAutoReturnName( Expr? expr, string alias )
+		protected override void TransformExpr( Expr expr )
 		{
-			if( expr == null )
-				return false;
+			if( expr is IdExpr id && id.idTplArgs.id == alias && id.idTplArgs.tplArgs.Count == 0 ) {
+				found = true;
+				return;
+			}
 
-			return expr switch {
-				IdExpr id
-					=> id.idTplArgs.id == alias && id.idTplArgs.tplArgs.Count == 0,
-				CastExpr ce => ContainsAutoReturnName( ce.expr, alias ),
-				FuncCallExpr fce
-					=> ContainsAutoReturnName( fce.expr, alias )
-					|| fce.funcCall.args.Any( a => ContainsAutoReturnName( a.expr, alias ) ),
-				UnOp uo => ContainsAutoReturnName( uo.expr, alias ),
-				BinOp bo
-					=> ContainsAutoReturnName( bo.left, alias )
-					|| ContainsAutoReturnName( bo.right, alias ),
-				TernOp to
-					=> ContainsAutoReturnName( to.left, alias )
-					|| ContainsAutoReturnName( to.mid, alias )
-					|| ContainsAutoReturnName( to.right, alias ),
-				NewExpr ne
-					=> ne.funcCall.args.Any( a => ContainsAutoReturnName( a.expr, alias ) ),
-				InitListExpr ile
-					=> ile.args.Any( a => ContainsAutoReturnName( a.expr, alias ) ),
-				Lambda => false,
-				_ => false,
-			};
+			expr.VisitSubExprs( WalkExpr );
 		}
+	}
+
+	private static bool UsesAutoReturnName( Stmt stmt, string alias )
+		=> new NameFinder( alias ).Find( stmt );
 
 		internal static bool HasUnconditionalReturn( Stmt stmt )
 		{
