@@ -11,21 +11,26 @@ namespace Myll.Transform
 	/// </summary>
 	public sealed class SpecialMemberAttributeValidator : Transformer
 	{
-		protected override void PostTransform( TransformContext ctx )
+protected override void PostTransform( TransformContext ctx )
 		{
-			ValidateDecl( ctx.Module.Module, Diagnostics );
+			Validator walker = new( Diagnostics );
+			walker.WalkModule( ctx.Module.Module );
 		}
 
-	private static void ValidateDecl( Decl decl, List<Diagnostic> diagnostics )
+	private sealed class Validator : DeclWalker
 	{
-		if( decl is Func func )
-			ValidateFunc( func, diagnostics );
-		else if( decl is AliasDecl alias )
-			ValidateAlias( alias, diagnostics );
+		private readonly List<Diagnostic> diagnostics;
 
-		if( decl is Hierarchical h ) {
-			foreach( Decl child in h.children )
-				ValidateDecl( child, diagnostics );
+		public Validator( List<Diagnostic> diagnostics ) => this.diagnostics = diagnostics;
+
+		protected override void TransformDecl( Decl decl )
+		{
+			if( decl is Func func )
+				ValidateFunc( func, diagnostics );
+			else if( decl is AliasDecl alias )
+				ValidateAlias( alias, diagnostics );
+
+			base.TransformDecl( decl );
 		}
 	}
 
