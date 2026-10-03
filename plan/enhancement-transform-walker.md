@@ -1,6 +1,10 @@
 # Enhancement: shared transform/validate walker
 
-Status: **open**. Found in the 2026-09-29 review.
+Status: **in progress**. The walker exists (`backend/Transform/DeclWalker.cs`, 2026-10-03);
+`ElseOnLoopTransformer` and `BreakContinueTransformer` are rewired (this also fixed
+`bug-lambda-holes.md` finding 2). The AST gained canonical enumerations:
+`Stmt.ReplaceChildStmts`/`Stmt.VisitChildExprs` and `Expr.VisitSubExprs`. Rewiring the other
+nine is the immediate follow-up, one commit per transform.
 
 ## Problem
 

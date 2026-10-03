@@ -1,6 +1,9 @@
 # Bug: lambda holes — captures ignored, transforms skipped, no return inference
 
-Status: **open**. Found in the 2026-09-29 review. Code-verified.
+Status: **mostly fixed 2026-10-03**. Regression case: `testing/cases/lambda_basics/`;
+negative cases: `testing/cases/lambda_capture_fail/`, `testing/cases/lambda_method_fail/`.
+Still open: real capture lists (finding 1 stage 2), per-line source maps (finding 4),
+callable-type conversions.
 
 ## Current state (verified 2026-09-30)
 
@@ -53,11 +56,37 @@ maps to the enclosing statement's line. Related: `bug-source-map-ordering.md`.
 
 ## Fix plan
 
-1. Reject non-empty capture lists with a diagnostic (stage 1), then implement capture emission
-   (stage 2).
-2. Recurse both loop transforms into lambda bodies (preferably via the shared walker).
-3. Make `IsReturningSomething` real for lambdas so `return`-based inference applies.
-4. Keep per-line `SrcPos` through `Lambda.Gen`.
+Implemented 2026-10-03:
+
+1. **Kinds and capture defaults**: the lambda grammar uses `kindOfFunc`, so `func`, `proc`, and
+   `method` lambdas exist. The default capture specifier is dialect-configurable
+   (`DefaultCaptureFunction = "[]"`, `DefaultCaptureProcedure = "[&]"`,
+   `DefaultCaptureMethod = "[this]"`, plus `dialect/myll.jsonc` entries) and `Lambda.Gen` emits
+   it by kind instead of the hardcoded `[&]`. Explicit capture lists are rejected with a clean
+   error for now; real capture emission (including `[&x]`, `[=x]` grammar forms) stays a
+   follow-up. Method lambdas require an enclosing non-static member function or constructor
+   (`DeclWalker.InMemberContext`, checked by the TypeChecker); `[this]` means members are
+   visible but locals and parameters are not captured.
+2. **Shared walker**: `DeclWalker` (`backend/Transform/DeclWalker.cs`) with canonical AST
+   enumerations (`Stmt.ReplaceChildStmts`/`VisitChildExprs`, `Expr.VisitSubExprs`). Both loop
+   transforms run on it, so lambda bodies are lowered like any other body. Lambdas get their own
+   breakable-construct stack in `BreakContinueTransformer` (C++ cannot jump out of a lambda), so
+   `break N` crossing a lambda boundary is a clean error. Rewiring the other nine walkers is the
+   immediate follow-up of `enhancement-transform-walker.md`.
+3. **Return-type inference**: unannotated lambdas get `ImplicitAuto` (the hardcoded
+   `IsReturningSomething` gate is gone) and `TypeChecker.LambdaReturnInferencer` runs the
+   ordinary `InferReturnType` over every lambda body.
+4. **`var auto` stays `auto`**: declared-auto locals keep the resolved type for validation but
+   emit C++ `auto` (locals and range-for variables), so `var auto f = func(...) {...};` binds the
+   closure itself. The concrete emission path is kept (commented out in `VarStmt.Gen`) for a
+   future `[resolve]` attribute; `new`-initialized autos and module-scope autos still materialize
+   (C++ would deduce a raw pointer from `new`, and the header needs a concrete `extern`).
+   Module-scope `var auto` with a lambda initializer is rejected.
+5. **Per-line source maps** through `Lambda.Gen` stay deferred (finding 4).
+
+Also fixed on the way: `ElseOnLoopTransformer` never recursed into loop bodies of loops without
+an `else`, so a nested loop-with-else inside a plain loop was silently skipped; the walker
+recursion covers it now.
 
 ## Verification
 
