@@ -96,6 +96,7 @@ namespace Myll.Resolver
 				new BreakContinueTransformer(),
 				new ConfiguredAliasShadowingTransformer(),
 				new RangeForAutoTypeTransformer(),
+				new StructuralOrderTransformer(),
 				// ContainedNamespaceUsingInjector is disabled for now; Myll emits fully
 				// qualified names, so per-function `using namespace` injection is redundant.
 				// new ContainedNamespaceUsingInjector(),

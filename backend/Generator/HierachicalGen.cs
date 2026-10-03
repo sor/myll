@@ -38,6 +38,24 @@ namespace Myll.Generator
 			};
 	}
 
+	/// <summary>
+	/// Declarations that must keep source order (nested classes etc.), grouped into
+	/// runs per access level that are emitted in arrival order with an access
+	/// specifier at each change. Unlike <see cref="PPPSourceLines"/>, this never
+	/// reorders relative to the source.
+	/// </summary>
+	internal class OrderedAccessSourceLines
+	{
+		public readonly AccessSourceLines runs = new();
+
+		public SourceLines Target( Access access )
+		{
+			SourceLines lines = new();
+			runs.Add( (access, lines) );
+			return lines;
+		}
+	}
+
 	internal static class Extensions
 	{
 		internal static IAccessSourceLines Concat( this IAccessSourceLines self, PPPSourceLines pppSourceLines )
@@ -84,7 +102,6 @@ namespace Myll.Generator
 		private readonly PPPSourceLines
 			protoEarly         = new(),
 			protoLate          = new(),
-			hierarchicalDecl   = new(),
 			hierarchicalImpl   = new(),
 			staticAccessorDecl = new(),
 			staticAccessorImpl = new(),
@@ -100,6 +117,10 @@ namespace Myll.Generator
 			operatorImpl       = new(),
 			methodDecl         = new(),
 			methodImpl         = new();
+
+		// nested hierarchicals keep source order; only the child reorder of the
+		// StructuralOrderTransformer may change it
+		private readonly OrderedAccessSourceLines hierarchicalDecl = new();
 
 		private readonly Access defaultAccess;
 
@@ -346,7 +367,7 @@ namespace Myll.Generator
 				listDecl = new AccessSourceLines()
 					.Concat( protoEarly )
 					.Concat( constexprDecl )
-					.Concat( hierarchicalDecl )
+					.Concat( hierarchicalDecl.runs )
 					.Concat( staticFieldDecl )
 					.Concat( staticAccessorDecl )
 					.Concat( staticMethodDecl )
