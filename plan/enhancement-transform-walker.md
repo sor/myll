@@ -1,10 +1,17 @@
 # Enhancement: shared transform/validate walker
 
-Status: **in progress**. The walker exists (`backend/Transform/DeclWalker.cs`, 2026-10-03);
-`ElseOnLoopTransformer` and `BreakContinueTransformer` are rewired (this also fixed
-`bug-lambda-holes.md` finding 2). The AST gained canonical enumerations:
-`Stmt.ReplaceChildStmts`/`Stmt.VisitChildExprs` and `Expr.VisitSubExprs`. Rewiring the other
-nine is the immediate follow-up, one commit per transform.
+Status: **done 2026-10-03**. The walker is `backend/Transform/DeclWalker.cs`, built on the canonical
+AST enumerations `Stmt.ReplaceChildStmts`/`Stmt.VisitChildExprs` and `Expr.VisitSubExprs`. All
+active transforms walk through it: ElseOnLoop, BreakContinue, ComparisonMode,
+SpecialMemberAttributeValidator, TemplateParam, AutoReturn, Chain, RuleOf, RangeForAutoType,
+Discard, DefaultAttributes, OperatorDefaultAttributes, and EnumTransformer (whose children
+snapshot moved into the walker default so synthesized declarations mid-walk are safe for
+everyone).
+
+Two justified exceptions: `ConfiguredAliasShadowingTransformer` keeps its resolved-scope walk over
+`ModuleContext.LocalDecls` because its data source is the resolver's local registry (synthesized
+locals, catch parameters) rather than the raw AST; `ContainedNamespaceUsingInjector` stays
+unrewired because it is disabled in the transformer list.
 
 ## Problem
 
