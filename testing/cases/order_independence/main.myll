@@ -1,0 +1,80 @@
+module order_independence;
+
+func main() -> int
+{
+	var Derived d;
+	var NSDerived nsd;
+	var Diamond dm;
+	var Outer o;
+	var Boxed bx;
+
+	var int sum = d.x + nsd.x + dm.left + dm.right + o.sum() + bx.value;
+	return sum - 28; // 1 + 2 + 3 + 4 + 11 + 7
+}
+
+// derived class before its base, same scope
+class Derived : Base {
+[pub]:
+	field int x = 1;
+}
+
+// diamond: both bases defined later
+class Diamond : Left, Right {
+}
+
+// base inside a namespace defined later
+class NSDerived : NS::Base {
+}
+
+// template base defined later
+class Boxed : Box<int> {
+}
+
+// mixed access sections: private derived, public base (same enclosing class)
+class Outer {
+[pub]:
+	class PubBase {
+	[pub]:
+		field int x = 5;
+	}
+[priv]:
+	class PrivBase : PubBase {
+	[pub]:
+		field int x = 6;
+	}
+
+	field {
+		PubBase pubBase;
+		PrivBase privBase;
+	}
+
+[pub]:
+	method sum() -> int => pubBase.x + privBase.x;
+}
+
+class Base {
+[pub]:
+	field int x = 2;
+}
+
+class Left {
+[pub]:
+	field int left = 3;
+}
+
+class Right {
+[pub]:
+	field int right = 4;
+}
+
+namespace NS {
+	class Base {
+	[pub]:
+		field int x = 2;
+	}
+}
+
+class Box<T> {
+[pub]:
+	field int value = 7;
+}

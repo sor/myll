@@ -1,0 +1,10 @@
+module order_independence_fail;
+
+class A : B { } // FAIL: Circular inheritance involving class 'A'
+
+class B : A { }
+
+func main() -> int
+{
+	return 0;
+}
