@@ -173,8 +173,7 @@ That requires semantic analysis to know whether the right-hand side names a type
 
 **Expected behavior:**
 
-- `[]:` opens an access section that stays active until another access section.
-- `[]` (without colon) should apply only to the *next* declaration, like `[pure]` does for methods.
+An access section is opened with one of `[pub]:`, `[priv]:`, `[prot]:` and stays active until another access section. Resetting to the default is done by opening the desired section explicitly; there is no dedicated "reset" syntax.
 
 Example of section form:
 
