@@ -18,20 +18,20 @@ namespace Myll.Transform
 			walker.WalkModule( ctx.Module.Module );
 		}
 
-	private sealed class Rewriter : DeclWalker
-	{
-		private readonly List<Diagnostic> diagnostics;
-
-		public Rewriter( List<Diagnostic> diagnostics ) => this.diagnostics = diagnostics;
-
-		protected override void TransformDecl( Decl decl )
+		private sealed class Rewriter : DeclWalker
 		{
-			if( decl is Func func )
-				TransformChainFunc( func, diagnostics );
+			private readonly List<Diagnostic> diagnostics;
 
-			base.TransformDecl( decl );
+			public Rewriter( List<Diagnostic> diagnostics ) => this.diagnostics = diagnostics;
+
+			protected override void TransformDecl( Decl decl )
+			{
+				if( decl is Func func )
+					TransformChainFunc( func, diagnostics );
+
+				base.TransformDecl( decl );
+			}
 		}
-	}
 
 		private static bool HasTrailingReturnSelf( Stmt stmt )
 		{
@@ -52,7 +52,7 @@ namespace Myll.Transform
 			};
 		}
 
-	private static void TransformChainFunc( Func func, List<Diagnostic> diagnostics )
+		private static void TransformChainFunc( Func func, List<Diagnostic> diagnostics )
 		{
 			if( !func.HasAttrib( "chain" ) )
 				return;

@@ -20,26 +20,26 @@ namespace Myll.Transform
 			walker.WalkModule( ctx.Module.Module );
 		}
 
-	private sealed class Injector : DeclWalker
-	{
-		private readonly ModuleContext context;
-
-		public Injector( ModuleContext context ) => this.context = context;
-
-		protected override void TransformDecl( Decl decl )
+		private sealed class Injector : DeclWalker
 		{
-			if( decl is ITemplatedDecl templated
-			 && templated.TplParams.Count >= 1
-			 && templated.TemplateParamScope != null ) {
-				InjectParameters( templated.TemplateParamScope, templated.TplParams, context );
+			private readonly ModuleContext context;
 
-				if( decl is VarDecl varDecl )
-					LinkVariableTemplateParamTypes( varDecl );
+			public Injector( ModuleContext context ) => this.context = context;
+
+			protected override void TransformDecl( Decl decl )
+			{
+				if( decl is ITemplatedDecl templated
+				 && templated.TplParams.Count >= 1
+				 && templated.TemplateParamScope != null ) {
+					InjectParameters( templated.TemplateParamScope, templated.TplParams, context );
+
+					if( decl is VarDecl varDecl )
+						LinkVariableTemplateParamTypes( varDecl );
+				}
+
+				base.TransformDecl( decl );
 			}
-
-			base.TransformDecl( decl );
 		}
-	}
 
 		private static void InjectParameters(
 			Scope scope,
@@ -98,7 +98,8 @@ namespace Myll.Transform
 				case TypespecNested n
 				  when n.idTpls.Count == 1
 				    && ( n.idTpls[0].tplArgs == null || n.idTpls[0].tplArgs.Count == 0 )
-				    && paramMap.TryGetValue( n.idTpls[0].id, out TplParamDecl? tp ): {
+				    && paramMap.TryGetValue( n.idTpls[0].id, out TplParamDecl? tp ):
+				{
 					n.resolvedDecl = tp!;
 					break;
 				}

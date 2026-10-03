@@ -52,25 +52,25 @@ namespace Myll.Transform
 			walker.WalkModule( ctx.Module.Module );
 		}
 
-	private sealed class Checker : DeclWalker
-	{
-		private readonly Dialect dialect;
-		private readonly List<Diagnostic> diagnostics;
-
-		public Checker( Dialect dialect, List<Diagnostic> diagnostics )
+		private sealed class Checker : DeclWalker
 		{
-			this.dialect    = dialect;
-			this.diagnostics = diagnostics;
-		}
+			private readonly Dialect dialect;
+			private readonly List<Diagnostic> diagnostics;
 
-		protected override void TransformDecl( Decl decl )
-		{
-			if( decl is Structural structural && !structural.IsForwardDeclaration && !structural.IsExternal )
-				CheckStructural( structural, dialect, diagnostics );
+			public Checker( Dialect dialect, List<Diagnostic> diagnostics )
+			{
+				this.dialect    = dialect;
+				this.diagnostics = diagnostics;
+			}
 
-			base.TransformDecl( decl );
+			protected override void TransformDecl( Decl decl )
+			{
+				if( decl is Structural structural && !structural.IsForwardDeclaration && !structural.IsExternal )
+					CheckStructural( structural, dialect, diagnostics );
+
+				base.TransformDecl( decl );
+			}
 		}
-	}
 
 		private static void CheckStructural(
 			Structural structural,

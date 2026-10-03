@@ -24,20 +24,20 @@ namespace Myll.Transform
 			walker.WalkModule( ctx.Module.Module );
 		}
 
-	private sealed class Checker : DeclWalker
-	{
-		private readonly List<Diagnostic> diagnostics;
-
-		public Checker( List<Diagnostic> diagnostics ) => this.diagnostics = diagnostics;
-
-		protected override void TransformDecl( Decl decl )
+		private sealed class Checker : DeclWalker
 		{
-			if( decl is Structural structural && !structural.IsForwardDeclaration && !structural.IsExternal )
-				CheckStructural( structural, diagnostics );
+			private readonly List<Diagnostic> diagnostics;
 
-			base.TransformDecl( decl );
+			public Checker( List<Diagnostic> diagnostics ) => this.diagnostics = diagnostics;
+
+			protected override void TransformDecl( Decl decl )
+			{
+				if( decl is Structural structural && !structural.IsForwardDeclaration && !structural.IsExternal )
+					CheckStructural( structural, diagnostics );
+
+				base.TransformDecl( decl );
+			}
 		}
-	}
 
 		private static void CheckStructural( Structural structural, List<Diagnostic> diagnostics )
 		{

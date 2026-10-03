@@ -30,27 +30,27 @@ namespace Myll.Transform
 			walker.WalkModule( ctx.Module.Module );
 		}
 
-	private sealed class Rewriter : DeclWalker
-	{
-		private readonly GlobalNamespace module;
-		private readonly ModuleContext context;
-		private readonly List<Diagnostic> diagnostics;
-
-		public Rewriter( GlobalNamespace module, ModuleContext context, List<Diagnostic> diagnostics )
+		private sealed class Rewriter : DeclWalker
 		{
-			this.module     = module;
-			this.context    = context;
-			this.diagnostics = diagnostics;
-		}
+			private readonly GlobalNamespace module;
+			private readonly ModuleContext context;
+			private readonly List<Diagnostic> diagnostics;
 
-		protected override void TransformDecl( Decl decl )
-		{
-			if( decl is Func func )
-				TryTransformFunc( func, module, context, diagnostics );
+			public Rewriter( GlobalNamespace module, ModuleContext context, List<Diagnostic> diagnostics )
+			{
+				this.module     = module;
+				this.context    = context;
+				this.diagnostics = diagnostics;
+			}
 
-			base.TransformDecl( decl );
+			protected override void TransformDecl( Decl decl )
+			{
+				if( decl is Func func )
+					TryTransformFunc( func, module, context, diagnostics );
+
+				base.TransformDecl( decl );
+			}
 		}
-	}
 
 		private static void TryTransformFunc(
 			Func func,
@@ -209,38 +209,38 @@ namespace Myll.Transform
 			return false;
 		}
 
-/// <summary>
+		/// <summary>
 		/// Scans a statement tree for a plain, non-template use of the alias name.
 		/// Lambda bodies are not entered: the alias must be used in the function
 		/// itself for the return-variable generation to kick in.
 		/// </summary>
-	private sealed class NameFinder : DeclWalker
-	{
-		private readonly string alias;
-		private bool found;
-
-		public NameFinder( string alias ) => this.alias = alias;
-
-		public bool Find( Stmt? stmt )
+		private sealed class NameFinder : DeclWalker
 		{
-			if( stmt != null )
-				WalkStmt( stmt );
-			return found;
-		}
+			private readonly string alias;
+			private bool found;
 
-		protected override void TransformExpr( Expr expr )
-		{
-			if( expr is IdExpr id && id.idTplArgs.id == alias && id.idTplArgs.tplArgs.Count == 0 ) {
-				found = true;
-				return;
+			public NameFinder( string alias ) => this.alias = alias;
+
+			public bool Find( Stmt? stmt )
+			{
+				if( stmt != null )
+					WalkStmt( stmt );
+				return found;
 			}
 
-			expr.VisitSubExprs( WalkExpr );
-		}
-	}
+			protected override void TransformExpr( Expr expr )
+			{
+				if( expr is IdExpr id && id.idTplArgs.id == alias && id.idTplArgs.tplArgs.Count == 0 ) {
+					found = true;
+					return;
+				}
 
-	private static bool UsesAutoReturnName( Stmt stmt, string alias )
-		=> new NameFinder( alias ).Find( stmt );
+				expr.VisitSubExprs( WalkExpr );
+			}
+		}
+
+		private static bool UsesAutoReturnName( Stmt stmt, string alias )
+			=> new NameFinder( alias ).Find( stmt );
 
 		internal static bool HasUnconditionalReturn( Stmt stmt )
 		{
