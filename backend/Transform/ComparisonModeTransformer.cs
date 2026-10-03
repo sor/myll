@@ -48,23 +48,29 @@ namespace Myll.Transform
 
 		protected override void PreTransform( TransformContext ctx )
 		{
-			foreach( Decl decl in ctx.Module.Module.children )
-				CheckDecl( decl, ctx.Module.Context.Dialect, Diagnostics );
+			Checker walker = new( ctx.Module.Context.Dialect, Diagnostics );
+			walker.WalkModule( ctx.Module.Module );
 		}
 
-		private static void CheckDecl(
-			Decl decl,
-			Dialect dialect,
-			List<Diagnostic> diagnostics )
+	private sealed class Checker : DeclWalker
+	{
+		private readonly Dialect dialect;
+		private readonly List<Diagnostic> diagnostics;
+
+		public Checker( Dialect dialect, List<Diagnostic> diagnostics )
+		{
+			this.dialect    = dialect;
+			this.diagnostics = diagnostics;
+		}
+
+		protected override void TransformDecl( Decl decl )
 		{
 			if( decl is Structural structural && !structural.IsForwardDeclaration && !structural.IsExternal )
 				CheckStructural( structural, dialect, diagnostics );
 
-			if( decl is Hierarchical h ) {
-				foreach( Decl child in h.children )
-					CheckDecl( child, dialect, diagnostics );
-			}
+			base.TransformDecl( decl );
 		}
+	}
 
 		private static void CheckStructural(
 			Structural structural,
