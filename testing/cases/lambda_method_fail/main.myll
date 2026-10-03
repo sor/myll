@@ -1,0 +1,8 @@
+module lambda_method_fail;
+
+func main() -> int
+{
+	var auto bad = method() -> int { return 1; }; // FAIL: Method lambdas are only allowed inside non-static member functions
+
+	return bad();
+}

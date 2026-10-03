@@ -14,7 +14,7 @@
   },
   "fixedOutput": [ "source_map" ],
     "depth": {
-    "generateFailing": [ "overload_and_operators_fail", "typecheck_fail", "decl_and_attributes_fail", "template_fail", "special_features_fail", "imported_namespace_unqualified_fail", "ptr_arithmetic_fail", "local_var_template_fail", "alias_template_fail", "local_alias_template_fail", "dialect_mismatch_fail", "cross_module_clash_fail", "same_module_redefinition_fail", "not_implemented_fail", "not_implemented_gen_fail", "reserved_prefix_fail", "order_independence_fail" ],
+    "generateFailing": [ "overload_and_operators_fail", "typecheck_fail", "decl_and_attributes_fail", "template_fail", "special_features_fail", "imported_namespace_unqualified_fail", "ptr_arithmetic_fail", "local_var_template_fail", "alias_template_fail", "local_alias_template_fail", "dialect_mismatch_fail", "cross_module_clash_fail", "same_module_redefinition_fail", "not_implemented_fail", "not_implemented_gen_fail", "reserved_prefix_fail", "order_independence_fail", "lambda_capture_fail", "lambda_method_fail" ],
     "generate": [ "cpp_backend_fail" ],
     "compile": [ "extern" ],
     "link": [],

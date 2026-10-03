@@ -1,0 +1,11 @@
+module lambda_capture_fail;
+
+func main() -> int
+{
+	var int x = 1;
+	var auto bad = func[x]( int a ) { // FAIL: Capture lists are not supported yet
+		return a + x;
+	};
+
+	return bad( 1 );
+}

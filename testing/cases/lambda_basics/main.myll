@@ -1,0 +1,77 @@
+module lambda_basics;
+
+class Counter {
+	field {
+		int value = 10;
+	}
+
+[pub]:
+	method bumpBy( int n ) -> int {
+		// method lambdas capture `this` by default, so members are visible,
+		// but locals and parameters are not
+		var auto readValue = method() -> int { return value; };
+		value += n;
+		return readValue();
+	}
+}
+
+func loopWork() -> int
+{
+	var auto f = func() -> int {
+		var int sum = 0;
+		var int i = 0;
+		while( i < 3 ) {
+			++i;
+			if( i == 1 )
+				continue;
+			sum += i;
+		}
+		else {
+			// loop was entered, so this must NOT run
+			sum += 100;
+		}
+		return sum;
+	};
+
+	var auto g = func() -> int {
+		var int found = 0;
+		var int a = 0;
+		for( ; a < 3; ++a ) {
+			var int b = 0;
+			for( ; b < 3; ++b ) {
+				if( a * b == 4 ) {
+					found = 1;
+					break 2;
+				}
+			}
+		}
+		return found;
+	};
+
+	return f() + g(); // 5 + 1
+}
+
+func main() -> int
+{
+	// func lambdas capture nothing by default and infer their return type
+	var auto add = func( int a, int b ) {
+		return a + b;
+	};
+	if( add( 1, 2 ) != 3 ) return 1;
+
+	// proc lambdas capture everything by reference
+	var int total = 5;
+	var auto bump = proc() -> int {
+		total += 10;
+		return total;
+	};
+	if( bump() != 15 ) return 2;
+	if( total != 15 ) return 3;
+
+	var Counter counter;
+	if( counter.bumpBy( 4 ) != 14 ) return 4;
+
+	if( loopWork() != 6 ) return 6;
+
+	return 0;
+}
