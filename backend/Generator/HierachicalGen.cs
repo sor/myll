@@ -579,8 +579,10 @@ namespace Myll.Generator
 				: fieldDecl;
 			AccessSourceLines targetImpl = isStatic ? staticFieldImpl : fieldImpl;
 
+			// Static members of a template default to inline: the out-of-line definition
+			// would need the enclosing template's header, which is not emitted.
 			bool       needsInline   = isExplicitInline
-			                        || ( isInsideStruct && isStatic && isCompileTime );
+			                        || ( isInsideStruct && isStatic && ( isCompileTime || obj.IsTemplateUp ) );
 			GenerateAt emitAt        = GenerateAt.Decl;
 			GenerateAt initIn        = GenerateAt.Decl;
 
