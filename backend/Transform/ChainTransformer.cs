@@ -14,8 +14,24 @@ namespace Myll.Transform
 	{
 		protected override void PreTransform( TransformContext ctx )
 		{
-			TransformDecl( ctx.Module.Module, Diagnostics );
+			Rewriter walker = new( Diagnostics );
+			walker.WalkModule( ctx.Module.Module );
 		}
+
+	private sealed class Rewriter : DeclWalker
+	{
+		private readonly List<Diagnostic> diagnostics;
+
+		public Rewriter( List<Diagnostic> diagnostics ) => this.diagnostics = diagnostics;
+
+		protected override void TransformDecl( Decl decl )
+		{
+			if( decl is Func func )
+				TransformChainFunc( func, diagnostics );
+
+			base.TransformDecl( decl );
+		}
+	}
 
 		private static bool HasTrailingReturnSelf( Stmt stmt )
 		{
@@ -36,21 +52,7 @@ namespace Myll.Transform
 			};
 		}
 
-		private static void TransformDecl( Decl decl, List<Diagnostic> diagnostics )
-		{
-			switch( decl ) {
-				case Func func:
-					TransformChainFunc( func, diagnostics );
-					break;
-
-				case Hierarchical h:
-					foreach( Decl child in h.children )
-						TransformDecl( child, diagnostics );
-					break;
-			}
-		}
-
-		private static void TransformChainFunc( Func func, List<Diagnostic> diagnostics )
+	private static void TransformChainFunc( Func func, List<Diagnostic> diagnostics )
 		{
 			if( !func.HasAttrib( "chain" ) )
 				return;
