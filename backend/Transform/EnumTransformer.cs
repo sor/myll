@@ -30,19 +30,22 @@ namespace Myll.Transform
 
 		protected override void PreTransform( TransformContext ctx )
 		{
-			TransformDecl( ctx.Module.Module, Diagnostics );
+			Checker walker = new( Diagnostics );
+			walker.WalkModule( ctx.Module.Module );
 		}
 
-		private static void TransformDecl( Decl decl, List<Diagnostic> diagnostics )
+		private sealed class Checker : DeclWalker
 		{
-			if( decl is Enumeration enumeration )
-				TransformEnumeration( enumeration, diagnostics );
+			private readonly List<Diagnostic> diagnostics;
 
-			if( decl is Hierarchical h ) {
-				// Snapshot the children because synthesizing enum operators can add
-				// new declarations to the same namespace we are currently iterating.
-				foreach( Decl child in h.children.ToList() )
-					TransformDecl( child, diagnostics );
+			public Checker( List<Diagnostic> diagnostics ) => this.diagnostics = diagnostics;
+
+			protected override void TransformDecl( Decl decl )
+			{
+				if( decl is Enumeration enumeration )
+					TransformEnumeration( enumeration, diagnostics );
+
+				base.TransformDecl( decl );
 			}
 		}
 

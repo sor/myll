@@ -27,7 +27,9 @@ namespace Myll.Transform
 					WalkBody( stc );
 					break;
 				case Hierarchical h:
-					foreach( Decl child in h.children )
+					// Snapshot: transforms may synthesize declarations into the
+					// iterated list (e.g. enum operators).
+					foreach( Decl child in h.children.ToList() )
 						TransformDecl( child );
 					break;
 			}
