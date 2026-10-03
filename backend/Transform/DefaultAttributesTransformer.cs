@@ -16,21 +16,25 @@ namespace Myll.Transform
 	{
 		protected override void PreTransform( TransformContext ctx )
 		{
-			foreach( Decl decl in ctx.Module.Module.children )
-				ApplyDefaults( decl, ctx.Module.Context.Dialect );
+			Applier walker = new( ctx.Module.Context.Dialect );
+			walker.WalkModule( ctx.Module.Module );
 		}
 
-		private static void ApplyDefaults( Decl decl, Dialect dialect )
+	private sealed class Applier : DeclWalker
+	{
+		private readonly Dialect dialect;
+
+		public Applier( Dialect dialect ) => this.dialect = dialect;
+
+		protected override void TransformDecl( Decl decl )
 		{
 			Attribs defaults = GetDefaultAttributes( decl, dialect );
 			if( defaults.Count > 0 )
 				decl.MergeAttribs( defaults );
 
-			if( decl is Hierarchical h ) {
-				foreach( Decl child in h.children )
-					ApplyDefaults( child, dialect );
-			}
+			base.TransformDecl( decl );
 		}
+	}
 
 		private static Attribs GetDefaultAttributes( Decl decl, Dialect dialect )
 		{
