@@ -1,0 +1,11 @@
+module extern_member_fail;
+
+class C {
+[pub]:
+	[extern] func foo() -> int; // FAIL: [extern] is only valid at module/namespace scope.
+}
+
+func main() -> int
+{
+	return 0;
+}

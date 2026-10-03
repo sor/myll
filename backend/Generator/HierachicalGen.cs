@@ -703,6 +703,14 @@ namespace Myll.Generator
 			                   : "";
 			bool isSpecial = specialTail != "";
 
+			if( isExternal && isInsideStruct ) {
+				Diagnostics.Add( new Diagnostic(
+					obj.srcPos,
+					DiagnosticKind.Error,
+					"[extern] is only valid at module/namespace scope." ) );
+				return;
+			}
+
 			string prefix     = (obj.IsNodiscard             ? "[[nodiscard]] " : "")
 			                  + (obj.IsCompileTime           ? "constexpr "     : "")
 			                  + (isStatic                    ? "static "        : "")
