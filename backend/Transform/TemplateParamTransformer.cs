@@ -16,10 +16,17 @@ namespace Myll.Transform
 
 		protected override void PreTransform( TransformContext ctx )
 		{
-			TransformDecl( ctx.Module.Module, ctx.Module.Context );
+			Injector walker = new( ctx.Module.Context );
+			walker.WalkModule( ctx.Module.Module );
 		}
 
-		private static void TransformDecl( Decl decl, ModuleContext context )
+	private sealed class Injector : DeclWalker
+	{
+		private readonly ModuleContext context;
+
+		public Injector( ModuleContext context ) => this.context = context;
+
+		protected override void TransformDecl( Decl decl )
 		{
 			if( decl is ITemplatedDecl templated
 			 && templated.TplParams.Count >= 1
@@ -30,11 +37,9 @@ namespace Myll.Transform
 					LinkVariableTemplateParamTypes( varDecl );
 			}
 
-			if( decl is Hierarchical h ) {
-				foreach( Decl child in h.children )
-					TransformDecl( child, context );
-			}
+			base.TransformDecl( decl );
 		}
+	}
 
 		private static void InjectParameters(
 			Scope scope,
