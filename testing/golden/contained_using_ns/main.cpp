@@ -12,7 +12,7 @@ Container::Container()
 int Container::sum()
 {
     int total = 0;
-    for( int it : values ) {
+    for( auto it : values ) {
         total += it;
     }
     return total;

@@ -7,20 +7,20 @@ int take(int v)
 }
 int main()
 {
-    int m = max<int>( 3, 4 );
+    auto m = max<int>( 3, 4 );
     if( m != 4 ) {
         return 1;
     }
-    int e = max<int>( 5, 6 );
+    auto e = max<int>( 5, 6 );
     if( e != 6 ) {
         return 2;
     }
-    int m2 = max<int>( 1, 2 );
+    auto m2 = max<int>( 1, 2 );
     if( m2 != 2 ) {
         return 3;
     }
     int value = 10;
-    int* p = unref<int>( &value );
+    auto p = unref<int>( &value );
     if( *p != 10 ) {
         return 4;
     }

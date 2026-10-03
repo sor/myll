@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Myll.Core;
+using Myll.Transform;
 
 namespace Myll.Resolver
 {
@@ -34,6 +35,33 @@ namespace Myll.Resolver
 				ValidateCalls( context );
 				ValidateShadowing( context );
 				ValidateDecl( module );
+				new LambdaReturnInferencer( this ).WalkModule( module );
+			}
+		}
+
+		/// <summary>
+		/// Runs the ordinary return-type inference over lambda bodies, which the
+		/// declaration walk cannot reach because lambdas live in expressions. Also
+		/// validates that method lambdas only appear where `this` exists.
+		/// </summary>
+		private sealed class LambdaReturnInferencer : DeclWalker
+		{
+			private readonly TypeChecker checker;
+
+			public LambdaReturnInferencer( TypeChecker checker ) => this.checker = checker;
+
+			protected override void TransformExpr( Expr expr )
+			{
+				if( expr is Lambda lambda ) {
+					checker.InferReturnType( lambda.func );
+					if( lambda.func.kind == Func.Kind.Method && !InMemberContext ) {
+						checker.diagnostics.Add( new Diagnostic(
+							lambda.srcPos,
+							DiagnosticKind.Error,
+							"Method lambdas are only allowed inside non-static member functions; use a func or proc lambda instead" ) );
+					}
+				}
+				base.TransformExpr( expr );
 			}
 		}
 
@@ -133,6 +161,9 @@ namespace Myll.Resolver
 						if( vd.init is InitListExpr il && il.args.Count == 0 ) {
 							AddError( il, "Cannot infer element type of an empty initializer list for `auto`" );
 						}
+						else if( vd.init is Lambda ) {
+							AddError( vd, "Auto variables with a lambda initializer are not supported at module scope" );
+						}
 						else {
 							vd.type = InferAutoType( typeResolver.Resolve( vd.init ) ) ?? vd.type;
 						}
@@ -164,8 +195,12 @@ namespace Myll.Resolver
 
 			case VarStmt vs:
 				if( vs.init != null ) {
+					bool isLambdaInit = vs.init is Lambda;
 					if( IsAutoKind( vs.type ) ) {
-						if( vs.init is InitListExpr il && il.args.Count == 0 ) {
+						if( isLambdaInit ) {
+							// keep `auto`; C++ deduces the closure type
+						}
+						else if( vs.init is InitListExpr il && il.args.Count == 0 ) {
 							AddError( il, "Cannot infer element type of an empty initializer list for `auto`" );
 						}
 						else {
@@ -180,8 +215,10 @@ namespace Myll.Resolver
 							InferInitListElementFromInit( vs.decl.type, vs.init );
 					}
 
-					CheckAssignment( vs.type, vs.init, vs.init.srcPos );
-					vs.init = BindToBitType( vs.init, vs.type );
+					if( !isLambdaInit ) {
+						CheckAssignment( vs.type, vs.init, vs.init.srcPos );
+						vs.init = BindToBitType( vs.init, vs.type );
+					}
 				}
 				break;
 

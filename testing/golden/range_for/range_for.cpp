@@ -16,7 +16,7 @@ int run_range_for_auto()
     v.push_back( 2 );
     v.push_back( 3 );
     int sum = 0;
-    for( int i : v ) {
+    for( auto i : v ) {
         sum += i;
     }
     if( sum != 6 ) {
@@ -27,7 +27,7 @@ int run_range_for_auto()
 int run_range_for_initlist_auto()
 {
     int total = 0;
-    for( std::int32_t i : { 1, 2, 3, 4, 5 } ) {
+    for( auto i : { 1, 2, 3, 4, 5 } ) {
         total += i;
     }
     if( total != 15 ) {

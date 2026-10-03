@@ -222,6 +222,7 @@ namespace Myll
 							type               = type,
 							init               = finalInit,
 							isDirectConstruct  = isDirectConstruct,
+							IsAutoDeclared     = type is TypespecBasic { kind: TypespecBasic.Kind.ImplicitAuto or TypespecBasic.Kind.ExplicitAuto },
 						};
 						if( init is Discard && finalInit == null )
 							stmt.AssignAttribs( new Attribs { ["noinit"] = new List<string>() } );
@@ -530,6 +531,7 @@ namespace Myll
 				type              = type,
 				init              = null,
 				isDirectConstruct = false,
+				IsAutoDeclared    = type is TypespecBasic { kind: TypespecBasic.Kind.ImplicitAuto or TypespecBasic.Kind.ExplicitAuto },
 			};
 
 			PushScope();

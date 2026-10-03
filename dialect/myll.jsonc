@@ -37,6 +37,10 @@
 	"defaultAttributesProcedure": "mutable",
 	"defaultAttributesMethod":    "",
 
+	"defaultCaptureFunction":  "[]",
+	"defaultCaptureProcedure": "[&]",
+	"defaultCaptureMethod":    "[this]",
+
 	"defaultAttributesConvertTo":   "pure",
 	"defaultAttributesConvertFrom": "",
 

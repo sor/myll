@@ -60,7 +60,7 @@ int takes(std::initializer_list<int> values)
 }
 int run_initializer_list()
 {
-    std::initializer_list<std::int32_t> ints = { 1, 2, 3 };
+    auto ints = { 1, 2, 3 };
     if( ints.size() != 3 ) {
         return 13;
     }

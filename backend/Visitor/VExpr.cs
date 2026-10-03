@@ -387,26 +387,37 @@ namespace Myll
 		{
 			// TODO this is probably just one big hack
 			PushScope(); // is this needed here?
-			Lambda ret = new();
+			Lambda ret = new() {
+				srcPos  = c.ToSrcPos(),
+				Dialect = Context.Dialect,
+			};
+			Func.Kind kind = c.kindOfFunc().Visit();
 			Func func = new() {
 				srcPos    = c.ToSrcPos(),
+				name      = "<lambda>",
+				kind      = kind,
 				TplParams = VisitTplParams( c.tplParams() ),
 				paras     = VisitFuncTypeDef( c.funcTypeDef() ).ToList(),
 			};
 			func.retType = c.typespec() != null ? VisitTypespec( c.typespec() ) :
-				func.IsReturningSomething ?
-					new TypespecBasic {
-						kind = TypespecBasic.Kind.ImplicitAuto,
-						size = TypespecBasic.SizeUndetermined,
-					} :
-					new TypespecBasic {
-						kind = TypespecBasic.Kind.Void,
-						size = TypespecBasic.SizeInvalid,
-					};
+				new TypespecBasic {
+					kind = TypespecBasic.Kind.ImplicitAuto,
+					size = TypespecBasic.SizeUndetermined,
+				};
 			AddParamsToScope( func.paras );
 			func.body = c.funcBody().Visit( Context );
 			ret.func = func;
 			PopScope();
+
+			if( c.capture() != null ) {
+				Context.Diagnostics.Add( new Diagnostic(
+					c.capture().ToSrcPos(),
+					DiagnosticKind.Error,
+					String.Format(
+						"Capture lists are not supported yet; the default for {0} lambdas is '{1}'",
+						kind.ToString().ToLowerInvariant(),
+						Context.Dialect.CaptureDefault( kind ) ) ) );
+			}
 
 			return ret;
 		}

@@ -180,6 +180,12 @@ namespace Myll.Core
 				: PrecedenceLevel;
 
 		/// <summary>
+		/// Visits every sub-expression directly owned by this expression. Lambda
+		/// sub-expressions are included; their bodies are owned by the walker.
+		/// </summary>
+		public virtual void VisitSubExprs( Action<Expr> visit ) { }
+
+		/// <summary>
 		/// The static type of this expression, computed by the type-resolution pass after
 		/// name resolution has converged. Null if the type could not be determined.
 		/// </summary>
@@ -208,6 +214,9 @@ namespace Myll.Core
 	public class UnOp : Expr
 	{
 		public Expr expr { get; set; } = null!;
+
+		public override void VisitSubExprs( Action<Expr> visit )
+			=> visit( expr );
 
 		public override string Gen( bool doBrace = false )
 		{
@@ -241,6 +250,12 @@ namespace Myll.Core
 	{
 		public Expr left  { get; set; } = null!;
 		public Expr right { get; set; } = null!;
+
+		public override void VisitSubExprs( Action<Expr> visit )
+		{
+			visit( left );
+			visit( right );
+		}
 
 		public override string Gen( bool doBrace = false )
 		{
@@ -464,6 +479,13 @@ namespace Myll.Core
 		public Expr mid   { get; set; } = null!;
 		public Expr right { get; set; } = null!;
 
+		public override void VisitSubExprs( Action<Expr> visit )
+		{
+			visit( left );
+			visit( mid );
+			visit( right );
+		}
+
 		public override string Gen( bool doBrace = false )
 		{
 			bool divPrecedence = IsDivergentPrecedence;
@@ -488,9 +510,16 @@ namespace Myll.Core
 	{
 		public Func func = null!;
 
+		/// <summary>
+		/// The dialect that supplies the default capture specifiers. Set from the module
+		/// context during visiting; falls back to <see cref="Dialect.Default"/> when not set.
+		/// </summary>
+		public Dialect Dialect { get; set; } = Dialect.Default;
+
 		public override string Gen( bool doBrace = false )
 		{
 			// TODO capture and template
+			string capture    = Dialect.CaptureDefault( func.kind );
 			string paramString = func.paras
 				.Select( p => p.Gen() )
 				.Join( ", " );
@@ -505,12 +534,14 @@ namespace Myll.Core
 			bool         shortLambda = body.Count <= 1;
 			if( shortLambda )
 				return Format(
-					"[&]({0}) {{ {1} }}",
+					"{0}({1}) {{ {2} }}",
+					capture,
 					paramString,
 					body.Join( "\n" ).TrimStart() ).Brace( doBrace );
 			else
 				return Format(
-					"[&]({0}) {{\n{1}\n}}",
+					"{0}({1}) {{\n{2}\n}}",
+					capture,
 					paramString,
 					body.Join( "\n" ) ).Brace( doBrace );
 		}
@@ -628,6 +659,13 @@ namespace Myll.Core
 	{
 		public FuncCall funcCall = null!;
 
+		public override void VisitSubExprs( Action<Expr> visit )
+		{
+			base.VisitSubExprs( visit );
+			foreach( Arg arg in funcCall.args )
+				visit( arg.expr );
+		}
+
 		public override string Gen( bool doBrace = false )
 		{
 			string ret = expr.Gen() + funcCall.Gen();
@@ -697,6 +735,12 @@ namespace Myll.Core
 		public Typespec type = null!;
 		public FuncCall funcCall = null!;
 
+		public override void VisitSubExprs( Action<Expr> visit )
+		{
+			foreach( Arg arg in funcCall.args )
+				visit( arg.expr );
+		}
+
 		/// <summary>
 		/// The dialect that supplies smart-pointer make templates. Set from the module
 		/// context during visiting; falls back to <see cref="Dialect.Default"/> when not set.
@@ -756,6 +800,12 @@ namespace Myll.Core
 	public class InitListExpr : Expr
 	{
 		public List<Arg> args = new();
+
+		public override void VisitSubExprs( Action<Expr> visit )
+		{
+			foreach( Arg arg in args )
+				visit( arg.expr );
+		}
 
 		public override string Gen( bool doBrace = false )
 		{

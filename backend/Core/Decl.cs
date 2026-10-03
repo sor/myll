@@ -197,9 +197,6 @@ namespace Myll.Core
 		/// </summary>
 		public List<string> InjectedNamespaceUsings { get; } = new();
 
-		// TODO: analyze, for void or auto return type of funcs
-		public bool IsReturningSomething => false;
-
 		public override void AddToGen( HierarchicalGen gen ) { gen.AddFunc( this ); }
 	}
 

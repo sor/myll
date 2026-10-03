@@ -407,7 +407,7 @@ expr		:	(idTplArgs	SCOPE)+	idTplArgs	# ScopedExpr
 				expr	DBL_QM threeWay+ (COLON expr)?	# ThreeWayConditionalExpr
 			| <assoc=right>
 				THROW	expr					# ThrowExpr		// Good or not?
-			|	FUNC capture? tplParams? funcTypeDef?
+			|	kindOfFunc capture? tplParams? funcTypeDef?
 				(RARROW typespec)?	funcBody	# LambdaExpr	// TODO
 		|	LPAREN	expr	RPAREN			# ParenExpr
 		|	LBRACK	args?	RBRACK			# InitListExpr

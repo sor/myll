@@ -41,6 +41,17 @@ namespace Myll.Core
 					line.SrcPos = srcPos;
 			return lines;
 		}
+
+		/// <summary>
+		/// Replaces every child statement in place with the result of <paramref name="replace"/>.
+		/// MultiStmt blocks are excluded: they are walked via dedicated block hooks.
+		/// </summary>
+		public virtual void ReplaceChildStmts( Func<Stmt, Stmt> replace ) { }
+
+		/// <summary>
+		/// Visits every expression directly owned by this statement.
+		/// </summary>
+		public virtual void VisitChildExprs( Action<Expr> visit ) { }
 	}
 
 	public class VarStmt : Stmt
@@ -52,6 +63,19 @@ namespace Myll.Core
 		public bool         isDirectConstruct;
 		public VarDecl?     decl;
 		public bool         IsAutoReturn { get; set; }
+
+		/// <summary>
+		/// True when the declared type was `auto` (explicit or omitted). The resolver
+		/// still infers and validates the concrete type, but emission keeps `auto`
+		/// wherever C++ deduces the same type.
+		/// </summary>
+		public bool IsAutoDeclared { get; set; }
+
+		public override void VisitChildExprs( Action<Expr> visit )
+		{
+			if( init != null )
+				visit( init );
+		}
 
 		public override SourceLines Gen( int level )
 		{
@@ -78,7 +102,17 @@ namespace Myll.Core
 						? ""
 						: VarEmptyInitFormat;
 
-			string typeAndName = type.Gen( name );
+			// C++ `auto` would deduce a raw pointer for `new` while Myll's type is a
+			// smart pointer, so those keep the materialized concrete type. Everything
+			// else resolves the same way C++ would deduce it.
+			// The concrete emission stays available: a future [resolve] attribute can
+			// opt back in per declaration.
+			bool emitAuto = IsAutoDeclared && init is not NewExpr;
+
+			string typeAndName = emitAuto
+				? VarAutoDeclFormat + name
+				: type.Gen( name );
+			//string typeAndName = type.Gen( name );
 
 			string ret = Format(
 				VarFormat[0],
@@ -136,6 +170,12 @@ namespace Myll.Core
 		public Expr? expr;
 		public bool  HasValue => expr != null;
 
+		public override void VisitChildExprs( Action<Expr> visit )
+		{
+			if( expr != null )
+				visit( expr );
+		}
+
 		public override SourceLines Gen( int level )
 			=> ((expr != null)
 					? Format( "return {0};", expr.Gen() )
@@ -146,6 +186,12 @@ namespace Myll.Core
 	public class ThrowStmt : Stmt
 	{
 		public Expr? expr;
+
+		public override void VisitChildExprs( Action<Expr> visit )
+		{
+			if( expr != null )
+				visit( expr );
+		}
 
 		public override SourceLines Gen( int level )
 			=> expr != null
@@ -180,6 +226,13 @@ namespace Myll.Core
 		public Stmt              tryBody = null!;
 		public List<CatchClause> catches = new();
 
+		public override void ReplaceChildStmts( Func<Stmt, Stmt> replace )
+		{
+			tryBody = replace( tryBody );
+			foreach( CatchClause cc in catches )
+				cc.body = replace( cc.body );
+		}
+
 		public override SourceLines Gen( int level )
 		{
 			SourceLines ret    = new();
@@ -209,6 +262,12 @@ namespace Myll.Core
 	{
 		public List<Expr> exprs = new();
 
+		public override void VisitChildExprs( Action<Expr> visit )
+		{
+			foreach( Expr e in exprs )
+				visit( e );
+		}
+
 		public override SourceLines Gen( int level )
 			=> (exprs
 				.Select( e => e.Gen() )
@@ -221,6 +280,12 @@ namespace Myll.Core
 		public Expr    leftExpr = null!;
 		public Expr    rightExpr = null!;
 
+		public override void VisitChildExprs( Action<Expr> visit )
+		{
+			visit( leftExpr );
+			visit( rightExpr );
+		}
+
 		public override SourceLines Gen( int level )
 			=> Format(
 				op.GetAssignFormat(),
@@ -231,6 +296,9 @@ namespace Myll.Core
 	public class ExprStmt : Stmt
 	{
 		public Expr expr = null!;
+
+		public override void VisitChildExprs( Action<Expr> visit )
+			=> visit( expr );
 
 		public override SourceLines Gen( int level )
 			=> Format( "{0};", expr.Gen() ).IndentAll( level, srcPos );
@@ -277,6 +345,19 @@ namespace Myll.Core
 		public List<CondThen> ifThens = new();
 		public Stmt?          els;
 
+		public override void ReplaceChildStmts( Func<Stmt, Stmt> replace )
+		{
+			foreach( CondThen ct in ifThens )
+				ct.then = replace( ct.then );
+			els = els != null ? replace( els ) : null;
+		}
+
+		public override void VisitChildExprs( Action<Expr> visit )
+		{
+			foreach( CondThen ct in ifThens )
+				visit( ct.cond );
+		}
+
 		public override SourceLines Gen( int level )
 		{
 			SourceLines ret     = new();
@@ -317,6 +398,21 @@ namespace Myll.Core
 		public List<CaseBlock> cases = new();
 		public MultiStmt?      els; // isScope = true
 
+		public override void ReplaceChildStmts( Func<Stmt, Stmt> replace )
+		{
+			foreach( CaseBlock cb in cases )
+				cb.then = (MultiStmt)replace( cb.then );
+			els = els != null ? (MultiStmt)replace( els ) : null;
+		}
+
+		public override void VisitChildExprs( Action<Expr> visit )
+		{
+			visit( cond );
+			foreach( CaseBlock cb in cases )
+				foreach( Expr e in cb.compare )
+					visit( e );
+		}
+
 		public override SourceLines Gen( int level )
 		{
 			SourceLines ret      = new();
@@ -343,6 +439,9 @@ namespace Myll.Core
 	{
 		public Stmt body = null!;
 
+		public override void ReplaceChildStmts( Func<Stmt, Stmt> replace )
+			=> body = replace( body );
+
 		public override SourceLines Gen( int level )
 		{
 			SourceLines ret    = new();
@@ -362,6 +461,21 @@ namespace Myll.Core
 		public Expr? cond;
 		public Expr? iter;
 		public Stmt? els; // TODO: not implemented yet
+
+		public override void ReplaceChildStmts( Func<Stmt, Stmt> replace )
+		{
+			init = replace( init );
+			body = body != null ? replace( body ) : null;
+			els  = els  != null ? replace( els )  : null;
+		}
+
+		public override void VisitChildExprs( Action<Expr> visit )
+		{
+			if( cond != null )
+				visit( cond );
+			if( iter != null )
+				visit( iter );
+		}
 
 		public override SourceLines Gen( int level )
 		{
@@ -398,11 +512,23 @@ namespace Myll.Core
 		public Stmt?   body;
 		public Stmt?   els;
 
+		public override void ReplaceChildStmts( Func<Stmt, Stmt> replace )
+		{
+			varDecl = (VarStmt)replace( varDecl );
+			body = body != null ? replace( body ) : null;
+			els  = els  != null ? replace( els )  : null;
+		}
+
+		public override void VisitChildExprs( Action<Expr> visit )
+			=> visit( range );
+
 		public override SourceLines Gen( int level )
 		{
 			SourceLines ret    = new();
 			string  indent = IndentString.Repeat( level );
-			string  decl   = varDecl.type.Gen( varDecl.name );
+			string  decl   = varDecl.IsAutoDeclared
+				? VarAutoDeclFormat + varDecl.name
+				: varDecl.type.Gen( varDecl.name );
 			ret.Add( Format( RangeForFormat[0], indent, decl, range.Gen() ) );
 			ret.AddRange( body?.GenWithoutCurly( level + 1 ) ?? new SourceLines() );
 			ret.Add( Format( CurlyClose, indent ) );
@@ -416,6 +542,15 @@ namespace Myll.Core
 		public Stmt  body = null!;
 		public Expr  cond = null!;
 		public Stmt? els;
+
+		public override void ReplaceChildStmts( Func<Stmt, Stmt> replace )
+		{
+			body = replace( body );
+			els  = els != null ? replace( els ) : null;
+		}
+
+		public override void VisitChildExprs( Action<Expr> visit )
+			=> visit( cond );
 
 		public override SourceLines Gen( int level )
 		{
@@ -432,6 +567,12 @@ namespace Myll.Core
 	{
 		public Stmt body = null!;
 		public Expr cond = null!;
+
+		public override void ReplaceChildStmts( Func<Stmt, Stmt> replace )
+			=> body = replace( body );
+
+		public override void VisitChildExprs( Action<Expr> visit )
+			=> visit( cond );
 
 		public override SourceLines Gen( int level )
 		{
@@ -450,6 +591,12 @@ namespace Myll.Core
 		public Expr    count = null!;
 		public string? name;
 		public long    offset = 0;
+
+		public override void ReplaceChildStmts( Func<Stmt, Stmt> replace )
+			=> body = replace( body );
+
+		public override void VisitChildExprs( Action<Expr> visit )
+			=> visit( count );
 
 		public override SourceLines Gen( int level )
 		{

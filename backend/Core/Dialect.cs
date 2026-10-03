@@ -98,6 +98,20 @@ namespace Myll.Core
 		public string DefaultAttributesProcedure { get; init; } = "mutable"; // proc
 		public string DefaultAttributesMethod    { get; init; } = "";        // method
 
+		// Default capture specifier emitted for lambdas of each kind, when no explicit
+		// capture list is given (explicit lists are rejected for now). Emitted verbatim.
+		public string DefaultCaptureFunction  { get; init; } = "[]";    // func
+		public string DefaultCaptureProcedure { get; init; } = "[&]";   // proc
+		public string DefaultCaptureMethod    { get; init; } = "[this]"; // method
+
+		public string CaptureDefault( Func.Kind kind )
+			=> kind switch {
+				Func.Kind.Function  => DefaultCaptureFunction,
+				Func.Kind.Procedure => DefaultCaptureProcedure,
+				Func.Kind.Method    => DefaultCaptureMethod,
+				_                   => "[&]",
+			};
+
 		// Default attributes applied to convert declarations. `convert -> T` operators
 		// default to const (via "pure"); the user/dialect must supply "implicit" or
 		// "explicit". `convert <- T` constructors likewise, but start with no defaults.
