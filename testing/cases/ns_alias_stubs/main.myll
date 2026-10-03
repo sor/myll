@@ -1,0 +1,16 @@
+module ns_alias_stubs;
+
+namespace Outer {
+	namespace Inner {
+		func ping() -> int {
+			return 7;
+		}
+	}
+}
+
+alias Inner = Outer::Inner;
+
+func main() -> int
+{
+	return Inner::ping() - 7;
+}

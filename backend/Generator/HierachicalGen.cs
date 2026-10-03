@@ -129,7 +129,6 @@ namespace Myll.Generator
 		private readonly IReadOnlyDictionary<string, IReadOnlyList<RawImport>>? moduleRawImports;
 		private readonly IReadOnlySet<string>?                                  prototypeModules;
 
-		private readonly HashSet<string> definedNamespaces         = new();
 		private readonly HashSet<string> namespaceUsingNames       = new();
 		private readonly HashSet<string> namespaceAliasTargetNames = new();
 
@@ -332,6 +331,16 @@ namespace Myll.Generator
 			return decl;
 		}
 
+		private static void CollectNamespaceNames( Hierarchical hier, ISet<string> names )
+		{
+			foreach( Decl child in hier.children ) {
+				if( child is Namespace ns ) {
+					names.Add( ns.FullyQualifiedName );
+					CollectNamespaceNames( ns, names );
+				}
+			}
+		}
+
 		// TODO: convert to ISourceLines if too slow
 		private SourceLines GenDecl()
 		{
@@ -339,6 +348,12 @@ namespace Myll.Generator
 			string accessIndent = DeIndentDecl;
 
 			SourceLines ret = new();
+
+			// The fully qualified names of all namespaces this gen's scope defines,
+			// collected from the AST: nested namespaces register on nested gens, so
+			// an accumulated set would be split across instances.
+			HashSet<string> definedNamespaces = new();
+			CollectNamespaceNames( hierarchical, definedNamespaces );
 
 			foreach( string ns in namespaceAliasTargetNames
 				.Where( n => definedNamespaces.Contains( n ) )
@@ -471,7 +486,7 @@ namespace Myll.Generator
 					return;
 				}
 
-				namespaceUsingNames.Add( obj.name );
+				namespaceUsingNames.Add( obj.type.Gen() );
 			}
 
 			protoEarly.Target( obj.access ).Add( ret );
@@ -1033,9 +1048,6 @@ namespace Myll.Generator
 				targetProto.Add( tpl );
 				targetDecl.Add( tpl );
 			}
-
-			if( isNamespace )
-				definedNamespaces.Add( nameDecl );
 
 			string keyword, bases;
 			if( isNamespace ) {
