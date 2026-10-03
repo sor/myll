@@ -1,6 +1,7 @@
 # Bug: generated C++ is invalid for several declaration combinations
 
-Status: **open**. Found in the 2026-09-29 review. One repro verified with clang++.
+Status: **fixed 2026-10-03**. Regression cases: `testing/cases/extern_member_fail/`,
+`testing/cases/static_template_member/`, `testing/cases/ns_alias_stubs/`.
 
 ## Finding 1 (verified): `[extern]` member function inside a non-extern class
 
@@ -27,9 +28,9 @@ The `extern ` prefix is built unconditionally
 function inside the class body, where `extern` is invalid C++. On the same path a provided body is
 silently discarded (guarded by `if( !isExternal )` at `:794`).
 
-Fix: reject `[extern]` on in-struct members with a diagnostic (the `AddVar` path already has this
-guard at `HierachicalGen.cs:527` — mirror it for functions), or omit the `extern` keyword for
-in-class declarations and keep it for the out-of-class definition. Pick one and document.
+Fix (done 2026-10-03): reject `[extern]` on in-struct member functions with the same diagnostic
+the `AddVar` path uses (`[extern] is only valid at module/namespace scope.`). External member
+declarations belong in prototype modules or extern classes.
 
 ## Finding 2 (code-verified): static data member of a class template
 
@@ -45,22 +46,25 @@ inline variables).
 Static members of a class template should be **`inline` by default** (inline variables), so the
 in-class definition suffices and no out-of-line template header is needed — same as the working
 `[static, inline]` / `[static, ct]` combinations above, just applied automatically when the
-enclosing structural is a template.
+enclosing structural is a template. Implemented 2026-10-03 via `IsTemplateUp` in `AddVar`'s
+`needsInline` ladder.
 
-**Far-future intent:** an attribute to opt into out-of-line generation for a static member (e.g.
-`[outline]`). Only then does the generator need to prepend the enclosing template's `template
+**Intermediate-future intent:** an attribute to opt into out-of-line generation for a static member
+(e.g. `[outline]`). Only then does the generator need to prepend the enclosing template's `template
 <typename T>` header to the out-of-line definition; the current bug disappears with the inline
 default and would return only for that opt-in.
 
 ## Finding 3 (code-verified): nested namespace alias/using stubs are missed
 
-Forward `namespace X {}` stubs for same-file namespace aliases/usings are matched by **plain name**:
-`definedNamespaces` stores `nameDecl` (`HierachicalGen.cs:1007`) while the filters compare qualified
-paths (`:322-326`, `:339-343`, `:442-451`). So `alias X = Outer::Inner;` (or a Contained/Leaky
-`using Outer::Inner;`) emits the alias in `protoEarly` before any `Outer::Inner` stub — a
-use-before-declaration in the header.
+Forward `namespace X {}` stubs for same-file namespace aliases/usings were matched by **plain
+name**: `definedNamespaces` accumulated plain names while the filters compared qualified paths —
+and the accumulated set was split across generator instances besides, because nested namespaces
+register on nested gens. So `alias X = Outer::Inner;` emitted the alias before any `Outer::Inner`
+stub — a use-before-declaration in the header.
 
-Fix: store and match the fully qualified target name.
+Fix (done 2026-10-03): collect the fully qualified names of all namespaces from the AST at
+`GenDecl` time (`CollectNamespaceNames`, scoped per gen), store using targets qualified as well,
+and emit the stub as a qualified `namespace Outer::Inner {}` (valid C++17+).
 
 ## Verification
 
