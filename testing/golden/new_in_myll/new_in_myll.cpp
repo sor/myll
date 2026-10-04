@@ -50,6 +50,13 @@ int check_bint()
     if( (static_cast<std::uint8_t>( ~a )) != static_cast<std::uint8_t>( 0xF0 ) ) {
         return 10;
     }
+    if( (static_cast<std::uint8_t>( ~(a ^ b) )) != static_cast<std::uint8_t>( 0xC3 ) ) {
+        return 13;
+    }
+    std::uint8_t eq = static_cast<std::uint8_t>( ~(a ^ b) );
+    if( eq != static_cast<std::uint8_t>( 0xC3 ) ) {
+        return 14;
+    }
     unsigned int m = static_cast<unsigned int>( 0xFFFFFFFF );
     unsigned int n = static_cast<unsigned int>( 0 );
     if( (m & n) != static_cast<std::uint32_t>( 0 ) ) {

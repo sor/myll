@@ -75,12 +75,11 @@ namespace Myll.Resolver
 			    or Operand.Divide or Operand.FractionalDivide or Operand.Modulo;
 
 		// Bit-flavored arithmetic and bitwise/shift operators, for operand family checks.
-		// `Divide` is tentative (the bint case assumes implication semantics);
-		// `Modulo` is deliberately absent: divide/remainder behavior on bags of
-		// bits is not yet defined.
+		// Bit types are bags of bits with set semantics: `+` union, `-` difference,
+		// `*` intersection, `/` implication/subset (tentative), `%` equivalence.
 		public static bool IsBitOperator( Operand op )
 			=> op is Operand.Add or Operand.Subtract or Operand.Multiply
-			    or Operand.Divide
+			    or Operand.Divide or Operand.Modulo
 			    or Operand.BitAnd or Operand.BitOr or Operand.BitXor
 			    or Operand.LeftShift or Operand.RightShift;
 

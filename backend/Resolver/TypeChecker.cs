@@ -802,8 +802,11 @@ namespace Myll.Resolver
 			}
 		}
 
-		private static bool IsBitOperand( Expr expr )
-			=> OperatorRules.IsScalarBitFamily( expr.Type );
+		// The operand types are not always memoized yet when the switch guard runs
+		// (e.g. var initializers), so resolve through the type resolver rather than
+		// reading expr.Type.
+		private bool IsBitOperand( Expr expr )
+			=> OperatorRules.IsScalarBitFamily( typeResolver.Resolve( expr ) );
 
 		private static bool IsArithmeticUnaryOperator( Operand op )
 			=> op is Operand.PrePlus or Operand.PreMinus

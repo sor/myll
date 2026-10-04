@@ -15,6 +15,9 @@ func check_bint() -> int
 	if( ( a << 1 ) != 0x1E ) return 8;
 	if( ( a >> 1 ) != 0x07 ) return 9;
 	if( ( ~a ) != 0xF0 ) return 10;     // negate all individual bits
+	if( ( a %  b ) != 0xC3 ) return 13; // equivalence, the negation of xor
+	var b8 eq = a % b;                  // also in initializer position
+	if( eq != 0xC3 ) return 14;
 
 	/* TODO: These are undecided what they do, if they return bint or bool
 	var bint r = +i; // maybe the same as `any`

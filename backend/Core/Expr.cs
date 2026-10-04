@@ -322,6 +322,13 @@ namespace Myll.Core
 					case Operand.Divide:
 						leftStr = BitFamilyCast( bitType!, Format( "~{0}", leftStr ) );
 						break;
+
+					case Operand.Modulo: {
+						// Equivalence is the negation of XOR. Like the other negations,
+						// the unary ~ promotes to int, so cast back to preserve the width.
+						string xor = Format( "({0} ^ {1})", leftStr, rightStr );
+						return BitFamilyCast( bitType!, Format( "~{0}", xor ) ).Brace( doBrace );
+					}
 				}
 			}
 
