@@ -243,7 +243,7 @@ namespace Myll.Resolver
 
 		private Typespec? ResolveBinOp( BinOp binOp )
 		{
-			if( IsMemberAccessOperation( binOp.op ) )
+			if( OperatorRules.IsMemberAccess( binOp.op ) )
 				return ResolveMemberAccess( binOp );
 
 			Typespec? leftType  = Resolve( binOp.left );
@@ -259,7 +259,7 @@ namespace Myll.Resolver
 			if( TryResolveBitOperation( binOp.op, leftType, rightType, out Typespec? bitResult ) )
 				return bitResult;
 
-			if( IsArithmeticOperation( binOp.op ) ) {
+			if( OperatorRules.IsArithmetic( binOp.op ) ) {
 				if( leftType == null || rightType == null )
 					return null;
 
@@ -290,16 +290,13 @@ namespace Myll.Resolver
 				return FoldUntypedIntegerResult( binOp.op, left, right, CommonArithmeticType( left, right ) );
 			}
 
-			if( IsComparisonOperation( binOp.op ) || IsLogicalOperation( binOp.op ) )
+			if( OperatorRules.IsComparison( binOp.op ) || OperatorRules.IsLogical( binOp.op ) )
 				return new TypespecBasic { kind = TypespecBasic.Kind.Bool, size = 1 };
 
-			if( IsAssignmentOperation( binOp.op ) )
-				return leftType;
-
-			if( IsBitwiseOperation( binOp.op ) )
+			if( OperatorRules.IsBitwise( binOp.op ) )
 				return FoldUntypedIntegerResult( binOp.op, leftType, rightType, CommonIntegerType( leftType, rightType ) );
 
-			if( IsShiftOperation( binOp.op ) )
+			if( OperatorRules.IsShift( binOp.op ) )
 				return FoldUntypedIntegerResult( binOp.op, leftType, rightType, PromoteInteger( leftType ) );
 
 			return null;
@@ -789,7 +786,7 @@ namespace Myll.Resolver
 		{
 			result = null;
 
-			if( !IsBitOperator( op ) )
+			if( !OperatorRules.IsBitOperator( op ) )
 				return false;
 
 			bool leftTyped  = IsTypedBitFamily( leftType );
@@ -798,10 +795,10 @@ namespace Myll.Resolver
 			if( !leftTyped && !rightTyped )
 				return false;
 
-			if( !SameBitFamily( leftType, rightType ) )
+			if( !OperatorRules.SameBitFamily( leftType, rightType ) )
 				return false;
 
-			if( IsShiftOperation( op ) ) {
+			if( OperatorRules.IsShift( op ) ) {
 				if( !leftTyped )
 					return false;
 
@@ -837,21 +834,6 @@ namespace Myll.Resolver
 		private static bool IsTypedBitFamily( Typespec? type )
 			=> OperatorRules.IsScalarBitFamily( type );
 
-		private static bool SameBitFamily( Typespec? left, Typespec? right )
-		{
-			bool leftBit  = OperatorRules.IsScalarBit( left );
-			bool rightBit = OperatorRules.IsScalarBit( right );
-			bool leftByte = OperatorRules.IsScalarByte( left );
-			bool rightByte = OperatorRules.IsScalarByte( right );
-
-			// A typed bit/byte operand may not mix with the other family.
-			if( ( leftBit && rightByte ) || ( leftByte && rightBit ) )
-				return false;
-
-			// If one side is untyped, it can bind to either family.
-			return leftBit || rightBit || leftByte || rightByte;
-		}
-
 		private static TypespecBasic? AsBitFamilyType( Typespec? type )
 		{
 			if( type is TypespecBasic basic
@@ -861,41 +843,5 @@ namespace Myll.Resolver
 
 			return null;
 		}
-
-		private static bool IsBitOperator( Operand op )
-			=> op is Operand.Add or Operand.Subtract or Operand.Multiply
-			|| op is Operand.Divide
-			|| op is Operand.BitAnd or Operand.BitOr or Operand.BitXor
-			|| op is Operand.LeftShift or Operand.RightShift;
-
-		private static bool IsMemberAccessOperation( Operand op )
-			=> op is Operand.MemberAccess
-			|| op is Operand.NCMemberAccess
-			|| op is Operand.MemberPtrAccess
-			|| op is Operand.MemberAccessPtr
-			|| op is Operand.NCMemberAccessPtr
-			|| op is Operand.MemberPtrAccessPtr;
-
-		private static bool IsArithmeticOperation( Operand op )
-			=> op is Operand.Add or Operand.Subtract or Operand.Multiply
-			|| op is Operand.Divide or Operand.FractionalDivide or Operand.Modulo;
-
-		private static bool IsComparisonOperation( Operand op )
-			=> op is Operand.Equal or Operand.NotEqual or Operand.LessThan
-			 || op is Operand.LessEqual or Operand.GreaterThan or Operand.GreaterEqual
-			 || op is Operand.Comparison;
-
-		private static bool IsLogicalOperation( Operand op )
-			=> op is Operand.And or Operand.Or;
-
-		private static bool IsAssignmentOperation( Operand op )
-			=> op is Operand.Equal;
-
-		private static bool IsBitwiseOperation( Operand op )
-			=> op is Operand.BitAnd or Operand.BitOr or Operand.BitXor;
-
-		private static bool IsShiftOperation( Operand op )
-			=> op is Operand.LeftShift or Operand.RightShift;
-
 	}
 }

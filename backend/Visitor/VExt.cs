@@ -161,7 +161,7 @@ namespace Myll
 				{ Parser.NEQ,		Operand.NotEqual },
 				{ Parser.DBL_AMP,	Operand.And },
 				{ Parser.DBL_PIPE,	Operand.Or },
-				{ Parser.ASSIGN,	Operand.Equal },
+				{ Parser.ASSIGN,	Operand.Assign },
 				{ Parser.AS_POW,	Operand.Pow },
 				{ Parser.AS_MUL,	Operand.Multiply },
 				{ Parser.AS_SLASH,	Operand.Divide },

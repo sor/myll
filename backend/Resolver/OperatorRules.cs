@@ -60,5 +60,58 @@ namespace Myll.Resolver
 		public static bool IsPointerToArray( Typespec? t )
 			=> t?.ptrs is { Count: > 0 } p
 			 && p[^1].kind == Pointer.Kind.PtrToAry;
+
+		/// <summary>
+		/// Operator classification for the built-in operator sets, one canonical
+		/// place so the resolver and the type checker cannot drift apart.
+		/// </summary>
+		public static bool IsMemberAccess( Operand op )
+			=> op is Operand.MemberAccess or Operand.NCMemberAccess
+			    or Operand.MemberPtrAccess or Operand.MemberAccessPtr
+			    or Operand.NCMemberAccessPtr or Operand.MemberPtrAccessPtr;
+
+		public static bool IsArithmetic( Operand op )
+			=> op is Operand.Add or Operand.Subtract or Operand.Multiply
+			    or Operand.Divide or Operand.FractionalDivide or Operand.Modulo;
+
+		// Bit-flavored arithmetic and bitwise/shift operators, for operand family checks.
+		// `Divide` is tentative (the bint case assumes implication semantics);
+		// `Modulo` is deliberately absent: divide/remainder behavior on bags of
+		// bits is not yet defined.
+		public static bool IsBitOperator( Operand op )
+			=> op is Operand.Add or Operand.Subtract or Operand.Multiply
+			    or Operand.Divide
+			    or Operand.BitAnd or Operand.BitOr or Operand.BitXor
+			    or Operand.LeftShift or Operand.RightShift;
+
+		public static bool IsBitwise( Operand op )
+			=> op is Operand.BitAnd or Operand.BitOr or Operand.BitXor;
+
+		public static bool IsShift( Operand op )
+			=> op is Operand.LeftShift or Operand.RightShift;
+
+		public static bool IsComparison( Operand op )
+			=> op is Operand.Equal or Operand.NotEqual or Operand.LessThan
+			    or Operand.LessEqual or Operand.GreaterThan or Operand.GreaterEqual
+			    or Operand.Comparison;
+
+		public static bool IsLogical( Operand op )
+			=> op is Operand.And or Operand.Or;
+
+		/// <summary>
+		/// A typed bit/byte operand may not mix families; untyped operands bind to either.
+		/// </summary>
+		public static bool SameBitFamily( Typespec? left, Typespec? right )
+		{
+			bool leftBit  = IsScalarBit( left );
+			bool rightBit = IsScalarBit( right );
+			bool leftByte = IsScalarByte( left );
+			bool rightByte = IsScalarByte( right );
+
+			if( ( leftBit && rightByte ) || ( leftByte && rightBit ) )
+				return false;
+
+			return leftBit || rightBit || leftByte || rightByte;
+		}
 	}
 }

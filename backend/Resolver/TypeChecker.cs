@@ -237,12 +237,6 @@ namespace Myll.Resolver
 
 				case ExprStmt exprStmt: {
 					ValidateExpression( exprStmt.expr );
-
-					if( exprStmt.expr is BinOp { op: Operand.Equal } assign ) {
-						CheckAssignment( assign.left, assign.right, assign.right.srcPos );
-						assign.right = BindToBitType( assign.right, typeResolver.Resolve( assign.left ) );
-					}
-
 					break;
 				}
 
@@ -722,28 +716,28 @@ namespace Myll.Resolver
 					break;
 				}
 
-				case BinOp binOp when IsBitOperator( binOp.op )
+				case BinOp binOp when OperatorRules.IsBitOperator( binOp.op )
 				               && ( IsBitOperand( binOp.left ) || IsBitOperand( binOp.right ) ): {
 					ValidateBitOperator( binOp );
 					break;
 				}
 
-				case BinOp binOp when IsArithmeticOperator( binOp.op ): {
+				case BinOp binOp when OperatorRules.IsArithmetic( binOp.op ): {
 					ValidateArithmeticOperator( binOp );
 					break;
 				}
 
-				case BinOp binOp when IsBitwiseOperator( binOp.op ): {
+				case BinOp binOp when OperatorRules.IsBitwise( binOp.op ): {
 					ValidateBitwiseOperator( binOp );
 					break;
 				}
 
-				case BinOp binOp when IsShiftOperator( binOp.op ): {
+				case BinOp binOp when OperatorRules.IsShift( binOp.op ): {
 					ValidateShiftOperator( binOp );
 					break;
 				}
 
-				case BinOp binOp when IsComparisonOperator( binOp.op ): {
+				case BinOp binOp when OperatorRules.IsComparison( binOp.op ): {
 					ValidateComparisonOperator( binOp );
 					break;
 				}
@@ -808,29 +802,8 @@ namespace Myll.Resolver
 			}
 		}
 
-		private static bool IsArithmeticOperator( Operand op )
-			=> op is Operand.Add or Operand.Subtract or Operand.Multiply
-			 || op is Operand.FractionalDivide or Operand.Divide or Operand.Modulo;
-
-		private static bool IsBitOperator( Operand op )
-			=> op is Operand.Add or Operand.Subtract or Operand.Multiply
-			 || op is Operand.Divide
-			 || op is Operand.BitAnd or Operand.BitOr or Operand.BitXor
-			 || op is Operand.LeftShift or Operand.RightShift;
-
 		private static bool IsBitOperand( Expr expr )
 			=> OperatorRules.IsScalarBitFamily( expr.Type );
-
-		private static bool IsBitwiseOperator( Operand op )
-			=> op is Operand.BitAnd or Operand.BitOr or Operand.BitXor;
-
-		private static bool IsShiftOperator( Operand op )
-			=> op is Operand.LeftShift or Operand.RightShift;
-
-		private static bool IsComparisonOperator( Operand op )
-			=> op is Operand.Equal or Operand.NotEqual or Operand.LessThan
-			 || op is Operand.LessEqual or Operand.GreaterThan or Operand.GreaterEqual
-			 || op is Operand.Comparison;
 
 		private static bool IsArithmeticUnaryOperator( Operand op )
 			=> op is Operand.PrePlus or Operand.PreMinus
@@ -919,14 +892,14 @@ namespace Myll.Resolver
 				return;
 			}
 
-			if( !SameBitFamily( leftType, rightType ) ) {
+			if( !OperatorRules.SameBitFamily( leftType, rightType ) ) {
 				AddError( binOp, String.Format(
 					"Bit operator '{0}' cannot mix bit and byte operands, found '{1}' and '{2}'",
 					OperatorName( binOp.op ), FormatType( leftType ), FormatType( rightType ) ) );
 				return;
 			}
 
-			if( IsShiftOperator( binOp.op ) )
+			if( OperatorRules.IsShift( binOp.op ) )
 				return;
 
 			TypespecBasic? leftConcrete  = AsConcreteBitFamilyType( leftType ) ?? AsConcreteBitFamilyType( rightType );
@@ -941,19 +914,6 @@ namespace Myll.Resolver
 		private static bool IsBitFamilyType( Typespec? type )
 			=> type is TypespecBasic { kind: TypespecBasic.Kind.Bitwise or TypespecBasic.Kind.Byte }
 			 && ( type.ptrs == null || type.ptrs.Count == 0 );
-
-		private static bool SameBitFamily( Typespec? left, Typespec? right )
-		{
-			bool leftBit  = left  is TypespecBasic { kind: TypespecBasic.Kind.Bitwise };
-			bool rightBit = right is TypespecBasic { kind: TypespecBasic.Kind.Bitwise };
-			bool leftByte = left  is TypespecBasic { kind: TypespecBasic.Kind.Byte };
-			bool rightByte = right is TypespecBasic { kind: TypespecBasic.Kind.Byte };
-
-			if( ( leftBit && rightByte ) || ( leftByte && rightBit ) )
-				return false;
-
-			return leftBit || rightBit || leftByte || rightByte;
-		}
 
 		private static bool IsUntypedBitOperand( Typespec? candidate, Typespec? other )
 			=> candidate is TypespecBasic { kind: TypespecBasic.Kind.UntypedInteger }

@@ -997,7 +997,7 @@ namespace Myll.Resolver
 					ApplyScopedOverloadOutcome( outcome, scoped, call.Callee );
 					return false;
 				}
-				case BinOp binOp when IsMemberAccessOperation( binOp.op ): {
+				case BinOp binOp when OperatorRules.IsMemberAccess( binOp.op ): {
 					if( binOp.right is not IdExpr member )
 						return false;
 
@@ -1126,14 +1126,6 @@ namespace Myll.Resolver
 			List<Decl> single = LookupNameCandidates( segments[0].id, scope, module );
 			return TryResolveOverload( single, call, scope, module, callee );
 		}
-
-		private static bool IsMemberAccessOperation( Operand op )
-			=> op is Operand.MemberAccess
-			|| op is Operand.NCMemberAccess
-			|| op is Operand.MemberPtrAccess
-			|| op is Operand.MemberAccessPtr
-			|| op is Operand.NCMemberAccessPtr
-			|| op is Operand.MemberPtrAccessPtr;
 
 		private static bool IsArrowMemberAccess( Operand op )
 			=> op is Operand.MemberAccessPtr
@@ -2017,7 +2009,7 @@ namespace Myll.Resolver
 					}
 				}
 			}
-			else if( expr is BinOp binop && IsMemberAccessOperation( binop.op )
+			else if( expr is BinOp binop && OperatorRules.IsMemberAccess( binop.op )
 			     && binop.right is IdExpr member
 			     && result.Members.TryGetValue( member, out Decl? memberDecl ) ) {
 				switch( memberDecl ) {
@@ -2300,21 +2292,13 @@ namespace Myll.Resolver
 		private List<TplArg>? TryExtractOwnerTemplateArgs( Expr callee, List<Structural> ownerChain )
 		{
 			return callee switch {
-				BinOp binOp when IsMemberAccessOperator( binOp.op )
+				BinOp binOp when OperatorRules.IsMemberAccess( binOp.op )
 					=> TryExtractOwnerArgsFromReceiver( binOp.left, ownerChain ),
 				ScopedExpr scoped
 					=> TryExtractOwnerArgsFromScopedPrefix( scoped, ownerChain ),
 				_ => null,
 			};
 		}
-
-		private static bool IsMemberAccessOperator( Operand op )
-			=> op is Operand.MemberAccess
-			    or Operand.NCMemberAccess
-			    or Operand.MemberPtrAccess
-			    or Operand.MemberAccessPtr
-			    or Operand.NCMemberAccessPtr
-			    or Operand.MemberPtrAccessPtr;
 
 		private List<TplArg>? TryExtractOwnerArgsFromReceiver(
 			Expr             receiverExpr,
