@@ -3,8 +3,9 @@ module source_map;
 namespace NSOne {
 	struct One {
 		var int value = 10;
+		var int doubled = 20;
 
-		ctor() {}
+		ctor() { doubled = value * 2; }
 		ctor( int v ) { value = v; }
 		dtor() {}
 

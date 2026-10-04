@@ -9,8 +9,6 @@
 #include <type_traits>
 #include <utility>
 #line 3 "../../cases/source_map/one.myll"
-#line 3 "../../cases/source_map/two.myll"
-#line 3 "../../cases/source_map/one.myll"
 namespace NSOne
 {
 #line 4
@@ -18,25 +16,24 @@ namespace NSOne
 #line 4
     struct One
     {
-        int value = 10;
 #line 5
-#line 7
-        One();
+        int value = 10;
+        int doubled = 20;
 #line 8
+        One();
         explicit One(int v);
-#line 9
         ~One();
-#line 11
+#line 12
         int half() const;
     };
-#line 14
+#line 15
     template <typename T>
     inline T tplFunc(T x);
-#line 14
+#line 15
     template <typename T>
     inline T tplFunc(T x)
     {
-#line 15
+#line 16
         return x;
     }
 }
@@ -45,48 +42,48 @@ namespace NSTwo
 {
 #line 4
     class Two;
-#line 14
+#line 16
     template <typename T>
     class Wrapper;
 #line 4
     class Two
     {
-        int value = 20;
 #line 5
+        int value = 20;
 #line 7
-        Two();
-#line 8
-        explicit Two(int v);
+        int tripled = 60;
 #line 9
+        Two();
+        explicit Two(int v);
         ~Two();
-#line 11
+#line 13
         int twice() const;
     };
-#line 14
+#line 16
     template <typename T>
     class Wrapper
     {
-        T value{};
-#line 15
 #line 17
+        T value{};
+#line 19
         explicit Wrapper(T v)
         {
-#line 17
+#line 19
             value = v;
         }
-#line 18
+#line 20
         ~Wrapper()
         {
         }
-#line 20
+#line 22
         inline T unwrap() const
         {
-#line 20
+#line 22
             return value;
         }
     };
 }
-#line 19 "../../cases/source_map/one.myll"
+#line 20 "../../cases/source_map/one.myll"
 int oneValue();
-#line 24 "../../cases/source_map/two.myll"
+#line 26 "../../cases/source_map/two.myll"
 int twoValue();
