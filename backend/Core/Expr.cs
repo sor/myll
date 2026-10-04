@@ -15,19 +15,21 @@ namespace Myll.Core
 	{
 		// Precedence Table in MYLL, will be filled with everything from Operand
 		// The original C++ levels are times 10 here to enable insertion of new in-between levels
+		// Anchors are the first member of each precedence level; every other member
+		// auto-fills from the last anchor seen, in enum declaration order.
 		public static readonly IDictionary<Operand, int>
 			PrecedenceLevel = new Dictionary<Operand, int> {
 				{ Operand.Scoped, 10 },
-				{ Operand.PostOps_Begin, 20 },
-				{ Operand.PreOps_Begin, 30 },
-				{ Operand.MemberAccessPtr_Begin, 40 },
+				{ Operand.PostIncr, 20 },
+				{ Operand.PreIncr, 30 },
+				{ Operand.MemberAccessPtr, 40 },
 				{ Operand.Pow, 45 }, // new mid level
-				{ Operand.MultOps_Begin, 50 },
-				{ Operand.AddOps_Begin, 60 },
-				{ Operand.ShiftOps_Begin, 70 },
+				{ Operand.Multiply, 50 },
+				{ Operand.Add, 60 },
+				{ Operand.LeftShift, 70 },
 				{ Operand.Comparison, 80 },
-				{ Operand.OrderOps_Begin, 90 },
-				{ Operand.EqualOps_Begin, 100 },
+				{ Operand.LessThan, 90 },
+				{ Operand.Equal, 100 },
 				{ Operand.And, 140 },
 				{ Operand.Or, 150 },
 				{ Operand.NullCoalesce, 155 }, // new mid level
@@ -59,9 +61,10 @@ namespace Myll.Core
 
 	public enum Operand
 	{
+		// The enum is ordered by precedence level, one blank line per level.
+
 		Scoped,
 
-		PostOps_Begin,
 		PostIncr,
 		PostDecr,
 		FuncCall,
@@ -71,9 +74,7 @@ namespace Myll.Core
 		MemberAccess,
 		NCMemberAccess, // new, special null coalescing = NC
 		MemberPtrAccess,
-		PostOps_End,
 
-		PreOps_Begin,
 		PreIncr,
 		PreDecr,
 		PrePlus,
@@ -83,7 +84,6 @@ namespace Myll.Core
 		Dereference,
 		AddressOf,
 
-		Cast_Begin,
 		CopyCast,
 		MoveCast,
 		ForwardCast,
@@ -95,23 +95,18 @@ namespace Myll.Core
 		BitCast,
 		ReinterpretCast,
 	//	AnyCast, // const_cast & reinterpret_cast
-		Cast_End,
 
 		SizeOf,
 		New,
 		Delete,
 		DeleteAry,
-		PreOps_End,
 
-		MemberAccessPtr_Begin,
 		MemberAccessPtr,
 		NCMemberAccessPtr, // new, special
 		MemberPtrAccessPtr,
-		MemberAccessPtr_End,
 
 		Pow,
 
-		MultOps_Begin,
 		Multiply,
 		Divide, // normal / division
 		Modulo,
@@ -119,51 +114,40 @@ namespace Myll.Core
 		Dot,    // new, special
 		Cross,  // new, special
 		FractionalDivide, // new, special
-		MultOps_End,
 
-		AddOps_Begin,
 		Add,
 		Subtract,
 		BitOr,  // moved, special
 		BitXor, // moved, special
-		AddOps_End,
 
-		ShiftOps_Begin,
 		LeftShift,
 		RightShift,
-		ShiftOps_End,
 
 		Comparison, // special, spaceship
 
-		OrderOps_Begin,	// TODO: Relational Ops
 		LessThan,
 		LessEqual,
 		GreaterThan,
 		GreaterEqual,
-		OrderOps_End,
 
-		EqualOps_Begin,
 		Equal,
 		NotEqual,
-		EqualOps_End,
 
-		BooleanOps_Begin,
 		And,
 		Or,
-		BooleanOps_End,
 
 		NullCoalesce, // new, special general null coalescing
 
 		Conditional, // a ? b : c
 
+		Assign,
+
 		Parens,
 
-		Ids_Begin,
 		Id,
 		SpecialId,
 		WildId,    // special
 		DiscardId, // special
-		Ids_End,
 
 		Literal,
 	}
@@ -223,8 +207,6 @@ namespace Myll.Core
 			if( op == Operand.Parens )
 				return expr.Gen().Brace( true );
 
-			bool isPreOp       = op.Between( Operand.PreOps_Begin,  Operand.PreOps_End );
-			bool isPostOp      = op.Between( Operand.PostOps_Begin, Operand.PostOps_End );
 			bool divPrecedence = IsDivergentPrecedence;
 			bool doBraceExpr = (divPrecedence || expr.IsDivergentPrecedence)
 			                && OriginalPrecedenceLevel < expr.OriginalPrecedenceLevel;
