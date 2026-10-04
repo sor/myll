@@ -195,21 +195,23 @@ namespace Myll.Generator
 			return true;
 		}
 
-		private void PrependDeclSourceMap( SourceLines target, Decl decl )
+		/// <summary>
+		/// Stamps the declaration's source position onto the line at <paramref name="index"/>
+		/// (the declaration's first emitted line). <see cref="SourceMapGenerator.Apply"/> turns
+		/// the stamp into a <c>#line</c> directive placed before the line, sharing one counter
+		/// with the automatic statement mapping. Shared buckets accumulate multiple
+		/// declarations, so callers capture the index before adding their lines.
+		/// </summary>
+		private void MarkDeclSourceMap( SourceLines target, Decl decl, int index )
 		{
 			if( context?.SourceMap.Decl != true )
 				return;
 
 			SrcPos? pos = decl.srcPos;
-			if( pos == null )
+			if( pos == null || index < 0 || index >= target.Count )
 				return;
 
-			string basePath = !IsNullOrEmpty( context.OutputBasePath )
-				? context.OutputBasePath
-				: Directory.GetCurrentDirectory();
-			string mappedFile = Path.GetRelativePath( basePath, pos.file ).Replace( '\\', '/' );
-
-			target.Add( Format( "#line {0} \"{1}\"", pos.from.line, mappedFile ) );
+			target[index] = target[index].WithSrcPos( pos );
 		}
 
 		private int LevelDecl { get; }
@@ -462,7 +464,7 @@ namespace Myll.Generator
 					name,
 					obj.value != null ? EntryFormat[1] + obj.value.Gen() : "" )
 			};
-			PrependDeclSourceMap( ret, obj );
+			MarkDeclSourceMap( ret, obj, 0 );
 			targetDecl.Add( (obj.access, ret) );
 		}
 
@@ -667,7 +669,7 @@ namespace Myll.Generator
 					needsTypename        ? VarFormat[5] : "",
 					obj.type.Gen( obj.name ),
 					initDecl ) );
-				PrependDeclSourceMap( retDecl, obj );
+				MarkDeclSourceMap( retDecl, obj, 0 );
 				targetDecl.Add( (obj.access, retDecl) );
 			}
 
@@ -685,7 +687,7 @@ namespace Myll.Generator
 					needsTypename ? VarFormat[5] : "",
 					obj.type.Gen( obj.FullyQualifiedName ),
 					initImpl ) );
-				PrependDeclSourceMap( retImpl, obj );
+				MarkDeclSourceMap( retImpl, obj, 0 );
 				targetImpl.Add( (obj.access, retImpl) );
 			}
 		}
@@ -809,11 +811,12 @@ namespace Myll.Generator
 				}
 
 				if( emitPrototype ) {
-					PrependDeclSourceMap( targetProto, obj );
+					int mark = targetProto.Count;
 					if( hasTpl )
 						targetProto.Add( tplDecl );
 
 					targetProto.Add( headlineDecl + specialTail + ";" );
+					MarkDeclSourceMap( targetProto, obj, mark );
 				}
 				return;
 			}
@@ -822,19 +825,21 @@ namespace Myll.Generator
 			if( isInlined || isExternal || hasTpl ) {
 				if( !isInsideStruct ) {
 					if( emitPrototype ) {
-						PrependDeclSourceMap( targetProto, obj );
+						int mark = targetProto.Count;
 						if( hasTpl )
 							targetProto.Add( tplDecl );
 						targetProto.Add( headlineDecl + ";" );
+						MarkDeclSourceMap( targetProto, obj, mark );
 					}
 				}
 				else if( isExternal ) {
 					// External members still need a declaration inside the class definition,
 					// and it should get its own source-map directive.
-					PrependDeclSourceMap( targetDecl, obj );
+					int mark = targetDecl.Count;
 					if( hasTpl )
 						targetDecl.Add( tplDecl );
 					targetDecl.Add( headlineDecl + ";" );
+					MarkDeclSourceMap( targetDecl, obj, mark );
 				}
 
 				if( !isExternal ) {
@@ -846,7 +851,7 @@ namespace Myll.Generator
 						return;
 					}
 
-				PrependDeclSourceMap( targetDecl, obj );
+				int mark = targetDecl.Count;
 				if( hasTpl )
 					targetDecl.Add( tplDecl );
 
@@ -858,6 +863,7 @@ namespace Myll.Generator
 
 				targetDecl.Add( headlineDecl );
 				targetDecl.AddRange( bodyToGen.Gen( LevelDecl ) );
+				MarkDeclSourceMap( targetDecl, obj, mark );
 
 				}
 			}
@@ -879,14 +885,15 @@ namespace Myll.Generator
 					implSuffix );
 
 				if( emitPrototype ) {
-					PrependDeclSourceMap( targetProto, obj );
+					int protoMark = targetProto.Count;
 					if( hasTpl )
 						targetProto.Add( tplDecl );
 
 					targetProto.Add( headlineDecl + ";" );
+					MarkDeclSourceMap( targetProto, obj, protoMark );
 				}
 
-				PrependDeclSourceMap( targetImpl, obj );
+				int implMark = targetImpl.Count;
 				if( hasTpl )
 					targetImpl.Add( tplImpl );
 
@@ -898,6 +905,7 @@ namespace Myll.Generator
 
 				targetImpl.Add( headlineImpl );
 				targetImpl.AddRange( bodyToGen.Gen( LevelImpl ) );
+				MarkDeclSourceMap( targetImpl, obj, implMark );
 			}
 		}
 
@@ -958,10 +966,11 @@ namespace Myll.Generator
 				}
 
 				if( isExternal ) {
-					PrependDeclSourceMap( targetDecl, obj );
+					int mark = targetDecl.Count;
 					if( hasTpl )
 						targetDecl.Add( tplDecl );
 					targetDecl.Add( declHeadline + ";" );
+					MarkDeclSourceMap( targetDecl, obj, mark );
 				}
 				else {
 					if( obj.body == null ) {
@@ -972,12 +981,13 @@ namespace Myll.Generator
 						return;
 					}
 
-				PrependDeclSourceMap( targetDecl, obj );
+				int mark = targetDecl.Count;
 				if( hasTpl )
 					targetDecl.Add( tplDecl );
 
 				targetDecl.Add( declHeadline );
 				targetDecl.AddRange( obj.body.Gen( LevelDecl ) );
+				MarkDeclSourceMap( targetDecl, obj, mark );
 				}
 			}
 			else {
@@ -989,18 +999,20 @@ namespace Myll.Generator
 					return;
 				}
 
-				PrependDeclSourceMap( targetProto, obj );
+				int protoMark = targetProto.Count;
 				if( hasTpl )
 					targetProto.Add( tplDecl );
 
 				targetProto.Add( declHeadline + ";" );
+				MarkDeclSourceMap( targetProto, obj, protoMark );
 
-				PrependDeclSourceMap( targetImpl, obj );
+				int implMark = targetImpl.Count;
 				if( hasTpl )
 					targetImpl.Add( tplImpl );
 
 				targetImpl.Add( implHeadline );
 				targetImpl.AddRange( obj.body.Gen( LevelImpl ) );
+				MarkDeclSourceMap( targetImpl, obj, implMark );
 			}
 		}
 
@@ -1033,10 +1045,10 @@ namespace Myll.Generator
 			bool isNamespace = gen.hierarchical is Namespace;
 			bool isEnum      = gen.hierarchical is Enumeration;
 
-			if( !isGlobal ) {
-				PrependDeclSourceMap( targetProto, obj );
-				PrependDeclSourceMap( targetDecl, obj );
-			}
+			// Capture the buckets' first free index before adding anything, so the
+			// stamp covers the template line too when present.
+			int protoMark = targetProto.Count;
+			int declMark  = targetDecl.Count;
 
 			if( gen.hierarchical is ITemplatedDecl hierWithTpl
 			 && hierWithTpl.TplParams.Count >= 1 ) {
@@ -1109,6 +1121,7 @@ namespace Myll.Generator
 							nameDecl,
 							"",
 							(isEnum ? bases : "") + ";" ) );
+					MarkDeclSourceMap( targetProto, obj, protoMark );
 				}
 				targetDecl.Add(
 					Format(
@@ -1119,6 +1132,7 @@ namespace Myll.Generator
 						nameDecl,
 						"",
 						bases ) );
+				MarkDeclSourceMap( targetDecl, obj, declMark );
 				targetDecl.Add( Format( CurlyOpen, indent ) );
 
 				if( gen.hierarchical is Structural objStruct ) {
@@ -1359,8 +1373,7 @@ namespace Myll.Generator
 			SourceLines target = protoEarly.Target( structural.access );
 			string  indent = DeIndentDecl;
 
-			PrependDeclSourceMap( target, structural );
-
+			int mark = target.Count;
 			if( structural.TplParams.Count >= 1 ) {
 				target.Add( Format(
 					"{0}template <{1}>",
@@ -1369,6 +1382,7 @@ namespace Myll.Generator
 			}
 
 			target.Add( Format( "{0}{1} {2};", indent, keyword, structural.name ) );
+			MarkDeclSourceMap( target, structural, mark );
 		}
 
 		public void AddStructor( Structor obj )
@@ -1418,8 +1432,9 @@ namespace Myll.Generator
 				followingDecl );
 
 			if( isInlined ) {
-				PrependDeclSourceMap( targetDecl, obj );
+				int declMark = targetDecl.Count;
 				targetDecl.Add( headlineDecl );
+				MarkDeclSourceMap( targetDecl, obj, declMark );
 				if( !isDefault && !isDisabled ) {
 					if( obj.body == null ) {
 						Diagnostics.Add( new Diagnostic(
@@ -1449,11 +1464,13 @@ namespace Myll.Generator
 					paramString,
 					"" );
 
-				PrependDeclSourceMap( targetDecl, obj );
+				int declMark = targetDecl.Count;
 				targetDecl.Add( headlineDecl + ";" );
+				MarkDeclSourceMap( targetDecl, obj, declMark );
 
-				PrependDeclSourceMap( targetImpl, obj );
+				int implMark = targetImpl.Count;
 				targetImpl.Add( headlineImpl + (obj.IsNoexcept ? " noexcept" : "") );
+				MarkDeclSourceMap( targetImpl, obj, implMark );
 
 				targetImpl.AddRange( obj.body.Gen( LevelImpl ) );
 			}
