@@ -1,31 +1,26 @@
 # Bug: `#line` source-map directives are misplaced and desynchronize
 
-Status: **open**. Found in the 2026-09-29 review. Code-verified; visible in existing goldens.
+Status: **fixed 2026-10-04** (findings 1 and 2, option B — one mechanism). Finding 3
+(lambda bodies) stays deferred. Regression case: `testing/cases/source_map/`
+(goldens regenerated; consecutive and gapped fields added).
 
-## Finding 1: the "prepend" appends
+## Fix (2026-10-04): declaration stamps instead of manual directives
 
-`PrependDeclSourceMap` (`backend/Generator/HierachicalGen.cs:178-193`) appends via `target.Add`
-despite its name. `AddVar` (`:632`, `:650`) and `AddEntry` (`:429`) call it **after** adding the
-declaration line, so the `#line` lands *after* the declaration it describes. Visible in
-`testing/golden/source_map/source_map.hpp`: `#line 5` appears after `int value = 10;`. In
-decl/full source-map mode every variable and enum-entry line maps one source line late, and its
-directive instead applies to the *next* emitted line — two consecutive fields report each other's
-lines.
+Chosen over patching the two bugs separately: declarations now carry their source position
+directly — `MarkDeclSourceMap` (the renamed `PrependDeclSourceMap`) stamps `SrcPos` onto the
+declaration's first emitted line (shared buckets accumulate multiple declarations, so callers
+capture the index before adding their lines). `SourceMapGenerator.Apply` — which already handles
+statement lines this way — turns stamps into directives, so:
 
-Fix: call `PrependDeclSourceMap` before adding the line to the bucket (or make it truly insert at
-index 0 and rename accordingly).
+- Finding 1 is fixed by construction: directives precede their line.
+- Finding 2 is fixed by construction: one counter, no manual directives to parse, no
+  relative-vs-absolute path reconciliation.
+- Redundant directives disappear: consecutive declarations on consecutive source lines map
+  automatically without emitting anything, and namespaces no longer produce stray
+  prototype-bucket directives.
 
-## Finding 2: `SourceMapGenerator.Apply` ignores manually prepended directives
-
-`Apply` (`backend/Generator/SourceMapGenerator.cs:27-49`) tracks state only from lines that carry a
-`SrcPos`. Manually prepended `#line` directives (`SrcPos == null`, from Finding 1's path) are neither
-parsed nor accounted for. When the tracked `expectedLine` happens to equal the next mapped line's
-source line, `Apply` skips its own directive and the statement maps to the wrong line (off by ≥ 1).
-Trigger: a function whose generated block has 4 (`.cpp` non-template) or 5 (`.hpp` template)
-no-`SrcPos` lines after the previous function's last mapped line.
-
-Fix: have `Apply` parse existing `#line` lines (reuse `DirectiveRegex`) and update its state from
-them, so manual and automatic directives share one counter.
+The `#line` density in the goldens drops accordingly; `NormalizeFileDirectives` stays as the
+harmless post-pass.
 
 ## Finding 3: lambda bodies lose per-line positions
 
