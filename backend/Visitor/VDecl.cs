@@ -686,27 +686,12 @@ namespace Myll
 
 			// Determine direction: `convert -> T` is an operator, `convert <- T` is a
 			// converting constructor.
-			string raw            = c.GetText();
-			string afterConvert = raw.StartsWith( "convert" ) ? raw.Substring( "convert".Length ) : raw;
-			bool isOperator     = afterConvert.StartsWith( "->" );
+			bool isOperator = c.RARROW() != null;
 
 			if( isOperator ) {
 				Typespec retType = VisitTypespec( c.typespec() );
-				if( retType is TypespecNested nested )
-					Context.UnresolvedTypes.Add( new UnresolvedType( nested, scopeStack.Peek() ) );
-
-				PushScope();
-				Func ret = new() {
-					srcPos  = c.ToSrcPos(),
-					name    = string.Empty,
-					access  = curAccess,
-					kind    = Func.Kind.Convert,
-					paras   = new(),
-					body    = c.funcBody().Visit( Context ),
-					retType = retType,
-				};
-				ret.funcScope = scopeStack.Peek();
-				PopScope();
+				Func ret = BuildConvertOperator(
+					c.ToSrcPos(), retType, new(), new(), c.funcBody() );
 				AddChild( ret );
 				c.id()?.Visit();
 				return ret;
@@ -714,14 +699,30 @@ namespace Myll
 
 			// Converting constructor: convert <- T
 			Typespec paramType = VisitTypespec( c.typespec() );
+			string paramName = c.id()?.Visit() ?? "other";
+			Structor retCtor = BuildConversionCtor(
+				structuralParent, c.ToSrcPos(), paramType, paramName, c.funcBody() );
+			AddChild( retCtor );
+			return retCtor;
+		}
+
+		/// <summary>
+		/// Shared conversion constructor for every spelling: `convert <- T`,
+		/// `ctor convert <- T`, and `ctor convert T`. The parameter is `T [name]`.
+		/// </summary>
+		private Structor BuildConversionCtor(
+			Structural structuralParent,
+			SrcPos srcPos,
+			Typespec paramType,
+			string paramName,
+			FuncBodyContext funcBody )
+		{
 			if( paramType is TypespecNested nestedParam )
 				Context.UnresolvedTypes.Add( new UnresolvedType( nestedParam, scopeStack.Peek() ) );
 
-			string paramName = c.id()?.Visit() ?? "other";
-
 			PushScope();
-			Structor retCtor = new() {
-				srcPos           = c.ToSrcPos(),
+			Structor ret = new() {
+				srcPos           = srcPos,
 				name             = structuralParent.name,
 				access           = curAccess,
 				kind             = Structor.Kind.Constructor,
@@ -732,12 +733,42 @@ namespace Myll
 						type = paramType,
 					},
 				},
-				body = c.funcBody().Visit( Context ),
+				body = funcBody.Visit( Context ),
 			};
-			AddParamsToScope( retCtor.paras );
+			AddParamsToScope( ret.paras );
 			PopScope();
-			AddChild( retCtor );
-			return retCtor;
+			return ret;
+		}
+
+		/// <summary>
+		/// Shared conversion operator for `convert -> T` and `op convert -> T`. The
+		/// defOp spelling may carry template parameters and requires.
+		/// </summary>
+		private Func BuildConvertOperator(
+			SrcPos srcPos,
+			Typespec retType,
+			List<TplParam> tplParams,
+			List<TypespecNested> requires,
+			FuncBodyContext funcBody )
+		{
+			if( retType is TypespecNested nested )
+				Context.UnresolvedTypes.Add( new UnresolvedType( nested, scopeStack.Peek() ) );
+
+			PushScope();
+			Func ret = new() {
+				srcPos    = srcPos,
+				name      = string.Empty,
+				access    = curAccess,
+				kind      = Func.Kind.Convert,
+				TplParams = tplParams,
+				Requires  = requires,
+				paras     = new(),
+				body      = funcBody.Visit( Context ),
+				retType   = retType,
+			};
+			ret.funcScope = scopeStack.Peek();
+			PopScope();
+			return ret;
 		}
 
 		public override Structor VisitDefCtor( DefCtorContext c )
@@ -745,6 +776,16 @@ namespace Myll
 			Scope parent = scopeStack.Peek();
 			if( parent.decl is not Structural structuralParent )
 				throw new Exception( "parent of ctor has no decl or is not a structural" );
+
+			// Converting constructor: `ctor convert <- T` / `ctor convert T`
+			if( c.CONVERT() != null ) {
+				Typespec paramType = VisitTypespec( c.typespec() );
+				string paramName = c.id()?.Visit() ?? "other";
+				Structor retConvert = BuildConversionCtor(
+					structuralParent, c.ToSrcPos(), paramType, paramName, c.funcBody() );
+				AddChild( retConvert );
+				return retConvert;
+			}
 
 			PushScope();
 			Structor ret;
@@ -980,17 +1021,12 @@ namespace Myll
 					//ret = VisitOpSpecialAssign( c );
 				}
 				else if( c.CONVERT() != null ) {
-					ret = new() {
-						srcPos    = c.ToSrcPos(),
-						name      = string.Empty,
-						access    = curAccess,
-						kind      = Func.Kind.Convert,
-						TplParams = VisitTplParams( c.tplParams() ),
-						Requires  = VisitTypespecsNested( c.typespecsNested() ),
-						paras     = new(),
-						body      = c.funcBody().Visit( Context ),
-						retType   = VisitTypespec( c.typespec() ),
-					};
+					ret = BuildConvertOperator(
+						c.ToSrcPos(),
+						VisitTypespec( c.typespec() ),
+						VisitTplParams( c.tplParams() ),
+						VisitTypespecsNested( c.typespecsNested() ),
+						c.funcBody() );
 				}
 				else if( c.opSymbol() != null ) {
 					string opName = "operator" + c.opSymbol().GetText();

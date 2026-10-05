@@ -125,17 +125,16 @@ defConvert	:	(	RARROW		to=typespec					// convert -> TYPE	- convert to TYPE	- op
 				)
 				funcBody;
 defCtor		:	(	kindOfPassing	(LT	tplType=typespec	GT)?	id?	initList?
-				|	CONVERT	LARROW?	typespec	id?
-				|	CONVERT			typespec	id?	RARROW?
+				|	CONVERT	LARROW?	typespec	id?					// ctor convert <- T / ctor convert T
 				|	funcTypeDef?	initList?
 				)
 				// (REQUIRES	typespecsNested)?  ?
 				funcBody;
 defDtor		:	(LPAREN RPAREN)?
 				funcBody;
-defOp		:	(		kindOfPassing	(LT	tplType=typespec	GT)?	ASSIGN		id?									// operator copy = other; / operator move = other;
-				|	CONVERT			tplParams?	RARROW?	typespec						// no param == no id
-				|	opSymbol		defCoreFunc										// operator +, operator [], operator ++, ...
+defOp		:	(	kindOfPassing	(LT	tplType=typespec	GT)?	ASSIGN		id?		// operator copy = other; / operator move = other;
+				|	CONVERT			tplParams?	RARROW		typespec					// no param == no id
+				|	opSymbol		defCoreFunc											// operator +, operator [], operator ++, ...
 				)
 				(REQUIRES	typespecsNested)?
 				funcBody;
