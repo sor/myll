@@ -1,4 +1,4 @@
-module extern_member_fail;
+module extern_member;
 
 class C {
 [pub]:

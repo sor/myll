@@ -151,6 +151,90 @@ class Derived : public Base
 public:
     int compute(int x) override;
 };
+namespace order_independence
+{
+    class Outer;
+    class Base;
+    class Derived;
+    class Left;
+    class Right;
+    class Diamond;
+    class NSDerived;
+    template <typename T>
+    class Box;
+    class Boxed;
+    class Outer
+    {
+        class PrivBase;
+    public:
+        class PubBase;
+        class PubBase
+        {
+        public:
+            int x = 5;
+        };
+    private:
+        class PrivBase : public order_independence::Outer::PubBase
+        {
+            using base = order_independence::Outer::PubBase;
+        public:
+            int x = 6;
+        };
+        order_independence::Outer::PubBase pubBase{};
+        order_independence::Outer::PrivBase privBase{};
+    public:
+        int sum();
+    };
+    class Base
+    {
+    public:
+        int x = 2;
+    };
+    class Derived : public order_independence::Base
+    {
+        using base = order_independence::Base;
+    public:
+        int x = 1;
+    };
+    class Left
+    {
+    public:
+        int left = 3;
+    };
+    class Right
+    {
+    public:
+        int right = 4;
+    };
+    class Diamond : public order_independence::Left, public order_independence::Right
+    {
+        using base = order_independence::Left;
+    };
+    namespace NS
+    {
+        class Base;
+        class Base
+        {
+        public:
+            int x = 2;
+        };
+    }
+    class NSDerived : public order_independence::NS::Base
+    {
+        using base = order_independence::NS::Base;
+    };
+    template <typename T>
+    class Box
+    {
+    public:
+        int value = 7;
+    };
+    class Boxed : public order_independence::Box<int>
+    {
+        using base = order_independence::Box<int>;
+    };
+    int run();
+}
 int use(AbstractBase* b);
 int dispatch(int x);
 int dispatch(float x) = delete;

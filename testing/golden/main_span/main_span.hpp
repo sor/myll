@@ -9,3 +9,6 @@
 #include <type_traits>
 #include <utility>
 #include <span>
+int spanSum(std::span<const int> values);
+int spanFirstOf(const std::span<const int>& values);
+int run_span_checks();

@@ -94,6 +94,20 @@ int Derived::compute(int x)
 {
     return x * 10;
 }
+int order_independence::Outer::sum()
+{
+    return pubBase.x + privBase.x;
+}
+int order_independence::run()
+{
+    order_independence::Derived d{};
+    order_independence::NSDerived nsd{};
+    order_independence::Diamond dm{};
+    order_independence::Outer o{};
+    order_independence::Boxed bx{};
+    int sum = d.x + nsd.x + dm.left + dm.right + o.sum() + bx.value;
+    return sum - 28;
+}
 int use(AbstractBase* b)
 {
     return b->compute();
@@ -255,6 +269,10 @@ int main()
         return r;
     }
     r = check_inheritance();
+    if( r != 0 ) {
+        return r;
+    }
+    r = order_independence::run();
     if( r != 0 ) {
         return r;
     }

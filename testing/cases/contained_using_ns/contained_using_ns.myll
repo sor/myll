@@ -1,3 +1,5 @@
+module contained_using_ns;
+
 import std_vector;
 
 namespace LocalNS {
@@ -49,6 +51,11 @@ func main() -> int {
 	}
 	{
 		var int result = check_class();
+		if( result != 0 )
+			return result;
+	}
+	{
+		var int result = run_ns_alias_checks();
 		if( result != 0 )
 			return result;
 	}

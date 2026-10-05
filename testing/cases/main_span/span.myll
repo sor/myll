@@ -1,6 +1,8 @@
+module main_span;
+
 import std_span;
 
-func sum( std::span<const int> values ) -> int
+func spanSum( std::span<const int> values ) -> int
 {
 	var int total = 0;
 	var u64 i = 0;
@@ -11,15 +13,15 @@ func sum( std::span<const int> values ) -> int
 	return total;
 }
 
-func firstOf( const std::span<const int> & values ) -> int
+func spanFirstOf( const std::span<const int> & values ) -> int
 	=> values[0];
 
-func main() -> int
+func run_span_checks() -> int
 {
 	var int[5] data = [1, 2, 3, 4, 5];
 	var std::span<const int> view( data, 5 );
 
-	if( sum( view ) != 15 )
+	if( spanSum( view ) != 15 )
 		return 1;
 
 	if( view.size() != 5 )
@@ -31,7 +33,7 @@ func main() -> int
 	if( view[4] != 5 )
 		return 4;
 
-	if( firstOf( view ) != 1 )
+	if( spanFirstOf( view ) != 1 )
 		return 5;
 
 	var const int[*] ptr = view.data();

@@ -1,4 +1,4 @@
-#include "main.hpp"
+#include "contained_using_ns.hpp"
 int LocalNS::localValue()
 {
     return 21;
@@ -16,6 +16,10 @@ int Container::sum()
         total += it;
     }
     return total;
+}
+int Outer::Inner::ping()
+{
+    return 7;
 }
 int check_module()
 {
@@ -46,5 +50,15 @@ int main()
             return result;
         }
     }
+    {
+        int result = run_ns_alias_checks();
+        if( result != 0 ) {
+            return result;
+        }
+    }
     return 0;
+}
+int run_ns_alias_checks()
+{
+    return Outer::Inner::ping() - 7;
 }

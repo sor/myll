@@ -2,6 +2,9 @@ import std_span;
 
 func main( std::span<char[*]> args ) -> int
 {
+	if( run_span_checks() != 0 )
+		return 2;
+
 	if( args.size() < 1 )
 		return 1;
 

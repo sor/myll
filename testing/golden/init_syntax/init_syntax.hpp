@@ -28,3 +28,4 @@ struct Counter
 int run_direct_ctor();
 int takes(std::initializer_list<int> values);
 int run_initializer_list();
+int run_local_multi_decl();

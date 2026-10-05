@@ -292,6 +292,45 @@ int overload_smart_ptr::run()
     }
     return 0;
 }
+int overload_template_ranking::generic(int value)
+{
+    return 2;
+}
+int overload_template_ranking::generic(int* value)
+{
+    return 3;
+}
+int overload_template_ranking::run()
+{
+    if( overload_template_ranking::generic( 42 ) != 2 ) {
+        return 1;
+    }
+    int x = 0;
+    if( overload_template_ranking::generic( &x ) != 3 ) {
+        return 2;
+    }
+    if( overload_template_ranking::generic<float>( 3.14f ) != 1 ) {
+        return 3;
+    }
+    return 0;
+}
+int overload_template::identity(int value)
+{
+    return value + 1000;
+}
+int overload_template::run()
+{
+    if( overload_template::identity( 5 ) != 1005 ) {
+        return 1;
+    }
+    if( overload_template::identity<float>( 3.0f ) <= 2.9f || overload_template::identity<float>( 3.0f ) >= 3.1f ) {
+        return 2;
+    }
+    if( overload_template::scale<int>( 7 ) != 7 ) {
+        return 3;
+    }
+    return 0;
+}
 int ref_binding::take(int& x)
 {
     ++x;
@@ -394,6 +433,12 @@ int main()
     }
     if( overload_smart_inheritance::run() != 0 ) {
         return 13;
+    }
+    if( overload_template::run() != 0 ) {
+        return 14;
+    }
+    if( overload_template_ranking::run() != 0 ) {
+        return 15;
     }
     return 0;
 }

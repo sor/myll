@@ -1,4 +1,4 @@
-module ns_alias_stubs;
+module contained_using_ns;
 
 namespace Outer {
 	namespace Inner {
@@ -10,7 +10,7 @@ namespace Outer {
 
 alias Inner = Outer::Inner;
 
-func main() -> int
+func run_ns_alias_checks() -> int
 {
 	return Inner::ping() - 7;
 }

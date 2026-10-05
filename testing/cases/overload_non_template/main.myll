@@ -15,5 +15,7 @@ func main() -> int
 	if( overload_inheritance_conversion::run() != 0 ) return 11;
 	if( overload_smart_ptr::run()              != 0 ) return 12;
 	if( overload_smart_inheritance::run()      != 0 ) return 13;
+	if( overload_template::run()             != 0 ) return 14;
+	if( overload_template_ranking::run()     != 0 ) return 15;
 	return 0;
 }

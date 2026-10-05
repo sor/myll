@@ -1,11 +1,13 @@
-module overload_template;
+module overload_non_template;
+
+namespace overload_template {
 
 func identity<T>( T value ) -> T { return value; }
 func identity( int value ) -> int { return value + 1000; }
 
 func scale<T>( T x ) -> T { return x; }
 
-func main() -> int
+func run() -> int
 {
 	if( identity( 5 ) != 1005 )
 		return 1;
@@ -17,4 +19,6 @@ func main() -> int
 		return 3;
 
 	return 0;
+}
+
 }

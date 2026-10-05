@@ -88,6 +88,38 @@ namespace ref_category
     };
     int run();
 }
+namespace static_member
+{
+    template <typename T>
+    class Box;
+    template <typename T>
+    class Box
+    {
+        inline static int count = 0;
+    public:
+        static inline int instances()
+        {
+            return static_member::Box<T>::count;
+        }
+    private:
+        T value{};
+    public:
+        explicit Box(T v)
+        {
+            static_member::Box<T>::count = static_member::Box<T>::count + 1;
+            value = v;
+        }
+        Box(const static_member::Box<T>& other)
+        {
+            value = other.value;
+        }
+        inline T read()
+        {
+            return value;
+        }
+    };
+    int run();
+}
 namespace template_call
 {
     template <typename T>

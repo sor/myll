@@ -8,5 +8,8 @@ func main() -> int
 	if( run_initializer_list() != 0 )
 		return 2;
 
+	if( run_local_multi_decl() != 0 )
+		return 3;
+
 	return 0;
 }

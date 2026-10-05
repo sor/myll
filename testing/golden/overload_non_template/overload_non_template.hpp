@@ -124,6 +124,38 @@ namespace overload_smart_ptr
     int take(std::shared_ptr<int> value);
     int run();
 }
+namespace overload_template_ranking
+{
+    template <typename T>
+    inline int generic(T value);
+    int generic(int value);
+    int generic(int* value);
+    int run();
+    template <typename T>
+    inline int generic(T value)
+    {
+        return 1;
+    }
+}
+namespace overload_template
+{
+    template <typename T>
+    inline T identity(T value);
+    int identity(int value);
+    template <typename T>
+    inline T scale(T x);
+    int run();
+    template <typename T>
+    inline T identity(T value)
+    {
+        return value;
+    }
+    template <typename T>
+    inline T scale(T x)
+    {
+        return x;
+    }
+}
 namespace ref_binding
 {
     int take(int& x);

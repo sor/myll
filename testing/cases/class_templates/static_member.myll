@@ -1,0 +1,38 @@
+module class_templates;
+
+namespace static_member {
+	class Box<T> {
+	[priv]:
+		field T value;
+
+		[static] var int count = 0;
+
+	[pub]:
+		ctor( T v ) {
+			count = count + 1;
+			value = v;
+		}
+
+		ctor copy {
+			value = other.value;
+		}
+
+		[static] method instances() -> int => count;
+
+		method read() -> T => value;
+	}
+
+	func run() -> int
+	{
+		var Box<int> a = Box<int>( 1 );
+		var Box<int> b = Box<int>( 2 );
+
+		var Box<int> copied = Box<int>( b );
+
+		if( Box<int>::instances() != 2 ) return 1;
+		if( a.read() != 1 ) return 2;
+		if( copied.read() != 2 ) return 3;
+
+		return 0;
+	}
+}

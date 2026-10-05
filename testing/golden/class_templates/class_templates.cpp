@@ -54,6 +54,22 @@ int ref_category::run()
     }
     return 0;
 }
+int static_member::run()
+{
+    static_member::Box<int> a = static_member::Box<int>( 1 );
+    static_member::Box<int> b = static_member::Box<int>( 2 );
+    static_member::Box<int> copied = static_member::Box<int>( b );
+    if( Box<int>::instances() != 2 ) {
+        return 1;
+    }
+    if( a.read() != 1 ) {
+        return 2;
+    }
+    if( copied.read() != 2 ) {
+        return 3;
+    }
+    return 0;
+}
 int template_call::run()
 {
     template_call::Wrapper<int> w{};
@@ -69,6 +85,9 @@ int main()
     }
     if( template_call::run() != 0 ) {
         return 3;
+    }
+    if( static_member::run() != 0 ) {
+        return 4;
     }
     return 0;
 }

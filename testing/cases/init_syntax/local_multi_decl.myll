@@ -1,8 +1,8 @@
-module local_multi_decl;
+module init_syntax;
 
 import std_initializer_list;
 
-func main() -> int
+func run_local_multi_decl() -> int
 {
 	// inferred element types must not leak between accessors sharing one statement
 	var ilist a = [1, 2], b = [3.5];
