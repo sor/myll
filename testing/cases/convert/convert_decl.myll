@@ -8,6 +8,47 @@ class A {
 	[implicit] convert <- int { i = other; }
 }
 
+// the ctor spellings: ctor convert <- T / ctor convert T, plus the conv alias
+class B {
+[pub]:
+	field int i;
+
+	[implicit] ctor convert <- int { i = other; }
+}
+
+class C {
+[pub]:
+	field int i;
+
+	[implicit] ctor convert bool b { i = b ? 1 : 2; }
+}
+
+class D {
+[pub]:
+	field int i;
+
+	[implicit] ctor conv int { i = other; }
+	[implicit] conv -> bool { return i > 0; }
+}
+
+// the operator spelling: operator convert -> T
+class E {
+[pub]:
+	field int i;
+
+	[implicit] ctor conv <- int { i = other; }
+	[implicit] operator convert -> bool { return i > 0; }
+}
+
+// explicit converts need explicit syntax: direct construction or a cast
+class F {
+[pub]:
+	field int i;
+
+	[explicit] ctor convert <- int { i = other; }
+	[explicit] conv -> bool { return i > 0; }
+}
+
 func run_convert_decl() -> int
 {
 	var A a = 5;            // convert <- int
@@ -17,6 +58,37 @@ func run_convert_decl() -> int
 	var A b = -3;
 	if( b )
 		return 2;
+
+	var B c = 7;            // ctor convert <- int
+	if( c.i != 7 )
+		return 3;
+
+	var C d = true;         // ctor convert T
+	if( d.i != 1 )
+		return 4;
+
+	var D f = 4;            // ctor conv T
+	if( !f )                // conv -> bool
+		return 5;
+
+	var E e = 9;            // ctor conv <- int
+	if( !e )                // operator convert -> bool
+		return 6;
+
+	var F g = F( 7 );       // explicit ctor via direct construction
+	if( g.i != 7 )
+		return 7;
+
+	var F h = (F)8;         // explicit ctor via cast
+	if( h.i != 8 )
+		return 8;
+
+	var F k( 9 );           // explicit ctor via direct-init syntax
+	if( k.i != 9 )
+		return 9;
+
+	if( !( (bool)g ) )      // explicit operator via cast
+		return 10;
 
 	return 0;
 }

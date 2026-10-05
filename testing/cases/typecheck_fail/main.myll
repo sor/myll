@@ -122,6 +122,17 @@ func test_object_slicing() -> int {
 	return takeSliceBase( d ); // FAIL 2
 }
 
+class ExplicitConvert {
+[pub]:
+	field int i;
+	[explicit] ctor convert <- int { i = other; }
+}
+
+func test_explicit_convert_implicit_use() -> void {
+	// Explicit conversions do not participate in implicit conversion.
+	var ExplicitConvert e = 4; // FAIL: Cannot convert 'untyped integer' to 'ExplicitConvert'
+}
+
 func returns_auto_void() -> auto { } // FAIL: explicit '-> auto' but has no value-returning statement
 
 func no_value_return() -> int { } // FAIL: declares return type 'int' but has no return or throw statement
