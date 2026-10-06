@@ -60,6 +60,8 @@ namespace Myll.Generator
 
 		public const string VarAutoDeclFormat = "auto ";
 
+		public const string ConstinitKeyword = "constinit ";
+
 		public static readonly string[] EntryFormat = {
 			"{0}{1}{2},", // 0 indent, 1 name, 2 init
 			" = ",

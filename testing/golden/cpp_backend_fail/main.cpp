@@ -28,3 +28,8 @@ int main()
 {
     return 0;
 }
+int test_constinit_static_assert()
+{
+    static_assert( ctCounter == 5, "" );
+    return 0;
+}

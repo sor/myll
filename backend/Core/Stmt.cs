@@ -125,13 +125,17 @@ namespace Myll.Core
 			}
 			//string typeAndName = type.Gen( name );
 
+			// constinit requires static storage duration, so a local [ct] var
+			// is only valid for [static] locals
+			bool isConstInit = IsCompileTime && ( kind == VarDecl.Kind.Var );
+
 			string ret = Format(
 				VarFormat[0],
 				"",
 				"",                           // extern
 				"",                           // inline
 				IsStatic      ? VarFormat[3] : "",
-				IsCompileTime ? VarFormat[4] : "",
+				IsCompileTime ? ( isConstInit ? ConstinitKeyword : VarFormat[4] ) : "",
 				needsTypename ? VarFormat[5] : "",
 				typeAndName,
 				initStr );

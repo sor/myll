@@ -84,6 +84,10 @@ int check_ct()
     if( doubled != 84 ) {
         return 2;
     }
+    ctCounter = ctCounter + 1;
+    if( ctCounter != 41 ) {
+        return 3;
+    }
     return 0;
 }
 int check_default_sized()

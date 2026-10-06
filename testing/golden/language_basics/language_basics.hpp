@@ -21,6 +21,7 @@ enum class TestFlagsNumbered;
 enum class TestFlagsNumberedPartially;
 enum class TestFlagsHex;
 enum class TestFlagsComposite;
+constinit int ctCounter = 40;
 enum class Test
 {
     A,

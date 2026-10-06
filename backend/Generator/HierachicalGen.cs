@@ -671,6 +671,10 @@ namespace Myll.Generator
 				? StripConstQualifier( obj.type )
 				: obj.type;
 
+			bool isConstInit     = isCompileTime
+			                        && ( obj.kind == VarDecl.Kind.Var
+			                        || obj.kind == VarDecl.Kind.Field );
+
 			// 0 indent, 1 extern, 2 inline, 3 static, 4 constexpr, 5 typename, 6 type & name, 7 init
 			if( (emitAt & GenerateAt.Decl) != 0 ) {
 				SourceLines retDecl = new();
@@ -682,7 +686,7 @@ namespace Myll.Generator
 					isExtern             ? VarFormat[1] : "",
 					needsInline          ? VarFormat[2] : "",
 					isStatic || isHidden ? VarFormat[3] : "",
-					isCompileTime        ? VarFormat[4] : "",
+					isCompileTime        ? ( isConstInit ? ConstinitKeyword : VarFormat[4] ) : "",
 					needsTypename        ? VarFormat[5] : "",
 					emitType.Gen( obj.name ),
 					initDecl ) );

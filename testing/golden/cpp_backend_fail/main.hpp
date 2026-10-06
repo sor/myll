@@ -10,6 +10,7 @@
 #include <utility>
 class PrivateClass;
 struct MutNum;
+constinit int ctCounter = 5;
 class PrivateClass
 {
     void secret() const;
@@ -22,3 +23,4 @@ struct MutNum
 };
 int test_private_call();
 int test_const_operator();
+int test_constinit_static_assert();

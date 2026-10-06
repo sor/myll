@@ -1,5 +1,7 @@
 module language_basics;
 
+[ct] var int ctCounter = 40;
+
 func check_ct() -> int
 {
 	[ct] const int answer = 42;
@@ -13,6 +15,11 @@ func check_ct() -> int
 
 	if( doubled != 84 )
 		return 2;
+
+	// [ct] var is constinit: mutable, but not usable in constant expressions
+	ctCounter = ctCounter + 1;
+	if( ctCounter != 41 )
+		return 3;
 
 	return 0;
 }

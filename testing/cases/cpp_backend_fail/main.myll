@@ -32,3 +32,10 @@ func test_const_operator() -> int {
 func main() -> int {
 	return 0;
 }
+
+[ct] var int ctCounter = 5; // constinit: usable at runtime, not in constant expressions
+
+func test_constinit_static_assert() -> int {
+	static_assert( ctCounter == 5, "" ); // FAIL: not a constant expression
+	return 0;
+}
