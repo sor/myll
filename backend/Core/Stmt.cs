@@ -109,9 +109,20 @@ namespace Myll.Core
 			// opt back in per declaration.
 			bool emitAuto = IsAutoDeclared && init is not NewExpr;
 
+			// constexpr implies const, so a [ct] const drops the kind-induced const from
+			// the emitted type; the resolver still sees the const-qualified type
 			string typeAndName = emitAuto
 				? VarAutoDeclFormat + name
-				: type.Gen( name );
+				: ( IsCompileTime && isConstType )
+					? ConstStrippedType().Gen( name )
+					: type.Gen( name );
+
+			Typespec ConstStrippedType()
+			{
+				Typespec stripped = type.Clone();
+				stripped.qual &= ~Qualifier.Const;
+				return stripped;
+			}
 			//string typeAndName = type.Gen( name );
 
 			string ret = Format(

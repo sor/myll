@@ -214,6 +214,17 @@ namespace Myll.Generator
 			target[index] = target[index].WithSrcPos( pos );
 		}
 
+		/// <summary>
+		/// Returns a copy of <paramref name="type"/> without the const qualifier
+		/// (for emission only - the resolver keeps the const-qualified original).
+		/// </summary>
+		private static Typespec StripConstQualifier( Typespec type )
+		{
+			Typespec stripped = type.Clone();
+			stripped.qual &= ~Qualifier.Const;
+			return stripped;
+		}
+
 		private int LevelDecl { get; }
 		private int LevelImpl { get; }
 
@@ -654,6 +665,12 @@ namespace Myll.Generator
 				? Format( "{0}template <{1}>", IndentImpl, tplContent )
 				: string.Empty;
 
+			// constexpr implies const, so a [ct] const drops the kind-induced const from
+			// the emitted type; the resolver still sees the const-qualified type
+			Typespec emitType = ( isCompileTime && isConstType )
+				? StripConstQualifier( obj.type )
+				: obj.type;
+
 			// 0 indent, 1 extern, 2 inline, 3 static, 4 constexpr, 5 typename, 6 type & name, 7 init
 			if( (emitAt & GenerateAt.Decl) != 0 ) {
 				SourceLines retDecl = new();
@@ -667,7 +684,7 @@ namespace Myll.Generator
 					isStatic || isHidden ? VarFormat[3] : "",
 					isCompileTime        ? VarFormat[4] : "",
 					needsTypename        ? VarFormat[5] : "",
-					obj.type.Gen( obj.name ),
+					emitType.Gen( obj.name ),
 					initDecl ) );
 				MarkDeclSourceMap( retDecl, obj, 0 );
 				targetDecl.Add( (obj.access, retDecl) );
@@ -685,7 +702,7 @@ namespace Myll.Generator
 					isHidden      ? VarFormat[3] : "",
 					"",
 					needsTypename ? VarFormat[5] : "",
-					obj.type.Gen( obj.FullyQualifiedName ),
+					emitType.Gen( obj.FullyQualifiedName ),
 					initImpl ) );
 				MarkDeclSourceMap( retImpl, obj, 0 );
 				targetImpl.Add( (obj.access, retImpl) );

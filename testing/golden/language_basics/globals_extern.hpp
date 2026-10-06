@@ -8,7 +8,7 @@
 #include <string>
 #include <type_traits>
 #include <utility>
-constexpr const int ctGlobal = 4;
+constexpr int ctGlobal = 4;
 extern int extGlobal;
 extern int normalGlobal;
 inline int inlineGlobal = 2;

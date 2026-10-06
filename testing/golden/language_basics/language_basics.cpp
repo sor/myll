@@ -74,7 +74,7 @@ int check_conversion()
 }
 int check_ct()
 {
-    constexpr const int answer = 42;
+    constexpr int answer = 42;
     constexpr int doubled = answer * 2;
     static_assert( answer == 42, "answer must be 42" );
     static_assert( doubled == 84, "doubled must be 84" );

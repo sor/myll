@@ -10,7 +10,7 @@
 #include <utility>
 namespace MyNs
 {
-    constexpr const int ctNs = 40;
+    constexpr int ctNs = 40;
     extern int normalNs;
     inline int inlineNs = 20;
     const int constNs = 30;

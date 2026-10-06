@@ -9,7 +9,7 @@
 #include <type_traits>
 #include <utility>
 struct S;
-constexpr const int SIZE = 4;
+constexpr int SIZE = 4;
 struct S
 {
     int arr[SIZE]{};
