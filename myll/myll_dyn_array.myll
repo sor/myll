@@ -2,7 +2,7 @@ module myll_dyn_array;
 
 namespace Myll {
 
-[ct] var usize DefaultCapacity = 8;
+[ct] const usize DefaultCapacity = 8;
 
 class DynArray<T> {
 field {
