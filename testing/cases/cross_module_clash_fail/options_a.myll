@@ -23,3 +23,6 @@ struct Kind
 {
 	field int k = 3;
 }
+namespace Test {
+	const T val<T> = (T)1;
+}

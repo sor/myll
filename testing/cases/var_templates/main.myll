@@ -3,12 +3,22 @@ module var_templates;
 const T answer<T> = (T)42;
 const T * ptrValue<T> = null;
 
+// specializations: full (all parameters bound) and partial (subset bound, in
+// primary parameter order)
+const T pi<T> = (T)3.1415;
+const T pi<T=int> = 3;
+const T pi<T=f32> = (f32)3.5;
+
+const T q<T, U> = (T)7;
+const T q<U=int> = (T)70;
+const T q<U=f32> = (T)71;
+
 class Pair<T, U> {
 [pub]:
-field {
-	T first;
-	U second;
-}
+	field {
+		T first;
+		U second;
+	}
 }
 
 const Pair<T, T> pairDup<T> = Pair<T, T>();
@@ -29,6 +39,20 @@ func main() -> int {
 	var Pair<int, int> pair = pairDup<int>;
 	if( pair.first != 0 || pair.second != 0 )
 		return 4;
+
+	if( pi<int> != 3 )
+		return 5;
+	if( pi<f32> < 3.4 || pi<f32> > 3.6 )
+		return 6;
+	if( pi<i64> < 3.0 || pi<i64> > 3.2 )
+		return 7;
+
+	if( q<int, i64> != 7 )
+		return 8;
+	if( q<i64, int> != 70 )
+		return 9;
+	if( q<int, f32> != 71 )
+		return 10;
 
 	return 0;
 }

@@ -40,3 +40,22 @@ func test_template_kind_mismatch() -> int {
 func main() -> int {
 	return 0;
 }
+
+// variable template specialization validation
+const T spec_pi<T> = (T)3;
+const T spec_pi<X=int> = 4; // FAIL: Unknown template parameter 'X' in specialization of 'spec_pi'
+
+const T spec_r<T, U, V> = (T)1;
+const T spec_r<V=int, U=f32> = (T)2; // FAIL: Bindings of 'spec_r' must follow the primary's parameter order
+
+const T spec_noPrimary<T=int> = 3; // FAIL: No matching variable template 'spec_noPrimary' in this module
+
+const T spec_late<T=int> = 4; // FAIL: Specialization of 'spec_late' must follow its primary template
+const T spec_late<T> = (T)1;
+
+const T spec_dup<T> = (T)1;
+const T spec_dup<T=int> = 4;
+const T spec_dup<T=int> = 5; // FAIL: Duplicate specialization of 'spec_dup' for T=int
+
+const T spec_mm<T> = (T)1;
+const f32 spec_mm<T=int> = 2.0; // FAIL: Specialization of 'spec_mm' declares type 'const float' but the primary's substituted type is 'const int'

@@ -17,5 +17,23 @@ int main()
     if( pair.first != 0 || pair.second != 0 ) {
         return 4;
     }
+    if( pi<int> != 3 ) {
+        return 5;
+    }
+    if( pi<float> < 3.4f || pi<float> > 3.6f ) {
+        return 6;
+    }
+    if( pi<std::int64_t> < 3.0f || pi<std::int64_t> > 3.2f ) {
+        return 7;
+    }
+    if( q<int, std::int64_t> != 7 ) {
+        return 8;
+    }
+    if( q<std::int64_t, int> != 70 ) {
+        return 9;
+    }
+    if( q<int, float> != 71 ) {
+        return 10;
+    }
     return 0;
 }
