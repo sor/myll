@@ -1171,11 +1171,13 @@ namespace Myll
 			foreach( IdAccessorContext q in c.typedIdAcors().idAccessors().idAccessor() ) {
 				List<TplParam> tplParams = VisitTplParams( q.tplParams() );
 				bool isTemplate = tplParams.Count >= 1;
+				bool isSpec = q.tplSpec() != null;
 
-				// Variable template parameters need their own scope so the parameter
-				// names are visible in the type/initializer without leaking out.
+				// Variable template parameters and specializations need their own scope:
+				// parameters for resolution, unbound parameters for specializations
+				// (filled by the VarSpecTransformer once the primary is known).
 				Scope? varTplScope = null;
-				if( isTemplate ) {
+				if( isTemplate || isSpec ) {
 					PushScope();
 					varTplScope = scopeStack.Peek();
 				}
@@ -1184,6 +1186,10 @@ namespace Myll
 				if( kind.ToQualifier() == Qualifier.Const ) {
 					type.qual |= Qualifier.Const;
 				}
+
+				List<TplBinding> tplSpec = isSpec
+					? VisitTplSpec( q.tplSpec() )
+					: new();
 
 				bool isDirectConstruct = q.funcCall() != null;
 				Expr? init = isDirectConstruct
@@ -1207,6 +1213,7 @@ namespace Myll
 					isDirectConstruct  = isDirectConstruct,
 					accessor           = q.accessorDef().Visit( Context ),
 					TplParams          = tplParams,
+					TplSpec            = tplSpec,
 					varScope           = varTplScope,
 				};
 				decls.Add( decl );
@@ -1214,6 +1221,19 @@ namespace Myll
 
 			AddChildren( decls );
 			return new MultiDecl( decls );
+		}
+
+		private List<TplBinding> VisitTplSpec( TplSpecContext? c )
+		{
+			if( c == null )
+				return new();
+
+			return c.tplBind()
+				.Select( b => new TplBinding {
+					name = b.id().Visit(),
+					type = VisitTypespec( b.typespec() ),
+				} )
+				.ToList();
 		}
 
 		#region Disallowed Visitors (throwing InvalidOperationException)

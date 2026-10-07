@@ -1216,6 +1216,11 @@ namespace Myll.Resolver
 				if( child is not VarDecl vd )
 					continue;
 
+				// Specializations share the primary's name and are validated by
+				// the VarSpecTransformer
+				if( vd.SpecInfo != null )
+					continue;
+
 				if( !seen.Add( vd.name ) )
 					AddError( vd, String.Format( "Duplicate variable/field declaration: {0}", vd.name ) );
 			}

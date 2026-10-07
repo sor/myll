@@ -339,6 +339,9 @@ tplParam	:	id						# TypeTplParam
 			|	typespec	id				# NonTypeTplParam
 			;
 tplParams	:	LT	tplParam	(COMMA tplParam)*	COMMA?	GT;
+// specialization bindings: named, in primary declaration order ( pi<T=int> )
+tplSpec	:	LT	tplBind	(COMMA tplBind)*	COMMA?	GT;
+tplBind	:	id	ASSIGN	typespec;
 //tplParams2	:	LT	cs[id]							GT;
 //cs[object id] returns [object[] ret]:	ret+=id (COMMA ret+=id)* COMMA?;
 
@@ -415,7 +418,7 @@ expr		:	(idTplArgs	SCOPE)+	idTplArgs	# ScopedExpr
 			|	idTplArgs						# IdTplExpr		// same as rule 1 ?
 			;
 
-idAccessor	:	id	tplParams?	(LCURLY	accessorDef+	RCURLY)?	(funcCall | ASSIGN	expr)?;
+idAccessor	:	id	(tplParams	|	tplSpec)?	(LCURLY	accessorDef+	RCURLY)?	(funcCall | ASSIGN	expr)?;
 idExpr		:	id									(ASSIGN expr)?;
 idAccessors	:	idAccessor	(COMMA idAccessor)*	COMMA?;
 idExprs		:	idExpr		(COMMA idExpr)*		COMMA?;

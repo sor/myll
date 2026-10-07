@@ -204,6 +204,12 @@ namespace Myll
 								DiagnosticKind.Error,
 								"Local variable templates are not supported" ) );
 						}
+						if( q.tplSpec() != null ) {
+							Context.Diagnostics.Add( new Diagnostic(
+								srcPos,
+								DiagnosticKind.Error,
+								"Local template specializations are not supported" ) );
+						}
 
 						Expr? init              = q.funcCall() != null
 							? new FuncCallExpr {

@@ -158,4 +158,14 @@ namespace Myll.Core
 		public TplParamKind kind = TplParamKind.Type;
 		public Typespec?    type;
 	}
+
+	/// <summary>
+	/// One binding of a template specialization: `T = int` in `pi<T=int>`.
+	/// Names must follow the primary's parameter declaration order.
+	/// </summary>
+	public class TplBinding
+	{
+		public string   name = null!;
+		public Typespec type = null!;
+	}
 }

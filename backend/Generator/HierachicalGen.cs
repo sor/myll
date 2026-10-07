@@ -543,8 +543,63 @@ namespace Myll.Generator
 			=> parameters.Select( GenTemplateParameter ).Join( ", " );
 
 		// Those need to be kept in adding order
+		/// <summary>
+		/// Emits a variable template specialization: `template<> inline constexpr T pi<int> = 3;`
+		/// for a full specialization, or `template<typename T> inline constexpr T q<T, 5> = ...;`
+		/// for a partial one (the unbound parameters become the specialization's own).
+		/// </summary>
+		private void EmitVarSpecialization( VarDecl obj )
+		{
+			VarDecl.VarSpecInfo info = obj.SpecInfo!;
+
+			string tplPrefix = info.IsFull
+				? Format( "{0}template<> ", IndentDecl )
+				: Format( "{0}template <{1}> ", IndentDecl, GenTemplateParameterList( obj.TplParams ) );
+
+			string args = info.Args
+				.Select( a => a.Gen() )
+				.Join( ", " );
+			string nameDecl = Format( "{0}<{1}>", obj.name, args );
+
+			bool isConstType   = ( obj.type.qual & Qualifier.Const ) != 0;
+			bool isInsideStruct = obj.IsInStruct;
+			bool isStatic      = obj.IsStatic;
+
+			// A const specialization is a constexpr entity like its primary
+			bool isCompileTime = isConstType;
+
+			Typespec emitType = ( isCompileTime && isConstType )
+				? StripConstQualifier( obj.type )
+				: obj.type;
+
+			string initStr = obj.init != null
+				? Format( " = {0}", obj.init.Gen() )
+				: Format( " {0}", VarEmptyInitFormat );
+
+			SourceLines ret = new();
+			ret.Add( Format(
+				"{0}{1}{2}{3}{4}{5};",
+				tplPrefix,
+				isStatic && isInsideStruct ? "static " : "",
+				isCompileTime ? "inline " : "",   // header entity like the primary
+				isCompileTime ? VarFormat[4] : "",
+				emitType.Gen( nameDecl ),
+				initStr ) );
+			MarkDeclSourceMap( ret, obj, 0 );
+
+			AccessSourceLines target = ( isCompileTime && !isInsideStruct )
+				? constexprDecl
+				: ( isStatic ? staticFieldDecl : fieldDecl );
+			target.Add( (obj.access, ret) );
+		}
+
 		public void AddVar( VarDecl obj )
 		{
+			if( obj.SpecInfo != null ) {
+				EmitVarSpecialization( obj );
+				return;
+			}
+
 			// Dependent nested types emit 'typename ' from TypespecNested.GenType().
 			// The VarFormat typename slot is intentionally left empty here to avoid
 			// a duplicate prefix.
@@ -553,7 +608,12 @@ namespace Myll.Generator
 			bool isInsideStruct   = obj.IsInStruct;
 			bool isStatic         = obj.IsStatic;
 			bool isHidden         = obj.IsHidden;
-			bool isCompileTime    = obj.IsCompileTime;
+			// const variable templates are implicitly [ct]: their values are
+			// compile-time constants like std::numbers::pi_v
+			bool isCompileTime    = obj.IsCompileTime
+			                        || ( obj.TplParams.Count > 0
+			                         && ( obj.kind == VarDecl.Kind.Const
+			                            || obj.kind == VarDecl.Kind.Let ) );
 			bool isExplicitInline = obj.IsInline;
 			bool isExplicitExtern = obj.IsExternal;
 			bool isConstType      = (obj.type.qual & Qualifier.Const) != 0;
@@ -610,7 +670,8 @@ namespace Myll.Generator
 			// Static members of a template default to inline: the out-of-line definition
 			// would need the enclosing template's header, which is not emitted.
 			bool       needsInline   = isExplicitInline
-			                        || ( isInsideStruct && isStatic && ( isCompileTime || obj.IsTemplateUp ) );
+			                        || ( isInsideStruct && isStatic && ( isCompileTime || obj.IsTemplateUp ) )
+			                        || ( isCompileTime && !isInsideStruct && obj.TplParams.Count > 0 );
 			GenerateAt emitAt        = GenerateAt.Decl;
 			GenerateAt initIn        = GenerateAt.Decl;
 

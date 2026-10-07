@@ -88,6 +88,7 @@ namespace Myll.Resolver
 				new EnumTransformer(),
 				new AutoReturnTransformer(),
 				new TemplateParamTransformer(),
+				new VarSpecTransformer(),
 				new ChainTransformer(),
 				new DiscardTransformer(),
 				new RuleOfTransformer(),
@@ -322,8 +323,8 @@ namespace Myll.Resolver
 				if( resolved == null )
 					continue;
 
-				if( TryResolveVariableTemplate( resolved, r.Node ) ) {
-					recordResolution( r.Node, resolved );
+				if( TryResolveVariableTemplate( resolved, r.Node, out Decl effective ) ) {
+					recordResolution( r.Node, effective );
 					progress = true;
 				}
 				else {
@@ -359,14 +360,25 @@ namespace Myll.Resolver
 		}
 
 		/// <summary>
-		/// Performs template argument validation and type substitution for variable templates.
-		/// Returns true when the reference is valid and should be recorded as a resolution.
+		/// Performs template argument validation and type substitution for variable templates,
+		/// preferring a matching specialization when one exists.
+		/// Returns true when the reference is valid and should be recorded as a resolution;
+		/// <paramref name="effective"/> is the declaration to record (a specialization when one
+		/// matched, the primary otherwise).
 		/// Returns false when the template arity mismatches; the caller must then mark the
 		/// node invalid rather than recording the resolution, and must not re-process the node.
 		/// </summary>
-		private bool TryResolveVariableTemplate( Decl resolved, Expr expr )
+		private bool TryResolveVariableTemplate( Decl resolved, Expr expr, out Decl effective )
 		{
-			if( resolved is not VarDecl varDecl || varDecl.TplParams.Count == 0 )
+			effective = resolved;
+
+			if( resolved is not VarDecl varDecl )
+				return true;
+
+			VarDecl primary = varDecl.SpecInfo != null ? varDecl.SpecInfo.Primary : varDecl;
+			bool isTemplate = primary.TplParams.Count > 0;
+
+			if( !isTemplate && varDecl.SpecInfo == null )
 				return true;
 
 			IdTplArgs idTpl = expr switch {
@@ -376,19 +388,33 @@ namespace Myll.Resolver
 					"Unexpected expression kind for variable template resolution" ),
 			};
 
-			TemplateArgValidation validation = TemplateInference.ValidateTemplateArgs( varDecl, idTpl.tplArgs );
+			List<TplArg> useArgs = idTpl.tplArgs;
+
+			if( useArgs.Count == 0 ) {
+				// No explicit arguments: only a full specialization with no parameters
+				// of its own could apply; the primary otherwise.
+				if( varDecl.SpecInfo != null && varDecl.SpecInfo.IsFull && varDecl.TplParams.Count == 0 ) {
+					effective = varDecl;
+					expr.Type = varDecl.type;
+					return true;
+				}
+				if( !isTemplate )
+					return true;
+			}
+
+			TemplateArgValidation validation = TemplateInference.ValidateTemplateArgs( primary, useArgs );
 			if( validation.IsMismatch ) {
 				string message = validation.MismatchKind == TemplateArgMismatchKind.Arity
 					? String.Format( "Template argument count mismatch for variable '{0}': expected {1}, got {2}",
-						varDecl.name,
-						varDecl.TplParams.Count,
-						idTpl.tplArgs.Count )
+						primary.name,
+						primary.TplParams.Count,
+						useArgs.Count )
 					: String.Format( "Template argument kind mismatch for variable '{0}': parameter {1} ('{2}') expects a {3}, but argument '{4}' is a {5}",
-						varDecl.name,
+						primary.name,
 						validation.MismatchIndex!.Value,
 						validation.ParameterName,
 						validation.Expected,
-						idTpl.tplArgs[validation.MismatchIndex.Value].Gen(),
+						useArgs[validation.MismatchIndex.Value].Gen(),
 						validation.Actual );
 				diagnostics.Add( new Diagnostic(
 					expr.srcPos,
@@ -397,12 +423,82 @@ namespace Myll.Resolver
 				return false;
 			}
 
+			// Specializations shadow the primary for matching explicit arguments.
+			VarDecl? spec = FindMatchingSpecialization( primary, useArgs, expr );
+			if( spec != null ) {
+				effective = spec;
+				expr.Type = TemplateInference.SubstituteTemplateParams(
+					spec.type,
+					spec.TplParams,
+					useArgs.ToList(),
+					result );
+				return true;
+			}
+
 			expr.Type = TemplateInference.SubstituteTemplateParams(
-				varDecl.type,
-				varDecl.TplParams,
-				idTpl.tplArgs.ToList(),
+				primary.type,
+				primary.TplParams,
+				useArgs.ToList(),
 				result );
 			return true;
+		}
+
+		/// <summary>
+		/// Finds the specialization of <paramref name="primary"/> whose bound values match
+		/// the explicit use arguments. Full specializations win over partial ones; among
+		/// partials the most-bound wins; ties are ambiguous and error out.
+		/// </summary>
+		private VarDecl? FindMatchingSpecialization( VarDecl primary, List<TplArg> useArgs, Expr expr )
+		{
+			Scope? containing = primary.scope as Scope ?? primary.scope?.parent as Scope;
+			if( containing == null )
+				return null;
+
+			if( !containing.children.TryGetValue( primary.name, out List<ScopeLeaf>? leaves ) )
+				return null;
+
+			VarDecl? best = null;
+			int bestBoundCount = -1;
+
+			foreach( ScopeLeaf leaf in leaves ) {
+				if( leaf.decl is not VarDecl spec || spec.SpecInfo == null || !ReferenceEquals( spec.SpecInfo.Primary, primary ) )
+					continue;
+
+				bool[] bound = spec.SpecInfo.Bound;
+				bool matches = true;
+				for( int i = 0; i < bound.Length; i++ ) {
+					if( !bound[ i ] )
+						continue;
+					Typespec? argType = i < useArgs.Count ? useArgs[ i ].typespec : null;
+					Typespec? boundType = spec.SpecInfo.Args[ i ].typespec;
+					if( argType == null || boundType == null
+					 || argType.Gen() != boundType.Gen() ) {
+						matches = false;
+						break;
+					}
+				}
+				if( !matches )
+					continue;
+
+				int boundCount = bound.Count( b => b );
+				if( boundCount == bound.Length ) // full specialization
+					return spec;
+
+				if( boundCount > bestBoundCount ) {
+					best = spec;
+					bestBoundCount = boundCount;
+				}
+				else if( boundCount == bestBoundCount && best != null ) {
+					diagnostics.Add( new Diagnostic(
+						expr.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Ambiguous specialization match for '{0}': both '{1}' and '{2}' bind {3} parameters",
+							primary.name, best.name, spec.name, boundCount ) ) );
+					return null;
+				}
+			}
+
+			return best;
 		}
 
 		private bool ResolveTypes( GlobalNamespace module, ModuleContext context )
@@ -2681,6 +2777,17 @@ namespace Myll.Resolver
 
 				if( fqn != null )
 					return candidates[0];
+			}
+
+			// Variable template specializations share the primary's name: pick the
+			// primary and let the specialization matching sort out the rest.
+			if( candidates.All( d => d is VarDecl ) ) {
+				List<VarDecl> primaries = candidates
+					.OfType<VarDecl>()
+					.Where( v => v.SpecInfo == null )
+					.ToList();
+				if( primaries.Count == 1 )
+					return primaries[0];
 			}
 
 			if( callSite ) {

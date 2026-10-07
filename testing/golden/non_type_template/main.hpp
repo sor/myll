@@ -10,7 +10,7 @@
 #include <utility>
 #include "array_checks.hpp"
 template <int N>
-const int twice = N * 2;
+inline constexpr int twice = N * 2;
 template <int N>
 inline int add(int x);
 template <int N>

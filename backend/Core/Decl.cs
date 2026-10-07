@@ -270,8 +270,20 @@ namespace Myll.Core
 		var int i { [inline] get; [inline] set; } = 99;
 	</example>
 	*/
-	public class VarDecl : Decl, ITemplatedDecl
+public class VarDecl : Decl, ITemplatedDecl
 	{
+		/// <summary>
+		/// Resolved specialization data for a variable template specialization
+		/// (filled by the resolver; see <see cref="VarDecl.SpecInfo"/>).
+		/// </summary>
+		public sealed class VarSpecInfo
+		{
+			public VarDecl     Primary = null!;
+			public List<TplArg> Args  = new(); // all primary params, declaration order
+			public bool[]       Bound = System.Array.Empty<bool>();
+			public bool IsFull => Bound.Length > 0 && Bound.All( b => b );
+		}
+
 		public enum Kind
 		{
 			Var,
@@ -285,8 +297,17 @@ namespace Myll.Core
 		public List<Accessor> accessor = new(); // opt, structural or global
 		public Expr?          init;
 		public bool           isDirectConstruct;
-		public List<TplParam> TplParams { get; init; } = new();
+		public List<TplParam> TplParams { get; set; } = new();
+		public List<TplBinding> TplSpec { get; init; } = new(); // non-empty: specialization of a same-module primary
 		public Scope?         varScope;
+
+		/// <summary>
+		/// Filled by the resolver for specializations: the primary plus the bound
+		/// template arguments. Args lists every primary parameter in declaration
+		/// order; unbound positions carry a symbolic TypespecNested naming the
+		/// parameter, and Bound marks the bound positions.
+		/// </summary>
+		public VarSpecInfo? SpecInfo { get; set; }
 
 		public Scope? TemplateParamScope => varScope;
 
