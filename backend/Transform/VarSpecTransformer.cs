@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Myll.Core;
 using Myll.Resolver;
@@ -9,15 +10,25 @@ namespace Myll.Transform
 	/// <summary>
 	/// Validates variable template specializations and links them to their primary:
 	/// the primary must live in the same module and scope and precede the
-	/// specialization; bindings must name primary parameters in declaration order;
-	/// and the specialization's declared type must match the primary's after
-	/// substituting the bound values. For partial specializations the unbound
-	/// parameters become the specialization's own template parameters and are
-	/// injected into its scope so initializers can reference them.
+	/// specialization, or in a module directly imported by the specialization's
+	/// module (then include order puts the primary first). Bindings must name
+	/// primary parameters in declaration order; and the specialization's declared
+	/// type must match the primary's after substituting the bound values. For
+	/// partial specializations the unbound parameters become the specialization's
+	/// own template parameters and are injected into its scope so initializers
+	/// can reference them.
 	/// </summary>
 	public sealed class VarSpecTransformer : Transformer
 	{
-		private ModuleContext context = null!;
+		private readonly IReadOnlyList<CompiledModuleResult> allModules;
+
+		private ModuleContext   context  = null!;
+		private GlobalNamespace moduleAst = null!;
+
+		public VarSpecTransformer( IReadOnlyList<CompiledModuleResult> allModules )
+		{
+			this.allModules = allModules;
+		}
 
 		protected override void PreTransform( TransformContext ctx )
 		{
@@ -25,22 +36,33 @@ namespace Myll.Transform
 			if( ctx.Module.Context.IsPrototypeFile )
 				return;
 
-			context = ctx.Module.Context;
+			context   = ctx.Module.Context;
+			moduleAst = module;
 			ValidateScope( module );
 		}
 
 		private void ValidateScope( Myll.Core.Hierarchical hier )
 		{
-			List<Decl> children = hier.children.ToList();
-			List<VarDecl> vars = children.OfType<VarDecl>().ToList();
+			List<Decl>    children = hier.children.ToList();
+			List<VarDecl> vars     = children.OfType<VarDecl>().ToList();
 
-			ValidateSpecsInScope( vars );
+			ValidateSpecsInScope( vars, NamespaceFqnOf( hier ) );
 
 			foreach( Decl child in children.OfType<Myll.Core.Hierarchical>() )
 				ValidateScope( (Myll.Core.Hierarchical)child );
 		}
 
-		private void ValidateSpecsInScope( List<VarDecl> vars )
+		/// <summary>
+		/// Namespace path from the module root down to <paramref name="hier"/>'s
+		/// own scope, or null inside a class/struct: member specializations stay
+		/// same-module for now.
+		/// </summary>
+		private static string? NamespaceFqnOf( Myll.Core.Hierarchical hier )
+			=> hier is Myll.Core.Structural ? null
+			: hier is Myll.Core.Namespace ns ? ns.FullyQualifiedName
+			: "";
+
+		private void ValidateSpecsInScope( List<VarDecl> vars, string? nsFqn )
 		{
 			// per primary: bound-value signatures already seen (duplicate check)
 			Dictionary<VarDecl, List<string>> seenSignatures = new();
@@ -50,22 +72,30 @@ namespace Myll.Transform
 					continue;
 
 				List<VarDecl> primaries = vars
-					.Where( v => v.name == spec.name && v.TplParams.Count > 0 )
+					.Where( v => v.name == spec.name && v.SpecInfo == null && v.TplParams.Count > 0 )
 					.ToList();
 
-				if( primaries.Count == 0 ) {
+				VarDecl? primary = primaries.Count > 0
+					? primaries[0]
+					: ( nsFqn != null ? FindImportedPrimary( spec, nsFqn ) : null );
+
+				if( primary == null ) {
 					Diagnostics.Add( new Diagnostic(
 						spec.srcPos,
 						DiagnosticKind.Error,
-						String.Format( "No matching variable template '{0}' in this module; specializations must live in the primary's module",
+						String.Format( "No matching variable template '{0}' in this module or its imports; a specialization must live in the primary's module or import it",
 							spec.name ) ) );
 					MarkInvalidSpec( spec );
 					continue;
 				}
 
-				VarDecl primary = primaries[0];
+				bool isImportedPrimary = primaries.Count == 0;
 
-				if( vars.IndexOf( primary ) >= vars.IndexOf( spec ) ) {
+				// Within one module the specialization must follow the primary by
+				// source position, not processing order, so multi-file modules stay
+				// order-independent. A cross-module primary needs no check: the include
+				// of the primary's module precedes every declaration of this one.
+				if( !isImportedPrimary && !IsLaterPos( spec, primary ) ) {
 					Diagnostics.Add( new Diagnostic(
 						spec.srcPos,
 						DiagnosticKind.Error,
@@ -254,6 +284,83 @@ namespace Myll.Transform
 				list.Add( leaf );
 				context.LocalDecls.Add( (placeholder, spec.varScope) );
 			}
+		}
+
+		/// <summary>
+		/// Finds the primary template for a cross-module specialization: same
+		/// namespace path and same name, in a module the specialization's module
+		/// imports directly, or in an implicitly imported std module. The generated
+		/// include of that module precedes this module's declarations, so include
+		/// order puts the primary before the specialization.
+		/// </summary>
+		private VarDecl? FindImportedPrimary( VarDecl spec, string nsFqn )
+		{
+			foreach( string importedName in ImportedModuleNames( moduleAst ) ) {
+				foreach( CompiledModuleResult m in allModules ) {
+					if( m.Module.module != importedName )
+						continue;
+
+					Myll.Core.Hierarchical? scope = FindNamespaceScope( m.Module, nsFqn );
+					if( scope == null || scope.scope == null
+					 || !scope.scope.children.TryGetValue( spec.name, out List<ScopeLeaf>? leaves ) )
+						continue;
+
+					foreach( ScopeLeaf leaf in leaves ) {
+						if( leaf.decl is VarDecl v
+						 && v.SpecInfo == null
+						 && v.TplParams.Count > 0
+						 && !v.IsHidden )
+							return v;
+					}
+				}
+			}
+
+			return null;
+		}
+
+		private static Myll.Core.Hierarchical? FindNamespaceScope( GlobalNamespace root, string fqn )
+		{
+			Myll.Core.Hierarchical cur = root;
+			if( fqn.Length != 0 ) {
+				foreach( string segment in fqn.Split( "::" ) ) {
+					Myll.Core.Hierarchical? next = null;
+					foreach( Decl child in cur.children ) {
+						if( child is Myll.Core.Namespace ns && ns.name == segment ) {
+							next = ns;
+							break;
+						}
+					}
+					if( next == null )
+						return null;
+					cur = next;
+				}
+			}
+			return cur;
+		}
+
+		// Mirrors Resolver.ImportedModuleNames: direct imports plus the implicitly
+		// imported std modules.
+		private static IEnumerable<string> ImportedModuleNames( GlobalNamespace module )
+		{
+			foreach( NamedImportSpec imp in module.imports.OfType<NamedImportSpec>() )
+				yield return imp.name;
+
+			foreach( string imp in StdBuiltins.ImplicitStdImports )
+				if( imp != module.module )
+					yield return imp;
+		}
+
+		// Compare by source position (file name, then line), like
+		// Resolver.IsLater: the harness and the driver hand files in sorted
+		// order, but the check must not depend on that.
+		private static bool IsLaterPos( Decl a, Decl b )
+		{
+			int fileCompare = StringComparer.Ordinal.Compare(
+				Path.GetFileName( a.srcPos.file ),
+				Path.GetFileName( b.srcPos.file ) );
+			if( fileCompare != 0 )
+				return fileCompare > 0;
+			return a.srcPos.from.line > b.srcPos.from.line;
 		}
 
 		private static string bindingSignature( TplBinding binding )

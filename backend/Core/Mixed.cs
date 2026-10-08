@@ -159,15 +159,15 @@ namespace Myll.Core
 		public Typespec?    type;
 	}
 
-		/// <summary>
-		/// One binding of a template specialization: `T = int` in `pi<T=int>`.
-		/// In the "name everything" form an entry can also be an unbound placeholder
-		/// (`T` in `q<T, U=int>`), marked by a null type. Names follow the primary's
-		/// parameter declaration order.
-		/// </summary>
-		public sealed class TplBinding
-		{
-			public string    name = null!;
-			public Typespec? type; // null: unbound placeholder
-		}
+	/// <summary>
+	/// One binding of a template specialization: `T = int` in `pi<T=int>`.
+	/// In the "name everything" form an entry can also be an unbound placeholder
+	/// (`T` in `q<T, U=int>`), marked by a null type. Names follow the primary's
+	/// parameter declaration order.
+	/// </summary>
+	public sealed class TplBinding
+	{
+		public string    name = null!;
+		public Typespec? type; // null: unbound placeholder
+	}
 }

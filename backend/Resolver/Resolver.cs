@@ -57,6 +57,12 @@ namespace Myll.Resolver
 		private readonly List<Diagnostic> diagnostics;
 		private readonly TypeResolver typeResolver;
 
+		// Cross-module variable template specialization data, built once after the
+		// pre-resolution transforms (SpecInfo is filled then).
+		private readonly Dictionary<VarDecl, List<SpecEntry>> specsByPrimary = new();
+		private readonly Dictionary<string, HashSet<string>> visibleByModule = new( StringComparer.Ordinal );
+		private readonly List<VarInstantiation> varInstantiations = new();
+
 		private NameResolver(
 			IReadOnlyDictionary<string, ModuleExports> moduleExports,
 			IReadOnlyDictionary<GlobalNamespace, ModuleContext> moduleContexts,
@@ -88,7 +94,7 @@ namespace Myll.Resolver
 				new EnumTransformer(),
 				new AutoReturnTransformer(),
 				new TemplateParamTransformer(),
-				new VarSpecTransformer(),
+				new VarSpecTransformer( modules ),
 				new ChainTransformer(),
 				new DiscardTransformer(),
 				new RuleOfTransformer(),
@@ -110,6 +116,7 @@ namespace Myll.Resolver
 			var exports  = BuildModuleExports( modules );
 			var contexts = modules.ToDictionary( m => m.Module, m => m.Context );
 			var resolver = new NameResolver( exports, contexts, result, diagnostics );
+			resolver.BuildVarSpecData( modules );
 			resolver.ResolveDialectBackings( modules, exports );
 
 		bool progress;
@@ -164,6 +171,7 @@ namespace Myll.Resolver
 
 			resolver.ValidateGlobalUsings( modules );
 			resolver.ValidateModuleDecls( modules );
+			resolver.ValidateVarSpecOdr();
 
 			foreach( CompiledModuleResult module in modules )
 				foreach( Transformer t in transformers )
@@ -323,7 +331,7 @@ namespace Myll.Resolver
 				if( resolved == null )
 					continue;
 
-				if( TryResolveVariableTemplate( resolved, r.Node, out Decl effective ) ) {
+				if( TryResolveVariableTemplate( resolved, r.Node, module.module, out Decl effective ) ) {
 					recordResolution( r.Node, effective );
 					progress = true;
 				}
@@ -361,14 +369,14 @@ namespace Myll.Resolver
 
 		/// <summary>
 		/// Performs template argument validation and type substitution for variable templates,
-		/// preferring a matching specialization when one exists.
-		/// Returns true when the reference is valid and should be recorded as a resolution;
+		/// preferring a matching specialization visible to <paramref name="useModule"/> when one
+		/// exists. Returns true when the reference is valid and should be recorded as a resolution;
 		/// <paramref name="effective"/> is the declaration to record (a specialization when one
-		/// matched, the primary otherwise).
-		/// Returns false when the template arity mismatches; the caller must then mark the
-		/// node invalid rather than recording the resolution, and must not re-process the node.
+		/// matched, the primary otherwise). Returns false when the template arity mismatches; the
+		/// caller must then mark the node invalid rather than recording the resolution, and must
+		/// not re-process the node.
 		/// </summary>
-		private bool TryResolveVariableTemplate( Decl resolved, Expr expr, out Decl effective )
+		private bool TryResolveVariableTemplate( Decl resolved, Expr expr, string useModule, out Decl effective )
 		{
 			effective = resolved;
 
@@ -423,8 +431,9 @@ namespace Myll.Resolver
 				return false;
 			}
 
-			// Specializations shadow the primary for matching explicit arguments.
-			VarDecl? spec = FindMatchingSpecialization( primary, useArgs, expr );
+			// Specializations visible to the use's module shadow the primary for
+			// matching explicit arguments.
+			VarDecl? spec = FindMatchingSpecialization( primary, useArgs, expr, useModule );
 			if( spec != null ) {
 				effective = spec;
 				expr.Type = TemplateInference.SubstituteTemplateParams(
@@ -434,6 +443,12 @@ namespace Myll.Resolver
 					result );
 				return true;
 			}
+
+			// The primary is instantiated here. Remember it for the ODR guard: a
+			// specialization of these arguments in a module this one cannot see
+			// would make translation units diverge.
+			if( specsByPrimary.ContainsKey( primary ) )
+				varInstantiations.Add( new VarInstantiation( primary, useArgs.ToList(), useModule, expr.srcPos ) );
 
 			expr.Type = TemplateInference.SubstituteTemplateParams(
 				primary.type,
@@ -445,43 +460,33 @@ namespace Myll.Resolver
 
 		/// <summary>
 		/// Finds the specialization of <paramref name="primary"/> whose bound values match
-		/// the explicit use arguments. Full specializations win over partial ones; among
-		/// partials the most-bound wins; ties are ambiguous and error out.
+		/// the explicit use arguments, among the specializations <paramref name="useModule"/>
+		/// can see. Full specializations win over partial ones; among partials the
+		/// most-bound wins; ties are ambiguous and error out.
 		/// </summary>
-		private VarDecl? FindMatchingSpecialization( VarDecl primary, List<TplArg> useArgs, Expr expr )
+		private VarDecl? FindMatchingSpecialization( VarDecl primary, List<TplArg> useArgs, Expr expr, string useModule )
 		{
-			Scope? containing = primary.scope as Scope ?? primary.scope?.parent as Scope;
-			if( containing == null )
+			if( !specsByPrimary.TryGetValue( primary, out List<SpecEntry>? entries ) )
 				return null;
 
-			if( !containing.children.TryGetValue( primary.name, out List<ScopeLeaf>? leaves ) )
+			// Prototype modules are not emitted; their translation units never
+			// see a Myll-generated specialization.
+			if( !visibleByModule.TryGetValue( useModule, out HashSet<string>? visible ) )
 				return null;
 
 			VarDecl? best = null;
 			int bestBoundCount = -1;
 
-			foreach( ScopeLeaf leaf in leaves ) {
-				if( leaf.decl is not VarDecl spec || spec.SpecInfo == null || !ReferenceEquals( spec.SpecInfo.Primary, primary ) )
+			foreach( SpecEntry entry in entries ) {
+				if( !visible.Contains( entry.Module ) )
 					continue;
 
-				bool[] bound = spec.SpecInfo.Bound;
-				bool matches = true;
-				for( int i = 0; i < bound.Length; i++ ) {
-					if( !bound[ i ] )
-						continue;
-					Typespec? argType = i < useArgs.Count ? useArgs[ i ].typespec : null;
-					Typespec? boundType = spec.SpecInfo.Args[ i ].typespec;
-					if( argType == null || boundType == null
-					 || argType.Gen() != boundType.Gen() ) {
-						matches = false;
-						break;
-					}
-				}
-				if( !matches )
+				VarDecl spec = entry.Spec;
+				if( !MatchesBoundArgs( spec.SpecInfo!, useArgs ) )
 					continue;
 
-				int boundCount = bound.Count( b => b );
-				if( boundCount == bound.Length ) // full specialization
+				int boundCount = spec.SpecInfo!.Bound.Count( b => b );
+				if( boundCount == spec.SpecInfo.Bound.Length ) // full specialization
 					return spec;
 
 				if( boundCount > bestBoundCount ) {
@@ -499,6 +504,24 @@ namespace Myll.Resolver
 			}
 
 			return best;
+		}
+
+		// A specialization matches a use when every bound parameter position has
+		// the same type; unbound positions are wildcards.
+		private static bool MatchesBoundArgs( VarDecl.VarSpecInfo info, List<TplArg> useArgs )
+		{
+			bool[] bound = info.Bound;
+			for( int i = 0; i < bound.Length; i++ ) {
+				if( !bound[ i ] )
+					continue;
+				Typespec? argType   = i < useArgs.Count ? useArgs[ i ].typespec : null;
+				Typespec? boundType = info.Args[ i ].typespec;
+				if( argType == null || boundType == null
+				 || argType.Gen() != boundType.Gen() )
+					return false;
+			}
+
+			return true;
 		}
 
 		private bool ResolveTypes( GlobalNamespace module, ModuleContext context )
@@ -644,6 +667,35 @@ namespace Myll.Resolver
 
 			foreach( CompiledModuleResult m in modules ) {
 				GlobalNamespace module = m.Module;
+if( m.Context.IsPrototypeFile )
+				continue;
+
+				CollectModuleDecls( module.scope, "", m, declsByKey );
+			}
+
+			foreach( ((string ns, string name), List<ModuleDecl> decls) in declsByKey ) {
+				List<ModuleDecl> distinct = decls
+					.GroupBy( d => d.Decl, ReferenceEqualityComparer.Instance )
+					.Select( g => g.First() )
+					.ToList();
+				if( distinct.Count < 2 )
+					continue;
+
+				ReportModuleCollisions( ns, name, distinct );
+			}
+		}
+
+		/// <summary>
+		/// One Myll compilation is one program: builds the transitive import
+		/// closure per module, so a module's translation unit sees exactly the
+		/// modules it imports plus the implicitly imported std modules. Also
+		/// collects every valid variable template specialization, keyed by its
+		/// primary, for cross-module lookup and the ODR guard.
+		/// </summary>
+		private void BuildVarSpecData( IReadOnlyList<CompiledModuleResult> modules )
+		{
+			foreach( CompiledModuleResult m in modules ) {
+				GlobalNamespace module = m.Module;
 				if( m.Context.IsPrototypeFile )
 					continue;
 
@@ -666,19 +718,133 @@ namespace Myll.Resolver
 					visible.Add( imp );
 
 				visibleByModule[module.module] = visible;
-				CollectModuleDecls( module.scope, "", m, declsByKey );
+
+				CollectVarSpecs( module.scope, module.module );
+			}
+		}
+
+		// Variable template specializations are linked to their primary with
+		// SpecInfo; failed ones carry a self-reference instead and are skipped.
+		private void CollectVarSpecs( Scope scope, string moduleName )
+		{
+			foreach( List<ScopeLeaf> leaves in scope.children.Values ) {
+				foreach( ScopeLeaf leaf in leaves ) {
+					Decl? decl = leaf.decl;
+					if( decl == null || decl.IsHidden )
+						continue;
+
+					if( decl is Namespace ns ) {
+						CollectVarSpecs( ns.scope, moduleName );
+						continue;
+					}
+
+					if( decl is not VarDecl spec || spec.SpecInfo == null )
+						continue;
+					if( ReferenceEquals( spec.SpecInfo.Primary, spec ) )
+						continue;
+
+					if( !specsByPrimary.TryGetValue( spec.SpecInfo.Primary, out List<SpecEntry>? entries ) ) {
+						entries = new List<SpecEntry>();
+						specsByPrimary[spec.SpecInfo.Primary] = entries;
+					}
+
+					entries.Add( new SpecEntry( spec, moduleName ) );
+				}
+			}
+		}
+
+		/// <summary>
+		/// Enforces the one-definition rule for variable template specializations
+		/// across modules. One Myll compilation is one program, so the generated
+		/// inline definitions must be identical in every translation unit. C++
+		/// only makes such divergences ill-formed with no diagnostic required
+		/// ("If an inline function or variable with external linkage is defined
+		/// differently in different translation units, the program is ill-formed,
+		/// no diagnostic required" and "Specialization must be declared before the
+		/// first use that would cause implicit instantiation, in every translation
+		/// unit where such use occurs"); Myll rejects both patterns as hard errors
+		/// instead.
+		/// </summary>
+		private void ValidateVarSpecOdr()
+		{
+			// The same bound signature for one primary, defined in two modules:
+			// the definitions are distinct, so wherever they meet they clash, and
+			// where they do not meet the translation units diverge.
+			foreach( (VarDecl primary, List<SpecEntry> entries) in specsByPrimary ) {
+				Dictionary<string, SpecEntry> seenSignatures = new( StringComparer.Ordinal );
+
+				foreach( SpecEntry entry in entries ) {
+					string signature = SpecSignature( primary, entry.Spec );
+					if( !seenSignatures.TryGetValue( signature, out SpecEntry earlier ) ) {
+						seenSignatures[ signature ] = entry;
+						continue;
+					}
+					if( earlier.Module == entry.Module )
+						continue; // same-module duplicates are reported by VarSpecTransformer
+
+					bool later = IsLater( entry.Spec, earlier.Spec );
+					SpecEntry laterEntry  = later ? entry  : earlier;
+					SpecEntry earlierEntry = later ? earlier : entry;
+
+					diagnostics.Add( new Diagnostic(
+						laterEntry.Spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format(
+							"Duplicate specialization of '{0}' for {1} (first defined in module '{2}')",
+							primary.name, signature, earlierEntry.Module ) ) );
+					diagnostics.Add( new Diagnostic(
+						earlierEntry.Spec.srcPos,
+						DiagnosticKind.Note,
+						String.Format( "The previous specialization of '{0}' is defined here.", primary.name ) ) );
+				}
 			}
 
-			foreach( ((string ns, string name), List<ModuleDecl> decls) in declsByKey ) {
-				List<ModuleDecl> distinct = decls
-					.GroupBy( d => d.Decl, ReferenceEqualityComparer.Instance )
-					.Select( g => g.First() )
-					.ToList();
-				if( distinct.Count < 2 )
+			// A primary instantiation in a module that cannot see a matching
+			// specialization: that translation unit would define the primary
+			// instantiation while others use the specialization.
+			foreach( VarInstantiation inst in varInstantiations ) {
+				if( !specsByPrimary.TryGetValue( inst.Primary, out List<SpecEntry>? entries ) )
 					continue;
 
-				ReportModuleCollisions( ns, name, distinct, visibleByModule );
+				foreach( SpecEntry entry in entries ) {
+					if( !MatchesBoundArgs( entry.Spec.SpecInfo!, inst.Args ) )
+						continue;
+
+					// Visible specializations were picked during resolution and
+					// never recorded as primary instantiations.
+					if( IsVisibleModule( inst.Module, entry.Module ) )
+						continue;
+
+					diagnostics.Add( new Diagnostic(
+						inst.Pos,
+						DiagnosticKind.Error,
+						String.Format(
+							"'{0}' is specialized for {1} in module '{2}', but module '{3}' does not import it; this use would instantiate '{0}' from the primary instead. Divergent definitions across translation units are ill-formed (no diagnostic required) in C++; Myll rejects them.",
+							inst.Primary.name, SpecSignature( inst.Primary, entry.Spec ), entry.Module, inst.Module ) ) );
+					diagnostics.Add( new Diagnostic(
+						entry.Spec.srcPos,
+						DiagnosticKind.Note,
+						String.Format( "The specialization of '{0}' is defined here.", inst.Primary.name ) ) );
+				}
 			}
+		}
+
+		private bool IsVisibleModule( string useModule, string specModule )
+			=> visibleByModule.TryGetValue( useModule, out HashSet<string>? visible )
+			  && visible.Contains( specModule );
+
+		// Canonical bound-signature of a specialization: the bound parameter
+		// names with their values, in primary parameter order.
+		private static string SpecSignature( VarDecl primary, VarDecl spec )
+		{
+			VarDecl.VarSpecInfo info = spec.SpecInfo!;
+			List<string> parts = new( info.Bound.Length );
+			for( int i = 0; i < info.Bound.Length; i++ ) {
+				if( info.Bound[ i ] )
+					parts.Add( primary.TplParams[ i ].name + "=" + info.Args[ i ].Gen() );
+			}
+
+			return String.Join( ",", parts );
 		}
 
 		private static void CollectModuleDecls(
@@ -729,11 +895,7 @@ namespace Myll.Resolver
 			return false;
 		}
 
-		private void ReportModuleCollisions(
-			string                             ns,
-			string                             name,
-			List<ModuleDecl>                  decls,
-			Dictionary<string, HashSet<string>> visibleByModule )
+		private void ReportModuleCollisions( string ns, string name, List<ModuleDecl> decls )
 		{
 			string fqn = ns.Length == 0 ? name : ns + "::" + name;
 
@@ -744,7 +906,7 @@ namespace Myll.Resolver
 					// A module always sees its own declarations; only cross-module pairs
 					// need a module that imports (transitively) both sides.
 					bool crossModule = a.Module != b.Module;
-					if( crossModule && !HasCommonVisibleModule( a.Module, b.Module, visibleByModule ) )
+					if( crossModule && !HasCommonVisibleModule( a.Module, b.Module ) )
 						continue;
 					CollisionKind kind = ClassifyCollision( a.Decl, b.Decl );
 					if( kind == CollisionKind.None )
@@ -790,6 +952,21 @@ namespace Myll.Resolver
 		/// </summary>
 		private static CollisionKind ClassifyCollision( Decl a, Decl b )
 		{
+			// A variable template specialization next to its primary, or next to
+			// another specialization of the same primary, is not a collision: it
+			// legally specializes the template. The var-spec ODR guard owns these
+			// pairs with dedicated diagnostics.
+			VarDecl? specA = a as VarDecl;
+			VarDecl? specB = b as VarDecl;
+			if( specA != null && specB != null
+			 && specA.SpecInfo != null && specB.SpecInfo != null
+			 && ReferenceEquals( specA.SpecInfo.Primary, specB.SpecInfo.Primary ) )
+				return CollisionKind.None;
+			if( specA != null && specA.SpecInfo != null && ReferenceEquals( specA.SpecInfo.Primary, b ) )
+				return CollisionKind.None;
+			if( specB != null && specB.SpecInfo != null && ReferenceEquals( specB.SpecInfo.Primary, a ) )
+				return CollisionKind.None;
+
 			if( !SameKind( a, b ) )
 				return CollisionKind.KindMismatch;
 
@@ -883,10 +1060,7 @@ namespace Myll.Resolver
 			return true;
 		}
 
-		private static bool HasCommonVisibleModule(
-			string                             a,
-			string                             b,
-			Dictionary<string, HashSet<string>> visibleByModule )
+		private bool HasCommonVisibleModule( string a, string b )
 		{
 			foreach( HashSet<string> visible in visibleByModule.Values ) {
 				if( visible.Contains( a ) && visible.Contains( b ) )
@@ -918,6 +1092,36 @@ namespace Myll.Resolver
 			{
 				Decl   = decl;
 				Module = module;
+			}
+		}
+
+		private sealed class SpecEntry
+		{
+			public readonly VarDecl Spec;
+			public readonly string  Module;
+
+			public SpecEntry( VarDecl spec, string module )
+			{
+				Spec   = spec;
+				Module = module;
+			}
+		}
+
+		// A use of a variable template that resolved to its primary (no visible
+		// specialization matched), recorded for the ODR guard.
+		private sealed class VarInstantiation
+		{
+			public readonly VarDecl       Primary;
+			public readonly List<TplArg>  Args;
+			public readonly string        Module;
+			public readonly SrcPos?       Pos;
+
+			public VarInstantiation( VarDecl primary, List<TplArg> args, string module, SrcPos? pos )
+			{
+				Primary = primary;
+				Args    = args;
+				Module  = module;
+				Pos     = pos;
 			}
 		}
 

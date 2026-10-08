@@ -547,6 +547,10 @@ namespace Myll.Generator
 		/// Emits a variable template specialization: `template<> inline constexpr T pi<int> = 3;`
 		/// for a full specialization, or `template<typename T> inline constexpr T q<T, 5> = ...;`
 		/// for a partial one (the unbound parameters become the specialization's own).
+		/// Runtime (non-constexpr) module-scope specializations are inline variables:
+		/// the declaration/definition split used for non-template runtime variables
+		/// does not exist for specializations (C++ rejects re-defining one), and a
+		/// non-inline definition in a header would collide across translation units.
 		/// </summary>
 		private void EmitVarSpecialization( VarDecl obj )
 		{
@@ -563,7 +567,7 @@ namespace Myll.Generator
 
 			bool isConstType   = ( obj.type.qual & Qualifier.Const ) != 0;
 			bool isInsideStruct = obj.IsInStruct;
-			bool isStatic      = obj.IsStatic;
+			bool isStatic       = obj.IsStatic;
 
 			// A const specialization is a constexpr entity like its primary
 			bool isCompileTime = isConstType;
@@ -581,7 +585,7 @@ namespace Myll.Generator
 				"{0}{1}{2}{3}{4}{5};",
 				tplPrefix,
 				isStatic && isInsideStruct ? "static " : "",
-				isCompileTime ? "inline " : "",   // header entity like the primary
+				isCompileTime || !isInsideStruct ? "inline " : "",
 				isCompileTime ? VarFormat[4] : "",
 				emitType.Gen( nameDecl ),
 				initStr ) );
@@ -759,6 +763,9 @@ namespace Myll.Generator
 				SourceLines retImpl = new();
 				if( hasTpl )
 					retImpl.Add( tplImplLine );
+				// A template primary's out-of-line definition repeats its parameters in
+				// the template<> prefix; the name must not carry its own argument list
+				// again (ReferenceName omits it, FullyQualifiedName would repeat it).
 				retImpl.Add( Format(
 					VarFormat[0],
 					IndentImpl,
@@ -767,7 +774,7 @@ namespace Myll.Generator
 					isHidden      ? VarFormat[3] : "",
 					"",
 					needsTypename ? VarFormat[5] : "",
-					emitType.Gen( obj.FullyQualifiedName ),
+					emitType.Gen( obj.ReferenceName ),
 					initImpl ) );
 				MarkDeclSourceMap( retImpl, obj, 0 );
 				targetImpl.Add( (obj.access, retImpl) );
