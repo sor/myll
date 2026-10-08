@@ -2,11 +2,12 @@
 
 Status: **implemented 2026-10-04** (phase 1: same-module variable specializations),
 **2026-10-08** (phase 3: cross-module + ODR guard; phase 2: class/struct/union
-specializations, same-module and cross-module). Cases: `testing/cases/var_templates/`,
-`testing/cases/class_templates/`, `testing/cases/cross_module_var_spec/` and
-`testing/cases/cross_module_struct_spec/` (positive), `template_fail/`,
-`cross_module_clash_fail/`, `cross_module_var_spec_fail/` and
-`cross_module_struct_spec_fail/` (negative).
+specializations; phase 4: function specializations, same-module and cross-module).
+Cases: `testing/cases/var_templates/`, `testing/cases/class_templates/`,
+`testing/cases/cross_module_var_spec/`, `testing/cases/cross_module_struct_spec/`
+and `testing/cases/cross_module_func_spec/` (positive), `template_fail/`,
+`cross_module_clash_fail/`, `cross_module_var_spec_fail/`,
+`cross_module_struct_spec_fail/` and `cross_module_func_spec_fail/` (negative).
 
 ## Syntax
 
@@ -16,7 +17,13 @@ const T pi<T=int>  = 3;           // full spec: template<> inline constexpr int 
 const T q<T, U>    = (T)7;        // primary, two params
 const T q<T, U=int> = (T)70;      // partial, full form: template<class T> ... q<T, int> = ...
 const T q<U=int>   = (T)70;       // partial, subset form — same specialization
+
+func max<T>( T a, T b ) -> T { ... }             // primary
+func max<T=int>( int a, int b ) -> int { ... }   // full spec: template<> int max<int>(...) { ... }
 ```
+
+Function specializations are full-only (C++ has no partial function specializations);
+class/struct/union specializations use the same forms as variables.
 
 Decisions (settled 2026-10-04):
 
@@ -131,15 +138,46 @@ Decisions (settled 2026-10-04):
   members no longer get default member initializers (C++ rejects initializing multiple
   members of a union).
 
+## Function specializations (phase 4)
+
+- Grammar: `defCoreFunc` accepts `tplSpec` (`func max<T=int>( int a, int b ) -> int { ... }`).
+- **Full only** — C++ allows no partial function specializations; any bare binding or
+  missing count is rejected.
+- **The signature must repeat the primary's substituted parameters and return type** —
+  verified against g++ that a differing return type is rejected ("template-id ... does not
+  match any template declaration"), so covariant-style returns are out: a specialization
+  replaces the primary for those arguments, and a differing return would diverge across
+  translation units just like the ODR traps.
+- **Bound parameter names stay usable** in the signature and body: the transformer injects
+  a hidden `IsBoundAlias` alias per bound parameter (`T -> int`) into the spec's function
+  scope, instead of rewriting the AST. Name resolution resolves `T` through the alias
+  (works for locals, casts, `new`, nested template arguments), inner declarations named
+  `T` shadow it naturally, and emission expands such aliases to their target
+  (`TypespecNested.GenType`) so no `T` reaches the generated C++. Writing the bound value
+  (`int`) directly is equally valid; the signature check substitutes both sides.
+- Resolution: a spec is a viable call candidate only when the explicit template arguments
+  match its bound values, or when the primary's deduced arguments do; a viable spec
+  shadows its primary in `TryResolveOverload`'s candidate list, an unmatched one steps
+  aside. Calls that resolved to a spec are not re-resolved (the candidate list would
+  shrink to the spec alone). Calls instantiating a primary are recorded for the ODR
+  guard, deduplicated across re-resolution iterations.
+- Emission: `template<>` prefix plus the decorated name (`template<> int max<int>(...)`)
+  with the body as a header entity; the emitted call keeps plain deduction
+  (`max( 21 )`), and C++ overload resolution picks the specialization.
+- Same ODR guard as the other kinds through the shared `specsByPrimary` index.
+
 ## Deferred inventory
 
-- Function/method specialization (C++: full only).
 - Specialization of member (field-scope) templates, variable or class: the transformer's
   imported-primary search follows namespaces only; members stay same-module for now.
+  Method (member function) specialization likewise stays unimplemented (the transformer
+  rejects attempts with a hint to move to module/namespace scope).
 - A future attribute to constrain class specializations: e.g. `[interface]` to enforce that a
   specialization exposes the primary's member set, or `[copy]` to copy the primary's members
   and only override the listed ones. The C++-first semantics (fresh member set, bound names
   not in scope) stay the default.
+- Retrofitting bound-parameter aliases to variables (initializer expressions) and
+  class/struct specializations (bodies), so all kinds allow writing `T` after binding.
 - Runtime primary instantiation from an importing module: the primary's definition lives in
   its module's `.cpp` while importers only see the `extern` declaration, so importing
   translation units cannot implicitly instantiate it. Same-module runtime primaries work.
