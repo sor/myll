@@ -1214,7 +1214,7 @@ namespace Myll.Generator
 				throw new InvalidOperationException( "not an enum and not a struct" );
 			}
 
-// "{0}{1}{2} {3}{4}{5}",
+			// "{0}{1}{2} {3}{4}{5}",
 			// 0 indent, 1 keyword, 2 attributes, 3 name, 4 final, 5 bases
 			if( !isGlobal ) {
 				// A specialization needs no forward declaration: it is defined

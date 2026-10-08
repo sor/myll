@@ -50,7 +50,7 @@ namespace Myll.Transform
 			List<Decl> children = hier.children.ToList();
 
 			ValidateSpecsInScope( children.OfType<VarDecl>().ToList(), NamespaceFqnOf( hier ) );
-			ValidateStructSpecs( children.OfType<Myll.Core.Structural>().ToList() );
+			ValidateStructSpecs( children.OfType<Myll.Core.Structural>().ToList(), NamespaceFqnOf( hier ) );
 
 			foreach( Decl child in children.OfType<Myll.Core.Hierarchical>() )
 				ValidateScope( (Myll.Core.Hierarchical)child );
@@ -65,6 +65,16 @@ namespace Myll.Transform
 			=> hier is Myll.Core.Structural ? null
 			: hier is Myll.Core.Namespace ns ? ns.FullyQualifiedName
 			: "";
+
+		private static bool IsVarPrimary( Decl decl )
+			=> decl is VarDecl { SpecInfo: null } v
+			 && v.TplParams.Count > 0
+			 && !v.IsHidden;
+
+		private static bool IsStructPrimary( Decl decl )
+			=> decl is Myll.Core.Structural { SpecInfo: null } s
+			 && s.TplParams.Count > 0
+			 && !s.IsHidden;
 
 		private void ValidateSpecsInScope( List<VarDecl> vars, string? nsFqn )
 		{
@@ -81,7 +91,7 @@ namespace Myll.Transform
 
 				VarDecl? primary = primaries.Count > 0
 					? primaries[0]
-					: ( nsFqn != null ? FindImportedPrimary( spec, nsFqn ) : null );
+					: ( nsFqn != null ? FindImportedPrimary( spec.name, nsFqn, IsVarPrimary ) as VarDecl : null );
 
 				if( primary == null ) {
 					Diagnostics.Add( new Diagnostic(
@@ -190,7 +200,7 @@ namespace Myll.Transform
 		/// parameter names are not in scope: the body is written with the bound
 		/// values spelled out, like C++.
 		/// </summary>
-		private void ValidateStructSpecs( List<Myll.Core.Structural> structs )
+		private void ValidateStructSpecs( List<Myll.Core.Structural> structs, string? nsFqn )
 		{
 			// per primary: bound-value signatures already seen (duplicate check)
 			Dictionary<Myll.Core.Structural, List<string>> seenSignatures = new();
@@ -203,21 +213,27 @@ namespace Myll.Transform
 					.Where( s => s.name == spec.name && s.SpecInfo == null && s.TplParams.Count > 0 )
 					.ToList();
 
-				if( primaries.Count == 0 ) {
+				Myll.Core.Structural? primary = primaries.Count > 0
+					? primaries[0]
+					: ( nsFqn != null ? FindImportedPrimary( spec.name, nsFqn, IsStructPrimary ) as Myll.Core.Structural : null );
+
+				if( primary == null ) {
 					Diagnostics.Add( new Diagnostic(
 						spec.srcPos,
 						DiagnosticKind.Error,
-						String.Format( "No matching template '{0}' in this module; a class/struct/union specialization must live in the primary's module",
+						String.Format( "No matching template '{0}' in this module or its imports; a class/struct/union specialization must live in the primary's module or import it",
 							spec.name ) ) );
 					MarkInvalidSpec( spec );
 					continue;
 				}
 
-				Myll.Core.Structural primary = primaries[0];
+				bool isImportedPrimary = primaries.Count == 0;
 
-				// The specialization must follow the primary by source position, not
-				// processing order, so multi-file modules stay order-independent.
-				if( !IsLaterPos( spec, primary ) ) {
+				// Within one module the specialization must follow the primary by
+				// source position, not processing order, so multi-file modules stay
+				// order-independent. A cross-module primary needs no check: the
+				// include of the primary's module precedes every declaration of this one.
+				if( !isImportedPrimary && !IsLaterPos( spec, primary ) ) {
 					Diagnostics.Add( new Diagnostic(
 						spec.srcPos,
 						DiagnosticKind.Error,
@@ -415,7 +431,7 @@ namespace Myll.Transform
 		/// include of that module precedes this module's declarations, so include
 		/// order puts the primary before the specialization.
 		/// </summary>
-		private VarDecl? FindImportedPrimary( VarDecl spec, string nsFqn )
+		private Decl? FindImportedPrimary( string name, string nsFqn, Func<Decl, bool> isPrimary )
 		{
 			foreach( string importedName in ImportedModuleNames( moduleAst ) ) {
 				foreach( CompiledModuleResult m in allModules ) {
@@ -424,15 +440,12 @@ namespace Myll.Transform
 
 					Myll.Core.Hierarchical? scope = FindNamespaceScope( m.Module, nsFqn );
 					if( scope == null || scope.scope == null
-					 || !scope.scope.children.TryGetValue( spec.name, out List<ScopeLeaf>? leaves ) )
+					 || !scope.scope.children.TryGetValue( name, out List<ScopeLeaf>? leaves ) )
 						continue;
 
 					foreach( ScopeLeaf leaf in leaves ) {
-						if( leaf.decl is VarDecl v
-						 && v.SpecInfo == null
-						 && v.TplParams.Count > 0
-						 && !v.IsHidden )
-							return v;
+						if( isPrimary( leaf.decl ) )
+							return leaf.decl;
 					}
 				}
 			}

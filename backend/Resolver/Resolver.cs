@@ -327,7 +327,7 @@ namespace Myll.Resolver
 					continue;
 
 				bool callSite = context.FuncCallCallees.Contains( r.Node );
-				Decl? resolved = ResolvePath( r.Segments, r.Scope, module, out _, callSite );
+				Decl? resolved = ResolvePath( r.Segments, r.Scope, module, out _, callSite, r.Node.srcPos );
 				if( resolved == null )
 					continue;
 
@@ -532,7 +532,7 @@ namespace Myll.Resolver
 					continue;
 
 				// Types are never call sites: prefer the type over a constructor.
-				Decl? resolved = ResolvePath( unresolved.Node.idTpls, unresolved.Scope, module, out _, callSite: false );
+				Decl? resolved = ResolvePath( unresolved.Node.idTpls, unresolved.Scope, module, out _, callSite: false, unresolved.Node.srcPos );
 
 				// Compute per-prefix dependency information for all nested names so
 				// that the generator can emit the C++ 'typename' and 'template'
@@ -2126,7 +2126,8 @@ if( m.Context.IsPrototypeFile )
 			Scope                    startScope,
 			GlobalNamespace          module,
 			out int                  unresolvedSegmentIndex,
-			bool                     callSite = false )
+			bool                     callSite = false,
+			SrcPos?                  usePos = null )
 		{
 			unresolvedSegmentIndex = -1;
 			if( segments.Count == 0 )
@@ -2144,7 +2145,7 @@ if( m.Context.IsPrototypeFile )
 				unresolvedSegmentIndex = 0;
 				return null;
 			}
-			current = TrySwapStructSpec( current, segments[0], module );
+			current = TrySwapStructSpec( current, segments[0], module, usePos );
 
 			for( int i = 1; i < segments.Count; i++ ) {
 				if( current is not Hierarchical h ) {
@@ -2160,7 +2161,7 @@ if( m.Context.IsPrototypeFile )
 					return null;
 				}
 
-				current = TrySwapStructSpec( next, segments[i], module );
+				current = TrySwapStructSpec( next, segments[i], module, usePos );
 			}
 
 			return current;
@@ -2170,9 +2171,11 @@ if( m.Context.IsPrototypeFile )
 		/// Swaps a resolved class/struct/union template primary for its matching
 		/// specialization, so that member lookup, constructors, and generation all
 		/// use the specialization's own declarations. Uses whose argument list is
-		/// dependent (a symbolic template parameter) keep the primary.
+		/// dependent (a symbolic template parameter) keep the primary. A use that
+		/// no visible specialization matches is recorded as a primary instantiation
+		/// for the ODR guard.
 		/// </summary>
-		private Decl TrySwapStructSpec( Decl resolved, IdTplArgs segment, GlobalNamespace module )
+		private Decl TrySwapStructSpec( Decl resolved, IdTplArgs segment, GlobalNamespace module, SrcPos? usePos )
 		{
 			if( resolved is not Structural primary
 			 || primary.SpecInfo != null
@@ -2181,7 +2184,16 @@ if( m.Context.IsPrototypeFile )
 				return resolved;
 
 			Decl? spec = FindMatchingSpecialization( primary, segment.tplArgs, null, module.module );
-			return spec ?? resolved;
+			if( spec != null )
+				return spec;
+
+			// Only the main resolution paths (name and type resolution) carry a source
+			// position here; secondary lookups that re-resolve the same use must not
+			// record it twice.
+			if( usePos != null && specsByPrimary.ContainsKey( primary ) )
+				varInstantiations.Add( new VarInstantiation( primary, segment.tplArgs.ToList(), module.module, usePos ) );
+
+			return resolved;
 		}
 
 		private bool TryGetMemberAccessBaseType(
