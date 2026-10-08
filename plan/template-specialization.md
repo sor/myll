@@ -1,7 +1,9 @@
 # Variable Template Specialization
 
-Status: **implemented 2026-10-04** (phase 1). Cases: `testing/cases/var_templates/`
-(positive), `template_fail/` + `cross_module_clash_fail/` (negative).
+Status: **implemented 2026-10-04** (phase 1: same-module), **2026-10-08** (phase 3:
+cross-module + ODR guard). Cases: `testing/cases/var_templates/` and
+`testing/cases/cross_module_var_spec/` (positive), `template_fail/`,
+`cross_module_clash_fail/` and `cross_module_var_spec_fail/` (negative).
 
 ## Syntax
 
@@ -25,10 +27,29 @@ Decisions (settled 2026-10-04):
   all-bare list (`q<T>`) parses as the primary declaration itself.
 - **Phase 1: type parameters only.** Binding a non-type parameter (`N=5`) needs a grammar
   extension; the binding grammar is `id ASSIGN typespec`.
-- **Specializations live in the primary's own module**, declared after the primary. Cross-module
-  specializations are an ODR trap in C++ (a non-importing module would instantiate from the
-  primary with a different value); the general form needs resolver visibility tracking plus
-  forced includes.
+- **Cross-module specializations (phase 3)** live in a module that directly imports the
+  primary's module (or in an implicitly imported std module), inside the primary's
+  namespace. The specializing module's generated header includes the primary's header, so
+  every translation unit sees the primary before the specialization. Transitive imports do
+  not qualify: Myll name resolution only sees direct imports, and the specialization rule
+  matches that. Same-module specializations must follow the primary by source position.
+- **One Myll compilation is one program — the ODR guard is a hard error.** C++ only makes
+  the diverging patterns ill-formed with no diagnostic required; Myll diagnoses them
+  instead. The two rejected patterns:
+  - the same bound signature for one primary, defined in two modules (duplicate
+    specialization), and
+  - a primary instantiation in a module that cannot see a matching specialization
+    (that translation unit would instantiate the primary while others use the
+    specialization).
+  The cppreference basis:
+  - inline specifier, Notes: "If an inline function or variable with external linkage is
+    defined differently in different translation units, the program is ill-formed, no
+    diagnostic required."
+  - explicit (full) template specialization: "Specialization must be declared before the
+    first use that would cause implicit instantiation, in every translation unit where
+    such use occurs."
+  A future `--program`-split option could relax the guard for separately linked programs;
+  it is not implemented.
 - **Primary-first resolution**: uses are type-checked against the primary's signature (the
   specialization must repeat the primary's substituted type, mirroring C++'s same-declarator
   rule), and the resolver picks the matching specialization for emission. A full specialization
@@ -54,18 +75,42 @@ Decisions (settled 2026-10-04):
   type equality; substitutes bound values into the specialization's declared type syntactically
   (no resolved decls needed); injects unbound `TplParamDecl`s into the specialization's scope so
   initializers can reference them. Failed specializations are marked with a self-referencing
-  `SpecInfo` so later passes treat them as consumed.
+  `SpecInfo` so later passes treat them as consumed. The transformer receives all compiled
+  modules: when the specialization's own module has no primary, it searches the directly
+  imported modules (plus the implicit std modules) along the specialization's namespace path.
+  The same-module primary-first check compares source positions (file name, then line), so
+  multi-file modules do not depend on file processing order.
 - Uses: `TryResolveVariableTemplate` prefers a matching specialization; `PickSingleCandidate`
-  picks the primary among same-name declarations.
-- Emission: `EmitVarSpecialization` in `HierachicalGen`.
+  picks the primary among same-name declarations. The resolver builds `specsByPrimary`
+  (every valid specialization keyed by its primary, with its module) and the transitive
+  `visibleByModule` import sets once after the pre-resolution transforms.
+  `FindMatchingSpecialization` picks from that index, filtered to the specializations the
+  use's module can see; prototype modules never see one. A use that falls through to the
+  primary is recorded as an implicit instantiation.
+- `ValidateVarSpecOdr` (after `ValidateModuleDecls`) rejects the two ODR patterns as errors,
+  each with a note on the other definition. `ValidateModuleDecls` no longer classifies a
+  specialization against its own primary or a sibling specialization of the same primary as
+  a redefinition; the guard owns those pairs.
+- Emission: `EmitVarSpecialization` in `HierachicalGen`. A runtime (non-const) module-scope
+  specialization is an inline variable (`template<> inline int rt<int> = 5;`): C++ offers no
+  declaration/definition split for specializations (re-defining one is an error), so inline
+  is the only header-safe form. The primary's out-of-line definition no longer repeats its
+  own template arguments (`obj.ReferenceName` instead of `FullyQualifiedName` in `AddVar`).
 
 ## Deferred inventory
 
 - Function/method specialization (C++: full only).
-- Class/struct specialization (own phase: specializations may change member sets, needs
-  specialization-aware member resolution).
+- Class/struct specialization — phase 2 (specializations may change member sets, needs
+  specialization-aware member resolution, `template<> struct Box<int> { ... }` emission).
+- Cross-module specialization of member (field-scope) variable templates: the transformer's
+  imported-primary search follows namespaces only; members stay same-module for now.
+- Runtime primary instantiation from an importing module: the primary's definition lives in
+  its module's `.cpp` while importers only see the `extern` declaration, so importing
+  translation units cannot implicitly instantiate it. Same-module runtime primaries work.
+  (Const primaries are fully defined in the header and unaffected.)
+- `--program`-split relaxation of the ODR guard.
 - Explicit instantiation syntax for classes/functions (`template class Foo<int>;`).
-- Extern-template declarations.
+- Extern declarations.
 - Non-type parameter bindings (`N=5`).
 - Use-site named template arguments.
 
