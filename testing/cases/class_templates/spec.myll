@@ -1,0 +1,104 @@
+module class_templates;
+
+namespace spec {
+
+// full specialization: own member set, C++ style — bound names are not in
+// scope, the body spells out the bound values
+class Box<T>
+{
+[pub]:
+	field T _value;
+	[default] ctor();
+	func read() -> T => _value;
+}
+
+class Box<T=int>
+{
+[pub]:
+	field int _value;
+	field int _extra;
+
+[pub]:
+	ctor( int v, int e ) { _value = v; _extra = e; }
+	func read() -> int => _value + _extra;
+}
+
+// partial specialization: T stays a parameter, U is bound
+class Pair<T, U>
+{
+[pub]:
+	field T _a;
+	field U _b;
+
+	[default] ctor();
+	func sum() -> T => _a;
+}
+
+class Pair<T, U=int>
+{
+[pub]:
+	field T _a;
+	field int _b;
+	field int _sum;
+
+	ctor( T a, int b ) { _a = a; _b = b; _sum = 0; }
+	method add() -> Pair<T, int> {
+		_sum = _sum + _b;
+		return *this;
+	}
+}
+
+// union specialization (unions keep their member default initializers off)
+union Choice<T>
+{
+	field {
+		T _val;
+		int _idx;
+	}
+}
+
+union Choice<T=f32>
+{
+	field {
+		f32 _val;
+		int _idx;
+		f32 _alt;
+	}
+}
+
+func run() -> int
+{
+	var Box<int> a( 3, 4 );
+	if( a.read() != 7 )
+		return 1;
+
+	var Box<f32> b;
+	b._value = 1.5;
+	if( b.read() < 1.4 || b.read() > 1.6 )
+		return 2;
+
+	var Pair<f32, int> p( 1.5, 2 );
+	p.add();
+	if( p._sum != 2 )
+		return 3;
+
+	var Pair<f32, f32> q;
+	q._a = 1.5;
+	q._b = 2.5;
+	if( q.sum() < 1.4 )
+		return 4;
+
+	var Choice<f32> c;
+	c._alt = 9.5;
+	if( c._alt < 9.0 || c._alt > 10.0 )
+		return 5;
+
+	var Choice<int> d;
+	d._idx = 3;
+	if( d._idx != 3 )
+		return 6;
+
+	return 0;
+}
+
+} // namespace spec

@@ -54,6 +54,40 @@ int ref_category::run()
     }
     return 0;
 }
+int spec::run()
+{
+    spec::Box<int> a( 3, 4 );
+    if( a.read() != 7 ) {
+        return 1;
+    }
+    spec::Box<float> b{};
+    b._value = 1.5f;
+    if( b.read() < 1.4f || b.read() > 1.6f ) {
+        return 2;
+    }
+    spec::Pair<float, int> p( 1.5f, 2 );
+    p.add();
+    if( p._sum != 2 ) {
+        return 3;
+    }
+    spec::Pair<float, float> q{};
+    q._a = 1.5f;
+    q._b = 2.5f;
+    if( q.sum() < 1.4f ) {
+        return 4;
+    }
+    spec::Choice<float> c{};
+    c._alt = 9.5f;
+    if( c._alt < 9.0f || c._alt > 10.0f ) {
+        return 5;
+    }
+    spec::Choice<int> d{};
+    d._idx = 3;
+    if( d._idx != 3 ) {
+        return 6;
+    }
+    return 0;
+}
 int static_member::run()
 {
     static_member::Box<int> a = static_member::Box<int>( 1 );
@@ -88,6 +122,9 @@ int main()
     }
     if( static_member::run() != 0 ) {
         return 4;
+    }
+    if( spec::run() != 0 ) {
+        return 5;
     }
     return 0;
 }

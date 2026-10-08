@@ -88,6 +88,87 @@ namespace ref_category
     };
     int run();
 }
+namespace spec
+{
+    template <typename T>
+    class Box;
+    template <typename T, typename U>
+    class Pair;
+    template <typename T>
+    union Choice;
+    template <typename T>
+    class Box
+    {
+    public:
+        T _value{};
+        Box() = default;
+        inline T read() const
+        {
+            return _value;
+        }
+    };
+    template<>
+    class Box<int>
+    {
+    public:
+        int _value{};
+        int _extra{};
+        Box(int v, int e)
+        {
+            _value = v;
+            _extra = e;
+        }
+        inline int read() const
+        {
+            return _value + _extra;
+        }
+    };
+    template <typename T, typename U>
+    class Pair
+    {
+    public:
+        T _a{};
+        U _b{};
+        Pair() = default;
+        inline T sum() const
+        {
+            return _a;
+        }
+    };
+    template <typename T>
+    class Pair<T, int>
+    {
+    public:
+        T _a{};
+        int _b{};
+        int _sum{};
+        Pair(T a, int b)
+        {
+            _a = a;
+            _b = b;
+            _sum = 0;
+        }
+        inline spec::Pair<T, int> add()
+        {
+            _sum = _sum + _b;
+            return *this;
+        }
+    };
+    template <typename T>
+    union Choice
+    {
+        T _val;
+        int _idx;
+    };
+    template<>
+    union Choice<float>
+    {
+        float _val;
+        int _idx;
+        float _alt;
+    };
+    int run();
+}
 namespace static_member
 {
     template <typename T>

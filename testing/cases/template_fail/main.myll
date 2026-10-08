@@ -68,3 +68,22 @@ const T spec4<U, T=int> = (T)2; // FAIL: Specialization 'spec4' names 'U' at par
 const T spec5<T, U> = (T)1;
 const T spec5<T, U=int> = (T)2;
 const T spec5<U=int> = (T)3; // FAIL: Duplicate specialization of 'spec5' for U=int
+
+// class/struct/union specialization validation
+class SBox<T> { field int v; }
+class SBox<X=int> { field int v; } // FAIL: Unknown template parameter 'X' in specialization of 'SBox'
+
+class SOrder<T, U> { field int v; }
+class SOrder<U=int, T=f32> { field int v; } // FAIL: Bindings of 'SOrder' must follow the primary's parameter order
+
+class SSkip<T, U, V> { field int v; }
+class SSkip<T, V=int> { field int v; } // FAIL: Specialization 'SSkip' names 2 of 3 parameters
+
+class SDup<T> { field int v; }
+class SDup<T=int> { field int v; }
+class SDup<T=int> { field int v; } // FAIL: Duplicate specialization of 'SDup' for T=int
+
+class SLate<T=int> { field int v; } // FAIL: Specialization of 'SLate' must follow its primary template
+class SLate<T> { field int v; }
+
+class SNoTpl<T=int> { field int v; } // FAIL: No matching template 'SNoTpl' in this module
