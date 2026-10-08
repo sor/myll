@@ -9,14 +9,20 @@ Status: **implemented 2026-10-04** (phase 1). Cases: `testing/cases/var_template
 const T pi<T>      = (T)3.1415;   // primary: template<class T> inline constexpr T pi = ...
 const T pi<T=int>  = 3;           // full spec: template<> inline constexpr int pi<int> = 3;
 const T q<T, U>    = (T)7;        // primary, two params
-const T q<U=int>   = (T)70;       // partial spec: template<class T> ... q<T, int> = ...
+const T q<T, U=int> = (T)70;      // partial, full form: template<class T> ... q<T, int> = ...
+const T q<U=int>   = (T)70;       // partial, subset form — same specialization
 ```
 
 Decisions (settled 2026-10-04):
 
 - **Named-only bindings**, in primary declaration order. `dict<K=string, V=int>` is rejected as
   out of order; positional bindings are not accepted. Partial specialization falls out of named
-  bindings: a partial binds a subset of the primary's parameters; a full spec binds all.
+  bindings: a partial binds a subset of the primary's parameters; a full spec binds all. Both
+  spellings of a partial are valid: the **full form** (the default/recommended) names *every*
+  parameter, with unbound ones bare (`q<T, U=int>`); the **subset form** names only the bound
+  ones (`q<U=int>`). Mixing bare names with skipping (`q<T, V=int>` for a 3-parameter primary)
+  is rejected — bare names must cover all parameters, at each parameter's own position. An
+  all-bare list (`q<T>`) parses as the primary declaration itself.
 - **Phase 1: type parameters only.** Binding a non-type parameter (`N=5`) needs a grammar
   extension; the binding grammar is `id ASSIGN typespec`.
 - **Specializations live in the primary's own module**, declared after the primary. Cross-module
@@ -34,8 +40,10 @@ Decisions (settled 2026-10-04):
 
 ## Mechanics
 
-- Grammar: `tplSpec : LT tplBind (COMMA tplBind)* GT; tplBind : id ASSIGN typespec;` on
-  `idAccessor`. ANTLR disambiguates from `tplParams` on the `id =` lookahead.
+- Grammar: `tplSpec : LT tplSpecEntry (COMMA tplSpecEntry)* GT; tplSpecEntry : tplBind | id;`
+  with `tplBind : id ASSIGN typespec;` on `idAccessor`. Bare entries (unbound placeholders) are
+  stored as `TplBinding`s with a null type. ANTLR resolves the all-bare list to `tplParams`
+  (the primary declaration), so no ambiguity arises.
 - AST: `VarDecl.TplSpec` (`TplBinding { name, type }`); non-empty marks a specialization. The
   resolver fills `VarDecl.SpecInfo` (`Primary`, `Args`, `Bound`): Args lists every primary
   parameter in declaration order with symbolic placeholders for unbound positions, which is also
