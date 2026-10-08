@@ -1,0 +1,7 @@
+// The function specialization case: nums owns the primary templates, nums_spec
+// imports nums and adds specializations, main imports both.
+module nums;
+
+func half<T>( T a ) -> T => a;
+
+func combine<T, U>( T a, U b ) -> T => a;

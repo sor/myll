@@ -2,8 +2,9 @@ module template_basics;
 
 func main() -> int
 {
-	if( templates::run() != 0 ) return 1;
+if( templates::run() != 0 ) return 1;
 	if( deduction::run() != 0 ) return 2;
-	if( overload::run() != 0 )  return 3;
+	if( overload::run() != 0 ) return 3;
+	if( spec::run() != 0 )      return 4;
 	return 0;
 }

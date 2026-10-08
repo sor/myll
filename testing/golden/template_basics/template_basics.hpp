@@ -53,6 +53,38 @@ namespace overload
         return 11;
     }
 }
+namespace spec
+{
+    template <typename T>
+    inline T half(T a);
+    template<>
+    inline int half<int>(int a);
+    template <typename T, typename U>
+    inline T combine(T a, U b);
+    template<>
+    inline int combine<int, float>(int a, float b);
+    int run();
+    template <typename T>
+    inline T half(T a)
+    {
+        return a;
+    }
+    template<>
+    inline int half<int>(int a)
+    {
+        return a * 2;
+    }
+    template <typename T, typename U>
+    inline T combine(T a, U b)
+    {
+        return a;
+    }
+    template<>
+    inline int combine<int, float>(int a, float b)
+    {
+        return a * 100 + static_cast<int>( b );
+    }
+}
 namespace templates
 {
     template <typename T>

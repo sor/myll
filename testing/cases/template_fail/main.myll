@@ -87,3 +87,37 @@ class SLate<T=int> { field int v; } // FAIL: Specialization of 'SLate' must foll
 class SLate<T> { field int v; }
 
 class SNoTpl<T=int> { field int v; } // FAIL: No matching template 'SNoTpl' in this module
+
+// function template specialization validation (full-only, signature repeat)
+func fval<T, U>( T a, U b ) -> T => a;
+func fval<T=int>( int a, int b ) -> int => a; // FAIL: Function templates allow only full specializations
+
+func fno<T>( T a ) -> T => a;
+func fno<X=int>( int a ) -> int => a; // FAIL: Unknown template parameter 'X' in specialization of 'fno'
+
+func forder<T, U>( T a, U b ) -> T => a;
+func forder<U=int, T=f32>( f32 a, int b ) -> f32 => a; // FAIL: Bindings of 'forder' must follow the primary's parameter order
+
+func fdup<T>( T a ) -> T => a;
+func fdup<T=int>( int a ) -> int => a;
+func fdup<T=int>( int a ) -> int => a; // FAIL: Duplicate specialization of 'fdup' for T=int
+
+func flate<T=int>( int a ) -> int => a; // FAIL: Specialization of 'flate' must follow its primary template
+func flate<T>( T a ) -> T => a;
+
+func fnoprimary<T=int>( int a ) -> int => a; // FAIL: No matching function template 'fnoprimary'
+
+func fparam<T>( T a ) -> T => a;
+func fparam<T=int>( int a, int b ) -> int => a; // FAIL: Specialization of 'fparam' must repeat the primary's substituted parameter and return types
+
+func fret<T>( T a ) -> T => a;
+func fret<T=int>( int a ) -> f32 => 1.5; // FAIL: Specialization of 'fret' must repeat the primary's substituted parameter and return types
+
+func fauto<T>( T a ) => a;
+func fauto<T=int>( int a ) => a; // FAIL: Specialization of 'fauto' must repeat the primary's return type
+
+class FHost<T> {
+[pub]:
+	func inner<U>( U a ) -> U => a;
+	func inner<U=int>( int a ) -> int => a; // FAIL: Specialization of method 'inner' is not supported yet
+}

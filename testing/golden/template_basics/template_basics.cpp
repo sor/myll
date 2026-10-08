@@ -45,6 +45,28 @@ int overload::run()
     }
     return 0;
 }
+int spec::run()
+{
+    if( spec::half( 21 ) != 42 ) {
+        return 1;
+    }
+    if( spec::half<float>( 2.5f ) < 2.4f || spec::half<float>( 2.5f ) > 2.6f ) {
+        return 2;
+    }
+    if( spec::half<int>( 4 ) != 8 ) {
+        return 3;
+    }
+    if( spec::combine( 2, 3.5f ) != 203 ) {
+        return 4;
+    }
+    if( spec::combine<float, float>( 2.5f, 3.5f ) != 2.5f ) {
+        return 5;
+    }
+    if( spec::half<int>( 3 ) != 6 ) {
+        return 6;
+    }
+    return 0;
+}
 int templates::run()
 {
     int m = templates::max<int>( 1, 2 );
@@ -66,6 +88,9 @@ int main()
     }
     if( overload::run() != 0 ) {
         return 3;
+    }
+    if( spec::run() != 0 ) {
+        return 4;
     }
     return 0;
 }

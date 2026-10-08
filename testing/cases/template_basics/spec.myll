@@ -1,0 +1,44 @@
+module template_basics;
+
+namespace spec {
+
+// Function template specialization: full only (C++ allows no partial function
+// specializations), signature repeats the primary's substituted one. Bound
+// parameter names stay usable in the signature and the body.
+func half<T>( T a ) -> T => a;
+
+func half<T=int>( T a ) -> T => a * 2;
+
+func combine<T, U>( T a, U b ) -> T => a;
+
+func combine<T=int, U=f32>( int a, f32 b ) -> int => a * 100 + (int)b; // spelling the bound values out works too
+
+func run() -> int
+{
+	// deduction picks the specialization
+	if( half( 21 ) != 42 )
+		return 1;
+
+	// other arguments instantiate the primary
+	if( half( 2.5 ) < 2.4 || half( 2.5 ) > 2.6 )
+		return 2;
+
+	// explicit template arguments pick the specialization
+	if( half<int>( 4 ) != 8 )
+		return 3;
+
+	// multi-parameter specialization via deduction
+	if( combine( 2, 3.5 ) != 203 )
+		return 4;
+
+	// primary instantiation for non-matching arguments
+	if( combine( 2.5, 3.5 ) != 2.5 )
+		return 5;
+
+	// namespace-qualified calls resolve through the specialization too
+	if( spec::half<int>( 3 ) != 6 )
+		return 6;
+	return 0;
+}
+
+} // namespace spec
