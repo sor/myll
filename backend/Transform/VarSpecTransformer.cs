@@ -45,12 +45,14 @@ namespace Myll.Transform
 			ValidateScope( module );
 		}
 
-		private void ValidateScope( Myll.Core.Hierarchical hier )
+private void ValidateScope( Myll.Core.Hierarchical hier )
 		{
 			List<Decl> children = hier.children.ToList();
+			string? nsFqn = NamespaceFqnOf( hier );
 
-			ValidateSpecsInScope( children.OfType<VarDecl>().ToList(), NamespaceFqnOf( hier ) );
-			ValidateStructSpecs( children.OfType<Myll.Core.Structural>().ToList(), NamespaceFqnOf( hier ) );
+			ValidateSpecsInScope( children.OfType<VarDecl>().ToList(), nsFqn );
+			ValidateStructSpecs( children.OfType<Myll.Core.Structural>().ToList(), nsFqn );
+			ValidateFuncSpecs( children.OfType<Func>().ToList(), hier is Myll.Core.Structural, nsFqn );
 
 			foreach( Decl child in children.OfType<Myll.Core.Hierarchical>() )
 				ValidateScope( (Myll.Core.Hierarchical)child );
@@ -75,6 +77,11 @@ namespace Myll.Transform
 			=> decl is Myll.Core.Structural { SpecInfo: null } s
 			 && s.TplParams.Count > 0
 			 && !s.IsHidden;
+
+		private static bool IsFuncPrimary( Decl decl )
+			=> decl is Func { SpecInfo: null } f
+			 && f.TplParams.Count > 0
+			 && !f.IsHidden;
 
 		private void ValidateSpecsInScope( List<VarDecl> vars, string? nsFqn )
 		{
@@ -291,6 +298,225 @@ namespace Myll.Transform
 				// parameters, injected into its class scope like
 				// TemplateParamTransformer does for primaries.
 				InjectParams( spec.scope, unboundParams, spec.srcPos );
+			}
+		}
+
+		/// <summary>
+		/// Validates function template specializations and links them to their
+		/// primary: a specialization is a full one (C++ allows no partial function
+		/// specializations), its parameters and return type must repeat the
+		/// primary's after substituting the bound values, and bound parameter
+		/// names stay usable inside the specialization through bound-parameter
+		/// aliases (`T` keeps meaning the bound value), in the signature and the
+		/// body alike.
+		/// </summary>
+		private void ValidateFuncSpecs( List<Func> funcs, bool insideStruct, string? nsFqn )
+		{
+			if( funcs.All( f => f.TplSpec.Count == 0 ) )
+				return;
+
+			if( insideStruct ) {
+				foreach( Func spec in funcs.Where( f => f.TplSpec.Count > 0 ) ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of method '{0}' is not supported yet; move it to module or namespace scope",
+							spec.name ) ) );
+					MarkInvalidSpec( spec );
+				}
+				return;
+			}
+
+			// per primary: bound-value signatures already seen (duplicate check)
+			Dictionary<Func, List<string>> seenSignatures = new();
+
+			foreach( Func spec in funcs ) {
+				if( spec.TplSpec.Count == 0 )
+					continue;
+
+				if( spec.body == null ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' must be a full definition",
+							spec.name ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				List<Func> primaries = funcs
+					.Where( f => f.name == spec.name && f.SpecInfo == null && f.TplParams.Count > 0 )
+					.ToList();
+
+				Func? primary = primaries.Count > 0
+					? primaries[0]
+					: ( nsFqn != null ? FindImportedPrimary( spec.name, nsFqn, IsFuncPrimary ) as Func : null );
+
+				if( primary == null ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "No matching function template '{0}' in this module or its imports; a specialization must live in the primary's module or import it",
+							spec.name ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				bool isImportedPrimary = primaries.Count == 0;
+
+				// Within one module the specialization must follow the primary by
+				// source position; a cross-module primary needs no check because
+				// its include precedes this module's declarations.
+				if( !isImportedPrimary && !IsLaterPos( spec, primary ) ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' must follow its primary template",
+							spec.name ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				// Function templates allow only full specializations: every
+				// parameter must be bound, so no bare names and a full count.
+				if( spec.TplSpec.Any( b => b.type == null )
+				 || spec.TplSpec.Count != primary.TplParams.Count ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format(
+							"Function templates allow only full specializations: specialization of '{0}' must bind all {1} parameters",
+							spec.name,
+							primary.TplParams.Count ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				if( !ValidateBindingShape( spec.name, spec.TplSpec, primary.TplParams, spec.srcPos ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				// The specialization repeats the primary's substituted signature:
+				// parameter types and return type. Writing the bound parameter
+				// name (T) or the bound value (int) is equivalent here because
+				// both sides are substituted before the comparison.
+				if( IsAutoType( spec.retType ) || IsAutoType( primary.retType ) ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' must repeat the primary's return type; inferred returns cannot specialize",
+							spec.name ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				Dictionary<string, Typespec> boundValues = new( StringComparer.Ordinal );
+				foreach( TplBinding binding in spec.TplSpec )
+					boundValues[ binding.name ] = binding.type!;
+
+				bool signatureMatches = spec.paras.Count == primary.paras.Count;
+				if( signatureMatches ) {
+					for( int i = 0; i < spec.paras.Count; i++ ) {
+						if( SubstituteBindings( spec.paras[i].type, boundValues ).Gen()
+						 != SubstituteBindings( primary.paras[i].type, boundValues ).Gen() ) {
+							signatureMatches = false;
+							break;
+						}
+					}
+				}
+				if( signatureMatches
+				 && SubstituteBindings( spec.retType, boundValues ).Gen()
+				 != SubstituteBindings( primary.retType, boundValues ).Gen() )
+					signatureMatches = false;
+
+				if( !signatureMatches ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' must repeat the primary's substituted parameter and return types",
+							spec.name ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				// Duplicate specialization signature check.
+				string signature = String.Join( ",",
+					spec.TplSpec
+						.Where( b => b.type != null )
+						.Select( b => bindingSignature( b ) ) );
+				if( !seenSignatures.TryGetValue( primary, out List<string>? seen ) ) {
+					seen = new();
+					seenSignatures[ primary ] = seen;
+				}
+				if( seen.Contains( signature ) ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Duplicate specialization of '{0}' for {1}",
+							spec.name, signature ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+				seen.Add( signature );
+
+				List<TplArg> args = BuildSpecArgs( primary.TplParams, spec.TplSpec, out bool[] bound, out List<TplParam> unboundParams );
+				System.Diagnostics.Debug.Assert( unboundParams.Count == 0 );
+
+				spec.SpecInfo = new Decl.SpecData {
+					Primary = primary,
+					Args    = args,
+					Bound   = bound,
+				};
+				spec.TplParams = new(); // full: nothing unbound
+
+				// Bound parameter names stay usable: an alias per bound parameter
+				// injected into the specialization's scope, expanded at emission.
+				InjectBoundAliases( spec, boundValues );
+			}
+		}
+
+		private static bool IsAutoType( Typespec type )
+			=> type is TypespecBasic { kind: TypespecBasic.Kind.ImplicitAuto or TypespecBasic.Kind.ExplicitAuto };
+
+		// A bound parameter keeps its meaning inside the specialization through a
+		// hidden alias: `T` resolves to the alias, the alias resolves to the bound
+		// value, and emission expands it so no `T` reaches the generated C++.
+		private void InjectBoundAliases( Func spec, Dictionary<string, Typespec> boundValues )
+		{
+			Scope? scope = spec.funcScope;
+			if( scope == null )
+				return;
+
+			foreach( (string name, Typespec value) in boundValues ) {
+				if( spec.paras.Any( p => p.name == name ) ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Parameter '{0}' of specialization '{1}' shadows the bound template parameter; rename it",
+							name, spec.name ) ) );
+					continue;
+				}
+
+				AliasDecl alias = new() {
+					name          = name,
+					type          = value,
+					srcPos        = spec.srcPos,
+					IsBoundAlias  = true,
+				};
+
+				ScopeLeaf leaf = new() {
+					parent = scope,
+					decl   = alias,
+				};
+				alias.scope = scope;
+
+				if( !scope.children.TryGetValue( name, out List<ScopeLeaf>? list ) ) {
+					list = new List<ScopeLeaf>( 1 );
+					scope.children.Add( name, list );
+				}
+				list.Add( leaf );
+				context.LocalDecls.Add( (alias, scope) );
 			}
 		}
 

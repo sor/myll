@@ -793,6 +793,7 @@ namespace Myll.Generator
 			List<TplParam> tplParams = obj.TplParams;
 
 			bool    hasTpl         = tplParams.Count >= 1;
+			bool    isSpec         = obj.SpecInfo != null;
 			bool    isInlined      = obj.IsInlined;
 			bool    isInsideStruct = obj.IsInStruct;
 			bool    isStatic       = obj.IsStatic;
@@ -800,6 +801,8 @@ namespace Myll.Generator
 			string  indentDecl     = IndentDecl;
 			string  indentImpl     = IndentImpl;
 			string  nameDecl       = obj.name;
+			if( isSpec )
+				nameDecl = Format( "{0}<{1}>", nameDecl, obj.SpecInfo.Args.Select( a => a.Gen() ).Join( ", " ) );
 			string  nameImpl       = obj.FullyQualifiedName;
 			SourceLines targetDecl     = (isStatic ? staticMethodDecl : methodDecl).Target( obj.access );
 			SourceLines targetImpl     = (isStatic ? staticMethodImpl : methodImpl).Target( obj.access );
@@ -870,7 +873,12 @@ namespace Myll.Generator
 
 			// TODO add the surrounding templates as well for tplImpl
 			string tplDecl, tplImpl;
-			if( hasTpl ) {
+			if( isSpec ) {
+				// A full specialization has no parameters of its own: template<>.
+				tplDecl = Format( "{0}template<>", indentDecl );
+				tplImpl = Format( "{0}template<>", indentImpl );
+			}
+			else if( hasTpl ) {
 				string tplContent = GenTemplateParameterList( tplParams );
 
 				tplDecl = Format( "{0}template <{1}>", indentDecl, tplContent );
@@ -918,11 +926,11 @@ namespace Myll.Generator
 			}
 
 			// TODO: move inlines to bottom of header
-			if( isInlined || isExternal || hasTpl ) {
+			if( isInlined || isExternal || hasTpl || isSpec ) {
 				if( !isInsideStruct ) {
 					if( emitPrototype ) {
 						int mark = targetProto.Count;
-						if( hasTpl )
+						if( hasTpl || isSpec )
 							targetProto.Add( tplDecl );
 						targetProto.Add( headlineDecl + ";" );
 						MarkDeclSourceMap( targetProto, obj, mark );
@@ -932,7 +940,7 @@ namespace Myll.Generator
 					// External members still need a declaration inside the class definition,
 					// and it should get its own source-map directive.
 					int mark = targetDecl.Count;
-					if( hasTpl )
+					if( hasTpl || isSpec )
 						targetDecl.Add( tplDecl );
 					targetDecl.Add( headlineDecl + ";" );
 					MarkDeclSourceMap( targetDecl, obj, mark );
@@ -948,7 +956,7 @@ namespace Myll.Generator
 					}
 
 				int mark = targetDecl.Count;
-				if( hasTpl )
+				if( hasTpl || isSpec )
 					targetDecl.Add( tplDecl );
 
 				MultiStmt bodyToGen = obj.body;

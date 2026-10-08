@@ -325,6 +325,12 @@ namespace Myll.Core
 			if( resolvedDecl is TplParamDecl tpl )
 				return tpl.name;
 
+			// A bound-parameter alias of a specialization expands to its target:
+			// no parameter name reaches the generated C++, the outer qualifiers
+			// and pointers still apply.
+			if( resolvedDecl is AliasDecl { IsBoundAlias: true } boundAlias )
+				return boundAlias.type.Gen();
+
 			bool needsTypename = disambiguateDependent && idTpls.Count > 1 && IsDependentType();
 
 			if( resolvedDecl != null

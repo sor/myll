@@ -152,7 +152,7 @@ opSymbol	:	PLUS | MINUS | STAR | SLASH | MOD | HAT | AMP | PIPE | TILDE | EM		//
 defFunc		:	id			defCoreFunc
 				(REQUIRES	typespecsNested)?
 				funcBody;
-defCoreFunc	:	tplParams?	funcTypeDef?
+defCoreFunc	:	(tplParams	|	tplSpec)?	funcTypeDef?
 				(RARROW		typespec)?;
 				//(REQUIRES	typespecsNested)?;
 

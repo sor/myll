@@ -206,7 +206,8 @@ namespace Myll.Core
 		}
 
 		public Kind                 kind;
-		public List<TplParam>       TplParams { get; init; } = new();
+		public List<TplParam>       TplParams { get; set; } = new();
+		public List<TplBinding>     TplSpec { get; init; } = new(); // non-empty: full specialization of a primary
 		public List<TypespecNested> Requires  { get; init; } = new(); // TODO: replace with dedicated type
 		public List<Param>          paras   = new();
 		public MultiStmt?           body; // isScope = true
@@ -286,6 +287,13 @@ namespace Myll.Core
 
 		// Set by the resolver when the aliased type is a namespace.
 		public bool IsNamespaceAlias { get; set; }
+
+		/// <summary>
+		/// A bound-parameter alias of a template specialization: injected instead
+		/// of substitution so that specializations can keep using the parameter
+		/// name in signatures and bodies. Uses emit the aliased type, not the name.
+		/// </summary>
+		public bool IsBoundAlias { get; set; }
 
 		public override void AddToGen( HierarchicalGen gen ) { gen.AddAlias( this ); }
 	}

@@ -62,6 +62,7 @@ namespace Myll.Resolver
 		private readonly Dictionary<Decl, List<SpecEntry>> specsByPrimary = new();
 		private readonly Dictionary<string, HashSet<string>> visibleByModule = new( StringComparer.Ordinal );
 		private readonly List<VarInstantiation> varInstantiations = new();
+		private readonly HashSet<(Decl Primary, string Module, string Args)> recordedInstantiations = new();
 
 		private NameResolver(
 			IReadOnlyDictionary<string, ModuleExports> moduleExports,
@@ -508,7 +509,7 @@ namespace Myll.Resolver
 
 		// A specialization matches a use when every bound parameter position has
 		// the same type; unbound positions are wildcards.
-		private static bool MatchesBoundArgs( Decl.SpecData info, List<TplArg> useArgs )
+		private static bool MatchesBoundArgs( Decl.SpecData info, IReadOnlyList<TplArg> useArgs )
 		{
 			bool[] bound = info.Bound;
 			for( int i = 0; i < bound.Length; i++ ) {
@@ -1271,7 +1272,9 @@ if( m.Context.IsPrototypeFile )
 			switch( call.Callee ) {
 				case IdExpr id: {
 					bool alreadyResolved = result.Ids.TryGetValue( id, out Decl? resolved );
-					if( alreadyResolved && resolved is not Func ) {
+					// A call that already resolved to a specialization stays resolved:
+					// re-resolving it would lose the primary from its candidate list.
+					if( alreadyResolved && ( resolved is not Func || resolved.SpecInfo != null ) ) {
 						// Callee resolved to a non-function (builtin variable, external type, ...).
 						// Do not re-validate; the C++ compiler handles the call.
 						return false;
@@ -1287,7 +1290,7 @@ if( m.Context.IsPrototypeFile )
 				}
 				case ScopedExpr scoped: {
 					bool alreadyResolved = result.Scopeds.TryGetValue( scoped, out Decl? resolved );
-					if( alreadyResolved && resolved is not Func ) {
+					if( alreadyResolved && ( resolved is not Func || resolved.SpecInfo != null ) ) {
 						// Scoped callee resolved to a type/namespace; accept constructor-style
 						// calls without Myll-side validation.
 						return false;
@@ -1494,324 +1497,378 @@ if( m.Context.IsPrototypeFile )
 					continue;
 				}
 
-			if( candidate is Structural structural ) {
-				callable.AddRange(
-					structural.children
-						.OfType<Structor>()
-						.Where( s => s.kind == Structor.Kind.Constructor ) );
-			}
-		}
-
-		if( callable.Count == 0 )
-			return (null, false, true);
-
-		// Collect argument/parameter pairs that rejected with None so we can decide
-		// whether the failure is definitive or just premature (types not resolved yet).
-		List<(Typespec source, Typespec target)> rejectedPairs = new();
-
-		string calleeName = callee switch {
-			IdExpr id                                => id.idTplArgs.id,
-			ScopedExpr scoped                        => scoped.idTpls.Count > 0 ? scoped.idTpls.Last().id : "?",
-			BinOp binOp when binOp.right is IdExpr m => m.idTplArgs.id,
-			_                                        => "?",
-		};
-		LogOverloadResolution( "Resolving '{0}' with {1} arg(s) among {2} candidate(s)",
-			calleeName, call.args.Count, callable.Count );
-		for( int i = 0; i < callable.Count; i++ ) {
-			Decl c = callable[i];
-			LogOverloadResolution( "  candidate[{0}]: {1}{2} arity={3} templateParams={4}",
-				i, c.name, FormatParamsForDebug( c ), GetParamCount( c ), TemplateInference.GetTemplateParamCount( c ) );
-		}
-
-		// Prefer an arity match first; if only one candidate has the right arity, pick it.
-		List<Decl> sameArity = callable
-			.Where( d => GetParamCount( d ) == call.args.Count )
-			.ToList();
-
-		LogOverloadResolution( "  {0} candidate(s) match arity {1}", sameArity.Count, call.args.Count );
-
-		if( sameArity.Count == 0 )
-			return (null, false, true);
-
-		IReadOnlyList<TplArg>? explicitTemplateArgs = TemplateInference.GetExplicitTemplateArgs( callee );
-		Dictionary<Decl, List<TplArg>> deducedArgsByCandidate = new();
-		bool templateMismatch = false;
-
-		// Filter candidates by template-argument availability and, when no explicit
-		// arguments are supplied, try to deduce them from the call arguments.
-		List<Decl> templateViable = new();
-		foreach( Decl candidate in sameArity ) {
-			if( explicitTemplateArgs is { Count: > 0 } ) {
-				TemplateArgValidation validation = TemplateInference.ValidateTemplateArgs( candidate, explicitTemplateArgs );
-				if( validation.IsMismatch ) {
-					LogOverloadResolution( "    candidate {0}: template mismatch ({1})", candidate.name, validation.MismatchKind );
-					templateMismatch = true;
-					continue;
+				if( candidate is Structural structural ) {
+					callable.AddRange(
+						structural.children
+							.OfType<Structor>()
+							.Where( s => s.kind == Structor.Kind.Constructor ) );
 				}
-
-				LogOverloadResolution( "    candidate {0}: explicit template args, accepted", candidate.name );
-				templateViable.Add( candidate );
-				continue;
 			}
 
-			// Forward/external functions whose return type does not depend on template
-			// parameters are usually left to the C++ compiler. Non-template externals
-			// are always accepted; external templates are accepted without Myll
-			// deduction when they are the only arity match. When there are other
-			// same-arity candidates we must still try to deduce the external template
-			// so it can compete in ranking, but we do not apply the deduced arguments
-			// to the callee expression.
-			if( candidate is Func fwd
-			 && ( fwd.IsForwardDeclaration || fwd.IsExternal )
-			 && !fwd.retType.IsDependentType() ) {
-				if( fwd.TplParams.Count == 0 ) {
-					LogOverloadResolution( "    candidate {0}: external non-template, accepted", candidate.name );
+			if( callable.Count == 0 )
+				return (null, false, true);
+
+			// Collect argument/parameter pairs that rejected with None so we can decide
+			// whether the failure is definitive or just premature (types not resolved yet).
+			List<(Typespec source, Typespec target)> rejectedPairs = new();
+
+			string calleeName = callee switch {
+				IdExpr id                                => id.idTplArgs.id,
+				ScopedExpr scoped                        => scoped.idTpls.Count > 0 ? scoped.idTpls.Last().id : "?",
+				BinOp binOp when binOp.right is IdExpr m => m.idTplArgs.id,
+				_                                        => "?",
+			};
+			LogOverloadResolution( "Resolving '{0}' with {1} arg(s) among {2} candidate(s)",
+				calleeName, call.args.Count, callable.Count );
+			for( int i = 0; i < callable.Count; i++ ) {
+				Decl c = callable[i];
+				LogOverloadResolution( "  candidate[{0}]: {1}{2} arity={3} templateParams={4}",
+					i, c.name, FormatParamsForDebug( c ), GetParamCount( c ), TemplateInference.GetTemplateParamCount( c ) );
+			}
+
+			// Prefer an arity match first; if only one candidate has the right arity, pick it.
+			List<Decl> sameArity = callable
+				.Where( d => GetParamCount( d ) == call.args.Count )
+				.ToList();
+
+			LogOverloadResolution( "  {0} candidate(s) match arity {1}", sameArity.Count, call.args.Count );
+
+			if( sameArity.Count == 0 )
+				return (null, false, true);
+
+			IReadOnlyList<TplArg>? explicitTemplateArgs = TemplateInference.GetExplicitTemplateArgs( callee );
+			Dictionary<Decl, List<TplArg>> deducedArgsByCandidate = new();
+			bool templateMismatch = false;
+
+			// Filter candidates by template-argument availability and, when no explicit
+			// arguments are supplied, try to deduce them from the call arguments.
+			// Specializations join after the loop: their viability depends on the
+			// primary's deduced arguments.
+			List<Decl> templateViable = new();
+			foreach( Decl candidate in sameArity ) {
+				if( candidate.SpecInfo != null )
+					continue; // specialization, handled below
+
+				if( explicitTemplateArgs is { Count: > 0 } ) {
+					TemplateArgValidation validation = TemplateInference.ValidateTemplateArgs( candidate, explicitTemplateArgs );
+					if( validation.IsMismatch ) {
+						LogOverloadResolution( "    candidate {0}: template mismatch ({1})", candidate.name, validation.MismatchKind );
+						templateMismatch = true;
+						continue;
+					}
+
+					LogOverloadResolution( "    candidate {0}: explicit template args, accepted", candidate.name );
 					templateViable.Add( candidate );
 					continue;
 				}
 
-				List<TplArg>? externalDeduced = null;
-				bool externalDeducedOk = sameArity.Count > 1
-					&& TemplateInference.TryDeduceTemplateArgs( fwd, call, typeResolver, result, out externalDeduced )
-					&& externalDeduced != null;
-				if( externalDeducedOk ) {
-					LogOverloadResolution( "    candidate {0}: external template deduced ({1}), accepted",
-						candidate.name, String.Join( ", ", externalDeduced!.Select( a => FormatTypeForDebug( a.typespec ) ) ) );
-					deducedArgsByCandidate[candidate] = externalDeduced!;
-					templateViable.Add( candidate );
+				// Forward/external functions whose return type does not depend on template
+				// parameters are usually left to the C++ compiler. Non-template externals
+				// are always accepted; external templates are accepted without Myll
+				// deduction when they are the only arity match. When there are other
+				// same-arity candidates we must still try to deduce the external template
+				// so it can compete in ranking, but we do not apply the deduced arguments
+				// to the callee expression.
+				if( candidate is Func fwd
+				 && ( fwd.IsForwardDeclaration || fwd.IsExternal )
+				 && !fwd.retType.IsDependentType() ) {
+					if( fwd.TplParams.Count == 0 ) {
+						LogOverloadResolution( "    candidate {0}: external non-template, accepted", candidate.name );
+						templateViable.Add( candidate );
+						continue;
+					}
+
+					List<TplArg>? externalDeduced = null;
+					bool externalDeducedOk = sameArity.Count > 1
+						&& TemplateInference.TryDeduceTemplateArgs( fwd, call, typeResolver, result, out externalDeduced )
+						&& externalDeduced != null;
+					if( externalDeducedOk ) {
+						LogOverloadResolution( "    candidate {0}: external template deduced ({1}), accepted",
+							candidate.name, String.Join( ", ", externalDeduced!.Select( a => FormatTypeForDebug( a.typespec ) ) ) );
+						deducedArgsByCandidate[candidate] = externalDeduced!;
+						templateViable.Add( candidate );
+					}
+					else if( sameArity.Count == 1 ) {
+						LogOverloadResolution( "    candidate {0}: external template alone, accepted", candidate.name );
+						templateViable.Add( candidate );
+					}
+					else {
+						LogOverloadResolution( "    candidate {0}: external template deduction failed", candidate.name );
+					}
+
+					continue;
 				}
-				else if( sameArity.Count == 1 ) {
-					LogOverloadResolution( "    candidate {0}: external template alone, accepted", candidate.name );
+
+				if( candidate is Func func ) {
+					(List<TplParam> ownerParams, List<TplArg> ownerArgs) = GetOwnerTemplateInfo( func, callee );
+
+					bool deductionOk = TemplateInference.TryDeduceTemplateArgs(
+						func, call, typeResolver, result, out List<TplArg>? deduced,
+						ownerParams.Count > 0 ? ownerParams : null,
+						ownerArgs.Count > 0 ? ownerArgs : null );
+
+					if( deductionOk && deduced != null ) {
+						LogOverloadResolution( "    candidate {0}: internal template deduced ({1}), accepted",
+							candidate.name, String.Join( ", ", deduced.Select( a => FormatTypeForDebug( a.typespec ) ) ) );
+						deducedArgsByCandidate[candidate] = deduced;
+						templateViable.Add( candidate );
+						continue;
+					}
+
+					if( deductionOk && deduced == null && func.TplParams.Count == 0 ) {
+						LogOverloadResolution( "    candidate {0}: non-template method, accepted", candidate.name );
+						templateViable.Add( candidate );
+						continue;
+					}
+
+					LogOverloadResolution( "    candidate {0}: internal template deduction failed", candidate.name );
+					continue;
+				}
+
+				if( TemplateInference.GetTemplateParamCount( candidate ) == 0 ) {
+					LogOverloadResolution( "    candidate {0}: non-template, accepted", candidate.name );
 					templateViable.Add( candidate );
 				}
 				else {
-					LogOverloadResolution( "    candidate {0}: external template deduction failed", candidate.name );
+					LogOverloadResolution( "    candidate {0}: template deduction failed", candidate.name );
 				}
-
-				continue;
 			}
 
-			if( candidate is Func func ) {
-				(List<TplParam> ownerParams, List<TplArg> ownerArgs) = GetOwnerTemplateInfo( func, callee );
+			// Specializations are viable only when the call's template arguments match
+			// their bound values: explicit ones directly, deduced ones through the
+			// primary's deduction. A viable specialization shadows its primary; an
+			// unmatched one steps aside for it.
+			if( sameArity.Any( d => d.SpecInfo != null ) ) {
+				List<Decl> shadowedPrimaries = new();
+				foreach( Decl candidate in sameArity ) {
+					if( candidate.SpecInfo == null )
+						continue;
 
-				bool deductionOk = TemplateInference.TryDeduceTemplateArgs(
-					func, call, typeResolver, result, out List<TplArg>? deduced,
-					ownerParams.Count > 0 ? ownerParams : null,
-					ownerArgs.Count > 0 ? ownerArgs : null );
+					bool specViable = false;
+					if( explicitTemplateArgs is { Count: > 0 } )
+						specViable = MatchesBoundArgs( candidate.SpecInfo, explicitTemplateArgs );
+					else if( deducedArgsByCandidate.TryGetValue( candidate.SpecInfo.Primary, out List<TplArg>? deduced )
+					         && deduced != null )
+						specViable = MatchesBoundArgs( candidate.SpecInfo, deduced );
 
-				if( deductionOk && deduced != null ) {
-					LogOverloadResolution( "    candidate {0}: internal template deduced ({1}), accepted",
-						candidate.name, String.Join( ", ", deduced.Select( a => FormatTypeForDebug( a.typespec ) ) ) );
-					deducedArgsByCandidate[candidate] = deduced;
-					templateViable.Add( candidate );
-					continue;
-				}
-
-				if( deductionOk && deduced == null && func.TplParams.Count == 0 ) {
-					LogOverloadResolution( "    candidate {0}: non-template method, accepted", candidate.name );
-					templateViable.Add( candidate );
-					continue;
-				}
-
-				LogOverloadResolution( "    candidate {0}: internal template deduction failed", candidate.name );
-				continue;
-			}
-
-			if( TemplateInference.GetTemplateParamCount( candidate ) == 0 ) {
-				LogOverloadResolution( "    candidate {0}: non-template, accepted", candidate.name );
-				templateViable.Add( candidate );
-			}
-			else {
-				LogOverloadResolution( "    candidate {0}: template deduction failed", candidate.name );
-			}
-		}
-
-		// Merge candidates that are the same declaration (a declaration and its
-		// definition, e.g. from different modules, or two identical definitions).
-		// C++ treats them as one overload; Myll must not read them as ambiguous.
-		if( templateViable.Count > 1 ) {
-			List<Decl> deduplicated = new( templateViable.Count );
-			foreach( Decl candidate in templateViable ) {
-				int index = -1;
-				for( int i = 0; i < deduplicated.Count; i++ ) {
-					if( IsSameSignatureCandidate( candidate, deduplicated[i] ) ) {
-						index = i;
-						break;
+					if( specViable ) {
+						LogOverloadResolution( "    specialization {0}: matched, shadows its primary", candidate.name );
+						templateViable.Add( candidate );
+						shadowedPrimaries.Add( candidate.SpecInfo.Primary );
+					}
+					else {
+						LogOverloadResolution( "    specialization {0}: no matching template arguments, stepped aside", candidate.name );
 					}
 				}
 
-				if( index < 0 ) {
-					deduplicated.Add( candidate );
-				}
-				else if( PrefersCandidate( candidate, deduplicated[index] ) ) {
-					deduplicated[index] = candidate;
-				}
+				if( shadowedPrimaries.Count > 0 )
+					templateViable.RemoveAll( d => shadowedPrimaries.Contains( d ) );
 			}
 
-			templateViable = deduplicated;
-		}
+			// Merge candidates that are the same declaration (a declaration and its
+			// definition, e.g. from different modules, or two identical definitions).
+			// C++ treats them as one overload; Myll must not read them as ambiguous.
+			if( templateViable.Count > 1 ) {
+				List<Decl> deduplicated = new( templateViable.Count );
+				foreach( Decl candidate in templateViable ) {
+					int index = -1;
+					for( int i = 0; i < deduplicated.Count; i++ ) {
+						if( IsSameSignatureCandidate( candidate, deduplicated[i] ) ) {
+							index = i;
+							break;
+						}
+					}
 
-		LogOverloadResolution( "  {0} candidate(s) survived template viability" , templateViable.Count );
-		foreach( Decl c in templateViable )
-			LogOverloadResolution( "    viable: {0}{1}", c.name, FormatParamsForDebug( c ) );
-		if( templateViable.Count == 0 ) {
-
-			if( templateMismatch && sameArity.Count == 1 )
-				ReportTemplateMismatch( sameArity[0], explicitTemplateArgs!, callee );
-			else if( templateMismatch )
-				ReportTemplateMismatch( sameArity, explicitTemplateArgs!, callee );
-
-			return (null, false, true);
-		}
-
-		// A lone non-template candidate (or a template candidate without explicit/deduced
-		// arguments) is accepted without a conversion check. This preserves the old
-		// resolver behaviour for class-template methods and other dependent calls where
-		// the concrete type-checking is delegated to the C++ compiler.
-		// Only do this when it is the *only* same-arity candidate. If other same-arity
-		// candidates were filtered out (e.g. a template whose deduction failed because an
-		// argument type is not known yet), we must run the conversion check or wait for
-		// another resolver pass instead of blindly picking the remaining candidate.
-		// LONE: lone-candidate shortcut.  Currently disabled (UseLoneCandidateShortcut
-		// is false).  If re-enabled, this short-circuit accepts any single viable
-		// candidate without a Myll conversion check.  See plan/lone-candidate-investigation.md.
-		if( UseLoneCandidateShortcut
-		 && templateViable.Count == 1
-		 && sameArity.Count == 1
-		 && explicitTemplateArgs?.Count == 0
-		 && !deducedArgsByCandidate.ContainsKey( templateViable[0] ) ) {
-			LogOverloadResolution( "  lone candidate {0}, skipping conversion check", templateViable[0].name );
-			return (templateViable[0], false, false);
-		}
-
-		// Resolve argument types and rank every remaining viable candidate by the worst
-		// conversion required. This rejects explicit template instantiations with
-		// incompatible arguments (e.g. identity<int>("hi")) and keeps deduction honest.
-		List<Typespec?> argTypes = call.args
-			.Select( a => typeResolver.Resolve( a.expr ) )
-			.ToList();
-
-		// If any argument type is still unknown, we cannot decide yet. Do not emit
-		// a diagnostic; a later resolver pass may provide the missing type.
-		if( argTypes.Any( t => t == null ) )
-			return (null, false, false);
-
-		LogOverloadResolution( "  argument types: {0}",
-			String.Join( ", ", argTypes.Select( t => FormatTypeForDebug( t ) ) ) );
-
-		List<(Decl Candidate, ConversionRank WorstRank)> viable = new();
-		ConversionRank bestWorst = ConversionRank.None;
-
-		foreach( Decl candidate in templateViable ) {
-			ConversionRank worst = ConversionRank.Exact;
-			bool ok = true;
-
-			List<Param> paras = candidate switch {
-				Func func    => func.paras,
-				Structor stc => stc.paras,
-				_            => new List<Param>(),
-			};
-
-			List<TplArg>? candidateArgs = explicitTemplateArgs is { Count: > 0 }
-				? explicitTemplateArgs as List<TplArg>
-				: deducedArgsByCandidate.TryGetValue( candidate, out List<TplArg>? deduced )
-					? deduced
-					: null;
-
-			(List<TplParam> ownerParams, List<TplArg> ownerArgs) = GetOwnerTemplateInfo( candidate, callee );
-
-			List<TplParam> combinedParams = TemplateInference.GetAllTemplateParams( candidate );
-			List<TplArg> combinedArgs = new( ownerArgs.Count + ( candidateArgs?.Count ?? 0 ) );
-			combinedArgs.AddRange( ownerArgs );
-			if( candidateArgs != null )
-				combinedArgs.AddRange( candidateArgs );
-
-			string rankDetails = "";
-			for( int i = 0; i < paras.Count; i++ ) {
-				Typespec paramType = combinedParams.Count > 0 && combinedArgs.Count > 0
-					? TemplateInference.SubstituteTemplateParams( paras[i].type, combinedParams, combinedArgs, result )
-					: paras[i].type;
-
-				ConversionRank rank = ConversionRules.GetRank(
-					argTypes[i]!,
-					paramType,
-					result,
-					ConversionRules.IsLValue( call.args[i].expr ),
-					allowArrayDecay: true );
-				rankDetails += String.Format( " [{0}] {1}->{2}={3}",
-					i, FormatTypeForDebug( argTypes[i] ), FormatTypeForDebug( paramType ), rank );
-				if( rank == ConversionRank.None ) {
-					ok = false;
-					rejectedPairs.Add( (argTypes[i]!, paramType) );
-					break;
+					if( index < 0 ) {
+						deduplicated.Add( candidate );
+					}
+					else if( PrefersCandidate( candidate, deduplicated[index] ) ) {
+						deduplicated[index] = candidate;
+					}
 				}
 
-				if( rank > worst )
-					worst = rank;
+				templateViable = deduplicated;
 			}
 
-			LogOverloadResolution( "    ranking {0}{1} -> {2}{3}",
-				candidate.name, FormatParamsForDebug( candidate ), ok ? "" : " REJECTED", rankDetails );
+			LogOverloadResolution( "  {0} candidate(s) survived template viability" , templateViable.Count );
+			foreach( Decl c in templateViable )
+				LogOverloadResolution( "    viable: {0}{1}", c.name, FormatParamsForDebug( c ) );
+			if( templateViable.Count == 0 ) {
 
-			if( !ok )
-				continue;
+				if( templateMismatch && sameArity.Count == 1 )
+					ReportTemplateMismatch( sameArity[0], explicitTemplateArgs!, callee );
+				else if( templateMismatch )
+					ReportTemplateMismatch( sameArity, explicitTemplateArgs!, callee );
 
-			if( worst < bestWorst ) {
-				viable.Clear();
-				viable.Add( (candidate, worst) );
-				bestWorst = worst;
+				return (null, false, true);
 			}
-			else if( worst == bestWorst ) {
-				viable.Add( (candidate, worst) );
+
+			// A lone non-template candidate (or a template candidate without explicit/deduced
+			// arguments) is accepted without a conversion check. This preserves the old
+			// resolver behaviour for class-template methods and other dependent calls where
+			// the concrete type-checking is delegated to the C++ compiler.
+			// Only do this when it is the *only* same-arity candidate. If other same-arity
+			// candidates were filtered out (e.g. a template whose deduction failed because an
+			// argument type is not known yet), we must run the conversion check or wait for
+			// another resolver pass instead of blindly picking the remaining candidate.
+			// LONE: lone-candidate shortcut.  Currently disabled (UseLoneCandidateShortcut
+			// is false).  If re-enabled, this short-circuit accepts any single viable
+			// candidate without a Myll conversion check.  See plan/lone-candidate-investigation.md.
+			if( UseLoneCandidateShortcut
+			 && templateViable.Count == 1
+			 && sameArity.Count == 1
+			 && explicitTemplateArgs?.Count == 0
+			 && !deducedArgsByCandidate.ContainsKey( templateViable[0] ) ) {
+				LogOverloadResolution( "  lone candidate {0}, skipping conversion check", templateViable[0].name );
+				return (templateViable[0], false, false);
 			}
-		}
 
-		LogOverloadResolution( "  {0} candidate(s) with best worst-rank {1}", viable.Count, bestWorst );
-		foreach( var v in viable )
-			LogOverloadResolution( "    best: {0}{1} rank={2} templateParams={3}",
-				v.Candidate.name, FormatParamsForDebug( v.Candidate ), v.WorstRank, TemplateInference.GetTemplateParamCount( v.Candidate ) );
-
-		// C++ tie-breaker: when several candidates require the same conversion,
-		// prefer a non-template over a template (or a less-specialized template).
-		if( viable.Count > 1 ) {
-			List<(Decl Candidate, ConversionRank WorstRank)> nonTemplates = viable
-				.Where( v => TemplateInference.GetTemplateParamCount( v.Candidate ) == 0 )
+			// Resolve argument types and rank every remaining viable candidate by the worst
+			// conversion required. This rejects explicit template instantiations with
+			// incompatible arguments (e.g. identity<int>("hi")) and keeps deduction honest.
+			List<Typespec?> argTypes = call.args
+				.Select( a => typeResolver.Resolve( a.expr ) )
 				.ToList();
 
-			if( nonTemplates.Count > 0 ) {
-				LogOverloadResolution( "  tie-breaker: preferring {0} non-template candidate(s)", nonTemplates.Count );
-				viable = nonTemplates;
+			// If any argument type is still unknown, we cannot decide yet. Do not emit
+			// a diagnostic; a later resolver pass may provide the missing type.
+			if( argTypes.Any( t => t == null ) )
+				return (null, false, false);
+
+			LogOverloadResolution( "  argument types: {0}",
+				String.Join( ", ", argTypes.Select( t => FormatTypeForDebug( t ) ) ) );
+
+			List<(Decl Candidate, ConversionRank WorstRank)> viable = new();
+			ConversionRank bestWorst = ConversionRank.None;
+
+			foreach( Decl candidate in templateViable ) {
+				ConversionRank worst = ConversionRank.Exact;
+				bool ok = true;
+
+				List<Param> paras = candidate switch {
+					Func func    => func.paras,
+					Structor stc => stc.paras,
+					_            => new List<Param>(),
+				};
+
+				List<TplArg>? candidateArgs = explicitTemplateArgs is { Count: > 0 }
+					? explicitTemplateArgs as List<TplArg>
+					: deducedArgsByCandidate.TryGetValue( candidate, out List<TplArg>? deduced )
+						? deduced
+						: null;
+
+				(List<TplParam> ownerParams, List<TplArg> ownerArgs) = GetOwnerTemplateInfo( candidate, callee );
+
+				List<TplParam> combinedParams = TemplateInference.GetAllTemplateParams( candidate );
+				List<TplArg> combinedArgs = new( ownerArgs.Count + ( candidateArgs?.Count ?? 0 ) );
+				combinedArgs.AddRange( ownerArgs );
+				if( candidateArgs != null )
+					combinedArgs.AddRange( candidateArgs );
+
+				string rankDetails = "";
+				for( int i = 0; i < paras.Count; i++ ) {
+					Typespec paramType = combinedParams.Count > 0 && combinedArgs.Count > 0
+						? TemplateInference.SubstituteTemplateParams( paras[i].type, combinedParams, combinedArgs, result )
+						: paras[i].type;
+
+					ConversionRank rank = ConversionRules.GetRank(
+						argTypes[i]!,
+						paramType,
+						result,
+						ConversionRules.IsLValue( call.args[i].expr ),
+						allowArrayDecay: true );
+					rankDetails += String.Format( " [{0}] {1}->{2}={3}",
+						i, FormatTypeForDebug( argTypes[i] ), FormatTypeForDebug( paramType ), rank );
+					if( rank == ConversionRank.None ) {
+						ok = false;
+						rejectedPairs.Add( (argTypes[i]!, paramType) );
+						break;
+					}
+
+					if( rank > worst )
+						worst = rank;
+				}
+
+				LogOverloadResolution( "    ranking {0}{1} -> {2}{3}",
+					candidate.name, FormatParamsForDebug( candidate ), ok ? "" : " REJECTED", rankDetails );
+
+				if( !ok )
+					continue;
+
+				if( worst < bestWorst ) {
+					viable.Clear();
+					viable.Add( (candidate, worst) );
+					bestWorst = worst;
+				}
+				else if( worst == bestWorst ) {
+					viable.Add( (candidate, worst) );
+				}
 			}
-		}
 
-		if( viable.Count == 1 ) {
-			Decl chosen = viable[0].Candidate;
-			LogOverloadResolution( "  chosen: {0}{1}", chosen.name, FormatParamsForDebug( chosen ) );
-			// External/forward templates are ranked with Myll deduction, but the C++
-			// compiler is still responsible for the real deduction; do not emit
-			// explicit template arguments for them.
-			bool shouldApplyDeduced = chosen is Func chosenFunc
-			                       && !( chosenFunc.IsForwardDeclaration || chosenFunc.IsExternal );
-			if( shouldApplyDeduced
-			 && deducedArgsByCandidate.TryGetValue( chosen, out List<TplArg>? deduced ) )
-				TemplateInference.ApplyTemplateArgs( callee, deduced );
-			return (chosen, false, false);
-		}
+			LogOverloadResolution( "  {0} candidate(s) with best worst-rank {1}", viable.Count, bestWorst );
+			foreach( var v in viable )
+				LogOverloadResolution( "    best: {0}{1} rank={2} templateParams={3}",
+					v.Candidate.name, FormatParamsForDebug( v.Candidate ), v.WorstRank, TemplateInference.GetTemplateParamCount( v.Candidate ) );
 
-		if( viable.Count > 1 ) {
-			LogOverloadResolution( "  ambiguous" );
-			return (null, true, false);
-		}
+			// C++ tie-breaker: when several candidates require the same conversion,
+			// prefer a non-template over a template (or a less-specialized template).
+			if( viable.Count > 1 ) {
+				List<(Decl Candidate, ConversionRank WorstRank)> nonTemplates = viable
+					.Where( v => TemplateInference.GetTemplateParamCount( v.Candidate ) == 0 )
+					.ToList();
 
-		if( rejectedPairs.Count > 0
-		 && rejectedPairs.Any( p => TypeMightResolveLater( p.source ) || TypeMightResolveLater( p.target ) ) ) {
-			LogOverloadResolution( "  no viable candidate yet; deferring because types are still unresolved" );
-			return (null, false, false);
-		}
+				if( nonTemplates.Count > 0 ) {
+					LogOverloadResolution( "  tie-breaker: preferring {0} non-template candidate(s)", nonTemplates.Count );
+					viable = nonTemplates;
+				}
+			}
 
-		LogOverloadResolution( "  no viable candidate" );
-		return (null, false, true);
-	}
+			if( viable.Count == 1 ) {
+				Decl chosen = viable[0].Candidate;
+				LogOverloadResolution( "  chosen: {0}{1}", chosen.name, FormatParamsForDebug( chosen ) );
+				// External/forward templates are ranked with Myll deduction, but the C++
+				// compiler is still responsible for the real deduction; do not emit
+				// explicit template arguments for them.
+				bool shouldApplyDeduced = chosen is Func chosenFunc
+				                         && !( chosenFunc.IsForwardDeclaration || chosenFunc.IsExternal );
+				if( shouldApplyDeduced
+				 && deducedArgsByCandidate.TryGetValue( chosen, out List<TplArg>? deduced ) )
+					TemplateInference.ApplyTemplateArgs( callee, deduced );
+
+				// A template call that did not pick a specialization instantiates the
+				// primary; record it for the ODR guard. Calls re-resolve across
+				// fixed-point iterations, so record each (primary, module, args)
+				// combination only once.
+				if( chosen is Func { SpecInfo: null } chosenTemplate
+				 && chosenTemplate.TplParams.Count > 0
+				 && specsByPrimary.ContainsKey( chosen ) ) {
+					IReadOnlyList<TplArg>? callArgs = explicitTemplateArgs is { Count: > 0 }
+						? explicitTemplateArgs
+						: deducedArgsByCandidate.TryGetValue( chosen, out List<TplArg>? recordedDeduced )
+							? recordedDeduced
+							: null;
+					if( callArgs is { Count: > 0 }
+					 && recordedInstantiations.Add( (chosen, module.module, callArgs.Select( a => a.Gen() ).Join( "," ) ) ) )
+						varInstantiations.Add( new VarInstantiation( chosen, callArgs.ToList(), module.module, callee.srcPos ) );
+				}
+
+				return (chosen, false, false);
+			}
+
+			if( viable.Count > 1 ) {
+				LogOverloadResolution( "  ambiguous" );
+				return (null, true, false);
+			}
+
+			if( rejectedPairs.Count > 0
+			 && rejectedPairs.Any( p => TypeMightResolveLater( p.source ) || TypeMightResolveLater( p.target ) ) ) {
+				LogOverloadResolution( "  no viable candidate yet; deferring because types are still unresolved" );
+				return (null, false, false);
+			}
+
+			LogOverloadResolution( "  no viable candidate" );
+			return (null, false, true);
+		}
 
 		/// <summary>
 		/// Returns true when a type still contains unresolved nested names. In that case a
@@ -3016,8 +3073,11 @@ if( m.Context.IsPrototypeFile )
 					return candidates[0];
 			}
 
-			// Template specializations share the primary's name: pick the primary and
-			// let the specialization matching sort out the rest.
+			// Variable and structural template specializations share the primary's name:
+			// pick the primary and let the specialization matching sort out the rest.
+			// Function specializations must NOT collapse here: a pre-resolved
+			// callee would shrink the overload candidate list, so the call path
+			// (TryResolveOverload) handles them with the full list.
 			if( candidates.All( d => d is VarDecl )
 			 || candidates.All( d => d is Structural ) ) {
 				List<Decl> primaries = candidates
