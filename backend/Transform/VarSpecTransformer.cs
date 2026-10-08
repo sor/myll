@@ -75,33 +75,68 @@ namespace Myll.Transform
 					continue;
 				}
 
-				// Bindings must name primary parameters in declaration order.
+				// Bindings must name primary parameters in declaration order. The "name
+				// everything" form lists unbound parameters bare (q<T, U=int>); then every
+				// primary parameter must be listed, each at its own position.
 				Dictionary<string, int> paramPos = new( StringComparer.Ordinal );
 				for( int i = 0; i < primary.TplParams.Count; i++ )
 					paramPos[ primary.TplParams[i].name ] = i;
 
-				int lastPos = -1;
+				bool isFullForm = spec.TplSpec.Any( b => b.type == null );
 				bool bindingsValid = true;
-				foreach( TplBinding binding in spec.TplSpec ) {
-					if( !paramPos.TryGetValue( binding.name, out int pos ) ) {
+
+				if( isFullForm ) {
+					if( spec.TplSpec.Count != primary.TplParams.Count ) {
 						Diagnostics.Add( new Diagnostic(
 							spec.srcPos,
 							DiagnosticKind.Error,
-							String.Format( "Unknown template parameter '{0}' in specialization of '{1}'",
-								binding.name, spec.name ) ) );
+							String.Format(
+								"Specialization '{0}' names {1} of {2} parameters; either name all of them or only the bound ones",
+								spec.name,
+								spec.TplSpec.Count,
+								primary.TplParams.Count ) ) );
 						bindingsValid = false;
-						break;
 					}
-					if( pos <= lastPos ) {
-						Diagnostics.Add( new Diagnostic(
-							spec.srcPos,
-							DiagnosticKind.Error,
-							String.Format( "Bindings of '{0}' must follow the primary's parameter order; '{1}' comes after a later parameter",
-								spec.name, binding.name ) ) );
-						bindingsValid = false;
-						break;
+					else {
+						for( int i = 0; i < spec.TplSpec.Count; i++ ) {
+							string expected = primary.TplParams[i].name;
+							string actual   = spec.TplSpec[i].name;
+							if( actual != expected ) {
+								Diagnostics.Add( new Diagnostic(
+									spec.srcPos,
+									DiagnosticKind.Error,
+									String.Format(
+										"Specialization '{0}' names '{1}' at parameter '{2}''s position; unbound names must match the primary's parameters",
+										spec.name, actual, expected ) ) );
+								bindingsValid = false;
+								break;
+							}
+						}
 					}
-					lastPos = pos;
+				}
+				else {
+					int lastPos = -1;
+					foreach( TplBinding binding in spec.TplSpec ) {
+						if( !paramPos.TryGetValue( binding.name, out int pos ) ) {
+							Diagnostics.Add( new Diagnostic(
+								spec.srcPos,
+								DiagnosticKind.Error,
+								String.Format( "Unknown template parameter '{0}' in specialization of '{1}'",
+									binding.name, spec.name ) ) );
+							bindingsValid = false;
+							break;
+						}
+						if( pos <= lastPos ) {
+							Diagnostics.Add( new Diagnostic(
+								spec.srcPos,
+								DiagnosticKind.Error,
+								String.Format( "Bindings of '{0}' must follow the primary's parameter order; '{1}' comes after a later parameter",
+									spec.name, binding.name ) ) );
+							bindingsValid = false;
+							break;
+						}
+						lastPos = pos;
+					}
 				}
 				if( !bindingsValid ) {
 					MarkInvalidSpec( spec );
@@ -113,8 +148,10 @@ namespace Myll.Transform
 				// registered as unresolved at visit time; the substituted type needs
 				// no resolution of its own.
 				Dictionary<string, Typespec> boundValues = new( StringComparer.Ordinal );
-				foreach( TplBinding binding in spec.TplSpec )
-					boundValues[ binding.name ] = binding.type;
+				foreach( TplBinding binding in spec.TplSpec ) {
+					if( binding.type != null )
+						boundValues[ binding.name ] = binding.type;
+				}
 
 				Typespec originalType = spec.type;
 				Typespec specType = SubstituteBindings( spec.type, boundValues );
@@ -134,7 +171,9 @@ namespace Myll.Transform
 
 				// Duplicate specialization signature check.
 				string signature = String.Join( ",",
-					spec.TplSpec.Select( b => bindingSignature( b ) ) );
+					spec.TplSpec
+						.Where( b => b.type != null )
+						.Select( b => bindingSignature( b ) ) );
 				if( !seenSignatures.TryGetValue( primary, out List<string>? seen ) ) {
 					seen = new();
 					seenSignatures[ primary ] = seen;
@@ -161,7 +200,7 @@ namespace Myll.Transform
 					TplBinding? binding = spec.TplSpec
 						.FirstOrDefault( b => b.name == param.name );
 
-					if( binding != null ) {
+					if( binding != null && binding.type != null ) {
 						bound[ i ] = true;
 						args.Add( new TplArg { typespec = binding.type } );
 					}

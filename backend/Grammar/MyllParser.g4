@@ -339,8 +339,13 @@ tplParam	:	id						# TypeTplParam
 			|	typespec	id				# NonTypeTplParam
 			;
 tplParams	:	LT	tplParam	(COMMA tplParam)*	COMMA?	GT;
-// specialization bindings: named, in primary declaration order ( pi<T=int> )
-tplSpec	:	LT	tplBind	(COMMA tplBind)*	COMMA?	GT;
+// specialization bindings: named, in primary declaration order ( pi<T=int> ).
+// The "name everything" form also lists unbound parameters bare ( q<T, U=int> );
+// an all-bare list parses as tplParams, the primary declaration.
+tplSpec	:	LT	tplSpecEntry	(COMMA tplSpecEntry)*	COMMA?	GT;
+tplSpecEntry	:	tplBind
+			|	id				// unbound placeholder
+			;
 tplBind	:	id	ASSIGN	typespec;
 //tplParams2	:	LT	cs[id]							GT;
 //cs[object id] returns [object[] ret]:	ret+=id (COMMA ret+=id)* COMMA?;

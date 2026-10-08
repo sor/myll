@@ -270,7 +270,7 @@ namespace Myll.Core
 		var int i { [inline] get; [inline] set; } = 99;
 	</example>
 	*/
-public class VarDecl : Decl, ITemplatedDecl
+	public class VarDecl : Decl, ITemplatedDecl
 	{
 		/// <summary>
 		/// Resolved specialization data for a variable template specialization

@@ -1228,10 +1228,11 @@ namespace Myll
 			if( c == null )
 				return new();
 
-			return c.tplBind()
-				.Select( b => new TplBinding {
-					name = b.id().Visit(),
-					type = VisitTypespec( b.typespec() ),
+			return c.tplSpecEntry()
+				.Select( e => new TplBinding {
+					name = ( e.tplBind() != null ? e.tplBind().id() : e.id() ).Visit(),
+					// null type marks an unbound placeholder (the "name everything" form)
+					type = e.tplBind() != null ? VisitTypespec( e.tplBind().typespec() ) : null,
 				} )
 				.ToList();
 		}
