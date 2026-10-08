@@ -1,0 +1,8 @@
+// The primary home of the cross-module specialization case: nums owns the
+// primaries, nums_spec imports nums and adds specializations, main imports
+// both and mixes specialized and primary instantiations.
+module nums;
+
+const T pi<T> = (T)3.1415;
+const T q<T, U> = (T)7;
+var T rt<T> = (T)0;

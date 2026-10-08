@@ -35,3 +35,9 @@ public:
     T first{};
     U second{};
 };
+template <typename T>
+extern T rt;
+template<> inline int rt<int> = 5;
+template <typename T, typename U>
+extern T rtq;
+template <typename T> inline T rtq<T, int> = static_cast<T>( 70 );

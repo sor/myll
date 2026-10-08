@@ -1,0 +1,10 @@
+// Cross-module specializations: the primary lives in nums; this module
+// imports it and adds specializations. The generated header includes
+// nums.hpp, so the primary precedes every specialization.
+module nums_spec;
+
+import nums;
+
+const T pi<T=int> = 3;
+const T q<T, U=int> = (T)70;
+var T rt<T=i32> = 5;

@@ -1,0 +1,5 @@
+module spec_a;
+
+import nums;
+
+const T pi<T=int> = 3;

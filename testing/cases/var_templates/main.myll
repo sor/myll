@@ -19,6 +19,13 @@ const T z<T, U> = (T)17;
 const T z<U=int> = (T)170;
 const T z<U=f32> = (T)171;
 
+// runtime variable templates specialize as inline variables; constexpr is
+// const-only and the extern-declaration split does not exist for them
+var T rt<T> = (T)0;
+var T rt<T=int> = 5;
+var T rtq<T, U> = (T)7;
+var T rtq<T, U=int> = (T)70;
+
 class Pair<T, U> {
 [pub]:
 	field {
@@ -66,6 +73,15 @@ func main() -> int {
 		return 12;
 	if( z<int, f32> != 171 )
 		return 13;
+
+	if( rt<int> != 5 )
+		return 14;
+	if( rt<i64> != 0 )
+		return 15;
+	if( rtq<i64, int> != 70 )
+		return 16;
+	if( rtq<int, i64> != 7 )
+		return 17;
 
 	return 0;
 }

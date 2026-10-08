@@ -1,4 +1,8 @@
 #include "var_templates.hpp"
+template <typename T>
+T rt = static_cast<T>( 0 );
+template <typename T, typename U>
+T rtq = static_cast<T>( 7 );
 int main()
 {
     int a = answer<int>;
@@ -43,6 +47,18 @@ int main()
     }
     if( z<int, float> != 171 ) {
         return 13;
+    }
+    if( rt<int> != 5 ) {
+        return 14;
+    }
+    if( rt<std::int64_t> != 0 ) {
+        return 15;
+    }
+    if( rtq<std::int64_t, int> != 70 ) {
+        return 16;
+    }
+    if( rtq<int, std::int64_t> != 7 ) {
+        return 17;
     }
     return 0;
 }
