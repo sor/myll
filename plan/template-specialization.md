@@ -1,9 +1,12 @@
 # Variable Template Specialization
 
-Status: **implemented 2026-10-04** (phase 1: same-module), **2026-10-08** (phase 3:
-cross-module + ODR guard). Cases: `testing/cases/var_templates/` and
-`testing/cases/cross_module_var_spec/` (positive), `template_fail/`,
-`cross_module_clash_fail/` and `cross_module_var_spec_fail/` (negative).
+Status: **implemented 2026-10-04** (phase 1: same-module variable specializations),
+**2026-10-08** (phase 3: cross-module + ODR guard; phase 2: class/struct/union
+specializations, same-module and cross-module). Cases: `testing/cases/var_templates/`,
+`testing/cases/class_templates/`, `testing/cases/cross_module_var_spec/` and
+`testing/cases/cross_module_struct_spec/` (positive), `template_fail/`,
+`cross_module_clash_fail/`, `cross_module_var_spec_fail/` and
+`cross_module_struct_spec_fail/` (negative).
 
 ## Syntax
 
@@ -50,6 +53,12 @@ Decisions (settled 2026-10-04):
     such use occurs."
   A future `--program`-split option could relax the guard for separately linked programs;
   it is not implemented.
+- **Class/struct/union specializations (phase 2)** follow the same binding rules and the
+  same module rules as variable specializations, and their bodies are their own member
+  sets (C++ first): bound parameter names are not in scope — the body spells out the
+  bound values — while unbound parameters stay the specialization's own template
+  parameters. A future attribute (`[interface]` / `[copy]`) could enforce interface parity
+  or copy members from the primary; see the deferred inventory.
 - **Primary-first resolution**: uses are type-checked against the primary's signature (the
   specialization must repeat the primary's substituted type, mirroring C++'s same-declarator
   rule), and the resolver picks the matching specialization for emission. A full specialization
@@ -97,13 +106,40 @@ Decisions (settled 2026-10-04):
   is the only header-safe form. The primary's out-of-line definition no longer repeats its
   own template arguments (`obj.ReferenceName` instead of `FullyQualifiedName` in `AddVar`).
 
+## Class/struct/union specializations (phase 2)
+
+- Grammar: `defStruct` accepts `tplSpec` after the type name (`class Box<T=int> { ... }`),
+  mirroring the variable rule. An all-bare list still parses as `tplParams`, so a primary
+  declaration never parses as a specialization.
+- AST: `Structural.TplSpec`; `VarDecl.VarSpecInfo` became the shared `Decl.SpecData` with
+  a `SpecInfo` property on `Decl`.
+- `VarSpecTransformer` validates structural specializations with the same binding rules
+  (shape, order, duplicates) and injects unbound parameters into the class scope. A
+  bodiless specialization is rejected by the earlier visit-stage forward-declaration check.
+- Resolution: `PickSingleCandidate` picks the primary among same-name structurals, and
+  `TrySwapStructSpec` (inside `ResolvePath`) swaps a concrete-argument use to its matching
+  specialization, so member lookup, constructors, and generation all use the
+  specialization's declarations; dependent argument lists keep the primary.
+  `TemplateInference.ValidateTemplateArgs`/`GetTemplateParamCount` validate against the
+  primary. The ODR guard covers structurals through the same `specsByPrimary` index; type
+  and name resolution record primary uses for the divergence check (only the main
+  resolution paths, which carry source positions).
+- Emission: `template<> class Box<int> { ... };` for full specs,
+  `template<typename T> class Box<T, int> { ... };` for partials, with no forward
+  declaration. Members of a specialization are header entities (`Decl.IsTemplateUp`), and
+  qualified names carry the specialization's arguments (`Decl.BuildQualifiedName`). Union
+  members no longer get default member initializers (C++ rejects initializing multiple
+  members of a union).
+
 ## Deferred inventory
 
 - Function/method specialization (C++: full only).
-- Class/struct specialization — phase 2 (specializations may change member sets, needs
-  specialization-aware member resolution, `template<> struct Box<int> { ... }` emission).
-- Cross-module specialization of member (field-scope) variable templates: the transformer's
+- Specialization of member (field-scope) templates, variable or class: the transformer's
   imported-primary search follows namespaces only; members stay same-module for now.
+- A future attribute to constrain class specializations: e.g. `[interface]` to enforce that a
+  specialization exposes the primary's member set, or `[copy]` to copy the primary's members
+  and only override the listed ones. The C++-first semantics (fresh member set, bound names
+  not in scope) stay the default.
 - Runtime primary instantiation from an importing module: the primary's definition lives in
   its module's `.cpp` while importers only see the `extern` declaration, so importing
   translation units cannot implicitly instantiate it. Same-module runtime primaries work.
