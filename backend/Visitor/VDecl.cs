@@ -596,6 +596,7 @@ namespace Myll
 				access    = curAccess,
 				kind      = kind,
 				TplParams = VisitTplParams( c.tplParams() ),
+				TplSpec   = VisitTplSpec( c.tplSpec() ),
 				reqs      = VisitTypespecsNested( c.reqs?.typespecNested() ),
 			};
 

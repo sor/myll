@@ -53,8 +53,13 @@ namespace Myll.Resolver
 			};
 		}
 
+		// Specializations carry only their unbound parameters; template argument
+		// validation always targets the primary.
+		private static Decl PrimaryOf( Decl decl )
+			=> decl.SpecInfo != null ? decl.SpecInfo.Primary : decl;
+
 		public static int GetTemplateParamCount( Decl decl )
-			=> ( decl as ITemplatedDecl )?.TplParams.Count ?? 0;
+			=> ( PrimaryOf( decl ) as ITemplatedDecl )?.TplParams.Count ?? 0;
 
 		/// <summary>
 		/// Returns all template parameters in scope for a declaration: the template parameters
@@ -105,7 +110,7 @@ namespace Myll.Resolver
 			if( actual != expected )
 				return new TemplateArgValidation( true, TemplateArgMismatchKind.Arity, null, null, null, null );
 
-			List<TplParam> parameters = ( candidate as ITemplatedDecl )!.TplParams;
+			List<TplParam> parameters = ( PrimaryOf( candidate ) as ITemplatedDecl )!.TplParams;
 			for( int i = 0; i < parameters.Count; i++ ) {
 				TplParam param = parameters[i];
 				TplArg   arg   = explicitArgs![i];

@@ -59,7 +59,7 @@ namespace Myll.Resolver
 
 		// Cross-module variable template specialization data, built once after the
 		// pre-resolution transforms (SpecInfo is filled then).
-		private readonly Dictionary<VarDecl, List<SpecEntry>> specsByPrimary = new();
+		private readonly Dictionary<Decl, List<SpecEntry>> specsByPrimary = new();
 		private readonly Dictionary<string, HashSet<string>> visibleByModule = new( StringComparer.Ordinal );
 		private readonly List<VarInstantiation> varInstantiations = new();
 
@@ -383,7 +383,7 @@ namespace Myll.Resolver
 			if( resolved is not VarDecl varDecl )
 				return true;
 
-			VarDecl primary = varDecl.SpecInfo != null ? varDecl.SpecInfo.Primary : varDecl;
+			VarDecl primary = varDecl.SpecInfo != null ? (VarDecl)varDecl.SpecInfo.Primary : varDecl;
 			bool isTemplate = primary.TplParams.Count > 0;
 
 			if( !isTemplate && varDecl.SpecInfo == null )
@@ -433,7 +433,7 @@ namespace Myll.Resolver
 
 			// Specializations visible to the use's module shadow the primary for
 			// matching explicit arguments.
-			VarDecl? spec = FindMatchingSpecialization( primary, useArgs, expr, useModule );
+			VarDecl? spec = FindMatchingSpecialization( primary, useArgs, expr, useModule ) as VarDecl;;
 			if( spec != null ) {
 				effective = spec;
 				expr.Type = TemplateInference.SubstituteTemplateParams(
@@ -464,7 +464,7 @@ namespace Myll.Resolver
 		/// can see. Full specializations win over partial ones; among partials the
 		/// most-bound wins; ties are ambiguous and error out.
 		/// </summary>
-		private VarDecl? FindMatchingSpecialization( VarDecl primary, List<TplArg> useArgs, Expr expr, string useModule )
+		private Decl? FindMatchingSpecialization( Decl primary, List<TplArg> useArgs, Expr? expr, string useModule )
 		{
 			if( !specsByPrimary.TryGetValue( primary, out List<SpecEntry>? entries ) )
 				return null;
@@ -474,14 +474,14 @@ namespace Myll.Resolver
 			if( !visibleByModule.TryGetValue( useModule, out HashSet<string>? visible ) )
 				return null;
 
-			VarDecl? best = null;
+			Decl? best = null;
 			int bestBoundCount = -1;
 
 			foreach( SpecEntry entry in entries ) {
 				if( !visible.Contains( entry.Module ) )
 					continue;
 
-				VarDecl spec = entry.Spec;
+				Decl spec = entry.Spec;
 				if( !MatchesBoundArgs( spec.SpecInfo!, useArgs ) )
 					continue;
 
@@ -495,7 +495,7 @@ namespace Myll.Resolver
 				}
 				else if( boundCount == bestBoundCount && best != null ) {
 					diagnostics.Add( new Diagnostic(
-						expr.srcPos,
+						expr?.srcPos,
 						DiagnosticKind.Error,
 						String.Format( "Ambiguous specialization match for '{0}': both '{1}' and '{2}' bind {3} parameters",
 							primary.name, best.name, spec.name, boundCount ) ) );
@@ -508,7 +508,7 @@ namespace Myll.Resolver
 
 		// A specialization matches a use when every bound parameter position has
 		// the same type; unbound positions are wildcards.
-		private static bool MatchesBoundArgs( VarDecl.VarSpecInfo info, List<TplArg> useArgs )
+		private static bool MatchesBoundArgs( Decl.SpecData info, List<TplArg> useArgs )
 		{
 			bool[] bound = info.Bound;
 			for( int i = 0; i < bound.Length; i++ ) {
@@ -723,8 +723,9 @@ if( m.Context.IsPrototypeFile )
 			}
 		}
 
-		// Variable template specializations are linked to their primary with
-		// SpecInfo; failed ones carry a self-reference instead and are skipped.
+		// Template specializations (variable or class/struct/union) are linked to
+		// their primary with SpecInfo; failed ones carry a self-reference instead
+		// and are skipped.
 		private void CollectVarSpecs( Scope scope, string moduleName )
 		{
 			foreach( List<ScopeLeaf> leaves in scope.children.Values ) {
@@ -738,17 +739,17 @@ if( m.Context.IsPrototypeFile )
 						continue;
 					}
 
-					if( decl is not VarDecl spec || spec.SpecInfo == null )
+					if( decl.SpecInfo == null )
 						continue;
-					if( ReferenceEquals( spec.SpecInfo.Primary, spec ) )
+					if( ReferenceEquals( decl.SpecInfo.Primary, decl ) )
 						continue;
 
-					if( !specsByPrimary.TryGetValue( spec.SpecInfo.Primary, out List<SpecEntry>? entries ) ) {
+					if( !specsByPrimary.TryGetValue( decl.SpecInfo.Primary, out List<SpecEntry>? entries ) ) {
 						entries = new List<SpecEntry>();
-						specsByPrimary[spec.SpecInfo.Primary] = entries;
+						specsByPrimary[decl.SpecInfo.Primary] = entries;
 					}
 
-					entries.Add( new SpecEntry( spec, moduleName ) );
+					entries.Add( new SpecEntry( decl, moduleName ) );
 				}
 			}
 		}
@@ -770,7 +771,7 @@ if( m.Context.IsPrototypeFile )
 			// The same bound signature for one primary, defined in two modules:
 			// the definitions are distinct, so wherever they meet they clash, and
 			// where they do not meet the translation units diverge.
-			foreach( (VarDecl primary, List<SpecEntry> entries) in specsByPrimary ) {
+			foreach( (Decl primary, List<SpecEntry> entries) in specsByPrimary ) {
 				Dictionary<string, SpecEntry> seenSignatures = new( StringComparer.Ordinal );
 
 				foreach( SpecEntry entry in entries ) {
@@ -835,13 +836,14 @@ if( m.Context.IsPrototypeFile )
 
 		// Canonical bound-signature of a specialization: the bound parameter
 		// names with their values, in primary parameter order.
-		private static string SpecSignature( VarDecl primary, VarDecl spec )
+		private static string SpecSignature( Decl primary, Decl spec )
 		{
-			VarDecl.VarSpecInfo info = spec.SpecInfo!;
+			Decl.SpecData info = spec.SpecInfo!;
 			List<string> parts = new( info.Bound.Length );
+			var primaryParams = ((ITemplatedDecl)primary).TplParams;
 			for( int i = 0; i < info.Bound.Length; i++ ) {
 				if( info.Bound[ i ] )
-					parts.Add( primary.TplParams[ i ].name + "=" + info.Args[ i ].Gen() );
+					parts.Add( primaryParams[ i ].name + "=" + info.Args[ i ].Gen() );
 			}
 
 			return String.Join( ",", parts );
@@ -857,6 +859,9 @@ if( m.Context.IsPrototypeFile )
 				foreach( ScopeLeaf leaf in leaves ) {
 					Decl? decl = leaf.decl;
 					if( decl == null || decl.IsHidden )
+						continue;
+					// Failed specializations are already reported and consumed.
+					if( decl.SpecInfo != null && ReferenceEquals( decl.SpecInfo.Primary, decl ) )
 						continue;
 
 					if( decl is Namespace ns ) {
@@ -952,19 +957,16 @@ if( m.Context.IsPrototypeFile )
 		/// </summary>
 		private static CollisionKind ClassifyCollision( Decl a, Decl b )
 		{
-			// A variable template specialization next to its primary, or next to
-			// another specialization of the same primary, is not a collision: it
-			// legally specializes the template. The var-spec ODR guard owns these
-			// pairs with dedicated diagnostics.
-			VarDecl? specA = a as VarDecl;
-			VarDecl? specB = b as VarDecl;
-			if( specA != null && specB != null
-			 && specA.SpecInfo != null && specB.SpecInfo != null
-			 && ReferenceEquals( specA.SpecInfo.Primary, specB.SpecInfo.Primary ) )
+			// A template specialization next to its primary, or next to another
+			// specialization of the same primary, is not a collision: it legally
+			// specializes the template. The spec ODR guard owns these pairs with
+			// dedicated diagnostics.
+			if( a.SpecInfo != null && b.SpecInfo != null
+			 && ReferenceEquals( a.SpecInfo.Primary, b.SpecInfo.Primary ) )
 				return CollisionKind.None;
-			if( specA != null && specA.SpecInfo != null && ReferenceEquals( specA.SpecInfo.Primary, b ) )
+			if( a.SpecInfo != null && ReferenceEquals( a.SpecInfo.Primary, b ) )
 				return CollisionKind.None;
-			if( specB != null && specB.SpecInfo != null && ReferenceEquals( specB.SpecInfo.Primary, a ) )
+			if( b.SpecInfo != null && ReferenceEquals( b.SpecInfo.Primary, a ) )
 				return CollisionKind.None;
 
 			if( !SameKind( a, b ) )
@@ -1097,10 +1099,10 @@ if( m.Context.IsPrototypeFile )
 
 		private sealed class SpecEntry
 		{
-			public readonly VarDecl Spec;
-			public readonly string  Module;
+			public readonly Decl   Spec;
+			public readonly string Module;
 
-			public SpecEntry( VarDecl spec, string module )
+			public SpecEntry( Decl spec, string module )
 			{
 				Spec   = spec;
 				Module = module;
@@ -1111,12 +1113,12 @@ if( m.Context.IsPrototypeFile )
 		// specialization matched), recorded for the ODR guard.
 		private sealed class VarInstantiation
 		{
-			public readonly VarDecl       Primary;
-			public readonly List<TplArg>  Args;
-			public readonly string        Module;
-			public readonly SrcPos?       Pos;
+			public readonly Decl         Primary;
+			public readonly List<TplArg> Args;
+			public readonly string       Module;
+			public readonly SrcPos?      Pos;
 
-			public VarInstantiation( VarDecl primary, List<TplArg> args, string module, SrcPos? pos )
+			public VarInstantiation( Decl primary, List<TplArg> args, string module, SrcPos? pos )
 			{
 				Primary = primary;
 				Args    = args;
@@ -2142,6 +2144,7 @@ if( m.Context.IsPrototypeFile )
 				unresolvedSegmentIndex = 0;
 				return null;
 			}
+			current = TrySwapStructSpec( current, segments[0], module );
 
 			for( int i = 1; i < segments.Count; i++ ) {
 				if( current is not Hierarchical h ) {
@@ -2157,10 +2160,28 @@ if( m.Context.IsPrototypeFile )
 					return null;
 				}
 
-				current = next;
+				current = TrySwapStructSpec( next, segments[i], module );
 			}
 
 			return current;
+		}
+
+		/// <summary>
+		/// Swaps a resolved class/struct/union template primary for its matching
+		/// specialization, so that member lookup, constructors, and generation all
+		/// use the specialization's own declarations. Uses whose argument list is
+		/// dependent (a symbolic template parameter) keep the primary.
+		/// </summary>
+		private Decl TrySwapStructSpec( Decl resolved, IdTplArgs segment, GlobalNamespace module )
+		{
+			if( resolved is not Structural primary
+			 || primary.SpecInfo != null
+			 || primary.TplParams.Count == 0
+			 || segment.tplArgs.Count == 0 )
+				return resolved;
+
+			Decl? spec = FindMatchingSpecialization( primary, segment.tplArgs, null, module.module );
+			return spec ?? resolved;
 		}
 
 		private bool TryGetMemberAccessBaseType(
@@ -2983,12 +3004,12 @@ if( m.Context.IsPrototypeFile )
 					return candidates[0];
 			}
 
-			// Variable template specializations share the primary's name: pick the
-			// primary and let the specialization matching sort out the rest.
-			if( candidates.All( d => d is VarDecl ) ) {
-				List<VarDecl> primaries = candidates
-					.OfType<VarDecl>()
-					.Where( v => v.SpecInfo == null )
+			// Template specializations share the primary's name: pick the primary and
+			// let the specialization matching sort out the rest.
+			if( candidates.All( d => d is VarDecl )
+			 || candidates.All( d => d is Structural ) ) {
+				List<Decl> primaries = candidates
+					.Where( d => d.SpecInfo == null )
 					.ToList();
 				if( primaries.Count == 1 )
 					return primaries[0];

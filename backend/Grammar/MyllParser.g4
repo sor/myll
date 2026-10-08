@@ -110,12 +110,12 @@ defEnum		:	id
 baseSpec	:	attribBlk?	typespecNested ;
 baseSpecs	:	baseSpec (COMMA baseSpec)* COMMA? ;
 
-defStruct	:	typeId		tplParams?
+defStruct	:	typeId		(tplParams	|	tplSpec)?
 				(COLON		bases=baseSpecs)?
 				(REQUIRES 	reqs=typespecsNested)?	// TODO: should this rather be "expr" instead of typespecsNested?
 				(
 					LCURLY	decl*		RCURLY	SEMI?
-				| 	SEMI
+				|	SEMI
 				);
 
 // convert is implicit by default?

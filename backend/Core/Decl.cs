@@ -33,15 +33,38 @@ namespace Myll.Core
 		public Access    access = Access.Public;
 		public ScopeLeaf scope = null!;
 
-		// recursively check if there is anything templated surrounding
+		/// <summary>
+		/// Resolved specialization data for a template specialization (variable or
+		/// class/struct/union), filled by the pre-resolution transformer.
+		/// </summary>
+		public sealed class SpecData
+		{
+			public Decl         Primary = null!;
+			public List<TplArg> Args  = new(); // all primary params, declaration order
+			public bool[]       Bound = System.Array.Empty<bool>();
+			public bool IsFull => Bound.Length > 0 && Bound.All( b => b );
+		}
+
+		/// <summary>
+		/// Filled for template specializations: the primary plus the bound template
+		/// arguments. Args lists every primary parameter in declaration order; unbound
+		/// positions carry a symbolic TypespecNested naming the parameter, and Bound
+		/// marks the bound positions.
+		/// </summary>
+		public SpecData? SpecInfo { get; set; }
+
+// recursively check if there is anything templated surrounding
 		public bool IsTemplateUp {
 			get {
-			for( ScopeLeaf cur = scope; cur?.parent != null; cur = cur.parent )
+			for( ScopeLeaf cur = scope; cur?.parent != null; cur = cur.parent ) {
+				if( cur.decl.SpecInfo != null )
+					return true; // inside a specialization: header entity like a template
 				if( cur.decl is ITemplatedDecl curStruct )
 					if( curStruct.TplParams.Count >= 1 )
 						return true;
+			}
 
-				return false;
+			return false;
 			}
 		}
 
@@ -94,7 +117,14 @@ namespace Myll.Core
 				Decl?  decl     = cur.decl;
 				string declName = decl?.name ?? "unknown_fix_me";
 				bool includeTplParams = includeOwnTemplateParams || cur != scope;
-				if( includeTplParams
+				if( includeTplParams && decl != null && decl.SpecInfo != null ) {
+					// A specialization names its primary's arguments, not its own
+					// (unbound) parameters: Box<int>::member.
+					declName += "<" + decl.SpecInfo.Args
+						.Select( a => a.Gen() )
+						.Join( ", " ) + ">";
+				}
+				else if( includeTplParams
 				 && decl is ITemplatedDecl curStruct
 				 && curStruct.TplParams.Count >= 1 )
 					declName += "<" + curStruct.TplParams
@@ -272,18 +302,6 @@ namespace Myll.Core
 	*/
 	public class VarDecl : Decl, ITemplatedDecl
 	{
-		/// <summary>
-		/// Resolved specialization data for a variable template specialization
-		/// (filled by the resolver; see <see cref="VarDecl.SpecInfo"/>).
-		/// </summary>
-		public sealed class VarSpecInfo
-		{
-			public VarDecl     Primary = null!;
-			public List<TplArg> Args  = new(); // all primary params, declaration order
-			public bool[]       Bound = System.Array.Empty<bool>();
-			public bool IsFull => Bound.Length > 0 && Bound.All( b => b );
-		}
-
 		public enum Kind
 		{
 			Var,
@@ -300,14 +318,6 @@ namespace Myll.Core
 		public List<TplParam> TplParams { get; set; } = new();
 		public List<TplBinding> TplSpec { get; init; } = new(); // non-empty: specialization of a same-module primary
 		public Scope?         varScope;
-
-		/// <summary>
-		/// Filled by the resolver for specializations: the primary plus the bound
-		/// template arguments. Args lists every primary parameter in declaration
-		/// order; unbound positions carry a symbolic TypespecNested naming the
-		/// parameter, and Bound marks the bound positions.
-		/// </summary>
-		public VarSpecInfo? SpecInfo { get; set; }
 
 		public Scope? TemplateParamScope => varScope;
 
@@ -416,8 +426,9 @@ namespace Myll.Core
 			Union,
 		}
 
-		public Kind                 kind;
+public Kind                 kind;
 		public List<TplParam>       TplParams { get; set; } = new();
+		public List<TplBinding>     TplSpec { get; init; } = new(); // non-empty: specialization of a same-module primary
 		public List<BaseType>       basetypes = new();
 		public List<TypespecNested> reqs = new();
 

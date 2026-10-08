@@ -17,6 +17,10 @@ namespace Myll.Transform
 	/// partial specializations the unbound parameters become the specialization's
 	/// own template parameters and are injected into its scope so initializers
 	/// can reference them.
+	/// Class/struct/union specializations follow the same binding rules, live in
+	/// the primary's module, and are linked the same way; their bodies are their
+	/// own member sets (C++ semantics) with unbound parameters injected into the
+	/// class scope.
 	/// </summary>
 	public sealed class VarSpecTransformer : Transformer
 	{
@@ -43,10 +47,10 @@ namespace Myll.Transform
 
 		private void ValidateScope( Myll.Core.Hierarchical hier )
 		{
-			List<Decl>    children = hier.children.ToList();
-			List<VarDecl> vars     = children.OfType<VarDecl>().ToList();
+			List<Decl> children = hier.children.ToList();
 
-			ValidateSpecsInScope( vars, NamespaceFqnOf( hier ) );
+			ValidateSpecsInScope( children.OfType<VarDecl>().ToList(), NamespaceFqnOf( hier ) );
+			ValidateStructSpecs( children.OfType<Myll.Core.Structural>().ToList() );
 
 			foreach( Decl child in children.OfType<Myll.Core.Hierarchical>() )
 				ValidateScope( (Myll.Core.Hierarchical)child );
@@ -108,67 +112,7 @@ namespace Myll.Transform
 				// Bindings must name primary parameters in declaration order. The "name
 				// everything" form lists unbound parameters bare (q<T, U=int>); then every
 				// primary parameter must be listed, each at its own position.
-				Dictionary<string, int> paramPos = new( StringComparer.Ordinal );
-				for( int i = 0; i < primary.TplParams.Count; i++ )
-					paramPos[ primary.TplParams[i].name ] = i;
-
-				bool isFullForm = spec.TplSpec.Any( b => b.type == null );
-				bool bindingsValid = true;
-
-				if( isFullForm ) {
-					if( spec.TplSpec.Count != primary.TplParams.Count ) {
-						Diagnostics.Add( new Diagnostic(
-							spec.srcPos,
-							DiagnosticKind.Error,
-							String.Format(
-								"Specialization '{0}' names {1} of {2} parameters; either name all of them or only the bound ones",
-								spec.name,
-								spec.TplSpec.Count,
-								primary.TplParams.Count ) ) );
-						bindingsValid = false;
-					}
-					else {
-						for( int i = 0; i < spec.TplSpec.Count; i++ ) {
-							string expected = primary.TplParams[i].name;
-							string actual   = spec.TplSpec[i].name;
-							if( actual != expected ) {
-								Diagnostics.Add( new Diagnostic(
-									spec.srcPos,
-									DiagnosticKind.Error,
-									String.Format(
-										"Specialization '{0}' names '{1}' at parameter '{2}''s position; unbound names must match the primary's parameters",
-										spec.name, actual, expected ) ) );
-								bindingsValid = false;
-								break;
-							}
-						}
-					}
-				}
-				else {
-					int lastPos = -1;
-					foreach( TplBinding binding in spec.TplSpec ) {
-						if( !paramPos.TryGetValue( binding.name, out int pos ) ) {
-							Diagnostics.Add( new Diagnostic(
-								spec.srcPos,
-								DiagnosticKind.Error,
-								String.Format( "Unknown template parameter '{0}' in specialization of '{1}'",
-									binding.name, spec.name ) ) );
-							bindingsValid = false;
-							break;
-						}
-						if( pos <= lastPos ) {
-							Diagnostics.Add( new Diagnostic(
-								spec.srcPos,
-								DiagnosticKind.Error,
-								String.Format( "Bindings of '{0}' must follow the primary's parameter order; '{1}' comes after a later parameter",
-									spec.name, binding.name ) ) );
-							bindingsValid = false;
-							break;
-						}
-						lastPos = pos;
-					}
-				}
-				if( !bindingsValid ) {
+				if( !ValidateBindingShape( spec.name, spec.TplSpec, primary.TplParams, spec.srcPos ) ) {
 					MarkInvalidSpec( spec );
 					continue;
 				}
@@ -220,31 +164,9 @@ namespace Myll.Transform
 				seen.Add( signature );
 
 				// Fill the spec info: every primary parameter in order, bound or symbolic.
-				int paramCount = primary.TplParams.Count;
-				bool[] bound = new bool[ paramCount ];
-				List<TplArg> args = new( paramCount );
-				List<TplParam> unboundParams = new();
+				List<TplArg> args = BuildSpecArgs( primary.TplParams, spec.TplSpec, out bool[] bound, out List<TplParam> unboundParams );
 
-				for( int i = 0; i < paramCount; i++ ) {
-					TplParam param = primary.TplParams[ i ];
-					TplBinding? binding = spec.TplSpec
-						.FirstOrDefault( b => b.name == param.name );
-
-					if( binding != null && binding.type != null ) {
-						bound[ i ] = true;
-						args.Add( new TplArg { typespec = binding.type } );
-					}
-					else {
-						args.Add( new TplArg {
-							typespec = new TypespecNested {
-								idTpls = new List<IdTplArgs> { new() { id = param.name } },
-							},
-						} );
-						unboundParams.Add( param );
-					}
-				}
-
-				spec.SpecInfo = new VarDecl.VarSpecInfo {
+				spec.SpecInfo = new Decl.SpecData {
 					Primary = primary,
 					Args    = args,
 					Bound   = bound,
@@ -254,13 +176,213 @@ namespace Myll.Transform
 
 				// Unbound parameters become the specialization's own template
 				// parameters, injected into its scope so initializers can use them.
-				InjectUnboundParams( spec, unboundParams );
+				InjectParams( spec.varScope, unboundParams, spec.srcPos );
 			}
 		}
 
-		private void InjectUnboundParams( VarDecl spec, List<TplParam> unboundParams )
+		/// <summary>
+		/// Validates class/struct/union specializations in one scope and links them
+		/// to their same-module primary: the primary must precede the
+		/// specialization by source position and carry the same name; the body is
+		/// the specialization's own member set (C++ semantics); the unbound
+		/// parameters become the specialization's own template parameters and are
+		/// injected into its class scope so members can reference them. Bound
+		/// parameter names are not in scope: the body is written with the bound
+		/// values spelled out, like C++.
+		/// </summary>
+		private void ValidateStructSpecs( List<Myll.Core.Structural> structs )
 		{
-			if( unboundParams.Count == 0 || spec.varScope == null )
+			// per primary: bound-value signatures already seen (duplicate check)
+			Dictionary<Myll.Core.Structural, List<string>> seenSignatures = new();
+
+			foreach( Myll.Core.Structural spec in structs ) {
+				if( spec.TplSpec.Count == 0 )
+					continue;
+
+				List<Myll.Core.Structural> primaries = structs
+					.Where( s => s.name == spec.name && s.SpecInfo == null && s.TplParams.Count > 0 )
+					.ToList();
+
+				if( primaries.Count == 0 ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "No matching template '{0}' in this module; a class/struct/union specialization must live in the primary's module",
+							spec.name ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				Myll.Core.Structural primary = primaries[0];
+
+				// The specialization must follow the primary by source position, not
+				// processing order, so multi-file modules stay order-independent.
+				if( !IsLaterPos( spec, primary ) ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' must follow its primary template",
+							spec.name ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				if( spec.IsForwardDeclaration ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' must be a full definition",
+							spec.name ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				if( !ValidateBindingShape( spec.name, spec.TplSpec, primary.TplParams, spec.srcPos ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				// Duplicate specialization signature check.
+				string signature = String.Join( ",",
+					spec.TplSpec
+						.Where( b => b.type != null )
+						.Select( b => bindingSignature( b ) ) );
+				if( !seenSignatures.TryGetValue( primary, out List<string>? seen ) ) {
+					seen = new();
+					seenSignatures[ primary ] = seen;
+				}
+				if( seen.Contains( signature ) ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Duplicate specialization of '{0}' for {1}",
+							spec.name, signature ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+				seen.Add( signature );
+
+				List<TplArg> args = BuildSpecArgs( primary.TplParams, spec.TplSpec, out bool[] bound, out List<TplParam> unboundParams );
+
+				spec.SpecInfo = new Decl.SpecData {
+					Primary = primary,
+					Args    = args,
+					Bound   = bound,
+				};
+				spec.TplParams = unboundParams;
+
+				// Unbound parameters become the specialization's own template
+				// parameters, injected into its class scope like
+				// TemplateParamTransformer does for primaries.
+				InjectParams( spec.scope, unboundParams, spec.srcPos );
+			}
+		}
+
+		/// <summary>
+		/// Validates the binding list shape against the primary's parameter list:
+		/// the full form ("name everything") must name every parameter, each bare
+		/// name at its own position; the subset form must name known parameters in
+		/// the primary's declaration order.
+		/// </summary>
+		private bool ValidateBindingShape( string specName, List<TplBinding> tplSpec, IReadOnlyList<TplParam> primaryParams, SrcPos srcPos )
+		{
+			Dictionary<string, int> paramPos = new( StringComparer.Ordinal );
+			for( int i = 0; i < primaryParams.Count; i++ )
+				paramPos[ primaryParams[i].name ] = i;
+
+			bool isFullForm = tplSpec.Any( b => b.type == null );
+
+			if( isFullForm ) {
+				if( tplSpec.Count != primaryParams.Count ) {
+					Diagnostics.Add( new Diagnostic(
+						srcPos,
+						DiagnosticKind.Error,
+						String.Format(
+							"Specialization '{0}' names {1} of {2} parameters; either name all of them or only the bound ones",
+							specName,
+							tplSpec.Count,
+							primaryParams.Count ) ) );
+					return false;
+				}
+
+				for( int i = 0; i < tplSpec.Count; i++ ) {
+					string expected = primaryParams[i].name;
+					string actual   = tplSpec[i].name;
+					if( actual != expected ) {
+						Diagnostics.Add( new Diagnostic(
+							srcPos,
+							DiagnosticKind.Error,
+							String.Format(
+								"Specialization '{0}' names '{1}' at parameter '{2}''s position; unbound names must match the primary's parameters",
+								specName, actual, expected ) ) );
+						return false;
+					}
+				}
+
+				return true;
+			}
+
+			int lastPos = -1;
+			foreach( TplBinding binding in tplSpec ) {
+				if( !paramPos.TryGetValue( binding.name, out int pos ) ) {
+					Diagnostics.Add( new Diagnostic(
+						srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Unknown template parameter '{0}' in specialization of '{1}'",
+							binding.name, specName ) ) );
+					return false;
+				}
+				if( pos <= lastPos ) {
+					Diagnostics.Add( new Diagnostic(
+						srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Bindings of '{0}' must follow the primary's parameter order; '{1}' comes after a later parameter",
+							specName, binding.name ) ) );
+					return false;
+				}
+				lastPos = pos;
+			}
+
+			return true;
+		}
+
+		// The specialization argument list: every primary parameter in
+		// declaration order, bound values for bound positions and symbolic
+		// placeholders for unbound ones; the unbound parameters become the
+		// specialization's own template parameters.
+		private static List<TplArg> BuildSpecArgs( IReadOnlyList<TplParam> primaryParams, List<TplBinding> tplSpec, out bool[] bound, out List<TplParam> unboundParams )
+		{
+			bound = new bool[ primaryParams.Count ];
+			List<TplArg> args = new( primaryParams.Count );
+			unboundParams = new();
+
+			for( int i = 0; i < primaryParams.Count; i++ ) {
+				TplParam param = primaryParams[ i ];
+				TplBinding? binding = tplSpec
+					.FirstOrDefault( b => b.name == param.name );
+
+				if( binding != null && binding.type != null ) {
+					bound[ i ] = true;
+					args.Add( new TplArg { typespec = binding.type } );
+				}
+				else {
+					args.Add( new TplArg {
+						typespec = new TypespecNested {
+							idTpls = new List<IdTplArgs> { new() { id = param.name } },
+						},
+					} );
+					unboundParams.Add( param );
+				}
+			}
+
+			return args;
+		}
+
+		// Unbound parameters become the specialization's own template parameters,
+		// injected into its scope so members can use them.
+		private void InjectParams( Scope? scope, List<TplParam> unboundParams, SrcPos fallbackPos )
+		{
+			if( unboundParams.Count == 0 || scope == null )
 				return;
 
 			foreach( TplParam param in unboundParams ) {
@@ -268,21 +390,21 @@ namespace Myll.Transform
 					name   = param.name,
 					kind   = param.kind,
 					type   = param.type,
-					srcPos = spec.varScope.decl?.srcPos ?? spec.srcPos,
+					srcPos = scope.decl?.srcPos ?? fallbackPos,
 				};
 
 				ScopeLeaf leaf = new() {
-					parent = spec.varScope,
+					parent = scope,
 					decl   = placeholder,
 				};
-				placeholder.scope = spec.varScope;
+				placeholder.scope = scope;
 
-				if( !spec.varScope.children.TryGetValue( param.name, out List<ScopeLeaf>? list ) ) {
+				if( !scope.children.TryGetValue( param.name, out List<ScopeLeaf>? list ) ) {
 					list = new List<ScopeLeaf>( 1 );
-					spec.varScope.children.Add( param.name, list );
+					scope.children.Add( param.name, list );
 				}
 				list.Add( leaf );
-				context.LocalDecls.Add( (placeholder, spec.varScope) );
+				context.LocalDecls.Add( (placeholder, scope) );
 			}
 		}
 
@@ -370,8 +492,8 @@ namespace Myll.Transform
 		/// Marks a specialization whose validation failed so later passes treat it
 		/// as consumed (no duplicate-name error, no overload candidate).
 		/// </summary>
-		private static void MarkInvalidSpec( VarDecl spec )
-			=> spec.SpecInfo = new VarDecl.VarSpecInfo { Primary = spec };
+		private static void MarkInvalidSpec( Decl spec )
+			=> spec.SpecInfo = new Decl.SpecData { Primary = spec };
 
 		/// <summary>
 		/// Syntactic substitution of bound parameter names with their values. Unlike

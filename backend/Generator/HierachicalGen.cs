@@ -554,7 +554,7 @@ namespace Myll.Generator
 		/// </summary>
 		private void EmitVarSpecialization( VarDecl obj )
 		{
-			VarDecl.VarSpecInfo info = obj.SpecInfo!;
+			Decl.SpecData info = obj.SpecInfo!;
 
 			string tplPrefix = info.IsFull
 				? Format( "{0}template<> ", IndentDecl )
@@ -709,16 +709,23 @@ namespace Myll.Generator
 					: VarEmptyInitFormat
 				: "";
 
+			// A union member may not get a default initializer when another member has
+			// one (C++ rejects initializing multiple members); Myll's empty braces
+			// on every member would always trip that, so unions get none.
+			bool isInUnion = obj.IsInStruct
+			                 && obj.scope?.parent?.decl is Structural unionStruct
+			                 && unionStruct.kind == Structural.Kind.Union;
+
 			string initDecl = ( initIn & GenerateAt.Decl ) == 0 ? ""
 			                : obj.isDirectConstruct             ? directArgs
 			                : obj.init != null                  ? VarFormat[6] + obj.init.Gen()
-			                : obj.IsNoInit || isExtern          ? ""
+			                : obj.IsNoInit || isExtern || isInUnion ? ""
 			                : VarEmptyInitFormat;
 
 			string initImpl = ( initIn & GenerateAt.Impl ) == 0 ? ""
 			                : obj.isDirectConstruct             ? directArgs
 			                : obj.init != null                  ? VarFormat[6] + obj.init.Gen()
-			                : obj.IsNoInit                      ? ""
+			                : obj.IsNoInit || isInUnion         ? ""
 			                : VarEmptyInitFormat;
 
 			bool hasTpl = obj.TplParams.Count >= 1;
@@ -1133,20 +1140,30 @@ namespace Myll.Generator
 			bool isGlobal    = gen.hierarchical is GlobalNamespace;
 			bool isNamespace = gen.hierarchical is Namespace;
 			bool isEnum      = gen.hierarchical is Enumeration;
+			Structural? structSpec = gen.hierarchical as Structural;
+			bool isStructSpec = structSpec != null && structSpec.SpecInfo != null;
+
+			if( isStructSpec )
+				nameDecl = Format( "{0}<{1}>", nameDecl, structSpec.SpecInfo.Args.Select( a => a.Gen() ).Join( ", " ) );
 
 			// Capture the buckets' first free index before adding anything, so the
 			// stamp covers the template line too when present.
 			int protoMark = targetProto.Count;
 			int declMark  = targetDecl.Count;
 
-			if( gen.hierarchical is ITemplatedDecl hierWithTpl
-			 && hierWithTpl.TplParams.Count >= 1 ) {
+			if( isStructSpec && structSpec.SpecInfo.IsFull ) {
+				// A full specialization has no template parameters of its own.
+				targetDecl.Add( Format( "{0}template<>", indent ) );
+			}
+			else if( gen.hierarchical is ITemplatedDecl hierWithTpl
+			       && hierWithTpl.TplParams.Count >= 1 ) {
 				string tpl = Format(
 					"{0}template <{1}>",
 					indent,
 					GenTemplateParameterList( hierWithTpl.TplParams ) );
 
-				targetProto.Add( tpl );
+				if( !isStructSpec )
+					targetProto.Add( tpl );
 				targetDecl.Add( tpl );
 			}
 
@@ -1197,10 +1214,12 @@ namespace Myll.Generator
 				throw new InvalidOperationException( "not an enum and not a struct" );
 			}
 
-			// "{0}{1}{2} {3}{4}{5}",
+// "{0}{1}{2} {3}{4}{5}",
 			// 0 indent, 1 keyword, 2 attributes, 3 name, 4 final, 5 bases
 			if( !isGlobal ) {
-				if( !isNamespace ) {
+				// A specialization needs no forward declaration: it is defined
+				// where it stands, after the primary.
+				if( !isNamespace && !isStructSpec ) {
 					targetProto.Add(
 						Format(
 							StructFormat[0],
