@@ -1,0 +1,20 @@
+module nums_spec;
+
+import nums;
+
+class Box<T=int>
+{
+[pub]:
+	field int _value;
+	field int _extra;
+	ctor( int v, int e ) { _value = v; _extra = e; }
+	func read() -> int => _value + _extra;
+}
+
+class Pair<T, U=int>
+{
+[pub]:
+	field T _a;
+	field int _sum;
+	ctor( T a, int s ) { _a = a; _sum = s; }
+}

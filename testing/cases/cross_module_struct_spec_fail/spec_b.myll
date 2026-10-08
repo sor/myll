@@ -1,0 +1,9 @@
+module spec_b;
+
+import nums;
+
+class Box<T=int> // FAIL: Duplicate specialization of 'Box' for T=int
+{
+[pub]:
+	field int _value;
+}

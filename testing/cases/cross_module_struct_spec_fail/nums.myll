@@ -1,0 +1,19 @@
+// The structural ODR guard case: the two violations rejected as hard errors.
+// (1) nums uses Box<int> but cannot see the specializations spec_a and spec_b
+// attach to it: its translation unit would instantiate the primary while
+// theirs use the specializations. (2) spec_a and spec_b both specialize Box
+// for int.
+module nums;
+
+class Box<T>
+{
+[pub]:
+	field T _value;
+	[default] ctor();
+}
+
+func probe() -> int
+{
+	var Box<int> b; // FAIL: 'Box' is specialized for T=int in module 'spec_a'
+	return 0;
+}

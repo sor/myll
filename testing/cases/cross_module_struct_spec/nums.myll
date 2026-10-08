@@ -1,0 +1,16 @@
+module nums;
+
+class Box<T>
+{
+[pub]:
+	field T _value;
+	[default] ctor();
+	func read() -> T => _value;
+}
+
+class Pair<T, U>
+{
+[pub]:
+	field T _a;
+	[default] ctor();
+}

@@ -1,0 +1,11 @@
+module spec_a;
+
+import nums;
+
+class Box<T=int>
+{
+[pub]:
+	field int _value;
+	field int _extra;
+	ctor( int v, int e ) { _value = v; _extra = e; }
+}
