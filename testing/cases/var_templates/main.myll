@@ -9,9 +9,15 @@ const T pi<T> = (T)3.1415;
 const T pi<T=int> = 3;
 const T pi<T=f32> = (f32)3.5;
 
+// partial specializations: full form (name every parameter) ...
 const T q<T, U> = (T)7;
-const T q<U=int> = (T)70;
-const T q<U=f32> = (T)71;
+const T q<T, U=int> = (T)70;
+const T q<T, U=f32> = (T)71;
+
+// ... and the subset form (name only the bound ones), same semantics
+const T z<T, U> = (T)17;
+const T z<U=int> = (T)170;
+const T z<U=f32> = (T)171;
 
 class Pair<T, U> {
 [pub]:
@@ -53,6 +59,13 @@ func main() -> int {
 		return 9;
 	if( q<int, f32> != 71 )
 		return 10;
+
+	if( z<int, i64> != 17 )
+		return 11;
+	if( z<i64, int> != 170 )
+		return 12;
+	if( z<int, f32> != 171 )
+		return 13;
 
 	return 0;
 }

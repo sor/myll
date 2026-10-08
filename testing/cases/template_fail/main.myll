@@ -59,3 +59,12 @@ const T spec_dup<T=int> = 5; // FAIL: Duplicate specialization of 'spec_dup' for
 
 const T spec_mm<T> = (T)1;
 const f32 spec_mm<T=int> = 2.0; // FAIL: Specialization of 'spec_mm' declares type 'const float' but the primary's substituted type is 'const int'
+
+// full-form specialization validation: skip form and wrong position
+const T spec3<T, U, V> = (T)1;
+const T spec3<T, V=int> = (T)2; // FAIL: Specialization 'spec3' names 2 of 3 parameters
+const T spec4<T, U> = (T)1;
+const T spec4<U, T=int> = (T)2; // FAIL: Specialization 'spec4' names 'U' at parameter 'T''s position
+const T spec5<T, U> = (T)1;
+const T spec5<T, U=int> = (T)2;
+const T spec5<U=int> = (T)3; // FAIL: Duplicate specialization of 'spec5' for U=int

@@ -35,5 +35,14 @@ int main()
     if( q<int, float> != 71 ) {
         return 10;
     }
+    if( z<int, std::int64_t> != 17 ) {
+        return 11;
+    }
+    if( z<std::int64_t, int> != 170 ) {
+        return 12;
+    }
+    if( z<int, float> != 171 ) {
+        return 13;
+    }
     return 0;
 }
