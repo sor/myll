@@ -126,7 +126,7 @@ defConvert	:	(	RARROW		to=typespec					// convert -> TYPE	- convert to TYPE	- op
 				funcBody;
 defCtor		:	(	kindOfPassing	(LT	tplType=typespec	GT)?	id?	initList?
 				|	CONVERT	LARROW?	typespec	id?					// ctor convert <- T / ctor convert T
-				|	funcTypeDef?	initList?
+				|	(tplParams	|	tplSpec)?	funcTypeDef?	initList?
 				)
 				// (REQUIRES	typespecsNested)?  ?
 				funcBody;

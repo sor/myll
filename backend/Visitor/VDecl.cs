@@ -796,15 +796,18 @@ namespace Myll
 			}
 			else {
 				ret = new() {
-					srcPos = c.ToSrcPos(),
-					name   = structuralParent.name,
-					access = curAccess,
-					kind   = Structor.Kind.Constructor,
-					paras  = c.funcTypeDef() != null
+					srcPos   = c.ToSrcPos(),
+					name     = structuralParent.name,
+					access   = curAccess,
+					kind     = Structor.Kind.Constructor,
+					TplParams = VisitTplParams( c.tplParams() ),
+					TplSpec    = VisitTplSpec( c.tplSpec() ),
+					paras    = c.funcTypeDef() != null
 						? VisitFuncTypeDef( c.funcTypeDef() ).ToList()
 						: new(),
 					// TODO: cc.initList(); // opt
 				};
+				ret.ctorScope = scopeStack.Peek();
 				AddParamsToScope( ret.paras );
 			}
 

@@ -1069,7 +1069,10 @@ namespace Myll.Generator
 			string paramString = obj.paras
 				.Select( p => p.Gen() )
 				.Join( ", " );
-			string prefix = obj.IsCompileTime ? "constexpr " : "";
+			// Out-of-line specializations are header entities: mark them inline, or
+			// every importing translation unit would define them.
+			string prefix = "inline "
+			              + ( obj.IsCompileTime ? "constexpr " : "" );
 			string suffix = (obj.IsConstMethod ? " const" : "")
 			              + (obj.IsNoexcept  ? " noexcept" : "");
 
@@ -1096,7 +1099,58 @@ namespace Myll.Generator
 				suffix ) );
 
 			MarkDeclSourceMap( ret, obj, 0 );
-			ret.AddRange( obj.body.Gen( LevelDecl - 2 ) );
+			ret.AddRange( obj.body.Gen( LevelDecl - 1 ) );
+
+			methodSpecDecls.Add( ret );
+		}
+
+		private void EmitStructSpec( Structor obj )
+		{
+			Decl.SpecData info = obj.SpecInfo!;
+			Myll.Core.Structural owner = (Myll.Core.Structural) obj.scope!.parent!.decl!;
+
+			int classParamCount = owner.TplParams.Count;
+			List<TplArg> classArgs = info.Args
+				.Take( classParamCount )
+				.ToList();
+			List<TplArg> memberArgs = info.Args
+				.Skip( classParamCount )
+				.ToList();
+
+			string classPart = owner.ReferenceName;
+			if( classParamCount > 0 )
+				classPart = Format( "{0}<{1}>", classPart, classArgs.Select( a => a.Gen() ).Join( ", " ) );
+
+			// Constructor names never carry template arguments (the deduction
+			// form): template-ids on constructor names are compiler-divergent.
+			string qualifiedName = classPart + "::" + obj.name;
+
+string paramString = obj.paras
+				.Select( p => p.Gen() )
+				.Join( ", " );
+
+			// explicit and [[nodiscard]] can only be spelled in the in-class
+			// declaration; the specialization repeats the primary's.
+			string suffix = obj.IsNoexcept ? " noexcept" : "";
+
+			string outIndent = DeIndentDecl;
+			SourceLines ret = new();
+			ret.Add( Format( "{0}template<>", outIndent ) );
+			if( memberArgs.Count > 0 )
+				ret.Add( obj.TplParams.Count > 0
+					? Format( "{0}template <{1}>", outIndent, GenTemplateParameterList( obj.TplParams ) )
+					: Format( "{0}template<>", outIndent ) );
+
+			ret.Add( Format(
+				FuncFormat[1],
+				outIndent,
+				"inline ",
+				qualifiedName,
+				paramString,
+				suffix ) );
+
+			MarkDeclSourceMap( ret, obj, 0 );
+			ret.AddRange( obj.body.Gen( LevelDecl - 1 ) );
 
 			methodSpecDecls.Add( ret );
 		}
@@ -1598,11 +1652,17 @@ namespace Myll.Generator
 			if( obj.IsStatic )
 				throw new ArgumentOutOfRangeException( nameof( obj ), true, "Con/Destructor can not be static" );
 
+			if( obj.SpecInfo != null ) {
+				EmitStructSpec( obj );
+				return;
+			}
+
 			bool    isCtor     = obj.kind == Structor.Kind.Constructor;
 			bool    isDtor     = obj.kind == Structor.Kind.Destructor;
 			bool    isDefault  = obj.IsDefault;
 			bool    isDisabled = obj.IsDisabled;
-			bool    isInlined  = obj.IsInlined || isDefault || isDisabled;
+			bool    hasTpl     = obj.TplParams.Count > 0;
+			bool    isInlined  = obj.IsInlined || isDefault || isDisabled || hasTpl;
 			string  indentDecl = IndentDecl;
 			string  indentImpl = IndentImpl;
 			string  nameDecl   = obj.name;
@@ -1634,10 +1694,16 @@ namespace Myll.Generator
 			string headlineDecl = Format(
 				FuncFormat[1],
 				indentDecl,
-				leadingAttrDecl,
-				nameDecl,
-				paramString,
-				followingDecl );
+			leadingAttrDecl,
+			nameDecl,
+			paramString,
+			followingDecl );
+
+			if( hasTpl ) {
+				int tplMark = targetDecl.Count;
+				targetDecl.Add( Format( "{0}template <{1}>", indentDecl, GenTemplateParameterList( obj.TplParams ) ) );
+				MarkDeclSourceMap( targetDecl, obj, tplMark );
+			}
 
 			if( isInlined ) {
 				int declMark = targetDecl.Count;

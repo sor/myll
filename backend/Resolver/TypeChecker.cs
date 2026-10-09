@@ -1314,12 +1314,16 @@ namespace Myll.Resolver
 			// Detect duplicate declarations in the same scope first.
 			HashSet<(Scope Scope, string Name)> reported = new();
 			foreach( (Decl local, Scope scope) in context.LocalDecls ) {
+				if( local is AliasDecl { IsBoundAlias: true } )
+					continue; // intentional specialization alias, not user code
+
 				if( !reported.Add( (scope, local.name) ) )
 					continue;
 
 				int count = context.LocalDecls.Count( ld
 					=> ld.Scope == scope
-					 && ld.Local.name == local.name );
+					 && ld.Local.name == local.name
+					 && !( ld.Local is AliasDecl { IsBoundAlias: true } ) );
 
 				if( count > 1 ) {
 					ReportLocalShadowing(
@@ -1332,6 +1336,9 @@ namespace Myll.Resolver
 			}
 
 			foreach( (Decl local, Scope scope) in context.LocalDecls ) {
+				if( local is AliasDecl { IsBoundAlias: true } )
+					continue; // intentional specialization alias, not user code
+
 				CheckOuterScopeShadowing( local, scope, context, dialect );
 				CheckMemberCollisions( local, scope, dialect );
 			}

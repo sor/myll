@@ -1600,31 +1600,54 @@ if( m.Context.IsPrototypeFile )
 					continue;
 				}
 
-				if( candidate is Func func ) {
-					(List<TplParam> ownerParams, List<TplArg> ownerArgs) = GetOwnerTemplateInfo( func, callee );
+if( candidate is Func func ) {
+				(List<TplParam> ownerParams, List<TplArg> ownerArgs) = GetOwnerTemplateInfo( func, callee );
 
-					bool deductionOk = TemplateInference.TryDeduceTemplateArgs(
-						func, call, typeResolver, result, out List<TplArg>? deduced,
-						ownerParams.Count > 0 ? ownerParams : null,
-						ownerArgs.Count > 0 ? ownerArgs : null );
+				bool deductionOk = TemplateInference.TryDeduceTemplateArgs(
+					func, call, typeResolver, result, out List<TplArg>? deduced,
+					ownerParams.Count > 0 ? ownerParams : null,
+					ownerArgs.Count > 0 ? ownerArgs : null );
 
-					if( deductionOk && deduced != null ) {
-						LogOverloadResolution( "    candidate {0}: internal template deduced ({1}), accepted",
-							candidate.name, String.Join( ", ", deduced.Select( a => FormatTypeForDebug( a.typespec ) ) ) );
-						deducedArgsByCandidate[candidate] = deduced;
-						templateViable.Add( candidate );
-						continue;
-					}
-
-					if( deductionOk && deduced == null && func.TplParams.Count == 0 ) {
-						LogOverloadResolution( "    candidate {0}: non-template method, accepted", candidate.name );
-						templateViable.Add( candidate );
-						continue;
-					}
-
-					LogOverloadResolution( "    candidate {0}: internal template deduction failed", candidate.name );
+				if( deductionOk && deduced != null ) {
+					LogOverloadResolution( "    candidate {0}: internal template deduced ({1}), accepted",
+						candidate.name, String.Join( ", ", deduced.Select( a => FormatTypeForDebug( a.typespec ) ) ) );
+					deducedArgsByCandidate[candidate] = deduced;
+					templateViable.Add( candidate );
 					continue;
 				}
+
+				if( deductionOk && deduced == null && func.TplParams.Count == 0 ) {
+					LogOverloadResolution( "    candidate {0}: non-template method, accepted", candidate.name );
+					templateViable.Add( candidate );
+					continue;
+				}
+
+				LogOverloadResolution( "    candidate {0}: internal template deduction failed", candidate.name );
+				continue;
+			}
+
+			if( candidate is Structor ctor && ctor.TplParams.Count > 0 ) {
+				// Constructor template arguments are always deduced from the call
+				// arguments; the class arguments come from the callee's own
+				// template-id, which the enclosing substitution covers.
+				(List<TplParam> ownerParams, List<TplArg> ownerArgs) = GetOwnerTemplateInfo( ctor, callee );
+
+				bool ctorDeductionOk = TemplateInference.TryDeduceTemplateArgs(
+					ctor, call, typeResolver, result, out List<TplArg>? ctorDeduced,
+					ownerParams.Count > 0 ? ownerParams : null,
+					ownerArgs.Count > 0 ? ownerArgs : null );
+
+				if( ctorDeductionOk && ctorDeduced != null ) {
+					LogOverloadResolution( "    candidate ctor: template deduced ({0}), accepted",
+						String.Join( ", ", ctorDeduced.Select( a => FormatTypeForDebug( a.typespec ) ) ) );
+					deducedArgsByCandidate[candidate] = ctorDeduced;
+					templateViable.Add( candidate );
+					continue;
+				}
+
+				LogOverloadResolution( "    candidate ctor: template deduction failed" );
+				continue;
+			}
 
 				if( TemplateInference.GetTemplateParamCount( candidate ) == 0 ) {
 					LogOverloadResolution( "    candidate {0}: non-template, accepted", candidate.name );

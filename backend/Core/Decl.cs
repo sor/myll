@@ -232,7 +232,7 @@ namespace Myll.Core
 	}
 
 	// Constructor / Destructor
-	public class Structor : Decl, IBodyOwner
+	public class Structor : Decl, ITemplatedDecl, IBodyOwner
 	{
 		public enum Kind
 		{
@@ -244,6 +244,12 @@ namespace Myll.Core
 		public bool        isConversionCtor; // true for `convert <- T` declarations
 		public List<Param> paras = new();
 		public MultiStmt?  body;
+
+		public List<TplParam>   TplParams { get; set; } = new();
+		public List<TplBinding> TplSpec   { get; init; } = new(); // non-empty: specialization of a primary (same module or imported)
+		public Scope?           ctorScope;
+
+		public Scope? TemplateParamScope => ctorScope;
 
 		/// <summary>
 		/// See <see cref="Func.InjectedNamespaceUsings"/>.

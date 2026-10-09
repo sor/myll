@@ -58,6 +58,8 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 			ValidateSpecsInScope( children.OfType<VarDecl>().ToList(), nsFqn );
 			ValidateStructSpecs( children.OfType<Myll.Core.Structural>().ToList(), nsFqn );
 			ValidateFuncSpecs( children.OfType<Func>().ToList(), hier is Myll.Core.Structural s ? s : null, nsFqn );
+			if( hier is Myll.Core.Structural structHier )
+				ValidateCtorSpecs( children.OfType<Structor>().ToList(), structHier );
 
 			foreach( Decl child in children.OfType<Myll.Core.Hierarchical>() )
 				ValidateScope( (Myll.Core.Hierarchical)child );
@@ -653,8 +655,169 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 			}
 		}
 
+		/// <summary>
+		/// Validates constructor specializations inside one class: the bindings name
+		/// the class parameters first, then the constructor's own template
+		/// parameters. Constructors can only be specialized for a class template
+		/// (both compilers reject the plain-class form); the member parameters may
+		/// stay open or be fully bound — both spellings are emittable, with the
+		/// deduction form for fully bound ones because template-ids on constructor
+		/// names are compiler-divergent. Bodies emit out-of-line after the class,
+		/// like method specializations.
+		/// </summary>
+		private void ValidateCtorSpecs( List<Structor> ctors, Myll.Core.Structural owner )
+		{
+			if( ctors.All( c => c.TplSpec.Count == 0 ) )
+				return;
+
+			if( owner.SpecInfo != null ) {
+				foreach( Structor spec in ctors.Where( c => c.TplSpec.Count > 0 ) ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of the constructor sits inside the specialization of '{0}; specialize the class instead",
+							owner.name ) ) );
+					MarkInvalidSpec( spec );
+				}
+				return;
+			}
+
+			// per primary: bound-value signatures already seen (duplicate check)
+			Dictionary<Decl, List<string>> seenSignatures = new();
+
+			foreach( Structor spec in ctors ) {
+				if( spec.TplSpec.Count == 0 )
+					continue;
+
+				if( spec.body == null ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of the constructor of '{0}' must be a full definition",
+							owner.name ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				if( owner.TplParams.Count == 0 ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Constructor specializations need a class template; '{0}' is not a template",
+							owner.name ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				// The primary is a same-class constructor whose parameter list
+				// covers all binding names: the class parameters followed by its
+				// own.
+				List<Structor> coveringPrimaries = ctors
+					.Where( c => c != spec && c.SpecInfo == null && CoversCtorBindings( owner, c, spec ) )
+					.ToList();
+
+				if( coveringPrimaries.Count == 0 ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "No matching constructor template in '{0}'; a specialization must name class and constructor parameters",
+							owner.name ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				Structor primary = coveringPrimaries[0];
+				List<TplParam> target = new();
+				target.AddRange( owner.TplParams );
+				target.AddRange( primary.TplParams );
+
+				if( !IsLaterPos( spec, primary ) ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of the constructor of '{0}' must follow its primary",
+							owner.name ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				if( !ValidateBindingShape( owner.name, spec.TplSpec, target, spec.srcPos ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				bool classParamsBound = owner.TplParams
+					.All( p => spec.TplSpec.Any( b => b.name == p.name && b.type != null ) );
+				if( !classParamsBound ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of the constructor of '{0}' must bind all class template parameters with concrete types",
+							owner.name ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				if( !HasConcreteBindings( spec.TplSpec, target, owner.name, spec.srcPos ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				Dictionary<string, Typespec> boundValues = new( StringComparer.Ordinal );
+				foreach( TplBinding binding in spec.TplSpec ) {
+					if( binding.type != null )
+						boundValues[ binding.name ] = binding.type;
+				}
+
+				// Constructors have no return type: the signature repeats the
+				// primary's substituted parameters only.
+				bool signatureMatches = spec.paras.Count == primary.paras.Count;
+				if( signatureMatches ) {
+					for( int i = 0; i < spec.paras.Count; i++ ) {
+						if( SubstituteBindings( spec.paras[i].type, boundValues ).Gen()
+						 != SubstituteBindings( primary.paras[i].type, boundValues ).Gen() ) {
+							signatureMatches = false;
+							break;
+						}
+					}
+				}
+
+				if( !signatureMatches ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of the constructor of '{0}' must repeat the primary's substituted parameters",
+							owner.name ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				if( !TryAddSpecSignature( primary, "ctor of " + owner.name, spec.TplSpec, spec.srcPos, seenSignatures ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				List<TplArg> args = BuildSpecArgs( target, spec.TplSpec, out bool[] bound, out List<TplParam> unboundParams );
+
+				spec.SpecInfo = new Decl.SpecData {
+					Primary = primary,
+					Args    = args,
+					Bound   = bound,
+				};
+				spec.TplParams = unboundParams; // the open constructor parameters
+
+				InjectParams( spec.ctorScope, unboundParams, spec.srcPos );
+				InjectBoundAliases( spec.ctorScope, spec.paras, spec.srcPos, boundValues );
+			}
+		}
+
 		// The primary covers the spec when every binding name exists in the
 		// primary's parameter list: the class parameters followed by its own.
+		private static bool CoversCtorBindings( Myll.Core.Structural owner, Structor candidate, Structor spec )
+			=> spec.TplSpec.All(
+				b => owner.TplParams.Any( p => p.name == b.name )
+				 || candidate.TplParams.Any( p => p.name == b.name ) );
+
 		private static bool CoversBindings( Myll.Core.Structural owner, Func candidate, Func spec )
 			=> spec.TplSpec.All(
 				b => owner.TplParams.Any( p => p.name == b.name )
@@ -688,22 +851,24 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 		// hidden alias: `T` resolves to the alias, the alias resolves to the bound
 		// value, and emission expands it so no `T` reaches the generated C++.
 		private void InjectBoundAliases( Func spec, Dictionary<string, Typespec> boundValues )
+			=> InjectBoundAliases( spec.funcScope, spec.paras, spec.srcPos, boundValues );
+
+		private void InjectBoundAliases( Scope? scope, List<Param> paras, SrcPos srcPos, Dictionary<string, Typespec> boundValues )
 		{
-			Scope? scope = spec.funcScope;
 			if( scope == null )
 				return;
 
 			foreach( (string name, Typespec value) in boundValues ) {
-				if( spec.paras.Any( p => p.name == name ) ) {
+				if( paras.Any( p => p.name == name ) ) {
 					Diagnostics.Add( new Diagnostic(
-						spec.srcPos,
+						srcPos,
 						DiagnosticKind.Error,
-						String.Format( "Parameter '{0}' of specialization '{1}' shadows the bound template parameter; rename it",
-							name, spec.name ) ) );
+						String.Format( "Parameter '{0}' shadows a bound template parameter; rename it",
+							name ) ) );
 					continue;
 				}
 
-				AddBoundAlias( scope, name, value, spec.srcPos );
+				AddBoundAlias( scope, name, value, srcPos );
 			}
 		}
 

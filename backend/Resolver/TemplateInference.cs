@@ -145,26 +145,49 @@ namespace Myll.Resolver
 		/// allows a method like <c>Outer&lt;T&gt;::Inner::store&lt;U&gt;(U x, T y)</c> to deduce
 		/// <c>U</c> from <c>x</c> while treating <c>T</c> as already-known from the receiver.
 		/// </summary>
+public static bool TryDeduceTemplateArgs(
+		Func              candidate,
+		FuncCall          call,
+		TypeResolver      typeResolver,
+		ResolutionResult  result,
+		out List<TplArg>? deduced,
+		List<TplParam>?   enclosingParameters = null,
+		List<TplArg>?     enclosingArguments  = null )
+			=> TryDeduceTemplateArgs( candidate.TplParams, candidate.paras, call, typeResolver, result,
+				out deduced, enclosingParameters, enclosingArguments );
+
 		public static bool TryDeduceTemplateArgs(
-			Func              candidate,
-			FuncCall          call,
-			TypeResolver      typeResolver,
-			ResolutionResult  result,
-			out List<TplArg>? deduced,
-			List<TplParam>?   enclosingParameters = null,
-			List<TplArg>?     enclosingArguments  = null )
+		Structor           candidate,
+		FuncCall          call,
+		TypeResolver      typeResolver,
+		ResolutionResult  result,
+		out List<TplArg>? deduced,
+		List<TplParam>?   enclosingParameters = null,
+		List<TplArg>?     enclosingArguments  = null )
+			=> TryDeduceTemplateArgs( candidate.TplParams, candidate.paras, call, typeResolver, result,
+				out deduced, enclosingParameters, enclosingArguments );
+
+		private static bool TryDeduceTemplateArgs(
+		List<TplParam>    tplParams,
+		List<Param>       paras,
+		FuncCall          call,
+		TypeResolver      typeResolver,
+		ResolutionResult  result,
+		out List<TplArg>? deduced,
+		List<TplParam>?   enclosingParameters = null,
+		List<TplArg>?     enclosingArguments  = null )
 		{
 			deduced = null;
 
-			if( candidate.TplParams.Count == 0 )
+			if( tplParams.Count == 0 )
 				return true;
 
 			// Non-type parameters can not be deduced from call arguments; they must be
 			// supplied explicitly. Reject mixed parameter lists immediately.
-			if( candidate.TplParams.Any( p => p.kind == TplParamKind.NonType ) )
+			if( tplParams.Any( p => p.kind == TplParamKind.NonType ) )
 				return false;
 
-			if( call.args.Count != candidate.paras.Count )
+			if( call.args.Count != paras.Count )
 				return false;
 
 			bool substituteEnclosing = enclosingParameters is { Count: > 0 }
@@ -172,12 +195,12 @@ namespace Myll.Resolver
 
 			var bindings = new Dictionary<string, Typespec>( StringComparer.Ordinal );
 
-			for( int i = 0; i < candidate.paras.Count; i++ ) {
+			for( int i = 0; i < paras.Count; i++ ) {
 				Typespec? argType = typeResolver.Resolve( call.args[i].expr );
 				if( argType == null )
 					return false;
 
-				Typespec paramType = candidate.paras[i].type;
+				Typespec paramType = paras[i].type;
 				if( substituteEnclosing )
 					paramType = SubstituteTemplateParams( paramType, enclosingParameters!, enclosingArguments!, result );
 
@@ -185,10 +208,10 @@ namespace Myll.Resolver
 					return false;
 			}
 
-			if( bindings.Count != candidate.TplParams.Count )
+			if( bindings.Count != tplParams.Count )
 				return false;
 
-			deduced = candidate.TplParams
+			deduced = tplParams
 				.Select( p => new TplArg { typespec = NormalizeDeducedType( bindings[p.name] ).Clone( true ) } )
 				.ToList();
 			return true;
