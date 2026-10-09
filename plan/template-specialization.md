@@ -86,7 +86,7 @@ Decisions (settled 2026-10-04):
   parameter in declaration order with symbolic placeholders for unbound positions, which is also
   the emitted argument list for partials; partials get their unbound parameters as their own
   `TplParams`.
-- `VarSpecTransformer` (pre-resolution, after `TemplateParamTransformer`): validates primary
+- `SpecTransformer` (pre-resolution, after `TemplateParamTransformer`): validates primary
   existence/order/module, binding names and order, duplicate bound signatures, and the substituted
   type equality; substitutes bound values into the specialization's declared type syntactically
   (no resolved decls needed); injects unbound `TplParamDecl`s into the specialization's scope so
@@ -120,7 +120,7 @@ Decisions (settled 2026-10-04):
   declaration never parses as a specialization.
 - AST: `Structural.TplSpec`; `VarDecl.VarSpecInfo` became the shared `Decl.SpecData` with
   a `SpecInfo` property on `Decl`.
-- `VarSpecTransformer` validates structural specializations with the same binding rules
+- `SpecTransformer` validates structural specializations with the same binding rules
   (shape, order, duplicates) and injects unbound parameters into the class scope. A
   bodiless specialization is rejected by the earlier visit-stage forward-declaration check.
 - Resolution: `PickSingleCandidate` picks the primary among same-name structurals, and

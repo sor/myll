@@ -207,7 +207,7 @@ namespace Myll.Core
 
 		public Kind                 kind;
 		public List<TplParam>       TplParams { get; set; } = new();
-		public List<TplBinding>     TplSpec { get; init; } = new(); // non-empty: full specialization of a primary
+		public List<TplBinding>     TplSpec { get; init; } = new(); // non-empty: full specialization of a primary (same module or imported)
 		public List<TypespecNested> Requires  { get; init; } = new(); // TODO: replace with dedicated type
 		public List<Param>          paras   = new();
 		public MultiStmt?           body; // isScope = true
@@ -324,7 +324,7 @@ namespace Myll.Core
 		public Expr?          init;
 		public bool           isDirectConstruct;
 		public List<TplParam> TplParams { get; set; } = new();
-		public List<TplBinding> TplSpec { get; init; } = new(); // non-empty: specialization of a same-module primary
+		public List<TplBinding> TplSpec { get; init; } = new(); // non-empty: specialization of a primary (same module or imported)
 		public Scope?         varScope;
 
 		public Scope? TemplateParamScope => varScope;
@@ -436,7 +436,7 @@ namespace Myll.Core
 
 public Kind                 kind;
 		public List<TplParam>       TplParams { get; set; } = new();
-		public List<TplBinding>     TplSpec { get; init; } = new(); // non-empty: specialization of a same-module primary
+		public List<TplBinding>     TplSpec { get; init; } = new(); // non-empty: specialization of a primary (same module or imported)
 		public List<BaseType>       basetypes = new();
 		public List<TypespecNested> reqs = new();
 

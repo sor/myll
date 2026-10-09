@@ -8,28 +8,33 @@ using Myll.Resolver;
 namespace Myll.Transform
 {
 	/// <summary>
-	/// Validates variable template specializations and links them to their primary:
-	/// the primary must live in the same module and scope and precede the
-	/// specialization, or in a module directly imported by the specialization's
-	/// module (then include order puts the primary first). Bindings must name
-	/// primary parameters in declaration order; and the specialization's declared
-	/// type must match the primary's after substituting the bound values. For
+	/// Validates template specializations (variable, class/struct/union, function)
+	/// and links them to their primary: the primary must live in the same module
+	/// and scope and precede the specialization, or in a module directly imported
+	/// by the specialization's module (then include order puts the primary first).
+	/// Bindings must name primary parameters in declaration order, and a
+	/// specialization's bound-signature may only be defined once per module.
+	///
+	/// Variable specializations must repeat the primary's substituted type; for
 	/// partial specializations the unbound parameters become the specialization's
-	/// own template parameters and are injected into its scope so initializers
-	/// can reference them.
-	/// Class/struct/union specializations follow the same binding rules, live in
-	/// the primary's module, and are linked the same way; their bodies are their
-	/// own member sets (C++ semantics) with unbound parameters injected into the
-	/// class scope.
+	/// own template parameters, injected into its scope so initializers can
+	/// reference them.
+	/// Class/struct/union specializations follow the same binding rules; their
+	/// bodies are their own member sets (C++ semantics), with unbound parameters
+	/// injected into the class scope and bound parameters not in scope.
+	/// Function specializations are full-only (C++ has no partials), must repeat
+	/// the primary's substituted parameters and return type, and keep bound
+	/// parameter names usable in signature and body through bound-parameter
+	/// aliases.
 	/// </summary>
-	public sealed class VarSpecTransformer : Transformer
+	public sealed class SpecTransformer : Transformer
 	{
 		private readonly IReadOnlyList<CompiledModuleResult> allModules;
 
 		private ModuleContext   context  = null!;
 		private GlobalNamespace moduleAst = null!;
 
-		public VarSpecTransformer( IReadOnlyList<CompiledModuleResult> allModules )
+		public SpecTransformer( IReadOnlyList<CompiledModuleResult> allModules )
 		{
 			this.allModules = allModules;
 		}
@@ -86,7 +91,7 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 		private void ValidateSpecsInScope( List<VarDecl> vars, string? nsFqn )
 		{
 			// per primary: bound-value signatures already seen (duplicate check)
-			Dictionary<VarDecl, List<string>> seenSignatures = new();
+			Dictionary<Decl, List<string>> seenSignatures = new();
 
 			foreach( VarDecl spec in vars ) {
 				if( spec.TplSpec.Count == 0 )
@@ -161,24 +166,10 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 				}
 
 				// Duplicate specialization signature check.
-				string signature = String.Join( ",",
-					spec.TplSpec
-						.Where( b => b.type != null )
-						.Select( b => bindingSignature( b ) ) );
-				if( !seenSignatures.TryGetValue( primary, out List<string>? seen ) ) {
-					seen = new();
-					seenSignatures[ primary ] = seen;
-				}
-				if( seen.Contains( signature ) ) {
-					Diagnostics.Add( new Diagnostic(
-						spec.srcPos,
-						DiagnosticKind.Error,
-						String.Format( "Duplicate specialization of '{0}' for {1}",
-							spec.name, signature ) ) );
+				if( !TryAddSpecSignature( primary, spec.name, spec.TplSpec, spec.srcPos, seenSignatures ) ) {
 					MarkInvalidSpec( spec );
 					continue;
 				}
-				seen.Add( signature );
 
 				// Fill the spec info: every primary parameter in order, bound or symbolic.
 				List<TplArg> args = BuildSpecArgs( primary.TplParams, spec.TplSpec, out bool[] bound, out List<TplParam> unboundParams );
@@ -210,7 +201,7 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 		private void ValidateStructSpecs( List<Myll.Core.Structural> structs, string? nsFqn )
 		{
 			// per primary: bound-value signatures already seen (duplicate check)
-			Dictionary<Myll.Core.Structural, List<string>> seenSignatures = new();
+			Dictionary<Decl, List<string>> seenSignatures = new();
 
 			foreach( Myll.Core.Structural spec in structs ) {
 				if( spec.TplSpec.Count == 0 )
@@ -266,24 +257,10 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 				}
 
 				// Duplicate specialization signature check.
-				string signature = String.Join( ",",
-					spec.TplSpec
-						.Where( b => b.type != null )
-						.Select( b => bindingSignature( b ) ) );
-				if( !seenSignatures.TryGetValue( primary, out List<string>? seen ) ) {
-					seen = new();
-					seenSignatures[ primary ] = seen;
-				}
-				if( seen.Contains( signature ) ) {
-					Diagnostics.Add( new Diagnostic(
-						spec.srcPos,
-						DiagnosticKind.Error,
-						String.Format( "Duplicate specialization of '{0}' for {1}",
-							spec.name, signature ) ) );
+				if( !TryAddSpecSignature( primary, spec.name, spec.TplSpec, spec.srcPos, seenSignatures ) ) {
 					MarkInvalidSpec( spec );
 					continue;
 				}
-				seen.Add( signature );
 
 				List<TplArg> args = BuildSpecArgs( primary.TplParams, spec.TplSpec, out bool[] bound, out List<TplParam> unboundParams );
 
@@ -328,7 +305,7 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 			}
 
 			// per primary: bound-value signatures already seen (duplicate check)
-			Dictionary<Func, List<string>> seenSignatures = new();
+			Dictionary<Decl, List<string>> seenSignatures = new();
 
 			foreach( Func spec in funcs ) {
 				if( spec.TplSpec.Count == 0 )
@@ -441,24 +418,10 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 				}
 
 				// Duplicate specialization signature check.
-				string signature = String.Join( ",",
-					spec.TplSpec
-						.Where( b => b.type != null )
-						.Select( b => bindingSignature( b ) ) );
-				if( !seenSignatures.TryGetValue( primary, out List<string>? seen ) ) {
-					seen = new();
-					seenSignatures[ primary ] = seen;
-				}
-				if( seen.Contains( signature ) ) {
-					Diagnostics.Add( new Diagnostic(
-						spec.srcPos,
-						DiagnosticKind.Error,
-						String.Format( "Duplicate specialization of '{0}' for {1}",
-							spec.name, signature ) ) );
+				if( !TryAddSpecSignature( primary, spec.name, spec.TplSpec, spec.srcPos, seenSignatures ) ) {
 					MarkInvalidSpec( spec );
 					continue;
 				}
-				seen.Add( signature );
 
 				List<TplArg> args = BuildSpecArgs( primary.TplParams, spec.TplSpec, out bool[] bound, out List<TplParam> unboundParams );
 				System.Diagnostics.Debug.Assert( unboundParams.Count == 0 );
@@ -726,6 +689,36 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 
 		private static string bindingSignature( TplBinding binding )
 			=> binding.name + "=" + binding.type.Gen();
+
+		/// <summary>
+		/// Records the bound-value signature of a specialization per primary;
+		/// a duplicate within one module is rejected. Cross-module duplicates
+		/// are reported by the resolver's ODR guard.
+		/// </summary>
+		private bool TryAddSpecSignature( Decl primary, string specName, List<TplBinding> tplSpec, SrcPos srcPos, Dictionary<Decl, List<string>> seenSignatures )
+		{
+			string signature = String.Join( ",",
+				tplSpec
+					.Where( b => b.type != null )
+					.Select( b => bindingSignature( b ) ) );
+
+			if( !seenSignatures.TryGetValue( primary, out List<string>? seen ) ) {
+				seen = new();
+				seenSignatures[ primary ] = seen;
+			}
+
+			if( seen.Contains( signature ) ) {
+				Diagnostics.Add( new Diagnostic(
+					srcPos,
+					DiagnosticKind.Error,
+					String.Format( "Duplicate specialization of '{0}' for {1}",
+						specName, signature ) ) );
+				return false;
+			}
+
+			seen.Add( signature );
+			return true;
+		}
 
 		/// <summary>
 		/// Marks a specialization whose validation failed so later passes treat it

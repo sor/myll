@@ -1217,7 +1217,7 @@ namespace Myll.Resolver
 					continue;
 
 				// Specializations share the primary's name and are validated by
-				// the VarSpecTransformer
+				// the SpecTransformer
 				if( vd.SpecInfo != null )
 					continue;
 

@@ -1177,7 +1177,7 @@ namespace Myll
 
 				// Variable template parameters and specializations need their own scope:
 				// parameters for resolution, unbound parameters for specializations
-				// (filled by the VarSpecTransformer once the primary is known).
+				// (filled by the SpecTransformer once the primary is known).
 				Scope? varTplScope = null;
 				if( isTemplate || isSpec ) {
 					PushScope();

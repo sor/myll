@@ -61,7 +61,7 @@ namespace Myll.Resolver
 		// pre-resolution transforms (SpecInfo is filled then).
 		private readonly Dictionary<Decl, List<SpecEntry>> specsByPrimary = new();
 		private readonly Dictionary<string, HashSet<string>> visibleByModule = new( StringComparer.Ordinal );
-		private readonly List<VarInstantiation> varInstantiations = new();
+		private readonly List<SpecInstantiation> specInstantiations = new();
 		private readonly HashSet<(Decl Primary, string Module, string Args)> recordedInstantiations = new();
 
 		private NameResolver(
@@ -95,7 +95,7 @@ namespace Myll.Resolver
 				new EnumTransformer(),
 				new AutoReturnTransformer(),
 				new TemplateParamTransformer(),
-				new VarSpecTransformer( modules ),
+				new SpecTransformer( modules ),
 				new ChainTransformer(),
 				new DiscardTransformer(),
 				new RuleOfTransformer(),
@@ -172,7 +172,7 @@ namespace Myll.Resolver
 
 			resolver.ValidateGlobalUsings( modules );
 			resolver.ValidateModuleDecls( modules );
-			resolver.ValidateVarSpecOdr();
+			resolver.ValidateSpecOdr();
 
 			foreach( CompiledModuleResult module in modules )
 				foreach( Transformer t in transformers )
@@ -449,7 +449,7 @@ namespace Myll.Resolver
 			// specialization of these arguments in a module this one cannot see
 			// would make translation units diverge.
 			if( specsByPrimary.ContainsKey( primary ) )
-				varInstantiations.Add( new VarInstantiation( primary, useArgs.ToList(), useModule, expr.srcPos ) );
+				specInstantiations.Add( new SpecInstantiation( primary, useArgs.ToList(), useModule, expr.srcPos ) );
 
 			expr.Type = TemplateInference.SubstituteTemplateParams(
 				primary.type,
@@ -720,14 +720,14 @@ if( m.Context.IsPrototypeFile )
 
 				visibleByModule[module.module] = visible;
 
-				CollectVarSpecs( module.scope, module.module );
+				CollectSpecs( module.scope, module.module );
 			}
 		}
 
 		// Template specializations (variable or class/struct/union) are linked to
 		// their primary with SpecInfo; failed ones carry a self-reference instead
 		// and are skipped.
-		private void CollectVarSpecs( Scope scope, string moduleName )
+		private void CollectSpecs( Scope scope, string moduleName )
 		{
 			foreach( List<ScopeLeaf> leaves in scope.children.Values ) {
 				foreach( ScopeLeaf leaf in leaves ) {
@@ -736,7 +736,7 @@ if( m.Context.IsPrototypeFile )
 						continue;
 
 					if( decl is Namespace ns ) {
-						CollectVarSpecs( ns.scope, moduleName );
+						CollectSpecs( ns.scope, moduleName );
 						continue;
 					}
 
@@ -767,7 +767,7 @@ if( m.Context.IsPrototypeFile )
 		/// unit where such use occurs"); Myll rejects both patterns as hard errors
 		/// instead.
 		/// </summary>
-		private void ValidateVarSpecOdr()
+		private void ValidateSpecOdr()
 		{
 			// The same bound signature for one primary, defined in two modules:
 			// the definitions are distinct, so wherever they meet they clash, and
@@ -782,7 +782,7 @@ if( m.Context.IsPrototypeFile )
 						continue;
 					}
 					if( earlier.Module == entry.Module )
-						continue; // same-module duplicates are reported by VarSpecTransformer
+						continue; // same-module duplicates are reported by SpecTransformer
 
 					bool later = IsLater( entry.Spec, earlier.Spec );
 					SpecEntry laterEntry  = later ? entry  : earlier;
@@ -804,7 +804,7 @@ if( m.Context.IsPrototypeFile )
 			// A primary instantiation in a module that cannot see a matching
 			// specialization: that translation unit would define the primary
 			// instantiation while others use the specialization.
-			foreach( VarInstantiation inst in varInstantiations ) {
+			foreach( SpecInstantiation inst in specInstantiations ) {
 				if( !specsByPrimary.TryGetValue( inst.Primary, out List<SpecEntry>? entries ) )
 					continue;
 
@@ -1112,14 +1112,14 @@ if( m.Context.IsPrototypeFile )
 
 		// A use of a variable template that resolved to its primary (no visible
 		// specialization matched), recorded for the ODR guard.
-		private sealed class VarInstantiation
+		private sealed class SpecInstantiation
 		{
 			public readonly Decl         Primary;
 			public readonly List<TplArg> Args;
 			public readonly string       Module;
 			public readonly SrcPos?      Pos;
 
-			public VarInstantiation( Decl primary, List<TplArg> args, string module, SrcPos? pos )
+			public SpecInstantiation( Decl primary, List<TplArg> args, string module, SrcPos? pos )
 			{
 				Primary = primary;
 				Args    = args;
@@ -1849,7 +1849,7 @@ if( m.Context.IsPrototypeFile )
 							: null;
 					if( callArgs is { Count: > 0 }
 					 && recordedInstantiations.Add( (chosen, module.module, callArgs.Select( a => a.Gen() ).Join( "," ) ) ) )
-						varInstantiations.Add( new VarInstantiation( chosen, callArgs.ToList(), module.module, callee.srcPos ) );
+						specInstantiations.Add( new SpecInstantiation( chosen, callArgs.ToList(), module.module, callee.srcPos ) );
 				}
 
 				return (chosen, false, false);
@@ -2248,7 +2248,7 @@ if( m.Context.IsPrototypeFile )
 			// position here; secondary lookups that re-resolve the same use must not
 			// record it twice.
 			if( usePos != null && specsByPrimary.ContainsKey( primary ) )
-				varInstantiations.Add( new VarInstantiation( primary, segment.tplArgs.ToList(), module.module, usePos ) );
+				specInstantiations.Add( new SpecInstantiation( primary, segment.tplArgs.ToList(), module.module, usePos ) );
 
 			return resolved;
 		}
