@@ -1,0 +1,27 @@
+// The declared-specialization guard case: somelib.decl.myll says the real
+// header already specializes Somelib::Box for int. Re-specializing it here is
+// rejected: the generated definition would collide with the header's.
+module somelib;
+
+import "somelib.hpp";
+
+namespace Somelib {
+	class Box<T> {
+	[pub]:
+		ctor();
+
+		field T _v;
+
+		func Get() -> T => _v;
+	};
+
+	class Box<T=int> {
+	[pub]:
+		ctor();
+
+		field int _v;
+		field int _extra;
+
+		func Get() -> int => _v + _extra;
+	};
+}

@@ -1,0 +1,20 @@
+module main;
+
+import somelib;
+
+func main() -> int
+{
+	// The declared specialization drives member resolution...
+	var Somelib::Box<int> b;
+	b._v = 3;
+	b._extra = 4;
+	if( b.Get() != 7 )
+		return 1;
+
+	// ...while other arguments use the primary.
+	var Somelib::Box<f64> d;
+	d._v = 1.5;
+	if( d.Get() < 1.4 )
+		return 2;
+	return 0;
+}

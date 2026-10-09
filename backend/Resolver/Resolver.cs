@@ -697,8 +697,13 @@ if( m.Context.IsPrototypeFile )
 		{
 			foreach( CompiledModuleResult m in modules ) {
 				GlobalNamespace module = m.Module;
-				if( m.Context.IsPrototypeFile )
+				if( m.Context.IsPrototypeFile ) {
+					// Prototype modules carry no uses, but their declared
+					// specializations feed resolution and the duplicate guard:
+					// they say the real header already specializes this.
+					CollectSpecs( module.scope, module.module );
 					continue;
+				}
 
 				HashSet<string> visible = new( StringComparer.Ordinal ) { module.module };
 				Queue<string> pending = new( module.imports.OfType<NamedImportSpec>().Select( s => s.name ) );

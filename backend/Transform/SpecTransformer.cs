@@ -33,21 +33,24 @@ namespace Myll.Transform
 
 		private ModuleContext   context  = null!;
 		private GlobalNamespace moduleAst = null!;
+		private bool            isDeclModule;
 
 		public SpecTransformer( IReadOnlyList<CompiledModuleResult> allModules )
 		{
 			this.allModules = allModules;
 		}
 
+		protected override bool RunInPrototypeFiles => true;
+
 		protected override void PreTransform( TransformContext ctx )
 		{
-			GlobalNamespace module = ctx.Module.Module;
-			if( ctx.Module.Context.IsPrototypeFile )
-				return;
-
-			context   = ctx.Module.Context;
-			moduleAst = module;
-			ValidateScope( module );
+			// Prototype (.decl.myll) modules run too: a specialization declared
+			// there says "the real header already specializes this" — it feeds
+			// resolution and the duplicate guard, and emits nothing.
+			context      = ctx.Module.Context;
+			moduleAst    = ctx.Module.Module;
+			isDeclModule = ctx.Module.Context.IsPrototypeFile;
+			ValidateScope( moduleAst );
 		}
 
 private void ValidateScope( Myll.Core.Hierarchical hier )
@@ -243,7 +246,7 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 					continue;
 				}
 
-				if( spec.IsForwardDeclaration ) {
+				if( spec.IsForwardDeclaration && !isDeclModule ) {
 					Diagnostics.Add( new Diagnostic(
 						spec.srcPos,
 						DiagnosticKind.Error,
@@ -306,7 +309,7 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 				if( spec.TplSpec.Count == 0 )
 					continue;
 
-				if( spec.body == null ) {
+				if( spec.body == null && !isDeclModule ) {
 					Diagnostics.Add( new Diagnostic(
 						spec.srcPos,
 						DiagnosticKind.Error,
@@ -473,7 +476,7 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 				if( spec.TplSpec.Count == 0 )
 					continue;
 
-				if( spec.body == null ) {
+				if( spec.body == null && !isDeclModule ) {
 					Diagnostics.Add( new Diagnostic(
 						spec.srcPos,
 						DiagnosticKind.Error,
@@ -689,7 +692,7 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 				if( spec.TplSpec.Count == 0 )
 					continue;
 
-				if( spec.body == null ) {
+				if( spec.body == null && !isDeclModule ) {
 					Diagnostics.Add( new Diagnostic(
 						spec.srcPos,
 						DiagnosticKind.Error,
