@@ -101,4 +101,71 @@ func run() -> int
 	return 0;
 }
 
+// Method specializations: emitted out-of-line after the class (C++ rejects
+// in-class), with the class parameters bound first. The class name inside a
+// specialization stands for the specialized instantiation (OpBox<int>).
+class Num {
+[pub]:
+	field int _v;
+
+[pub]:
+	ctor( int v ) { _v = v; }
+	func Get<T>( T t ) -> T => t;
+	func Get<T=int>( T t ) -> T => t + _v;
+}
+
+class Store<T> {
+[pub]:
+	field T _v;
+
+[pub]:
+	ctor( T v ) { _v = v; }
+	func Val( T t ) -> T => t;
+	func Val<T=int>( T t ) -> T => t + _v;
+
+	func Load<U>( U u ) -> U => u;
+	func Load<T=int>( U u ) -> U => u + 1;
+	func Load<T=int, U=int>( U u ) -> U => u + 3;
+}
+
+class OpBox<T> {
+[pub]:
+	field T _v;
+
+[pub]:
+	ctor( T v ) { _v = v; }
+	operator +( OpBox other ) -> OpBox => OpBox( other._v + _v );
+	operator +<T=int>( OpBox other ) -> OpBox => OpBox( other._v + _v + 100 );
+}
+
+func run2() -> int
+{
+	var Num n( 2 );
+	if( n.Get( 40 ) != 42 ) // spec via deduction
+		return 1;
+	if( n.Get<f32>( 1.5 ) < 1.4 ) // primary via explicit args
+		return 2;
+
+	var Store<int> s( 100 );
+	if( s.Val( 1 ) != 101 ) // class+method spec via receiver and deduction
+		return 3;
+	if( s.Load( 1 ) != 4 ) // the fully bound spec wins over the open one
+		return 4;
+	if( s.Load<f32>( 2.5 ) < 3.4 ) // open member spec via explicit member args
+		return 5;
+
+	var Store<f32> t( 1.5 );
+	if( t.Val( 2.5 ) < 2.4 ) // primary
+		return 6;
+	if( t.Load( 1 ) != 1 ) // no spec matches: primary
+		return 7;
+
+	var OpBox<int> a( 1 );
+	var OpBox<int> b( 2 );
+	var OpBox<int> r = a + b;
+	if( r._v != 103 ) // operator spec
+		return 8;
+	return 0;
+}
+
 } // namespace spec

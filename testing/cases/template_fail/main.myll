@@ -116,8 +116,33 @@ func fret<T=int>( int a ) -> f32 => 1.5; // FAIL: Specialization of 'fret' must 
 func fauto<T>( T a ) => a;
 func fauto<T=int>( int a ) => a; // FAIL: Specialization of 'fauto' must repeat the primary's return type
 
-class FHost<T> {
+// method specialization validation (class params first, then method params)
+class MHost<T> {
 [pub]:
-	func inner<U>( U a ) -> U => a;
-	func inner<U=int>( int a ) -> int => a; // FAIL: Specialization of method 'inner' is not supported yet
+	func open<U>( U a ) -> U => a;
+	func open<U=int>( U a ) -> U => a; // FAIL: Specialization of 'open' must bind all class template parameters
+
+	func named<X=int>( int a ) -> int => a; // FAIL: No matching method template 'named'
+
+	func sym<U>( U a ) -> U => a;
+	func sym<T=U>( int a ) -> int => a; // FAIL: Specialization of 'sym' must bind 'T' to a concrete type
+
+	func dup<U>( U a ) -> U => a;
+	func dup<T=int, U=f32>( f32 a ) -> f32 => a;
+	func dup<T=int, U=f32>( f32 a ) -> f32 => a; // FAIL: Duplicate specialization of 'dup' for T=int,U=float
+
+	func shadow<T>( T a ) -> T => a;
+	func shadow<T=int>( int a ) -> int => a; // FAIL: Method 'shadow' has a template parameter shadowing
+}
+
+class MSpec<T=int> {
+[pub]:
+	func inner( int a ) -> int => a;
+	func inner<T=f32>( f32 a ) -> f32 => a; // FAIL: Specialization of 'inner' sits inside the specialization
+}
+
+class MPlain {
+[pub]:
+	func partial<A, B>( A a, B b ) -> A => a;
+	func partial<A=int, B>( int a, int b ) -> int => a; // FAIL: Function templates allow only full specializations
 }

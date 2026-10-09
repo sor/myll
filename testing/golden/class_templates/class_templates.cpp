@@ -54,6 +54,10 @@ int ref_category::run()
     }
     return 0;
 }
+spec::Num::Num(int v)
+{
+    _v = v;
+}
 int spec::run()
 {
     spec::Box<int> a( 3, 4 );
@@ -85,6 +89,40 @@ int spec::run()
     d._idx = 3;
     if( d._idx != 3 ) {
         return 6;
+    }
+    return 0;
+}
+int spec::run2()
+{
+    spec::Num n( 2 );
+    if( n.Get<int>( 40 ) != 42 ) {
+        return 1;
+    }
+    if( n.Get<float>( 1.5f ) < 1.4f ) {
+        return 2;
+    }
+    spec::Store<int> s( 100 );
+    if( s.Val( 1 ) != 101 ) {
+        return 3;
+    }
+    if( s.Load( 1 ) != 4 ) {
+        return 4;
+    }
+    if( s.Load<float>( 2.5f ) < 3.4f ) {
+        return 5;
+    }
+    spec::Store<float> t( 1.5f );
+    if( t.Val( 2.5f ) < 2.4f ) {
+        return 6;
+    }
+    if( t.Load<int>( 1 ) != 1 ) {
+        return 7;
+    }
+    spec::OpBox<int> a( 1 );
+    spec::OpBox<int> b( 2 );
+    spec::OpBox<int> r = a + b;
+    if( r._v != 103 ) {
+        return 8;
     }
     return 0;
 }
@@ -125,6 +163,9 @@ int main()
     }
     if( spec::run() != 0 ) {
         return 5;
+    }
+    if( spec::run2() != 0 ) {
+        return 6;
     }
     return 0;
 }

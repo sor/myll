@@ -6,6 +6,7 @@ func main() -> int
 	if( ref_category::run()  != 0 ) return 2;
 	if( template_call::run() != 0 ) return 3;
 	if( static_member::run() != 0 ) return 4;
-	if( spec::run()          != 0 ) return 5;
+if( spec::run() != 0 )     return 5;
+	if( spec::run2() != 0 )    return 6;
 	return 0;
 }

@@ -96,6 +96,11 @@ namespace spec
     class Pair;
     template <typename T>
     union Choice;
+    class Num;
+    template <typename T>
+    class Store;
+    template <typename T>
+    class OpBox;
     template <typename T>
     class Box
     {
@@ -167,7 +172,79 @@ namespace spec
         int _idx;
         float _alt;
     };
+    class Num
+    {
+    public:
+        int _v{};
+        explicit Num(int v);
+        template <typename T>
+        inline T Get(T t) const
+        {
+            return t;
+        }
+    };
+    template<>
+    int spec::Num::Get<int>(int t) const
+{
+    return t + _v;
+}
+    template <typename T>
+    class Store
+    {
+    public:
+        T _v{};
+        explicit Store(T v)
+        {
+            _v = v;
+        }
+        inline T Val(T t) const
+        {
+            return t;
+        }
+        template <typename U>
+        inline U Load(U u) const
+        {
+            return u;
+        }
+    };
+    template<>
+    int spec::Store<int>::Val(int t) const
+{
+    return t + _v;
+}
+    template<>
+    template <typename U>
+    U spec::Store<int>::Load(U u) const
+{
+    return u + 1;
+}
+    template<>
+    template<>
+    int spec::Store<int>::Load<int>(int u) const
+{
+    return u + 3;
+}
+    template <typename T>
+    class OpBox
+    {
+    public:
+        T _v{};
+        explicit OpBox(T v)
+        {
+            _v = v;
+        }
+        inline spec::OpBox<T> operator+(spec::OpBox<T> other) const
+        {
+            return OpBox( other._v + _v );
+        }
+    };
+    template<>
+    spec::OpBox<int> spec::OpBox<int>::operator+(spec::OpBox<int> other) const
+{
+    return OpBox( other._v + _v + 100 );
+}
     int run();
+    int run2();
 }
 namespace static_member
 {
