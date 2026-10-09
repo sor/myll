@@ -114,6 +114,14 @@ int spec::run3()
     if( f._v != 7 ) {
         return 5;
     }
+    spec::SpecBox<int> sa( 3 );
+    if( sa._v != 3 ) {
+        return 6;
+    }
+    spec::SpecBox<int> sb( 1.5f, 4 );
+    if( sb._v != 5 ) {
+        return 7;
+    }
     return 0;
 }
 int spec::run2()

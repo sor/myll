@@ -49,6 +49,23 @@ class F {
 	[explicit] conv -> bool { return i > 0; }
 }
 
+// templated converts: the parameters deduce — constructor side from the
+// source type, operator side from the required target type
+class G {
+[pub]:
+	field int i;
+
+	[implicit] convert<U> <- U { i = 7; }
+}
+
+class H {
+[pub]:
+	field int i;
+
+	[implicit] ctor convert<U> <- U { i = 9; }
+	[implicit] convert<U> -> U* { return null; }
+}
+
 func run_convert_decl() -> int
 {
 	var A a = 5;            // convert <- int
@@ -89,6 +106,18 @@ func run_convert_decl() -> int
 
 	if( !( (bool)g ) )      // explicit operator via cast
 		return 10;
+
+	var G gg = 11;         // templated convert <- : U deduced from int
+	if( gg.i != 7 )
+		return 11;
+
+	var H hh = 12;         // templated ctor convert <- : U deduced from int
+	if( hh.i != 9 )
+		return 12;
+
+	var int* pp = hh;      // templated convert -> : U deduced from int*
+	if( pp != null )
+		return 13;
 
 	return 0;
 }

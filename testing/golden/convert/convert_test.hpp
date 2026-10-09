@@ -14,6 +14,8 @@ class C;
 class D;
 class E;
 class F;
+class G;
+class H;
 class A
 {
 public:
@@ -53,6 +55,31 @@ public:
     int i{};
     explicit F(int other);
     explicit operator bool() const;
+};
+class G
+{
+public:
+    int i{};
+    template <typename U>
+    G(U other)
+    {
+        i = 7;
+    }
+};
+class H
+{
+public:
+    int i{};
+    template <typename U>
+    H(U other)
+    {
+        i = 9;
+    }
+    template <typename U>
+    inline operator U*() const
+    {
+        return nullptr;
+    }
 };
 int run_convert_decl();
 bool takesString(const std::string& s);

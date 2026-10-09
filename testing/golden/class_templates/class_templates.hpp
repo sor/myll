@@ -98,6 +98,8 @@ namespace spec
     union Choice;
     class Num;
     template <typename T>
+    class SpecBox;
+    template <typename T>
     class Store;
     template <typename T>
     class OpBox;
@@ -190,6 +192,31 @@ namespace spec
     {
         return t + _v;
     }
+    template <typename T>
+    class SpecBox
+    {
+    public:
+        T _v{};
+        explicit SpecBox(T v)
+        {
+            _v = v;
+        }
+    };
+    template<>
+    class SpecBox<int>
+    {
+    public:
+        int _v{};
+        explicit SpecBox(int v)
+        {
+            _v = v;
+        }
+        template <typename U>
+        SpecBox(U u, int v)
+        {
+            _v = v + static_cast<int>( u );
+        }
+    };
     template <typename T>
     class Store
     {

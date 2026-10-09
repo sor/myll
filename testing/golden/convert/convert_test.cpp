@@ -80,6 +80,18 @@ int run_convert_decl()
     if( !(static_cast<bool>( g )) ) {
         return 10;
     }
+    G gg = 11;
+    if( gg.i != 7 ) {
+        return 11;
+    }
+    H hh = 12;
+    if( hh.i != 9 ) {
+        return 12;
+    }
+    int* pp = hh;
+    if( pp != nullptr ) {
+        return 13;
+    }
     return 0;
 }
 bool takesString(const std::string& s)

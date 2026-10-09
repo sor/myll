@@ -114,6 +114,21 @@ class Num {
 	func Get<T=int>( T t ) -> T => t + _v;
 }
 
+// Constructor templates compose inside class specializations: the class spec
+// owns the members, and the ctor template keeps its own parameters.
+class SpecBox<T> {
+[pub]:
+	field T _v;
+	ctor( T v ) { _v = v; }
+}
+
+class SpecBox<T=int> {
+[pub]:
+	field int _v;
+	ctor( int v ) { _v = v; }
+	ctor<U>( U u, int v ) { _v = v + (int)u; }
+}
+
 class Store<T> {
 [pub]:
 	field T _v;
@@ -169,6 +184,13 @@ func run3() -> int
 	var Wrap<i64> f = Wrap<i64>( 6, 7 );
 	if( f._v != 7 )
 		return 5;
+
+	var SpecBox<int> sa( 3 );
+	if( sa._v != 3 ) // class spec ctor
+		return 6;
+	var SpecBox<int> sb( 1.5, 4 );
+	if( sb._v != 5 ) // ctor template inside the class spec
+		return 7;
 	return 0;
 }
 
