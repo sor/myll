@@ -498,7 +498,7 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 					continue;
 				}
 
-// Same-name class and method parameters make the bindings ambiguous;
+				// Same-name class and method parameters make the bindings ambiguous;
 				// the bindings map by name, so rename one.
 				List<TplParam> probeTarget = new();
 				probeTarget.AddRange( owner.TplParams );
