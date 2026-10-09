@@ -4,7 +4,8 @@ Status: **implemented 2026-10-04** (phase 1: same-module variable specialization
 **2026-10-08** (phase 3: cross-module + ODR guard; phase 2: class/struct/union
 specializations; phase 4: function specializations, same-module and cross-module;
 phase 5: method specializations; phase 6/6b: constructor templates and
-specializations, plus declared specializations in prototype modules).
+specializations, plus declared specializations in prototype modules;
+phase 6c: templated conversions in both directions).
 Cases: `testing/cases/var_templates/`, `testing/cases/class_templates/`,
 `testing/cases/cross_module_var_spec/`, `testing/cases/cross_module_struct_spec/`,
 `testing/cases/cross_module_func_spec/` and `testing/cases/cross_module_decl_spec/`
@@ -246,6 +247,28 @@ Decisions (settled 2026-10-04):
   existing sets: implicit std modules everywhere, explicitly imported ones
   otherwise.
 
+## Templated conversions (phase 6c)
+
+- Both directions take template parameters after the `convert` keyword:
+  `convert<U> <- T`, `ctor convert<U> <- T` (converting constructors) and
+  `convert<U> -> T` (conversion operators, matching the existing
+  `op convert<U> -> T` form). A `template<typename U> Wrap(const U&)` maps to
+  `convert<U> <- U`.
+- Resolution follows the C++ rule for conversion function templates: parameters
+  deduce from the source type (constructors) or the required target type
+  (operators) via `TemplateInference.TryDeduceTemplateArgsAgainst`; their
+  specializations are invisible to normal lookup (target-driven deduction always
+  uses the primary — noted, nothing to enforce).
+- Convert builders register their parameter/return types inside their own scope
+  so types naming a template parameter resolve. Conversion operator emission
+  uses `Gen` so pointer targets keep their pointers (`convert -> char*` is
+  `operator char*()`).
+- Copy/move constructors with a type parameter are rejected cleanly
+  (C++ forbids copy/move constructor templates); the passing forms take no
+  parameter lists, so anything else there is a parse error.
+- Constructor templates compose inside class specializations (pinned in
+  `class_templates`).
+
 ## Deferred inventory
 
 - Specialization of member (field-scope) variable and class templates: the transformer's
@@ -259,8 +282,6 @@ Decisions (settled 2026-10-04):
   not in scope) stay the default.
 - Retrofitting bound-parameter aliases to variables (initializer expressions) and
   class/struct specializations (bodies), so all kinds allow writing `T` after binding.
-- Templated conversion constructors (`ctor convert <- T` with template parameters): the
-  `convert` path is a separate declaration form today.
 - Runtime primary instantiation from an importing module: the primary's definition lives in
   its module's `.cpp` while importers only see the `extern` declaration, so importing
   translation units cannot implicitly instantiate it. Same-module runtime primaries work.
