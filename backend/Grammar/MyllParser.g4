@@ -120,12 +120,12 @@ defStruct	:	typeId		(tplParams	|	tplSpec)?
 
 // convert is implicit by default?
 // ctor    is explicit by default?
-defConvert	:	(	RARROW		to=typespec					// convert -> TYPE	- convert to TYPE	- operator TYPE
-				|	LARROW		from=typespec	id?			// convert <- TYPE	- convert from TYPE	- ctor( TYPE )
+defConvert	:	(	tplParams?	RARROW		to=typespec	// convert -> TYPE	- convert to TYPE	- operator TYPE
+				|	tplParams?	LARROW		from=typespec	id?			// convert <- TYPE	- convert from TYPE	- ctor( TYPE )
 				)
 				funcBody;
 defCtor		:	(	kindOfPassing	(LT	tplType=typespec	GT)?	id?	initList?
-				|	CONVERT	LARROW?	typespec	id?					// ctor convert <- T / ctor convert T
+				|	CONVERT			tplParams?	LARROW?	typespec	id?	// ctor convert <- T / ctor convert T
 				|	(tplParams	|	tplSpec)?	funcTypeDef?	initList?
 				)
 				// (REQUIRES	typespecsNested)?  ?

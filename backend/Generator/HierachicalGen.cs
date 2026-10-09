@@ -1125,7 +1125,7 @@ namespace Myll.Generator
 			// form): template-ids on constructor names are compiler-divergent.
 			string qualifiedName = classPart + "::" + obj.name;
 
-string paramString = obj.paras
+			string paramString = obj.paras
 				.Select( p => p.Gen() )
 				.Join( ", " );
 
@@ -1169,7 +1169,9 @@ string paramString = obj.paras
 		{
 			string indentDecl = IndentDecl;
 			string indentImpl = IndentImpl;
-			string targetType = obj.retType.GenType();
+			// Gen (not GenType) so pointer targets keep their pointers:
+			// `convert -> char*` is `operator char*()`, not `operator char()`.
+			string targetType = obj.retType.Gen();
 			string explicitKw = obj.IsImplicit ? "" : "explicit ";
 			string declHeadline = Format(
 				"{0}{1}{2}operator {3}(){4}",
@@ -1694,10 +1696,10 @@ string paramString = obj.paras
 			string headlineDecl = Format(
 				FuncFormat[1],
 				indentDecl,
-			leadingAttrDecl,
-			nameDecl,
-			paramString,
-			followingDecl );
+				leadingAttrDecl,
+				nameDecl,
+				paramString,
+				followingDecl );
 
 			if( hasTpl ) {
 				int tplMark = targetDecl.Count;

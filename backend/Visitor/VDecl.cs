@@ -692,7 +692,7 @@ namespace Myll
 			if( isOperator ) {
 				Typespec retType = VisitTypespec( c.typespec() );
 				Func ret = BuildConvertOperator(
-					c.ToSrcPos(), retType, new(), new(), c.funcBody() );
+					c.ToSrcPos(), retType, VisitTplParams( c.tplParams() ), new(), c.funcBody() );
 				AddChild( ret );
 				c.id()?.Visit();
 				return ret;
@@ -702,7 +702,7 @@ namespace Myll
 			Typespec paramType = VisitTypespec( c.typespec() );
 			string paramName = c.id()?.Visit() ?? "other";
 			Structor retCtor = BuildConversionCtor(
-				structuralParent, c.ToSrcPos(), paramType, paramName, c.funcBody() );
+				structuralParent, c.ToSrcPos(), VisitTplParams( c.tplParams() ), paramType, paramName, c.funcBody() );
 			AddChild( retCtor );
 			return retCtor;
 		}
@@ -714,20 +714,26 @@ namespace Myll
 		private Structor BuildConversionCtor(
 			Structural structuralParent,
 			SrcPos srcPos,
+			List<TplParam> tplParams,
 			Typespec paramType,
 			string paramName,
 			FuncBodyContext funcBody )
 		{
+			PushScope();
+			// Register inside the constructor's own scope: template parameters
+			// are injected there, so a parameter type naming one must resolve in
+			// that scope.
 			if( paramType is TypespecNested nestedParam )
 				Context.UnresolvedTypes.Add( new UnresolvedType( nestedParam, scopeStack.Peek() ) );
 
-			PushScope();
 			Structor ret = new() {
 				srcPos           = srcPos,
 				name             = structuralParent.name,
 				access           = curAccess,
 				kind             = Structor.Kind.Constructor,
 				isConversionCtor = true,
+				TplParams        = tplParams,
+				ctorScope        = scopeStack.Peek(),
 				paras = new() {
 					new Param {
 						name = paramName,
@@ -752,10 +758,12 @@ namespace Myll
 			List<TypespecNested> requires,
 			FuncBodyContext funcBody )
 		{
+			PushScope();
+			// Register inside the operator's own scope: template parameters are
+			// injected there, so a return type naming one must resolve there.
 			if( retType is TypespecNested nested )
 				Context.UnresolvedTypes.Add( new UnresolvedType( nested, scopeStack.Peek() ) );
 
-			PushScope();
 			Func ret = new() {
 				srcPos    = srcPos,
 				name      = string.Empty,
@@ -783,7 +791,7 @@ namespace Myll
 				Typespec paramType = VisitTypespec( c.typespec() );
 				string paramName = c.id()?.Visit() ?? "other";
 				Structor retConvert = BuildConversionCtor(
-					structuralParent, c.ToSrcPos(), paramType, paramName, c.funcBody() );
+					structuralParent, c.ToSrcPos(), VisitTplParams( c.tplParams() ), paramType, paramName, c.funcBody() );
 				AddChild( retConvert );
 				return retConvert;
 			}
@@ -796,13 +804,13 @@ namespace Myll
 			}
 			else {
 				ret = new() {
-					srcPos   = c.ToSrcPos(),
-					name     = structuralParent.name,
-					access   = curAccess,
-					kind     = Structor.Kind.Constructor,
+					srcPos    = c.ToSrcPos(),
+					name      = structuralParent.name,
+					access    = curAccess,
+					kind      = Structor.Kind.Constructor,
 					TplParams = VisitTplParams( c.tplParams() ),
-					TplSpec    = VisitTplSpec( c.tplSpec() ),
-					paras    = c.funcTypeDef() != null
+					TplSpec   = VisitTplSpec( c.tplSpec() ),
+					paras     = c.funcTypeDef() != null
 						? VisitFuncTypeDef( c.funcTypeDef() ).ToList()
 						: new(),
 					// TODO: cc.initList(); // opt
@@ -823,9 +831,22 @@ namespace Myll
 		{
 			PassingKind passingKind = c.kindOfPassing().Visit();
 
-			if( c.tplType != null && passingKind != PassingKind.InitList )
-				throw new NotSupportedException(
-					"explicit element type is only supported for `ctor initlist`" );
+			// `ctor copy<T>` and `ctor move<T>` parse as the element-type form
+			// (`<typespec>`): copy/move constructors cannot take template
+			// parameters — C++ forbids copy/move constructor templates.
+			if( c.tplType != null && passingKind != PassingKind.InitList ) {
+				Context.Diagnostics.Add( new Diagnostic(
+					c.ToSrcPos(),
+					DiagnosticKind.Error,
+					String.Format(
+						"'{0}' constructors cannot be parameterized by a template type; copy/move constructors cannot be templates (C++); declare a plain templated constructor 'ctor<U>( ... )' instead",
+						passingKind.ToString().ToLowerInvariant() ) ) );
+				return new() {
+					srcPos = c.ToSrcPos(),
+					name   = structuralParent.name,
+					kind   = Structor.Kind.Constructor,
+				};
+			}
 
 			string className = structuralParent.name;
 			string paramName = c.id()?.Visit()

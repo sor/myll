@@ -145,37 +145,37 @@ namespace Myll.Resolver
 		/// allows a method like <c>Outer&lt;T&gt;::Inner::store&lt;U&gt;(U x, T y)</c> to deduce
 		/// <c>U</c> from <c>x</c> while treating <c>T</c> as already-known from the receiver.
 		/// </summary>
-public static bool TryDeduceTemplateArgs(
-		Func              candidate,
-		FuncCall          call,
-		TypeResolver      typeResolver,
-		ResolutionResult  result,
-		out List<TplArg>? deduced,
-		List<TplParam>?   enclosingParameters = null,
-		List<TplArg>?     enclosingArguments  = null )
+		public static bool TryDeduceTemplateArgs(
+			Func              candidate,
+			FuncCall          call,
+			TypeResolver      typeResolver,
+			ResolutionResult  result,
+			out List<TplArg>? deduced,
+			List<TplParam>?   enclosingParameters = null,
+			List<TplArg>?     enclosingArguments  = null )
 			=> TryDeduceTemplateArgs( candidate.TplParams, candidate.paras, call, typeResolver, result,
 				out deduced, enclosingParameters, enclosingArguments );
 
 		public static bool TryDeduceTemplateArgs(
-		Structor           candidate,
-		FuncCall          call,
-		TypeResolver      typeResolver,
-		ResolutionResult  result,
-		out List<TplArg>? deduced,
-		List<TplParam>?   enclosingParameters = null,
-		List<TplArg>?     enclosingArguments  = null )
+			Structor          candidate,
+			FuncCall          call,
+			TypeResolver      typeResolver,
+			ResolutionResult  result,
+			out List<TplArg>? deduced,
+			List<TplParam>?   enclosingParameters = null,
+			List<TplArg>?     enclosingArguments  = null )
 			=> TryDeduceTemplateArgs( candidate.TplParams, candidate.paras, call, typeResolver, result,
 				out deduced, enclosingParameters, enclosingArguments );
 
 		private static bool TryDeduceTemplateArgs(
-		List<TplParam>    tplParams,
-		List<Param>       paras,
-		FuncCall          call,
-		TypeResolver      typeResolver,
-		ResolutionResult  result,
-		out List<TplArg>? deduced,
-		List<TplParam>?   enclosingParameters = null,
-		List<TplArg>?     enclosingArguments  = null )
+			List<TplParam>    tplParams,
+			List<Param>       paras,
+			FuncCall          call,
+			TypeResolver      typeResolver,
+			ResolutionResult  result,
+			out List<TplArg>? deduced,
+			List<TplParam>?   enclosingParameters = null,
+			List<TplArg>?     enclosingArguments  = null )
 		{
 			deduced = null;
 
@@ -348,15 +348,15 @@ public static bool TryDeduceTemplateArgs(
 
 			return false;
 		}
-		private static bool TryBindParameter(
-			Typespec                      parameterType,
-			Typespec                      argumentType,
-			Dictionary<string, Typespec>  bindings,
-			ResolutionResult              result )
-		{
-			Decl? parameterDecl = parameterType is TypespecNested nested
-				? GetResolvedDecl( nested, result )
-				: null;
+private static bool TryBindParameter(
+		Typespec                      parameterType,
+		Typespec                      argumentType,
+		Dictionary<string, Typespec>  bindings,
+		ResolutionResult?             result )
+	{
+		Decl? parameterDecl = parameterType is TypespecNested nested
+			? GetResolvedDecl( nested, result )
+			: null;
 
 		if( parameterDecl is not TplParamDecl tpl )
 			return true; // no template parameter to bind; let overload resolution decide
@@ -410,6 +410,26 @@ public static bool TryDeduceTemplateArgs(
 	private static bool IsReferenceKind( Pointer.Kind kind )
 		=> kind is Pointer.Kind.LVRef or Pointer.Kind.RVRef;
 
+		/// <summary>
+		/// Deduces template parameters of a conversion operator from a required
+		/// target type: the declared return type is the pattern and the target
+		/// the concrete type. Returns true when every parameter got bound.
+		/// Mirrors the C++ rule for conversion function templates, whose
+		/// parameters are deduced from the target (their specializations are
+		/// invisible to normal lookup).
+		/// </summary>
+		public static bool TryDeduceTemplateArgsAgainst( Typespec pattern, List<TplParam> tplParams, Typespec concrete )
+		{
+			Dictionary<string, Typespec> bindings = new( StringComparer.Ordinal );
+			BindTypePattern( pattern, concrete, bindings );
+			return tplParams.All( p => bindings.ContainsKey( p.name ) );
+		}
+
+		private static void BindTypePattern( Typespec pattern, Typespec concrete, Dictionary<string, Typespec> bindings )
+		{
+			TryBindParameter( pattern, concrete, bindings, null );
+		}
+
 	private static bool IsUntypedLiteral( Typespec type )
 		=> type is TypespecBasic b
 		 && ( b.kind == TypespecBasic.Kind.UntypedInteger
@@ -437,12 +457,12 @@ public static bool TryDeduceTemplateArgs(
 
 			return type;
 		}
-		private static Decl? GetResolvedDecl( TypespecNested type, ResolutionResult result )
+		private static Decl? GetResolvedDecl( TypespecNested type, ResolutionResult? result )
 		{
 			if( type.resolvedDecl != null )
 				return type.resolvedDecl;
 
-			return result.TryGetResolved( type, out Decl? decl ) ? decl : null;
+			return result?.TryGetResolved( type, out Decl? decl ) == true ? decl : null;
 		}
 
 		private static Typespec StripOutermostPointers( Typespec source, int count )

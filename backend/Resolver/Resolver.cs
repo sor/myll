@@ -1467,12 +1467,12 @@ if( m.Context.IsPrototypeFile )
 			string suffix = "";
 			if( type.ptrs is { Count: > 0 } )
 				suffix = " " + String.Join( "", type.ptrs.Select( p => p.kind switch {
-					Pointer.Kind.RawPtr    => "*",
-					Pointer.Kind.LVRef     => "&",
-					Pointer.Kind.RVRef     => "&&",
-					Pointer.Kind.Unique     => "*!",
-					Pointer.Kind.Shared     => "*@",
-					Pointer.Kind.Weak       => "*?",
+					Pointer.Kind.RawPtr      => "*",
+					Pointer.Kind.LVRef       => "&",
+					Pointer.Kind.RVRef       => "&&",
+					Pointer.Kind.Unique      => "*!",
+					Pointer.Kind.Shared      => "*@",
+					Pointer.Kind.Weak        => "*?",
 					Pointer.Kind.UniqueArray => "*![]",
 					Pointer.Kind.SharedArray => "*@[]",
 					Pointer.Kind.WeakArray   => "*?[]",
@@ -1605,7 +1605,7 @@ if( m.Context.IsPrototypeFile )
 					continue;
 				}
 
-if( candidate is Func func ) {
+			if( candidate is Func func ) {
 				(List<TplParam> ownerParams, List<TplArg> ownerArgs) = GetOwnerTemplateInfo( func, callee );
 
 				bool deductionOk = TemplateInference.TryDeduceTemplateArgs(

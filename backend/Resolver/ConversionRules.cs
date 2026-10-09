@@ -991,6 +991,14 @@ namespace Myll.Resolver
 				if( stc.paras.Count != 1 )
 					continue;
 
+				if( stc.TplParams.Count > 0 ) {
+					// Templated converting constructors (`convert<U> <- U`): the
+					// parameters are deduced from the source type.
+					if( TemplateInference.TryDeduceTemplateArgsAgainst( stc.paras[0].type, stc.TplParams, source ) )
+						return true;
+					continue;
+				}
+
 				if( IsImplicitlyConvertible( source, stc.paras[0].type ) )
 					return true;
 			}
@@ -1004,6 +1012,15 @@ namespace Myll.Resolver
 				 || func.kind != Func.Kind.Convert
 				 || !func.IsImplicit )
 					continue;
+
+				if( func.TplParams.Count > 0 ) {
+					// Templated conversion operators (`convert<U> -> ...`): the
+					// parameters are deduced from the required target type,
+					// mirroring the C++ rule for conversion function templates.
+					if( TemplateInference.TryDeduceTemplateArgsAgainst( func.retType, func.TplParams, target ) )
+						return true;
+					continue;
+				}
 
 				if( IsImplicitlyConvertible( func.retType, target ) )
 					return true;
