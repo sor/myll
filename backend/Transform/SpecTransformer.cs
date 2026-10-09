@@ -57,7 +57,7 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 
 			ValidateSpecsInScope( children.OfType<VarDecl>().ToList(), nsFqn );
 			ValidateStructSpecs( children.OfType<Myll.Core.Structural>().ToList(), nsFqn );
-			ValidateFuncSpecs( children.OfType<Func>().ToList(), hier is Myll.Core.Structural, nsFqn );
+			ValidateFuncSpecs( children.OfType<Func>().ToList(), hier is Myll.Core.Structural s ? s : null, nsFqn );
 
 			foreach( Decl child in children.OfType<Myll.Core.Hierarchical>() )
 				ValidateScope( (Myll.Core.Hierarchical)child );
@@ -287,20 +287,13 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 		/// aliases (`T` keeps meaning the bound value), in the signature and the
 		/// body alike.
 		/// </summary>
-		private void ValidateFuncSpecs( List<Func> funcs, bool insideStruct, string? nsFqn )
+		private void ValidateFuncSpecs( List<Func> funcs, Myll.Core.Structural? owner, string? nsFqn )
 		{
 			if( funcs.All( f => f.TplSpec.Count == 0 ) )
 				return;
 
-			if( insideStruct ) {
-				foreach( Func spec in funcs.Where( f => f.TplSpec.Count > 0 ) ) {
-					Diagnostics.Add( new Diagnostic(
-						spec.srcPos,
-						DiagnosticKind.Error,
-						String.Format( "Specialization of method '{0}' is not supported yet; move it to module or namespace scope",
-							spec.name ) ) );
-					MarkInvalidSpec( spec );
-				}
+			if( owner != null ) {
+				ValidateMethodSpecs( funcs, owner );
 				return;
 			}
 
@@ -374,6 +367,11 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 					continue;
 				}
 
+				if( !HasConcreteBindings( spec.TplSpec, primary.TplParams, spec.name, spec.srcPos ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
 				// The specialization repeats the primary's substituted signature:
 				// parameter types and return type. Writing the bound parameter
 				// name (T) or the bound value (int) is equivalent here because
@@ -442,6 +440,250 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 		private static bool IsAutoType( Typespec type )
 			=> type is TypespecBasic { kind: TypespecBasic.Kind.ImplicitAuto or TypespecBasic.Kind.ExplicitAuto };
 
+		/// <summary>
+		/// Validates member specializations inside one class: the bindings name
+		/// the class parameters first, then the method's own parameters, each in
+		/// declaration order. All class parameters must be bound to concrete
+		/// types (C++ requires concrete class arguments for member
+		/// specializations); method parameters may stay open, but only when the
+		/// class is a template. The body is emitted out-of-line after the class
+		/// (C++ rejects in-class member specializations), and bound names stay
+		/// usable through the same bound-parameter aliases as free functions.
+		/// </summary>
+		private void ValidateMethodSpecs( List<Func> funcs, Myll.Core.Structural owner )
+		{
+			if( owner.SpecInfo != null ) {
+				foreach( Func spec in funcs.Where( f => f.TplSpec.Count > 0 ) ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' sits inside the specialization of '{1}; specialize the class instead",
+							spec.name, owner.name ) ) );
+					MarkInvalidSpec( spec );
+				}
+				return;
+			}
+
+			// per primary: bound-value signatures already seen (duplicate check)
+			Dictionary<Decl, List<string>> seenSignatures = new();
+
+			foreach( Func spec in funcs ) {
+				if( spec.TplSpec.Count == 0 )
+					continue;
+
+				if( spec.body == null ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' must be a full definition",
+							spec.name ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				// The primary is a same-name method of the same class whose
+				// parameter list covers all binding names: the class parameters
+				// followed by the method's own.
+				List<Func> coveringPrimaries = funcs
+					.Where( f => f != spec && f.name == spec.name && f.SpecInfo == null && CoversBindings( owner, f, spec ) )
+					.ToList();
+
+				if( coveringPrimaries.Count == 0 ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "No matching method template '{0}' in this class; a specialization must name class and method parameters",
+							spec.name ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+// Same-name class and method parameters make the bindings ambiguous;
+				// the bindings map by name, so rename one.
+				List<TplParam> probeTarget = new();
+				probeTarget.AddRange( owner.TplParams );
+				probeTarget.AddRange( coveringPrimaries[0].TplParams );
+				if( probeTarget.GroupBy( p => p.name ).Any( g => g.Count() > 1 ) ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Method '{0}' has a template parameter shadowing the class parameter of '{1}; rename it",
+							spec.name, owner.name ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				Func primary = coveringPrimaries[0];
+				List<TplParam> target = new();
+				target.AddRange( owner.TplParams );
+				target.AddRange( primary.TplParams );
+
+				// The specialization must follow the primary by source position.
+				if( !IsLaterPos( spec, primary ) ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' must follow its primary template",
+							spec.name ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				if( !ValidateBindingShape( spec.name, spec.TplSpec, target, spec.srcPos ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				// Every class parameter must be bound to a concrete value: C++
+				// requires concrete class arguments for member specializations.
+				bool classParamsBound = owner.TplParams
+					.All( p => spec.TplSpec.Any( b => b.name == p.name && b.type != null ) );
+				if( !classParamsBound ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' must bind all class template parameters of '{1}' with concrete types",
+							spec.name, owner.name ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				if( !HasConcreteBindings( spec.TplSpec, target, spec.name, spec.srcPos ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				// Open member parameters are only expressible when the class is a
+				// template (template<> template<typename U> ...): a plain class
+				// allows full member specializations only.
+				bool hasOpenMembers = spec.TplSpec.Any( b => b.type == null )
+				                       || spec.TplSpec.Count < target.Count;
+				if( hasOpenMembers && owner.TplParams.Count == 0 ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Function templates allow only full specializations: specialization of '{0}' must bind all {1} parameters",
+							spec.name,
+							target.Count ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				// The specialization repeats the primary's substituted signature:
+				// parameter types and return type, with class and member
+				// bindings substituted alike.
+				if( IsAutoType( spec.retType ) || IsAutoType( primary.retType ) ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' must repeat the primary's return type; inferred returns cannot specialize",
+							spec.name ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				Dictionary<string, Typespec> boundValues = new( StringComparer.Ordinal );
+				foreach( TplBinding binding in spec.TplSpec ) {
+					if( binding.type != null )
+						boundValues[ binding.name ] = binding.type;
+				}
+
+				bool signatureMatches = spec.paras.Count == primary.paras.Count;
+				if( signatureMatches ) {
+					for( int i = 0; i < spec.paras.Count; i++ ) {
+						if( SubstituteBindings( spec.paras[i].type, boundValues ).Gen()
+						 != SubstituteBindings( primary.paras[i].type, boundValues ).Gen() ) {
+							signatureMatches = false;
+							break;
+						}
+					}
+				}
+				if( signatureMatches
+				 && SubstituteBindings( spec.retType, boundValues ).Gen()
+				 != SubstituteBindings( primary.retType, boundValues ).Gen() )
+					signatureMatches = false;
+
+				if( !signatureMatches ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' must repeat the primary's substituted parameter and return types",
+							spec.name ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				if( !TryAddSpecSignature( primary, spec.name, spec.TplSpec, spec.srcPos, seenSignatures ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				List<TplArg> args = BuildSpecArgs( target, spec.TplSpec, out bool[] bound, out List<TplParam> unboundParams );
+
+				spec.SpecInfo = new Decl.SpecData {
+					Primary = primary,
+					Args    = args,
+					Bound   = bound,
+				};
+				spec.TplParams = unboundParams; // the open member parameters
+
+				// Open member parameters become the specialization's own template
+				// parameters, injected into its scope like the free-function case;
+				// bound ones stay usable through bound-parameter aliases.
+				InjectParams( spec.funcScope, unboundParams, spec.srcPos );
+				InjectBoundAliases( spec, boundValues );
+
+				// The owner's class name inside the specialization means the
+				// specialized instantiation (OpBox stands for OpBox<int>): the
+				// out-of-line emission cannot use the injected class name.
+				if( owner.TplParams.Count > 0 && spec.funcScope != null ) {
+					List<TplArg> ownerArgs = spec.SpecInfo.Args
+						.Take( owner.TplParams.Count )
+						.ToList();
+					TypespecNested ownerType = new() {
+						idTpls = new List<IdTplArgs> { new() { id = owner.name, tplArgs = ownerArgs } },
+					};
+					AddBoundAlias( spec.funcScope, owner.name, ownerType, spec.srcPos );
+
+					// Resolve the aliased type against the class scope: the class
+					// name would resolve through the alias itself otherwise.
+					context.UnresolvedTypes.Add(
+						new UnresolvedType( ownerType, spec.funcScope.parent ?? spec.funcScope ) );
+				}
+			}
+		}
+
+		// The primary covers the spec when every binding name exists in the
+		// primary's parameter list: the class parameters followed by its own.
+		private static bool CoversBindings( Myll.Core.Structural owner, Func candidate, Func spec )
+			=> spec.TplSpec.All(
+				b => owner.TplParams.Any( p => p.name == b.name )
+				 || candidate.TplParams.Any( p => p.name == b.name ) );
+
+		// Bindings must name concrete types: a value naming one of the target
+		// parameters (T=U) has no C++ equivalent because function templates
+		// have no partial specializations.
+		private bool HasConcreteBindings( List<TplBinding> tplSpec, List<TplParam> target, string specName, SrcPos srcPos )
+		{
+			HashSet<string> names = new( target.Select( p => p.name ) );
+
+			foreach( TplBinding binding in tplSpec ) {
+				if( binding.type is TypespecNested nested
+				 && nested.idTpls.Count == 1
+				 && nested.idTpls[0].tplArgs.Count == 0
+				 && names.Contains( nested.idTpls[0].id ) ) {
+					Diagnostics.Add( new Diagnostic(
+						srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' must bind '{1}' to a concrete type, not the parameter '{2}'",
+							specName, binding.name, nested.idTpls[0].id ) ) );
+					return false;
+				}
+			}
+
+			return true;
+		}
+
 		// A bound parameter keeps its meaning inside the specialization through a
 		// hidden alias: `T` resolves to the alias, the alias resolves to the bound
 		// value, and emission expands it so no `T` reaches the generated C++.
@@ -461,26 +703,33 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 					continue;
 				}
 
-				AliasDecl alias = new() {
-					name          = name,
-					type          = value,
-					srcPos        = spec.srcPos,
-					IsBoundAlias  = true,
-				};
-
-				ScopeLeaf leaf = new() {
-					parent = scope,
-					decl   = alias,
-				};
-				alias.scope = scope;
-
-				if( !scope.children.TryGetValue( name, out List<ScopeLeaf>? list ) ) {
-					list = new List<ScopeLeaf>( 1 );
-					scope.children.Add( name, list );
-				}
-				list.Add( leaf );
-				context.LocalDecls.Add( (alias, scope) );
+				AddBoundAlias( scope, name, value, spec.srcPos );
 			}
+		}
+
+		// Registers a hidden alias in the specialization's scope: resolution
+		// binds the name to it, emission expands it to the aliased type.
+		private void AddBoundAlias( Scope scope, string name, Typespec type, SrcPos srcPos )
+		{
+			AliasDecl alias = new() {
+				name          = name,
+				type          = type,
+				srcPos        = srcPos,
+				IsBoundAlias  = true,
+			};
+
+			ScopeLeaf leaf = new() {
+				parent = scope,
+				decl   = alias,
+			};
+			alias.scope = scope;
+
+			if( !scope.children.TryGetValue( name, out List<ScopeLeaf>? list ) ) {
+				list = new List<ScopeLeaf>( 1 );
+				scope.children.Add( name, list );
+			}
+			list.Add( leaf );
+			context.LocalDecls.Add( (alias, scope) );
 		}
 
 		/// <summary>

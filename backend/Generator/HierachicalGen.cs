@@ -122,6 +122,13 @@ namespace Myll.Generator
 		// StructuralOrderTransformer may change it
 		private readonly OrderedAccessSourceLines hierarchicalDecl = new();
 
+		/// <summary>
+		/// Member specializations of one class: C++ rejects them in-class, so
+		/// they are collected here and emitted out-of-line right after the class
+		/// body closes.
+		/// </summary>
+		private readonly List<SourceLines> methodSpecDecls = new();
+
 		private readonly Access defaultAccess;
 
 		private readonly Hierarchical hierarchical;
@@ -790,6 +797,11 @@ namespace Myll.Generator
 
 		public void AddFunc( Func obj )
 		{
+			if( obj.SpecInfo != null && obj.IsInStruct ) {
+				EmitMethodSpec( obj );
+				return;
+			}
+
 			List<TplParam> tplParams = obj.TplParams;
 
 			bool    hasTpl         = tplParams.Count >= 1;
@@ -1011,6 +1023,82 @@ namespace Myll.Generator
 				targetImpl.AddRange( bodyToGen.Gen( LevelImpl ) );
 				MarkDeclSourceMap( targetImpl, obj, implMark );
 			}
+		}
+
+		/// <summary>
+		/// Emits a member specialization out-of-line, after the class body
+		/// closes: `template<> int Node::Get<int>(int) { ... }` for a plain
+		/// class, `template<> int Box<int>::Get(int) { ... }` for a plain method
+		/// of a class template, and `template<> template<typename U> U
+		/// Store<int>::Load(U) { ... }` when member parameters stay open.
+		/// C++ rejects member specializations inside the class, so these never
+		/// emit in-class.
+		/// </summary>
+		private void EmitMethodSpec( Func obj )
+		{
+			Decl.SpecData info = obj.SpecInfo!;
+			Myll.Core.Structural owner = (Myll.Core.Structural) obj.scope!.parent!.decl!;
+
+			// The owner's own template arguments are the spec's bound class
+			// arguments; the member arguments follow. ReferenceName omits the
+			// owner's own parameter list, which the bound arguments replace.
+			int classParamCount = owner.TplParams.Count;
+			List<TplArg> classArgs = info.Args
+				.Take( classParamCount )
+				.ToList();
+			List<TplArg> memberArgs = info.Args
+				.Skip( classParamCount )
+				.ToList();
+
+			string classPart = owner.ReferenceName;
+			if( classParamCount > 0 )
+				classPart = Format( "{0}<{1}>", classPart, classArgs.Select( a => a.Gen() ).Join( ", " ) );
+
+			string namePart = obj.name;
+			// Bound member arguments name the specialization (Load<int>); open
+			// ones do not (the template<> list carries them), and operators
+			// cannot carry template arguments (deduced from the signature).
+			if( memberArgs.Count > 0
+			 && obj.TplParams.Count == 0
+			 && obj.kind != Func.Kind.Operator
+			 && obj.kind != Func.Kind.Convert )
+				namePart = Format( "{0}<{1}>", namePart, memberArgs.Select( a => a.Gen() ).Join( ", " ) );
+
+			string qualifiedName = classPart + "::" + namePart;
+
+			string paramString = obj.paras
+				.Select( p => p.Gen() )
+				.Join( ", " );
+			string prefix = obj.IsCompileTime ? "constexpr " : "";
+			string suffix = (obj.IsConstMethod ? " const" : "")
+			              + (obj.IsNoexcept  ? " noexcept" : "");
+
+			// Out-of-line next to the class, so the lines use the class's own indent
+			// level and the body one level below the member gen.
+			string outIndent = DeIndentDecl;
+			SourceLines ret = new();
+			ret.Add( Format( "{0}template<>", outIndent ) );
+			// A class template contributes the first template<>; member template
+			// parameters add the second: open ones name their parameters, bound
+			// ones use an empty list.
+			if( classParamCount > 0 && memberArgs.Count > 0 ) {
+				ret.Add( obj.TplParams.Count > 0
+					? Format( "{0}template <{1}>", outIndent, GenTemplateParameterList( obj.TplParams ) )
+					: Format( "{0}template<>", outIndent ) );
+			}
+
+			ret.Add( Format(
+				FuncFormat[0],
+				outIndent,
+				prefix,
+				obj.retType.Gen( qualifiedName ),
+				paramString,
+				suffix ) );
+
+			MarkDeclSourceMap( ret, obj, 0 );
+			ret.AddRange( obj.body.Gen( LevelDecl - 2 ) );
+
+			methodSpecDecls.Add( ret );
 		}
 
 		private void AddConversionOperator(
@@ -1279,6 +1367,10 @@ namespace Myll.Generator
 
 			if( !isGlobal )
 				targetDecl.Add( Format( isNamespace ? CurlyClose : CurlyCloseSC, indent ) );
+
+			// Member specializations follow the class: C++ rejects them in-class.
+			foreach( SourceLines specDecl in gen.methodSpecDecls )
+				targetDecl.AddRange( specDecl );
 
 			targetImpl.AddRange( gen.GenImpl() );
 		}

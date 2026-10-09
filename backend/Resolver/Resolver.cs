@@ -1307,9 +1307,10 @@ if( m.Context.IsPrototypeFile )
 						return false;
 
 					if( result.Members.TryGetValue( member, out Decl? memberResolved ) ) {
-						if( memberResolved is not Func ) {
-							// Member resolved to a non-function (e.g. a template type alias).
-							// Leave validation to the C++ compiler.
+						if( memberResolved is not Func || memberResolved.SpecInfo != null ) {
+							// Member resolved to a non-function (e.g. a template type alias)
+							// or to a specialization; leave validation to the C++ compiler,
+							// a re-resolution would shrink the candidate list to it alone.
 							return false;
 						}
 
@@ -1636,28 +1637,77 @@ if( m.Context.IsPrototypeFile )
 
 			// Specializations are viable only when the call's template arguments match
 			// their bound values: explicit ones directly, deduced ones through the
-			// primary's deduction. A viable specialization shadows its primary; an
-			// unmatched one steps aside for it.
+			// primary's deduction. Among matching specializations of one primary
+			// the most-bound wins (ties are ambiguous), mirroring C++ partial
+			// ordering; a viable specialization shadows its primary.
+			bool specsDeferred = false;
 			if( sameArity.Any( d => d.SpecInfo != null ) ) {
-				List<Decl> shadowedPrimaries = new();
+				Dictionary<Decl, List<Decl>> matchingSpecsByPrimary = new();
 				foreach( Decl candidate in sameArity ) {
 					if( candidate.SpecInfo == null )
 						continue;
 
-					bool specViable = false;
+					List<TplArg>? matchArgs = null;
 					if( explicitTemplateArgs is { Count: > 0 } )
-						specViable = MatchesBoundArgs( candidate.SpecInfo, explicitTemplateArgs );
+						matchArgs = explicitTemplateArgs.ToList();
 					else if( deducedArgsByCandidate.TryGetValue( candidate.SpecInfo.Primary, out List<TplArg>? deduced )
 					         && deduced != null )
-						specViable = MatchesBoundArgs( candidate.SpecInfo, deduced );
+						matchArgs = deduced.ToList();
 
-					if( specViable ) {
-						LogOverloadResolution( "    specialization {0}: matched, shadows its primary", candidate.name );
-						templateViable.Add( candidate );
-						shadowedPrimaries.Add( candidate.SpecInfo.Primary );
+					if( matchArgs != null ) {
+						// Member specializations carry the class arguments before the
+						// member arguments: combine the receiver's class arguments
+						// with the call's member arguments before matching.
+						if( candidate.SpecInfo.Primary is Func { IsInStruct: true } primaryFunc ) {
+							(_, List<TplArg> ownerArgs) = GetOwnerTemplateInfo( primaryFunc, callee );
+							if( ownerArgs.Count > 0 )
+								matchArgs = ownerArgs.Concat( matchArgs ).ToList();
+							else if( primaryFunc.IsTemplateUp ) {
+								// Class arguments not known yet: decide on a later pass.
+								matchArgs = null;
+								specsDeferred = true;
+							}
+						}
+
+						if( matchArgs != null && MatchesBoundArgs( candidate.SpecInfo, matchArgs ) ) {
+							LogOverloadResolution( "    specialization {0}: matched", candidate.name );
+							if( !matchingSpecsByPrimary.TryGetValue( candidate.SpecInfo.Primary, out List<Decl>? specs ) ) {
+								specs = new List<Decl>();
+								matchingSpecsByPrimary[candidate.SpecInfo.Primary] = specs;
+							}
+							specs.Add( candidate );
+						}
+						else {
+							LogOverloadResolution( "    specialization {0}: no matching template arguments, stepped aside", candidate.name );
+						}
 					}
-					else {
-						LogOverloadResolution( "    specialization {0}: no matching template arguments, stepped aside", candidate.name );
+				}
+
+				List<Decl> shadowedPrimaries = new();
+				foreach( (Decl primary, List<Decl> specs) in matchingSpecsByPrimary ) {
+					Decl? best = null;
+					int bestBoundCount = -1;
+					foreach( Decl spec in specs ) {
+						int boundCount = spec.SpecInfo!.Bound.Count( b => b );
+						if( boundCount > bestBoundCount ) {
+							best = spec;
+							bestBoundCount = boundCount;
+						}
+						else if( boundCount == bestBoundCount && best != null ) {
+							diagnostics.Add( new Diagnostic(
+								GetCalleeSrcPos( callee ),
+								DiagnosticKind.Error,
+								String.Format( "Ambiguous specialization match for '{0}': both '{1}' and '{2}' bind {3} parameters",
+									primary.name, best.name, spec.name, boundCount ) ) );
+							best = null;
+							break;
+						}
+					}
+
+					if( best != null ) {
+						LogOverloadResolution( "    specialization {0}: shadows its primary", best.name );
+						templateViable.Add( best );
+						shadowedPrimaries.Add( primary );
 					}
 				}
 
@@ -1700,7 +1750,9 @@ if( m.Context.IsPrototypeFile )
 				else if( templateMismatch )
 					ReportTemplateMismatch( sameArity, explicitTemplateArgs!, callee );
 
-				return (null, false, true);
+				// A deferred specialization may still match once the receiver's class
+				// arguments resolve; not a mismatch yet.
+				return (null, false, specsDeferred ? false : true);
 			}
 
 			// A lone non-template candidate (or a template candidate without explicit/deduced

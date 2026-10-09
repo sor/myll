@@ -16,17 +16,28 @@ namespace Myll.Resolver
 			string              name,
 			bool                receiverIsConst,
 			HashSet<Structural> visited,
-			ResolutionResult    result )
+			ResolutionResult    result,
+			List<TplArg>?       receiverArgs = null )
 		{
 			if( !visited.Add( structural ) )
 				return null;
 
 			Func? strict   = null;
 			Func? fallback = null;
+			Func? specMatch = null;
 
 			foreach( Decl decl in structural.children ) {
 				if( decl is not Func func || func.name != name )
 					continue;
+
+				// A specialization whose class arguments match the receiver
+				// shadows the primary operator, like the call path does.
+				if( func.SpecInfo != null
+				 && receiverArgs != null
+				 && SpecMatchesReceiver( func.SpecInfo, receiverArgs ) ) {
+					specMatch ??= func;
+					continue;
+				}
 
 				bool isConst = func.IsConstMethod;
 				if( receiverIsConst ) {
@@ -40,6 +51,8 @@ namespace Myll.Resolver
 				}
 			}
 
+			if( specMatch != null )
+				return specMatch;
 			if( strict != null )
 				return strict;
 			if( fallback != null )
@@ -54,13 +67,32 @@ namespace Myll.Resolver
 
 				if( baseDecl is Structural baseStruct ) {
 					Func? fromBase = LookupOperatorOverload(
-						baseStruct, name, receiverIsConst, visited, result );
+						baseStruct, name, receiverIsConst, visited, result, receiverArgs );
 					if( fromBase != null )
 						return fromBase;
 				}
 			}
 
 			return null;
+		}
+
+		// The specialization's bound class arguments must equal the receiver's;
+		// open member parameters are not handled by the operator path (the
+		// binary syntax cannot spell them).
+		private static bool SpecMatchesReceiver( Decl.SpecData info, List<TplArg> receiverArgs )
+		{
+			if( info.Args.Count != receiverArgs.Count )
+				return false;
+			for( int i = 0; i < info.Bound.Length; i++ ) {
+				if( !info.Bound[i] )
+					return false;
+				Typespec? bound = info.Args[i].typespec;
+				Typespec? got = i < receiverArgs.Count ? receiverArgs[i].typespec : null;
+				if( bound == null || got == null
+				 || bound.Gen() != got.Gen() )
+					return false;
+			}
+			return true;
 		}
 
 		public static bool TryGetOperatorReturnType(
@@ -77,8 +109,9 @@ namespace Myll.Resolver
 				return false;
 
 			bool receiverIsConst = ( nested.qual & Qualifier.Const ) != 0;
+			List<TplArg>? receiverArgs = nested.idTpls.LastOrDefault()?.tplArgs;
 			Func? op = LookupOperatorOverload(
-				structural, name, receiverIsConst, new HashSet<Structural>(), result );
+				structural, name, receiverIsConst, new HashSet<Structural>(), result, receiverArgs );
 			if( op == null )
 				return false;
 
