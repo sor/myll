@@ -146,3 +146,28 @@ class MPlain {
 	func partial<A, B>( A a, B b ) -> A => a;
 	func partial<A=int, B>( int a, int b ) -> int => a; // FAIL: Function templates allow only full specializations
 }
+
+// constructor specialization validation
+class CPlain {
+[pub]:
+	ctor( int v ) { }
+	ctor<T=int>( int v ) { } // FAIL: Constructor specializations need a class template
+}
+
+class CCover<T> {
+[pub]:
+	ctor( T v ) { }
+	ctor<X=int>( int v ) { } // FAIL: No matching constructor template in 'CCover'
+}
+
+class CSym<T> {
+[pub]:
+	ctor<U>( U u, T t ) { }
+	ctor<T=U>( int u, int t ) { } // FAIL: Specialization of 'CSym' must bind 'T' to a concrete type
+}
+
+class CSig<T> {
+[pub]:
+	ctor( T v ) { }
+	ctor<T=int>( int v, int b ) { } // FAIL: Specialization of the constructor of 'CSig' must repeat the primary's substituted parameters
+}

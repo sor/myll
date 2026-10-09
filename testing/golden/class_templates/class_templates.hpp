@@ -102,6 +102,8 @@ namespace spec
     template <typename T>
     class OpBox;
     template <typename T>
+    class Wrap;
+    template <typename T>
     class Box
     {
     public:
@@ -184,10 +186,10 @@ namespace spec
         }
     };
     template<>
-    int spec::Num::Get<int>(int t) const
-{
-    return t + _v;
-}
+    inline int spec::Num::Get<int>(int t) const
+    {
+        return t + _v;
+    }
     template <typename T>
     class Store
     {
@@ -208,22 +210,22 @@ namespace spec
         }
     };
     template<>
-    int spec::Store<int>::Val(int t) const
-{
-    return t + _v;
-}
+    inline int spec::Store<int>::Val(int t) const
+    {
+        return t + _v;
+    }
     template<>
     template <typename U>
-    U spec::Store<int>::Load(U u) const
-{
-    return u + 1;
-}
+    inline U spec::Store<int>::Load(U u) const
+    {
+        return u + 1;
+    }
     template<>
     template<>
-    int spec::Store<int>::Load<int>(int u) const
-{
-    return u + 3;
-}
+    inline int spec::Store<int>::Load<int>(int u) const
+    {
+        return u + 3;
+    }
     template <typename T>
     class OpBox
     {
@@ -239,11 +241,38 @@ namespace spec
         }
     };
     template<>
-    spec::OpBox<int> spec::OpBox<int>::operator+(spec::OpBox<int> other) const
-{
-    return OpBox( other._v + _v + 100 );
-}
+    inline spec::OpBox<int> spec::OpBox<int>::operator+(spec::OpBox<int> other) const
+    {
+        return OpBox( other._v + _v + 100 );
+    }
+    template <typename T>
+    class Wrap
+    {
+    public:
+        T _v{};
+        explicit Wrap(T v)
+        {
+            _v = v;
+        }
+        template <typename U>
+        Wrap(U u, T t)
+        {
+            _v = t;
+        }
+    };
+    template<>
+    inline spec::Wrap<int>::Wrap(int v)
+    {
+        _v = v + 100;
+    }
+    template<>
+    template<>
+    inline spec::Wrap<float>::Wrap(std::int32_t u, float t)
+    {
+        _v = t + 1.5f;
+    }
     int run();
+    int run3();
     int run2();
 }
 namespace static_member

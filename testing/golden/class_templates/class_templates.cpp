@@ -92,6 +92,30 @@ int spec::run()
     }
     return 0;
 }
+int spec::run3()
+{
+    spec::Wrap<int> a( 1 );
+    if( a._v != 101 ) {
+        return 1;
+    }
+    spec::Wrap<float> b( 2.5f );
+    if( b._v < 2.4f ) {
+        return 2;
+    }
+    spec::Wrap<float> d( 1, 2.5f );
+    if( d._v < 3.9f || d._v > 4.1f ) {
+        return 3;
+    }
+    spec::Wrap<std::int64_t> e( 4, 5 );
+    if( e._v != 5 ) {
+        return 4;
+    }
+    spec::Wrap<std::int64_t> f = spec::Wrap<std::int64_t>( 6, 7 );
+    if( f._v != 7 ) {
+        return 5;
+    }
+    return 0;
+}
 int spec::run2()
 {
     spec::Num n( 2 );
