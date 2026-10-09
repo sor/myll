@@ -3,12 +3,14 @@
 Status: **implemented 2026-10-04** (phase 1: same-module variable specializations),
 **2026-10-08** (phase 3: cross-module + ODR guard; phase 2: class/struct/union
 specializations; phase 4: function specializations, same-module and cross-module;
-phase 5: method specializations).
+phase 5: method specializations; phase 6/6b: constructor templates and
+specializations, plus declared specializations in prototype modules).
 Cases: `testing/cases/var_templates/`, `testing/cases/class_templates/`,
-`testing/cases/cross_module_var_spec/`, `testing/cases/cross_module_struct_spec/`
-and `testing/cases/cross_module_func_spec/` (positive), `template_fail/`,
-`cross_module_clash_fail/`, `cross_module_var_spec_fail/`,
-`cross_module_struct_spec_fail/` and `cross_module_func_spec_fail/` (negative).
+`testing/cases/cross_module_var_spec/`, `testing/cases/cross_module_struct_spec/`,
+`testing/cases/cross_module_func_spec/` and `testing/cases/cross_module_decl_spec/`
+(positive), `template_fail/`, `cross_module_clash_fail/`,
+`cross_module_var_spec_fail/`, `cross_module_struct_spec_fail/`,
+`cross_module_func_spec_fail/` and `cross_module_decl_spec_fail/` (negative).
 
 ## Syntax
 
@@ -207,20 +209,58 @@ Decisions (settled 2026-10-04):
   guard is unchanged: same-module duplicates are caught by the transformer's
   per-primary signature check.
 
+## Constructor templates and specializations (phase 6)
+
+- **Constructor templates** (`ctor<U>( U u, T t )`): their arguments are always
+  deduced from the call arguments (C++ has no spelling for them at call sites;
+  the class arguments come from the callee's template-id). `TryResolveOverload`
+  gained a Structor deduction branch with enclosing class substitution;
+  `TemplateInference.TryDeduceTemplateArgs` is generalized over `Func` and
+  `Structor`. Emission adds the `template<...>` prefix in-class.
+- **Constructor specializations** bind class parameters first, then the
+  constructor's own. Scratch-verified against g++ and clang:
+  - the deduction spelling is portable on both (`template<> template<>
+    Store<int>::Store(char, int)` and `template<> Store<int>::Store(int)`),
+  - template-ids on constructor names are compiler-divergent (clang rejects
+    them), so constructor names never carry template arguments — fully bound
+    specs use the deduction form,
+  - plain-class specializations are rejected by both compilers → Myll rejects
+    them ("constructor specializations need a class template").
+- Emission is out-of-line after the class like method specializations, with the
+  `inline` keyword (also fixed for method specializations: they are header
+  entities, so every importing TU would define them otherwise) and bodies
+  indented relative to the emission level. `explicit`/`[[nodiscard]]` are not
+  repeated out-of-line (class-scope only). Bound-parameter aliases work for
+  constructors too and no longer trip the local shadowing diagnostics.
+
+## Declared specializations in prototype modules (phase 6b)
+
+- A specialization declared in a `.decl.myll` says "the real header already
+  specializes this": it feeds resolution (uses resolve against the specialized
+  member set) and the cross-module duplicate guard (re-specializing from an
+  authored module is rejected, because the generated definition would collide
+  with the header's), and the module emits nothing.
+- The `SpecTransformer` runs in prototype files; bodiless function/constructor
+  specializations are accepted there since only the signature matters. The spec
+  collector no longer skips prototype modules. Visibility flows through the
+  existing sets: implicit std modules everywhere, explicitly imported ones
+  otherwise.
+
 ## Deferred inventory
 
 - Specialization of member (field-scope) variable and class templates: the transformer's
   imported-primary search follows namespaces only; those stay same-module for now.
-  Method (member function) specializations are implemented (phase 5, same-module);
-  cross-module method specializations need a class-reopen or out-of-line syntax.
-  Constructor templates and their specializations remain unimplemented (Myll has no
-  general constructor template parameters yet).
+  Method (member function) and constructor specializations are implemented (phases 5/6,
+  same-module); cross-module method specializations need a class-reopen or out-of-line
+  syntax.
 - A future attribute to constrain class specializations: e.g. `[interface]` to enforce that a
   specialization exposes the primary's member set, or `[copy]` to copy the primary's members
   and only override the listed ones. The C++-first semantics (fresh member set, bound names
   not in scope) stay the default.
 - Retrofitting bound-parameter aliases to variables (initializer expressions) and
   class/struct specializations (bodies), so all kinds allow writing `T` after binding.
+- Templated conversion constructors (`ctor convert <- T` with template parameters): the
+  `convert` path is a separate declaration form today.
 - Runtime primary instantiation from an importing module: the primary's definition lives in
   its module's `.cpp` while importers only see the `extern` declaration, so importing
   translation units cannot implicitly instantiate it. Same-module runtime primaries work.
