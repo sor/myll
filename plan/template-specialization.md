@@ -2,7 +2,8 @@
 
 Status: **implemented 2026-10-04** (phase 1: same-module variable specializations),
 **2026-10-08** (phase 3: cross-module + ODR guard; phase 2: class/struct/union
-specializations; phase 4: function specializations, same-module and cross-module).
+specializations; phase 4: function specializations, same-module and cross-module;
+phase 5: method specializations).
 Cases: `testing/cases/var_templates/`, `testing/cases/class_templates/`,
 `testing/cases/cross_module_var_spec/`, `testing/cases/cross_module_struct_spec/`
 and `testing/cases/cross_module_func_spec/` (positive), `template_fail/`,
@@ -166,12 +167,54 @@ Decisions (settled 2026-10-04):
   (`max( 21 )`), and C++ overload resolution picks the specialization.
 - Same ODR guard as the other kinds through the shared `specsByPrimary` index.
 
+## Method specializations (phase 5)
+
+- **Syntax**: in-class, named bindings covering the class parameters first, then the
+  method's own:
+  ```myll
+  class Store<T> {
+      func Val( T t ) -> T => t;
+      func Val<T=int>( T t ) -> T => t + 1;      // plain method: template<> int Store<int>::Val(int)
+      func Load<U>( U u ) -> U => u;
+      func Load<T=int>( U u ) -> U => u + 1;     // open member: template<> template<typename U> ... Store<int>::Load(U)
+      func Load<T=int, U=int>( U u ) -> U => u + 3; // full: template<> template<> ... Store<int>::Load<int>(int)
+  }
+  ```
+  Plain-class method templates work the same way with only member parameters
+  (full-only); operators ride along (`operator +<T=int>(...)`).
+- **Rules**: class parameters must be fully bound to concrete types (C++ requires
+  concrete class arguments; symbolic bindings like `T=U` are rejected); member
+  parameters may stay open, but only when the class is a template; specs inside a
+  class specialization are rejected (specialize the class instead); method/class
+  parameter name collisions are rejected. Signature equality, bound-parameter
+  aliases, and duplicate signatures reuse the free-function machinery.
+- **Emission**: out-of-line right after the class body closes — g++ and clang
+  reject in-class member specializations (verified against g++-14, the container
+  compiler line). The owner class name inside the specialization stands for the
+  specialized instantiation (`OpBox` = `OpBox<int>`) through a bound alias, because
+  the injected class name is not usable out-of-line (verified: g++ rejects it).
+  Operators drop the name template arguments (deduced from the signature).
+- **Resolution**: member lookup returns primary and specialization as candidates;
+  `TryResolveOverload` combines the receiver's class arguments
+  (`GetOwnerTemplateInfo`) with explicit or deduced member arguments before
+  matching, and among matching specs the most-bound wins (C++ partial ordering).
+  Calls whose class arguments are not yet known defer instead of erroring; calls
+  that resolved to a spec are not re-resolved. Operator picks
+  (`LookupOperatorOverload`) prefer the spec matching the receiver's class
+  arguments.
+- **Scope**: same-module only (specs live in the class body). Cross-module method
+  specializations need a class-reopen or out-of-line syntax — deferred. The ODR
+  guard is unchanged: same-module duplicates are caught by the transformer's
+  per-primary signature check.
+
 ## Deferred inventory
 
-- Specialization of member (field-scope) templates, variable or class: the transformer's
-  imported-primary search follows namespaces only; members stay same-module for now.
-  Method (member function) specialization likewise stays unimplemented (the transformer
-  rejects attempts with a hint to move to module/namespace scope).
+- Specialization of member (field-scope) variable and class templates: the transformer's
+  imported-primary search follows namespaces only; those stay same-module for now.
+  Method (member function) specializations are implemented (phase 5, same-module);
+  cross-module method specializations need a class-reopen or out-of-line syntax.
+  Constructor templates and their specializations remain unimplemented (Myll has no
+  general constructor template parameters yet).
 - A future attribute to constrain class specializations: e.g. `[interface]` to enforce that a
   specialization exposes the primary's member set, or `[copy]` to copy the primary's members
   and only override the listed ones. The C++-first semantics (fresh member set, bound names
