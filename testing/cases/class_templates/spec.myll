@@ -129,6 +129,22 @@ class SpecBox<T=int> {
 	ctor<U>( U u, int v ) { _v = v + (int)u; }
 }
 
+// Bound parameter names stay usable in member signatures and bodies: the
+// spec below writes T everywhere, which the bound alias expands to int.
+class Rebind<T> {
+[pub]:
+	field T _v;
+	ctor( T v ) { _v = v; }
+	func twice() -> T => _v + _v;
+}
+
+class Rebind<T=int> {
+[pub]:
+	field T _v;
+	ctor( T v ) { _v = v; }
+	func twice() -> T => _v + _v;
+}
+
 class Store<T> {
 [pub]:
 	field T _v;
@@ -191,6 +207,10 @@ func run3() -> int
 	var SpecBox<int> sb( 1.5, 4 );
 	if( sb._v != 5 ) // ctor template inside the class spec
 		return 7;
+
+	var Rebind<int> r( 21 );
+	if( r.twice() != 42 ) // members written with the bound name
+		return 8;
 	return 0;
 }
 

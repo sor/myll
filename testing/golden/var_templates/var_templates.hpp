@@ -27,6 +27,9 @@ inline constexpr T z = static_cast<T>( 17 );
 template <typename T> inline constexpr T z<T, int> = static_cast<T>( 170 );
 template <typename T> inline constexpr T z<T, float> = static_cast<T>( 171 );
 template <typename T>
+inline constexpr T rtv = static_cast<T>( 0 );
+template<> inline constexpr int rtv<int> = static_cast<int>( 21 );
+template <typename T>
 inline constexpr Pair<T, T> pairDup = Pair<T, T>();
 template <typename T, typename U>
 class Pair

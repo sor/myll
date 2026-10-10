@@ -51,14 +51,17 @@ int main()
     if( rt<int> != 5 ) {
         return 14;
     }
-    if( rt<std::int64_t> != 0 ) {
+    if( rtv<int> != 21 ) {
         return 15;
     }
-    if( rtq<std::int64_t, int> != 70 ) {
+    if( rt<std::int64_t> != 0 ) {
         return 16;
     }
-    if( rtq<int, std::int64_t> != 7 ) {
+    if( rtq<std::int64_t, int> != 70 ) {
         return 17;
+    }
+    if( rtq<int, std::int64_t> != 7 ) {
+        return 18;
     }
     return 0;
 }

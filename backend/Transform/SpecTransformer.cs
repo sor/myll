@@ -166,6 +166,11 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 				spec.type = specType;
 				spec.TplParams = unboundParams;
 				InjectParams( spec.varScope, unboundParams, spec.srcPos );
+
+				// Bound parameter names stay usable in the initializer through
+				// the same aliases as functions: (T)3 resolves T to the bound
+				// value, emission expands it.
+				InjectBoundAliases( spec.varScope, new List<Param>(), spec.srcPos, boundValues );
 			}
 		}
 
@@ -294,6 +299,12 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 				};
 				spec.TplParams = unboundParams;
 				InjectParams( spec.scope, unboundParams, spec.srcPos );
+
+				// Bound parameter names stay usable in member signatures and
+				// bodies: field T _v; or func get() -> T inside class Box<T=int>
+				// resolves T to the bound value, and emission expands it, so the
+				// spelling concrete types stays optional.
+				InjectBoundAliases( spec.scope, new List<Param>(), spec.srcPos, BoundValuesOf( spec.TplSpec ) );
 			}
 		}
 

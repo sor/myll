@@ -100,6 +100,8 @@ namespace spec
     template <typename T>
     class SpecBox;
     template <typename T>
+    class Rebind;
+    template <typename T>
     class Store;
     template <typename T>
     class OpBox;
@@ -215,6 +217,34 @@ namespace spec
         SpecBox(U u, int v)
         {
             _v = v + static_cast<int>( u );
+        }
+    };
+    template <typename T>
+    class Rebind
+    {
+    public:
+        T _v{};
+        explicit Rebind(T v)
+        {
+            _v = v;
+        }
+        inline T twice() const
+        {
+            return _v + _v;
+        }
+    };
+    template<>
+    class Rebind<int>
+    {
+    public:
+        int _v{};
+        explicit Rebind(int v)
+        {
+            _v = v;
+        }
+        inline int twice() const
+        {
+            return _v + _v;
         }
     };
     template <typename T>

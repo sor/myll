@@ -122,6 +122,10 @@ int spec::run3()
     if( sb._v != 5 ) {
         return 7;
     }
+    spec::Rebind<int> r( 21 );
+    if( r.twice() != 42 ) {
+        return 8;
+    }
     return 0;
 }
 int spec::run2()

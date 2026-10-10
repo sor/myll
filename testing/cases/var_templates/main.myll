@@ -19,6 +19,11 @@ const T z<T, U> = (T)17;
 const T z<U=int> = (T)170;
 const T z<U=f32> = (T)171;
 
+// bound parameter names stay usable in the initializer: the (T) below names
+// the bound parameter, which the alias expands to int
+const T rtv<T> = (T)0;
+const T rtv<T=int> = (T)21;
+
 // runtime variable templates specialize as inline variables; constexpr is
 // const-only and the extern-declaration split does not exist for them
 var T rt<T> = (T)0;
@@ -76,12 +81,14 @@ func main() -> int {
 
 	if( rt<int> != 5 )
 		return 14;
-	if( rt<i64> != 0 )
+	if( rtv<int> != 21 ) // the initializer wrote (T), T bound to int
 		return 15;
-	if( rtq<i64, int> != 70 )
+	if( rt<i64> != 0 )
 		return 16;
-	if( rtq<int, i64> != 7 )
+	if( rtq<i64, int> != 70 )
 		return 17;
+	if( rtq<int, i64> != 7 )
+		return 18;
 
 	return 0;
 }
