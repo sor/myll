@@ -41,17 +41,24 @@ func main() -> int {
 		return 4;
 	if( folded<9> != 111 )
 		return 5;
+	if( folded<4+5> != 111 ) // folded use args match folded specs
+		return 6;
+	if( folded<0 - 5> != -5 ) // spaced minus folds to -5, stays primary
+		return 7;
 	if( twice<4> != 8 )
 		return 6;
 
 	var Fixed<int, 3> f;
 	if( f.len() != 30 )
-		return 7;
-	if( f.first() != 1 )
 		return 8;
+	if( f.first() != 1 )
+		return 9;
 	var Fixed<f32, 9> g;
 	if( g.len() != 9 )
-		return 9;
+		return 10;
+	var Fixed<f64, 2*2> h; // folded use arg: 4
+	if( h.len() != 4 )
+		return 11;
 
 	return 0;
 }
