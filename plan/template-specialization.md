@@ -290,12 +290,13 @@ Decisions (settled 2026-10-04):
 
 ## Deferred inventory
 
-- Folded constant expressions in non-type bindings (`N=2*8`): bindings accept
-  integer literals today; folding the resolver's constant arithmetic into
-  binding values follows.
+- Use-site folded or named template arguments: use sites accept plain literals
+  (`Arr<int, 5>`); spelled-out expressions or named constants there are future work.
 - Non-type substitution inside declared types: a variable specialization whose
   declared type references a bound non-type parameter (array sizes) is not
   substituted yet; class specializations are unaffected (no declared type).
+- Non-type bindings fold literal integer arithmetic only (`N=2*8` folds to 16);
+  named constants or calls stay unfolded (same restriction as use sites).
 - Specialization of member (field-scope) variable and class templates: the transformer's
   imported-primary search follows namespaces only; those stay same-module for now.
   Method (member function) and constructor specializations are implemented (phases 5/6,
