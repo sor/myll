@@ -102,36 +102,18 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 				if( spec.TplSpec.Count == 0 )
 					continue;
 
-				List<VarDecl> primaries = vars
-					.Where( v => v.name == spec.name && v.SpecInfo == null && v.TplParams.Count > 0 )
-					.ToList();
-
-				VarDecl? primary = primaries.Count > 0
-					? primaries[0]
-					: ( nsFqn != null ? FindImportedPrimary( spec.name, nsFqn, IsVarPrimary ) as VarDecl : null );
-
+				(VarDecl? primary, bool isImported) = FindPrimary( vars, spec,
+					v => v.name == spec.name && v.SpecInfo == null && v.TplParams.Count > 0,
+					IsVarPrimary, nsFqn,
+					String.Format( "No matching variable template '{0}' in this module or its imports; a specialization must live in the primary's module or import it",
+						spec.name ) );
 				if( primary == null ) {
-					Diagnostics.Add( new Diagnostic(
-						spec.srcPos,
-						DiagnosticKind.Error,
-						String.Format( "No matching variable template '{0}' in this module or its imports; a specialization must live in the primary's module or import it",
-							spec.name ) ) );
 					MarkInvalidSpec( spec );
 					continue;
 				}
 
-				bool isImportedPrimary = primaries.Count == 0;
-
-				// Within one module the specialization must follow the primary by
-				// source position, not processing order, so multi-file modules stay
-				// order-independent. A cross-module primary needs no check: the include
-				// of the primary's module precedes every declaration of this one.
-				if( !isImportedPrimary && !IsLaterPos( spec, primary ) ) {
-					Diagnostics.Add( new Diagnostic(
-						spec.srcPos,
-						DiagnosticKind.Error,
-						String.Format( "Specialization of '{0}' must follow its primary template",
-							spec.name ) ) );
+				if( !ValidateFollowOrder( spec, primary, isImported, String.Format( "Specialization of '{0}' must follow its primary template",
+					spec.name ) ) ) {
 					MarkInvalidSpec( spec );
 					continue;
 				}
@@ -148,17 +130,12 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 				// with the primary's substituted type. The original symbolic type was
 				// registered as unresolved at visit time; the substituted type needs
 				// no resolution of its own.
-				Dictionary<string, Typespec> boundValues = new( StringComparer.Ordinal );
-				foreach( TplBinding binding in spec.TplSpec ) {
-					if( binding.type != null )
-						boundValues[ binding.name ] = binding.type;
-				}
+				Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 
-				Typespec originalType = spec.type;
 				Typespec specType = SubstituteBindings( spec.type, boundValues );
 				Typespec primaryType = SubstituteBindings( primary.type, boundValues );
 
-				context.UnresolvedTypes.RemoveAll( ut => ReferenceEquals( ut.Node, originalType ) );
+				context.UnresolvedTypes.RemoveAll( ut => ReferenceEquals( ut.Node, spec.type ) );
 
 				if( specType.Gen() != primaryType.Gen() ) {
 					Diagnostics.Add( new Diagnostic(
@@ -177,6 +154,8 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 				}
 
 				// Fill the spec info: every primary parameter in order, bound or symbolic.
+				// Unbound parameters become the specialization's own template
+				// parameters, injected into its scope so initializers can use them.
 				List<TplArg> args = BuildSpecArgs( primary.TplParams, spec.TplSpec, out bool[] bound, out List<TplParam> unboundParams );
 
 				spec.SpecInfo = new Decl.SpecData {
@@ -186,11 +165,65 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 				};
 				spec.type = specType;
 				spec.TplParams = unboundParams;
-
-				// Unbound parameters become the specialization's own template
-				// parameters, injected into its scope so initializers can use them.
 				InjectParams( spec.varScope, unboundParams, spec.srcPos );
 			}
+		}
+
+		/// <summary>
+		/// The shared primary search: same-module primaries from the predicate,
+		/// then the imported fallback (module-scope kinds only). Emits the
+		/// no-primary diagnostic itself; the caller marks the spec invalid.
+		/// </summary>
+		private (TSpec? Primary, bool IsImported) FindPrimary<TSpec>(
+			List<TSpec>            candidates,
+			TSpec                  spec,
+			Func<TSpec, bool>      isLocalPrimary,
+			Func<Decl, bool>?      importedFilter,
+			string?                nsFqn,
+			string                 noPrimaryMessage )
+			where TSpec : Decl
+		{
+			List<TSpec> primaries = candidates.Where( isLocalPrimary ).ToList();
+
+			TSpec? primary = primaries.Count > 0
+				? primaries[0]
+				: ( importedFilter != null && nsFqn != null
+					? FindImportedPrimary( spec.name, nsFqn, importedFilter ) as TSpec
+					: null );
+
+			if( primary == null )
+				Diagnostics.Add( new Diagnostic( spec.srcPos, DiagnosticKind.Error, noPrimaryMessage ) );
+
+			// An imported primary needs no follow check: the include of the
+			// primary's module precedes every declaration of this one.
+			return (primary, primaries.Count == 0);
+		}
+
+		/// <summary>
+		/// Within one module the specialization must follow the primary by
+		/// source position, not processing order, so multi-file modules stay
+		/// order-independent.
+		/// </summary>
+		private bool ValidateFollowOrder( Decl spec, Decl primary, bool isImported, string message )
+		{
+			if( isImported || IsLaterPos( spec, primary ) )
+				return true;
+
+			Diagnostics.Add( new Diagnostic( spec.srcPos, DiagnosticKind.Error, message ) );
+			return false;
+		}
+
+		// The bound values of a specialization's bindings, keyed by parameter
+		// name; unbound placeholders are skipped.
+		private static Dictionary<string, Typespec> BoundValuesOf( List<TplBinding> tplSpec )
+		{
+			Dictionary<string, Typespec> boundValues = new( StringComparer.Ordinal );
+			foreach( TplBinding binding in tplSpec ) {
+				if( binding.type != null )
+					boundValues[ binding.name ] = binding.type;
+			}
+
+			return boundValues;
 		}
 
 		/// <summary>
@@ -212,36 +245,18 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 				if( spec.TplSpec.Count == 0 )
 					continue;
 
-				List<Myll.Core.Structural> primaries = structs
-					.Where( s => s.name == spec.name && s.SpecInfo == null && s.TplParams.Count > 0 )
-					.ToList();
-
-				Myll.Core.Structural? primary = primaries.Count > 0
-					? primaries[0]
-					: ( nsFqn != null ? FindImportedPrimary( spec.name, nsFqn, IsStructPrimary ) as Myll.Core.Structural : null );
-
+				(Myll.Core.Structural? primary, bool isImported) = FindPrimary( structs, spec,
+					s => s.name == spec.name && s.SpecInfo == null && s.TplParams.Count > 0,
+					IsStructPrimary, nsFqn,
+					String.Format( "No matching template '{0}' in this module or its imports; a class/struct/union specialization must live in the primary's module or import it",
+						spec.name ) );
 				if( primary == null ) {
-					Diagnostics.Add( new Diagnostic(
-						spec.srcPos,
-						DiagnosticKind.Error,
-						String.Format( "No matching template '{0}' in this module or its imports; a class/struct/union specialization must live in the primary's module or import it",
-							spec.name ) ) );
 					MarkInvalidSpec( spec );
 					continue;
 				}
 
-				bool isImportedPrimary = primaries.Count == 0;
-
-				// Within one module the specialization must follow the primary by
-				// source position, not processing order, so multi-file modules stay
-				// order-independent. A cross-module primary needs no check: the
-				// include of the primary's module precedes every declaration of this one.
-				if( !isImportedPrimary && !IsLaterPos( spec, primary ) ) {
-					Diagnostics.Add( new Diagnostic(
-						spec.srcPos,
-						DiagnosticKind.Error,
-						String.Format( "Specialization of '{0}' must follow its primary template",
-							spec.name ) ) );
+				if( !ValidateFollowOrder( spec, primary, isImported, String.Format( "Specialization of '{0}' must follow its primary template",
+					spec.name ) ) ) {
 					MarkInvalidSpec( spec );
 					continue;
 				}
@@ -267,6 +282,9 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 					continue;
 				}
 
+				// Unbound parameters become the specialization's own template
+				// parameters, injected into its class scope like
+				// TemplateParamTransformer does for primaries.
 				List<TplArg> args = BuildSpecArgs( primary.TplParams, spec.TplSpec, out bool[] bound, out List<TplParam> unboundParams );
 
 				spec.SpecInfo = new Decl.SpecData {
@@ -275,10 +293,6 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 					Bound   = bound,
 				};
 				spec.TplParams = unboundParams;
-
-				// Unbound parameters become the specialization's own template
-				// parameters, injected into its class scope like
-				// TemplateParamTransformer does for primaries.
 				InjectParams( spec.scope, unboundParams, spec.srcPos );
 			}
 		}
@@ -319,38 +333,21 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 					continue;
 				}
 
-				List<Func> primaries = funcs
-					.Where( f => f.name == spec.name && f.SpecInfo == null && f.TplParams.Count > 0 )
-					.ToList();
+(Func? primary, bool isImported) = FindPrimary( funcs, spec,
+					f => f.name == spec.name && f.SpecInfo == null && f.TplParams.Count > 0,
+					IsFuncPrimary, nsFqn,
+					String.Format( "No matching function template '{0}' in this module or its imports; a specialization must live in the primary's module or import it",
+						spec.name ) );
+			if( primary == null ) {
+				MarkInvalidSpec( spec );
+				continue;
+			}
 
-				Func? primary = primaries.Count > 0
-					? primaries[0]
-					: ( nsFqn != null ? FindImportedPrimary( spec.name, nsFqn, IsFuncPrimary ) as Func : null );
-
-				if( primary == null ) {
-					Diagnostics.Add( new Diagnostic(
-						spec.srcPos,
-						DiagnosticKind.Error,
-						String.Format( "No matching function template '{0}' in this module or its imports; a specialization must live in the primary's module or import it",
-							spec.name ) ) );
-					MarkInvalidSpec( spec );
-					continue;
-				}
-
-				bool isImportedPrimary = primaries.Count == 0;
-
-				// Within one module the specialization must follow the primary by
-				// source position; a cross-module primary needs no check because
-				// its include precedes this module's declarations.
-				if( !isImportedPrimary && !IsLaterPos( spec, primary ) ) {
-					Diagnostics.Add( new Diagnostic(
-						spec.srcPos,
-						DiagnosticKind.Error,
-						String.Format( "Specialization of '{0}' must follow its primary template",
-							spec.name ) ) );
-					MarkInvalidSpec( spec );
-					continue;
-				}
+			if( !ValidateFollowOrder( spec, primary, isImported, String.Format( "Specialization of '{0}' must follow its primary template",
+				spec.name ) ) ) {
+				MarkInvalidSpec( spec );
+				continue;
+			}
 
 				// Function templates allow only full specializations: every
 				// parameter must be bound, so no bare names and a full count.
@@ -395,22 +392,7 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 				foreach( TplBinding binding in spec.TplSpec )
 					boundValues[ binding.name ] = binding.type!;
 
-				bool signatureMatches = spec.paras.Count == primary.paras.Count;
-				if( signatureMatches ) {
-					for( int i = 0; i < spec.paras.Count; i++ ) {
-						if( SubstituteBindings( spec.paras[i].type, boundValues ).Gen()
-						 != SubstituteBindings( primary.paras[i].type, boundValues ).Gen() ) {
-							signatureMatches = false;
-							break;
-						}
-					}
-				}
-				if( signatureMatches
-				 && SubstituteBindings( spec.retType, boundValues ).Gen()
-				 != SubstituteBindings( primary.retType, boundValues ).Gen() )
-					signatureMatches = false;
-
-				if( !signatureMatches ) {
+				if( !SignatureMatchesParas( spec, primary, boundValues ) ) {
 					Diagnostics.Add( new Diagnostic(
 						spec.srcPos,
 						DiagnosticKind.Error,
@@ -444,6 +426,43 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 
 		private static bool IsAutoType( Typespec type )
 			=> type is TypespecBasic { kind: TypespecBasic.Kind.ImplicitAuto or TypespecBasic.Kind.ExplicitAuto };
+
+		// The specialization repeats the primary's substituted parameter types
+		// and, for functions, the return type.
+		private static bool SignatureMatchesParas( Func spec, Func primary, Dictionary<string, Typespec> boundValues )
+		{
+			bool signatureMatches = spec.paras.Count == primary.paras.Count;
+			if( signatureMatches ) {
+				for( int i = 0; i < spec.paras.Count; i++ ) {
+					if( SubstituteBindings( spec.paras[i].type, boundValues ).Gen()
+					 != SubstituteBindings( primary.paras[i].type, boundValues ).Gen() ) {
+						signatureMatches = false;
+						break;
+					}
+				}
+			}
+			if( signatureMatches
+			 && SubstituteBindings( spec.retType, boundValues ).Gen()
+			 != SubstituteBindings( primary.retType, boundValues ).Gen() )
+				signatureMatches = false;
+
+			return signatureMatches;
+		}
+
+		// Constructors have no return type.
+		private static bool SignatureMatchesParas( Structor spec, Structor primary, Dictionary<string, Typespec> boundValues )
+		{
+			if( spec.paras.Count != primary.paras.Count )
+				return false;
+
+			for( int i = 0; i < spec.paras.Count; i++ ) {
+				if( SubstituteBindings( spec.paras[i].type, boundValues ).Gen()
+				 != SubstituteBindings( primary.paras[i].type, boundValues ).Gen() )
+					return false;
+			}
+
+			return true;
+		}
 
 		/// <summary>
 		/// Validates member specializations inside one class: the bindings name
@@ -489,16 +508,12 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 				// The primary is a same-name method of the same class whose
 				// parameter list covers all binding names: the class parameters
 				// followed by the method's own.
-				List<Func> coveringPrimaries = funcs
-					.Where( f => f != spec && f.name == spec.name && f.SpecInfo == null && CoversBindings( owner, f, spec ) )
-					.ToList();
-
-				if( coveringPrimaries.Count == 0 ) {
-					Diagnostics.Add( new Diagnostic(
-						spec.srcPos,
-						DiagnosticKind.Error,
-						String.Format( "No matching method template '{0}' in this class; a specialization must name class and method parameters",
-							spec.name ) ) );
+				(Func? primary, _) = FindPrimary( funcs, spec,
+					f => f != spec && f.name == spec.name && f.SpecInfo == null && CoversBindings( owner, f, spec ),
+					null, null,
+					String.Format( "No matching method template '{0}' in this class; a specialization must name class and method parameters",
+						spec.name ) );
+				if( primary == null ) {
 					MarkInvalidSpec( spec );
 					continue;
 				}
@@ -507,7 +522,7 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 				// the bindings map by name, so rename one.
 				List<TplParam> probeTarget = new();
 				probeTarget.AddRange( owner.TplParams );
-				probeTarget.AddRange( coveringPrimaries[0].TplParams );
+				probeTarget.AddRange( primary.TplParams );
 				if( probeTarget.GroupBy( p => p.name ).Any( g => g.Count() > 1 ) ) {
 					Diagnostics.Add( new Diagnostic(
 						spec.srcPos,
@@ -518,18 +533,12 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 					continue;
 				}
 
-				Func primary = coveringPrimaries[0];
 				List<TplParam> target = new();
 				target.AddRange( owner.TplParams );
 				target.AddRange( primary.TplParams );
 
-				// The specialization must follow the primary by source position.
-				if( !IsLaterPos( spec, primary ) ) {
-					Diagnostics.Add( new Diagnostic(
-						spec.srcPos,
-						DiagnosticKind.Error,
-						String.Format( "Specialization of '{0}' must follow its primary template",
-							spec.name ) ) );
+				if( !ValidateFollowOrder( spec, primary, false, String.Format( "Specialization of '{0}' must follow its primary template",
+					spec.name ) ) ) {
 					MarkInvalidSpec( spec );
 					continue;
 				}
@@ -541,14 +550,8 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 
 				// Every class parameter must be bound to a concrete value: C++
 				// requires concrete class arguments for member specializations.
-				bool classParamsBound = owner.TplParams
-					.All( p => spec.TplSpec.Any( b => b.name == p.name && b.type != null ) );
-				if( !classParamsBound ) {
-					Diagnostics.Add( new Diagnostic(
-						spec.srcPos,
-						DiagnosticKind.Error,
-						String.Format( "Specialization of '{0}' must bind all class template parameters of '{1}' with concrete types",
-							spec.name, owner.name ) ) );
+				if( !ClassParamsBound( spec, owner, String.Format( "Specialization of '{0}' must bind all class template parameters of '{1}' with concrete types",
+						spec.name, owner.name ) ) ) {
 					MarkInvalidSpec( spec );
 					continue;
 				}
@@ -587,28 +590,9 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 					continue;
 				}
 
-				Dictionary<string, Typespec> boundValues = new( StringComparer.Ordinal );
-				foreach( TplBinding binding in spec.TplSpec ) {
-					if( binding.type != null )
-						boundValues[ binding.name ] = binding.type;
-				}
+Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 
-				bool signatureMatches = spec.paras.Count == primary.paras.Count;
-				if( signatureMatches ) {
-					for( int i = 0; i < spec.paras.Count; i++ ) {
-						if( SubstituteBindings( spec.paras[i].type, boundValues ).Gen()
-						 != SubstituteBindings( primary.paras[i].type, boundValues ).Gen() ) {
-							signatureMatches = false;
-							break;
-						}
-					}
-				}
-				if( signatureMatches
-				 && SubstituteBindings( spec.retType, boundValues ).Gen()
-				 != SubstituteBindings( primary.retType, boundValues ).Gen() )
-					signatureMatches = false;
-
-				if( !signatureMatches ) {
+				if( !SignatureMatchesParas( spec, primary, boundValues ) ) {
 					Diagnostics.Add( new Diagnostic(
 						spec.srcPos,
 						DiagnosticKind.Error,
@@ -637,24 +621,7 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 				// bound ones stay usable through bound-parameter aliases.
 				InjectParams( spec.funcScope, unboundParams, spec.srcPos );
 				InjectBoundAliases( spec, boundValues );
-
-				// The owner's class name inside the specialization means the
-				// specialized instantiation (OpBox stands for OpBox<int>): the
-				// out-of-line emission cannot use the injected class name.
-				if( owner.TplParams.Count > 0 && spec.funcScope != null ) {
-					List<TplArg> ownerArgs = spec.SpecInfo.Args
-						.Take( owner.TplParams.Count )
-						.ToList();
-					TypespecNested ownerType = new() {
-						idTpls = new List<IdTplArgs> { new() { id = owner.name, tplArgs = ownerArgs } },
-					};
-					AddBoundAlias( spec.funcScope, owner.name, ownerType, spec.srcPos );
-
-					// Resolve the aliased type against the class scope: the class
-					// name would resolve through the alias itself otherwise.
-					context.UnresolvedTypes.Add(
-						new UnresolvedType( ownerType, spec.funcScope.parent ?? spec.funcScope ) );
-				}
+				InjectOwnerAlias( spec, owner, spec.funcScope );
 			}
 		}
 
@@ -715,31 +682,22 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 				// The primary is a same-class constructor whose parameter list
 				// covers all binding names: the class parameters followed by its
 				// own.
-				List<Structor> coveringPrimaries = ctors
-					.Where( c => c != spec && c.SpecInfo == null && CoversCtorBindings( owner, c, spec ) )
-					.ToList();
-
-				if( coveringPrimaries.Count == 0 ) {
-					Diagnostics.Add( new Diagnostic(
-						spec.srcPos,
-						DiagnosticKind.Error,
-						String.Format( "No matching constructor template in '{0}'; a specialization must name class and constructor parameters",
-							owner.name ) ) );
+				(Structor? primary, _) = FindPrimary( ctors, spec,
+					c => c != spec && c.SpecInfo == null && CoversCtorBindings( owner, c, spec ),
+					null, null,
+					String.Format( "No matching constructor template in '{0}'; a specialization must name class and constructor parameters",
+						owner.name ) );
+				if( primary == null ) {
 					MarkInvalidSpec( spec );
 					continue;
 				}
 
-				Structor primary = coveringPrimaries[0];
 				List<TplParam> target = new();
 				target.AddRange( owner.TplParams );
 				target.AddRange( primary.TplParams );
 
-				if( !IsLaterPos( spec, primary ) ) {
-					Diagnostics.Add( new Diagnostic(
-						spec.srcPos,
-						DiagnosticKind.Error,
-						String.Format( "Specialization of the constructor of '{0}' must follow its primary",
-							owner.name ) ) );
+				if( !ValidateFollowOrder( spec, primary, false, String.Format( "Specialization of the constructor of '{0}' must follow its primary",
+					owner.name ) ) ) {
 					MarkInvalidSpec( spec );
 					continue;
 				}
@@ -749,14 +707,8 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 					continue;
 				}
 
-				bool classParamsBound = owner.TplParams
-					.All( p => spec.TplSpec.Any( b => b.name == p.name && b.type != null ) );
-				if( !classParamsBound ) {
-					Diagnostics.Add( new Diagnostic(
-						spec.srcPos,
-						DiagnosticKind.Error,
-						String.Format( "Specialization of the constructor of '{0}' must bind all class template parameters with concrete types",
-							owner.name ) ) );
+				if( !ClassParamsBound( spec, owner, String.Format( "Specialization of the constructor of '{0}' must bind all class template parameters with concrete types",
+						owner.name ) ) ) {
 					MarkInvalidSpec( spec );
 					continue;
 				}
@@ -766,26 +718,11 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 					continue;
 				}
 
-				Dictionary<string, Typespec> boundValues = new( StringComparer.Ordinal );
-				foreach( TplBinding binding in spec.TplSpec ) {
-					if( binding.type != null )
-						boundValues[ binding.name ] = binding.type;
-				}
+				Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 
 				// Constructors have no return type: the signature repeats the
 				// primary's substituted parameters only.
-				bool signatureMatches = spec.paras.Count == primary.paras.Count;
-				if( signatureMatches ) {
-					for( int i = 0; i < spec.paras.Count; i++ ) {
-						if( SubstituteBindings( spec.paras[i].type, boundValues ).Gen()
-						 != SubstituteBindings( primary.paras[i].type, boundValues ).Gen() ) {
-							signatureMatches = false;
-							break;
-						}
-					}
-				}
-
-				if( !signatureMatches ) {
+				if( !SignatureMatchesParas( spec, primary, boundValues ) ) {
 					Diagnostics.Add( new Diagnostic(
 						spec.srcPos,
 						DiagnosticKind.Error,
@@ -811,6 +748,7 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 
 				InjectParams( spec.ctorScope, unboundParams, spec.srcPos );
 				InjectBoundAliases( spec.ctorScope, spec.paras, spec.srcPos, boundValues );
+				InjectOwnerAlias( spec, owner, spec.ctorScope );
 			}
 		}
 
@@ -825,6 +763,27 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 			=> spec.TplSpec.All(
 				b => owner.TplParams.Any( p => p.name == b.name )
 				 || candidate.TplParams.Any( p => p.name == b.name ) );
+
+		// Bindings accessor shared by the hooks (each kind has its own TplSpec field).
+		private static List<TplBinding> TplBindings( Decl spec )
+			=> spec switch {
+				VarDecl v => v.TplSpec,
+				Myll.Core.Structural s => s.TplSpec,
+				Func f => f.TplSpec,
+				Structor c => c.TplSpec,
+				_ => throw new InvalidOperationException(),
+			};
+
+		private bool ClassParamsBound( Decl spec, Myll.Core.Structural owner, string message )
+		{
+			bool classParamsBound = owner.TplParams
+				.All( p => TplBindings( spec ).Any( b => b.name == p.name && b.type != null ) );
+			if( classParamsBound )
+				return true;
+
+			Diagnostics.Add( new Diagnostic( spec.srcPos, DiagnosticKind.Error, message ) );
+			return false;
+		}
 
 		// Bindings must name concrete types: a value naming one of the target
 		// parameters (T=U) has no C++ equivalent because function templates
@@ -898,6 +857,30 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 			}
 			list.Add( leaf );
 			context.LocalDecls.Add( (alias, scope) );
+		}
+
+		/// <summary>
+		/// The owner's class name inside a member specialization means the
+		/// specialized instantiation (OpBox stands for OpBox<int>): the
+		/// out-of-line emission cannot use the injected class name.
+		/// </summary>
+		private void InjectOwnerAlias( Decl spec, Myll.Core.Structural owner, Scope? funcScope )
+		{
+			if( owner.TplParams.Count == 0 || funcScope == null )
+				return;
+
+			List<TplArg> ownerArgs = spec.SpecInfo.Args
+				.Take( owner.TplParams.Count )
+				.ToList();
+			TypespecNested ownerType = new() {
+				idTpls = new List<IdTplArgs> { new() { id = owner.name, tplArgs = ownerArgs } },
+			};
+			AddBoundAlias( funcScope, owner.name, ownerType, spec.srcPos );
+
+			// Resolve the aliased type against the class scope: the class
+			// name would resolve through the alias itself otherwise.
+			context.UnresolvedTypes.Add(
+				new UnresolvedType( ownerType, funcScope.parent ?? funcScope ) );
 		}
 
 		/// <summary>
