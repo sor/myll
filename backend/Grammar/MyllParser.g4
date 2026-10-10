@@ -346,7 +346,7 @@ tplSpec	:	LT	tplSpecEntry	(COMMA tplSpecEntry)*	COMMA?	GT;
 tplSpecEntry	:	tplBind
 			|	id				// unbound placeholder
 			;
-tplBind	:	id	ASSIGN	typespec;
+tplBind	:	id	ASSIGN	(typespec	|	lit);
 //tplParams2	:	LT	cs[id]							GT;
 //cs[object id] returns [object[] ret]:	ret+=id (COMMA ret+=id)* COMMA?;
 

@@ -169,5 +169,6 @@ namespace Myll.Core
 	{
 		public string    name = null!;
 		public Typespec? type; // null: unbound placeholder
+		public Expr?     lit;  // non-type parameter binding: N = 5
 	}
 }

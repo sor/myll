@@ -171,3 +171,13 @@ class CSig<T> {
 	ctor( T v ) { }
 	ctor<T=int>( int v, int b ) { } // FAIL: Specialization of the constructor of 'CSig' must repeat the primary's substituted parameters
 }
+
+// non-type binding kind validation
+class BadKind<T> {
+[pub]:
+	ctor() {}
+	func f() -> int => 0;
+	func f<T=5>() -> int => 1; // FAIL: Specialization of 'f' must bind the type parameter 'T' to a type
+	func g<int N>() -> int => N;
+	func g<N=int>() -> int => 1; // FAIL: Specialization of 'g' must bind the non-type parameter 'N' to a value
+}

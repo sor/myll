@@ -1258,7 +1258,8 @@ namespace Myll
 				.Select( e => new TplBinding {
 					name = ( e.tplBind() != null ? e.tplBind().id() : e.id() ).Visit(),
 					// null type marks an unbound placeholder (the "name everything" form)
-					type = e.tplBind() != null ? VisitTypespec( e.tplBind().typespec() ) : null,
+					type = e.tplBind() != null && e.tplBind().typespec() != null ? VisitTypespec( e.tplBind().typespec() ) : null,
+					lit  = e.tplBind() != null && e.tplBind().lit() != null ? e.tplBind().lit().Visit( Context ) : null,
 				} )
 				.ToList();
 		}

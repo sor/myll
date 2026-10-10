@@ -362,7 +362,7 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 
 				// Function templates allow only full specializations: every
 				// parameter must be bound, so no bare names and a full count.
-				if( spec.TplSpec.Any( b => b.type == null )
+				if( spec.TplSpec.Any( b => b.type == null && b.lit == null )
 				 || spec.TplSpec.Count != primary.TplParams.Count ) {
 					Diagnostics.Add( new Diagnostic(
 						spec.srcPos,
@@ -575,7 +575,7 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 				// Open member parameters are only expressible when the class is a
 				// template (template<> template<typename U> ...): a plain class
 				// allows full member specializations only.
-				bool hasOpenMembers = spec.TplSpec.Any( b => b.type == null )
+				bool hasOpenMembers = spec.TplSpec.Any( b => b.type == null && b.lit == null )
 				                       || spec.TplSpec.Count < target.Count;
 				if( hasOpenMembers && owner.TplParams.Count == 0 ) {
 					Diagnostics.Add( new Diagnostic(
@@ -788,7 +788,7 @@ Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 		private bool ClassParamsBound( Decl spec, Myll.Core.Structural owner, string message )
 		{
 			bool classParamsBound = owner.TplParams
-				.All( p => TplBindings( spec ).Any( b => b.name == p.name && b.type != null ) );
+				.All( p => TplBindings( spec ).Any( b => b.name == p.name && ( b.type != null || b.lit != null ) ) );
 			if( classParamsBound )
 				return true;
 
@@ -906,7 +906,7 @@ Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 			for( int i = 0; i < primaryParams.Count; i++ )
 				paramPos[ primaryParams[i].name ] = i;
 
-			bool isFullForm = tplSpec.Any( b => b.type == null );
+			bool isFullForm = tplSpec.Any( b => b.type == null && b.lit == null );
 
 			if( isFullForm ) {
 				if( tplSpec.Count != primaryParams.Count ) {
@@ -934,9 +934,38 @@ Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 						return false;
 					}
 				}
-
-				return true;
 			}
+
+			// Bindings must match their parameter's kind: non-type parameters
+			// bind values (N=5), type parameters bind types (T=int).
+			Dictionary<string, TplParam> paramsByName = new( StringComparer.Ordinal );
+			foreach( TplParam param in primaryParams )
+				paramsByName[ param.name ] = param;
+
+			foreach( TplBinding binding in tplSpec ) {
+				if( !paramsByName.TryGetValue( binding.name, out TplParam param ) )
+					continue;
+
+				if( param.kind == TplParamKind.NonType && binding.lit == null && binding.type != null ) {
+					Diagnostics.Add( new Diagnostic(
+						srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' must bind the non-type parameter '{1}' to a value, not a type",
+							specName, binding.name ) ) );
+					return false;
+				}
+				if( param.kind != TplParamKind.NonType && binding.lit != null ) {
+					Diagnostics.Add( new Diagnostic(
+						srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' must bind the type parameter '{1}' to a type, not a value",
+							specName, binding.name ) ) );
+					return false;
+				}
+			}
+
+			if( isFullForm )
+				return true;
 
 			int lastPos = -1;
 			foreach( TplBinding binding in tplSpec ) {
@@ -977,9 +1006,12 @@ Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 				TplBinding? binding = tplSpec
 					.FirstOrDefault( b => b.name == param.name );
 
-				if( binding != null && binding.type != null ) {
+				if( binding != null && ( binding.type != null || binding.lit != null ) ) {
 					bound[ i ] = true;
-					args.Add( new TplArg { typespec = binding.type } );
+					args.Add( new TplArg {
+						typespec = binding.type,
+						lit      = binding.lit,
+					} );
 				}
 				else {
 					args.Add( new TplArg {
@@ -1099,7 +1131,7 @@ Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 		}
 
 		private static string bindingSignature( TplBinding binding )
-			=> binding.name + "=" + binding.type.Gen();
+			=> binding.name + "=" + ( binding.type?.Gen() ?? binding.lit!.Gen() );
 
 		/// <summary>
 		/// Records the bound-value signature of a specialization per primary;
@@ -1110,7 +1142,7 @@ Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 		{
 			string signature = String.Join( ",",
 				tplSpec
-					.Where( b => b.type != null )
+					.Where( b => b.type != null || b.lit != null )
 					.Select( b => bindingSignature( b ) ) );
 
 			if( !seenSignatures.TryGetValue( primary, out List<string>? seen ) ) {

@@ -1,3 +1,5 @@
+module non_type_template;
+
 import array_checks;
 
 func add<int N>( int x ) -> int {
@@ -6,6 +8,24 @@ func add<int N>( int x ) -> int {
 
 const int twice<int N> = N * 2;
 
+// non-type specialization bindings: N=8 binds the value parameter
+const int twice<N=8> = 5;
+
+// mixed type and non-type class specialization
+class Fixed<T, int N> {
+[pub]:
+	ctor() {}
+	func len() -> int => N;
+	func first() -> T => 0;
+}
+
+class Fixed<T=int, N=3> {
+[pub]:
+	ctor() {}
+	func len() -> int => 30;
+	func first() -> int => 1;
+}
+
 func main() -> int {
 	if( add<5>( 10 ) != 15 )
 		return 1;
@@ -13,6 +33,19 @@ func main() -> int {
 		return 2;
 	if( array_checks::checkStdArray() != 0 )
 		return 3;
+	if( twice<8> != 5 )
+		return 4;
+	if( twice<4> != 8 )
+		return 5;
+
+	var Fixed<int, 3> f;
+	if( f.len() != 30 )
+		return 6;
+	if( f.first() != 1 )
+		return 7;
+	var Fixed<f32, 9> g;
+	if( g.len() != 9 )
+		return 8;
 
 	return 0;
 }
