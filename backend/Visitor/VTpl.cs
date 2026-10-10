@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Myll.Core;
+using Myll.Resolver;
 
 using static Myll.MyllParser; // sadly pulls in all constants
 
@@ -32,7 +33,15 @@ namespace Myll
 		{
 			TplArg ret;
 			if( c.typespec()  != null ) ret = new TplArg { typespec = VisitTypespec( c.typespec() ) };
-			else if( c.lit()  != null ) ret = new TplArg { lit      = c.lit().Visit( Context ) };
+			else if( c.expr() != null ) {
+				// Fold literal arithmetic right here (2*8 becomes 16), so spec
+				// matching and emission compare plain constants; unfolded
+				// expressions stay as written and C++ evaluates them.
+				Expr lit = c.expr().Visit( Context );
+				if( TemplateArgFolding.TryFoldLiteral( lit, out System.Numerics.BigInteger value ) )
+					lit = new Literal { text = value.ToString() };
+				ret = new TplArg { lit = lit };
+			}
 			else throw new Exception( "unknown template arg kind" );
 			return ret;
 		}

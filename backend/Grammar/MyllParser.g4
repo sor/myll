@@ -333,7 +333,7 @@ param		:	VAR?	typespec	id?;
 funcTypeDef	:	LPAREN	(param (COMMA param)* COMMA?)?	RPAREN;
 
 // can't contain expr, will fck up through idTplArgs with multiple templates (e.g. op | from enums)
-tplArg		:	lit | typespec;
+tplArg		:	typespec	|	expr;	// typespec first: bare ids stay type args; literals and folded arithmetic parse as expr
 tplArgs		:	LT	tplArg	(COMMA tplArg)*	COMMA?	GT;
 tplParam	:	id						# TypeTplParam
 			|	typespec	id				# NonTypeTplParam
