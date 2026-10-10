@@ -269,8 +269,33 @@ Decisions (settled 2026-10-04):
 - Constructor templates compose inside class specializations (pinned in
   `class_templates`).
 
+## Bound-name usability and non-type bindings (phase 6d)
+
+- The 2026-10-09 consolidation folded the five validators' shared skeleton
+  into one set of helpers (`FindPrimary`, `ValidateFollowOrder`,
+  `SignatureMatchesParas`, `ClassParamsBound`, `InjectOwnerAlias`); constructor
+  specializations gained the owner-name alias that method specializations
+  already had.
+- Variable and class/struct specializations keep bound parameter names usable
+  through the same bound-parameter aliases as functions: `const T pi<T=int> =
+  (T)3;` and `class Box<T=int> { func get() -> T ... }` both resolve T to the
+  bound value, and emission expands it. Spelling the concrete value stays
+  valid; both forms are equivalent under the substitution-based checks.
+- Non-type parameters bind with literals (`class Arr<T=int, N=4>`, `const int
+  x<N=8>`); a binding counts as bound with either a type or a literal, and
+  ValidateBindingShape rejects kind mismatches (type parameter bound to a
+  value, non-type parameter bound to a type). Non-type bindings do not create
+  aliases: bodies spell the value like C++. Fully bound specializations emit
+  the template<> form for non-type positions too.
+
 ## Deferred inventory
 
+- Folded constant expressions in non-type bindings (`N=2*8`): bindings accept
+  integer literals today; folding the resolver's constant arithmetic into
+  binding values follows.
+- Non-type substitution inside declared types: a variable specialization whose
+  declared type references a bound non-type parameter (array sizes) is not
+  substituted yet; class specializations are unaffected (no declared type).
 - Specialization of member (field-scope) variable and class templates: the transformer's
   imported-primary search follows namespaces only; those stay same-module for now.
   Method (member function) and constructor specializations are implemented (phases 5/6,
@@ -289,7 +314,6 @@ Decisions (settled 2026-10-04):
 - `--program`-split relaxation of the ODR guard.
 - Explicit instantiation syntax for classes/functions (`template class Foo<int>;`).
 - Extern declarations.
-- Non-type parameter bindings (`N=5`).
 - Use-site named template arguments.
 
 See also `constinit`/`[ct] var` semantics in the `[ct]` series commits (2026-10-04).
