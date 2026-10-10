@@ -206,8 +206,8 @@ Decisions (settled 2026-10-04):
   (`LookupOperatorOverload`) prefer the spec matching the receiver's class
   arguments.
 - **Scope**: same-module only (specs live in the class body). Cross-module method
-  specializations need a class-reopen or out-of-line syntax — deferred. The ODR
-  guard is unchanged: same-module duplicates are caught by the transformer's
+  specializations need an out-of-line qualified syntax (see the deferred inventory).
+  The ODR guard is unchanged: same-module duplicates are caught by the transformer's
   per-primary signature check.
 
 ## Constructor templates and specializations (phase 6)
@@ -290,24 +290,31 @@ Decisions (settled 2026-10-04):
 
 ## Deferred inventory
 
-- Use-site folded or named template arguments: use sites accept plain literals
-  (`Arr<int, 5>`); spelled-out expressions or named constants there are future work.
+- Use-site named template arguments (`Arr<T=int, N=3>`): deferred — Myll has
+  no named non-template arguments either, and keeping the `<T=int>` spelling
+  specialization-only avoids ambiguity for readers. Folded expressions at use
+  sites are implemented (phase E).
 - Non-type substitution inside declared types: a variable specialization whose
   declared type references a bound non-type parameter (array sizes) is not
   substituted yet; class specializations are unaffected (no declared type).
 - Non-type bindings fold literal integer arithmetic only (`N=2*8` folds to 16);
-  named constants or calls stay unfolded (same restriction as use sites).
+  named constants or calls stay unfolded. Use sites fold the same way
+  (`Arr<int, 2*8>` folds to 16 and matches the folded specialization). Known
+  mini-wart: `<-5>` lexes as the left-arrow token; write `< -5>` or `0-5`.
 - Specialization of member (field-scope) variable and class templates: the transformer's
   imported-primary search follows namespaces only; those stay same-module for now.
   Method (member function) and constructor specializations are implemented (phases 5/6,
-  same-module); cross-module method specializations need a class-reopen or out-of-line
-  syntax.
+  same-module).
 - A future attribute to constrain class specializations: e.g. `[interface]` to enforce that a
   specialization exposes the primary's member set, or `[copy]` to copy the primary's members
   and only override the listed ones. The C++-first semantics (fresh member set, bound names
   not in scope) stay the default.
-- Retrofitting bound-parameter aliases to variables (initializer expressions) and
-  class/struct specializations (bodies), so all kinds allow writing `T` after binding.
+- Cross-module method/constructor specializations: C++ has no class reopening.
+  The C++-native mechanism is out-of-line qualified declarations at namespace
+  scope — exactly what the emission already produces. Leading syntax candidate:
+  a `[specialize]` block (`[specialize] class Box<T=int> { func Load<U>(...) ... }`)
+  that groups several members under one binding, so the qualified args are not
+  repeated per member. TBD.
 - Runtime primary instantiation from an importing module: the primary's definition lives in
   its module's `.cpp` while importers only see the `extern` declaration, so importing
   translation units cannot implicitly instantiate it. Same-module runtime primaries work.
@@ -315,6 +322,5 @@ Decisions (settled 2026-10-04):
 - `--program`-split relaxation of the ODR guard.
 - Explicit instantiation syntax for classes/functions (`template class Foo<int>;`).
 - Extern declarations.
-- Use-site named template arguments.
 
 See also `constinit`/`[ct] var` semantics in the `[ct]` series commits (2026-10-04).
