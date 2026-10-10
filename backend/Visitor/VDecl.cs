@@ -475,6 +475,7 @@ namespace Myll
 			name       = c.id().GetText(),
 			type       = VisitTypespec( c.typespec() ),
 			TplParams  = tplParams,
+			TplSpec    = VisitTplSpec( c.tplSpec() ),
 			aliasScope = aliasScope,
 		};
 
@@ -1259,7 +1260,7 @@ namespace Myll
 					name = ( e.tplBind() != null ? e.tplBind().id() : e.id() ).Visit(),
 					// null type marks an unbound placeholder (the "name everything" form)
 					type = e.tplBind() != null && e.tplBind().typespec() != null ? VisitTypespec( e.tplBind().typespec() ) : null,
-					lit  = e.tplBind() != null && e.tplBind().lit() != null ? e.tplBind().lit().Visit( Context ) : null,
+					lit  = e.tplBind() != null && e.tplBind().expr() != null ? e.tplBind().expr().Visit( Context ) : null,
 				} )
 				.ToList();
 		}

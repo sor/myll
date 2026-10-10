@@ -95,7 +95,7 @@ defNamespace:	id (SCOPE id)*
 				|	LCURLY	decl*		RCURLY);
 
 defUsing	:	typespecsNested SEMI;
-defAlias	:	id	tplParams?	ASSIGN	typespec SEMI;	// TODO: needs COMMA multiple support
+defAlias	:	id	(tplParams	|	tplSpec)?	ASSIGN	typespec	SEMI;	// TODO: needs COMMA multiple support
 
 defAspect	:	id	tplParams?;		// TODO
 defConcept	:	id	tplParams?		// TODO
@@ -346,7 +346,7 @@ tplSpec	:	LT	tplSpecEntry	(COMMA tplSpecEntry)*	COMMA?	GT;
 tplSpecEntry	:	tplBind
 			|	id				// unbound placeholder
 			;
-tplBind	:	id	ASSIGN	(typespec	|	lit);
+tplBind	:	id	ASSIGN	(typespec	|	expr);
 //tplParams2	:	LT	cs[id]							GT;
 //cs[object id] returns [object[] ret]:	ret+=id (COMMA ret+=id)* COMMA?;
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using Myll.Core;
 using Myll.Resolver;
 
@@ -58,11 +59,26 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 			List<Decl> children = hier.children.ToList();
 			string? nsFqn = NamespaceFqnOf( hier );
 
+			FoldSpecBindings( children );
+
 			ValidateSpecsInScope( children.OfType<VarDecl>().ToList(), nsFqn );
 			ValidateStructSpecs( children.OfType<Myll.Core.Structural>().ToList(), nsFqn );
 			ValidateFuncSpecs( children.OfType<Func>().ToList(), hier is Myll.Core.Structural s ? s : null, nsFqn );
 			if( hier is Myll.Core.Structural structHier )
 				ValidateCtorSpecs( children.OfType<Structor>().ToList(), structHier );
+
+			foreach( AliasDecl alias in children.OfType<AliasDecl>() ) {
+				if( alias.TplSpec.Count == 0 )
+					continue;
+				// C++ has no spelling for specializing an alias template; the
+				// C++ way is to specialize the underlying template instead.
+				Diagnostics.Add( new Diagnostic(
+					alias.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "Alias templates cannot be specialized; specialize the underlying template instead ('{0}')",
+						alias.name ) ) );
+				alias.SpecInfo = new Decl.SpecData { Primary = alias };
+			}
 
 			foreach( Decl child in children.OfType<Myll.Core.Hierarchical>() )
 				ValidateScope( (Myll.Core.Hierarchical)child );
@@ -241,6 +257,145 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 		/// parameter names are not in scope: the body is written with the bound
 		/// values spelled out, like C++.
 		/// </summary>
+		/// <summary>
+		/// Folds literal integer arithmetic in non-type bindings into their
+		/// canonical value (N=2*8 becomes N=16), so binding signatures, matching,
+		/// and emission compare and emit plain constants. Mirrors the
+		/// untyped-integer folding rules: division by zero and out-of-range
+		/// shifts stay unfolded for the C++ compiler to reject.
+		/// </summary>
+		private static void FoldSpecBindings( List<Decl> children )
+		{
+			foreach( Decl decl in children ) {
+				List<TplBinding>? bindings = decl switch {
+					VarDecl v => v.TplSpec,
+					Myll.Core.Structural s => s.TplSpec,
+					Func f => f.TplSpec,
+					Structor c => c.TplSpec,
+					AliasDecl a => a.TplSpec,
+					_ => null,
+				};
+				if( bindings == null )
+					continue;
+
+				foreach( TplBinding binding in bindings ) {
+					if( binding.lit == null )
+						continue;
+
+					if( TryFoldLiteral( binding.lit, out BigInteger value ) )
+						binding.lit = new Literal { text = value.ToString() };
+				}
+			}
+		}
+
+		// Literal-only constant folding: unary minus plus the binary integer
+		// operators. Anything else (identifiers, calls, floats) stays unfolded
+		// and keeps its expression shape.
+		private static bool TryFoldLiteral( Expr expr, out BigInteger value )
+		{
+			value = BigInteger.Zero;
+
+			switch( expr ) {
+				case Literal lit:
+					return ConversionRules.TryParseInteger( lit.text, out value );
+
+				case UnOp { op: Operand.PreMinus, expr: Literal inner }:
+					return ConversionRules.TryParseInteger( inner.text, out value )
+					 && ( value = -value ) == value;
+
+				case BinOp binOp:
+					if( !TryFoldLiteral( binOp.left, out BigInteger left )
+					 || !TryFoldLiteral( binOp.right, out BigInteger right ) )
+						return false;
+					return TryFoldBinary( binOp.op, left, right, out value );
+
+				default:
+					return false;
+				}
+		}
+
+		private static bool TryFoldBinary( Operand op, BigInteger left, BigInteger right, out BigInteger result )
+		{
+			result = BigInteger.Zero;
+
+			switch( op ) {
+				case Operand.Add:
+				case Operand.Multiply:
+				case Operand.Subtract:
+				case Operand.Divide:
+				case Operand.Modulo:
+				case Operand.BitAnd:
+				case Operand.BitOr:
+				case Operand.BitXor:
+				case Operand.LeftShift:
+				case Operand.RightShift:
+					return TryFoldInteger( op, left, right, out result );
+
+				default:
+					return false;
+				}
+		}
+
+		private static bool TryFoldInteger( Operand op, BigInteger left, BigInteger right, out BigInteger result )
+		{
+			result = BigInteger.Zero;
+
+			switch( op ) {
+				case Operand.Add:
+					result = left + right;
+					return true;
+
+				case Operand.Subtract:
+					result = left - right;
+					return true;
+
+				case Operand.Multiply:
+					result = left * right;
+					return true;
+
+				case Operand.Divide:
+					// Both C++ and BigInteger integer division truncate toward zero;
+					// division by zero is left to the C++ compiler.
+					if( right.IsZero )
+						return false;
+					result = left / right;
+					return true;
+
+				case Operand.Modulo:
+					if( right.IsZero )
+						return false;
+					result = left % right;
+					return true;
+
+				case Operand.BitAnd:
+					result = left & right;
+					return true;
+
+				case Operand.BitOr:
+					result = left | right;
+					return true;
+
+				case Operand.BitXor:
+					result = left ^ right;
+					return true;
+
+				case Operand.LeftShift:
+					if( right.Sign < 0 || right > int.MaxValue )
+						return false;
+					result = left << (int) right;
+					return true;
+
+				case Operand.RightShift:
+					if( right.Sign < 0 || right > int.MaxValue )
+						return false;
+					result = left >> (int) right;
+					return true;
+
+				default:
+					return false;
+			}
+		}
+
 		private void ValidateStructSpecs( List<Myll.Core.Structural> structs, string? nsFqn )
 		{
 			// per primary: bound-value signatures already seen (duplicate check)

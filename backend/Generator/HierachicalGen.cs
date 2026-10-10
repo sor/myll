@@ -514,6 +514,11 @@ namespace Myll.Generator
 
 		public void AddAlias( AliasDecl obj )
 		{
+			// Rejected specializations are consumed: the diagnostic already
+			// failed the compilation.
+			if( obj.SpecInfo != null && ReferenceEquals( obj.SpecInfo.Primary, obj ) )
+				return;
+
 			string indent = IndentDecl;
 
 			string targetName;

@@ -288,6 +288,7 @@ namespace Myll.Core
 	{
 		public Typespec       type     = null!;
 		public List<TplParam> TplParams { get; init; } = new();
+		public List<TplBinding> TplSpec { get; init; } = new(); // non-empty: rejected — alias templates cannot be specialized
 		public Scope?         aliasScope;
 		public Scope?         TemplateParamScope => aliasScope;
 

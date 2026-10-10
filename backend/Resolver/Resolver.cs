@@ -541,11 +541,13 @@ namespace Myll.Resolver
 				bool isDependentNestedName = IsDependentNestedName( unresolved.Node, unresolved.Scope, module );
 
 				if( resolved == null ) {
-					if( isDependentNestedName ) {
-					unresolved.Node.isDependent = true;
+					// Only a NEW dependent marking counts as progress: a type that
+					// stays unresolved but was already marked dependent must not
+					// spin the fixed-point loop forever.
+					if( isDependentNestedName && !unresolved.Node.isDependent ) {
+						unresolved.Node.isDependent = true;
 						progress = true;
 					}
-
 					continue;
 				}
 
