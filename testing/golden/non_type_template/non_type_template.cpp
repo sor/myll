@@ -13,19 +13,22 @@ int main()
     if( twice<8> != 5 ) {
         return 4;
     }
-    if( twice<4> != 8 ) {
+    if( folded<9> != 111 ) {
         return 5;
+    }
+    if( twice<4> != 8 ) {
+        return 6;
     }
     Fixed<int, 3> f{};
     if( f.len() != 30 ) {
-        return 6;
+        return 7;
     }
     if( f.first() != 1 ) {
-        return 7;
+        return 8;
     }
     Fixed<float, 9> g{};
     if( g.len() != 9 ) {
-        return 8;
+        return 9;
     }
     return 0;
 }

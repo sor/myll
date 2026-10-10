@@ -14,6 +14,9 @@ class Fixed;
 template <int N>
 inline constexpr int twice = N * 2;
 template<> inline constexpr int twice<8> = 5;
+template <int N>
+inline constexpr int folded = N;
+template<> inline constexpr int folded<9> = 111;
 template <typename T, int N>
 class Fixed
 {

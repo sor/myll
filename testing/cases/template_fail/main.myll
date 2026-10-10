@@ -181,3 +181,7 @@ class BadKind<T> {
 	func g<int N>() -> int => N;
 	func g<N=int>() -> int => 1; // FAIL: Specialization of 'g' must bind the non-type parameter 'N' to a value
 }
+
+// alias templates cannot be specialized (C++ has no spelling for it)
+alias BadSpec<T> = BadSpec<T>;
+alias BadSpec<T=int> = BadSpec<int>; // FAIL: Alias templates cannot be specialized
