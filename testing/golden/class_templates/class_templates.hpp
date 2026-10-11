@@ -106,6 +106,8 @@ namespace spec
     template <typename T>
     class OpBox;
     template <typename T>
+    class Holder;
+    template <typename T>
     class Wrap;
     template <typename T>
     class Box
@@ -303,6 +305,31 @@ namespace spec
         return OpBox( other._v + _v + 100 );
     }
     template <typename T>
+    class Holder
+    {
+    public:
+        template <typename V>
+        class Inner;
+        template <typename V>
+        class Inner
+        {
+        public:
+            V v{};
+        };
+        template <typename U>
+        inline static const T x = static_cast<U>( 0 );
+    };
+    template<>
+    template<>
+    inline constexpr int spec::Holder<int>::x<int> = 7;
+    template<>
+    template<>
+    class spec::Holder<int>::Inner<float>
+    {
+    public:
+        float w{};
+    };
+    template <typename T>
     class Wrap
     {
     public:
@@ -329,6 +356,7 @@ namespace spec
         _v = t + 1.5f;
     }
     int run();
+    int run4();
     int run3();
     int run2();
 }

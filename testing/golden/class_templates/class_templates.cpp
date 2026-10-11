@@ -92,6 +92,29 @@ int spec::run()
     }
     return 0;
 }
+int spec::run4()
+{
+    spec::Holder<int> h{};
+    if( Holder<int>::x<int> != 7 ) {
+        return 1;
+    }
+    if( h.x<int> != 7 ) {
+        return 2;
+    }
+    spec::Holder<float> h2{};
+    if( h2.x<int> != 0 ) {
+        return 3;
+    }
+    Holder<int>::Inner<float> i{};
+    if( i.w < 0.0f || i.w > 0.1f ) {
+        return 4;
+    }
+    Holder<float>::Inner<std::int32_t> j{};
+    if( j.v != 0 ) {
+        return 5;
+    }
+    return 0;
+}
 int spec::run3()
 {
     spec::Wrap<int> a( 1 );

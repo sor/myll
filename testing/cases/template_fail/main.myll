@@ -185,3 +185,35 @@ class BadKind<T> {
 // alias templates cannot be specialized (C++ has no spelling for it)
 alias BadSpec<T> = BadSpec<T>;
 alias BadSpec<T=int> = BadSpec<int>; // FAIL: Alias templates cannot be specialized
+
+// member variable specialization validation (class params first, at least one own param bound)
+class MVBox<T> {
+[pub]:
+	field const T y<U> = (U)0;
+	field const T y<U=int> = 1; // FAIL: Specialization of 'y' must bind all class template parameters
+}
+
+class MVOpen<T> {
+[pub]:
+	field const T z<U> = (U)0;
+	field const T z<T=int> = 1; // FAIL: Specialization of 'z' must bind at least one of 'MVOpen's own template parameters
+}
+
+class MVSpec<T> {
+[pub]:
+	field const T w<U> = (U)0;
+}
+
+class MVSpec<T=int> {
+[pub]:
+	field const T w<U=int> = 1; // FAIL: Specialization of 'w' sits inside the specialization
+}
+
+class MVDeep {
+[pub]:
+	class Mid {
+	[pub]:
+		class Deep<V> { field V v; }
+		class Deep<V=int> { field int v; } // FAIL: Specializations of nested classes inside another nested class are not supported yet
+	}
+}

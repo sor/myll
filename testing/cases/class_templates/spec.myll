@@ -169,6 +169,24 @@ class OpBox<T> {
 	operator +<T=int>( OpBox other ) -> OpBox => OpBox( other._v + _v + 100 );
 }
 
+// Member variable specializations bind class parameters first (like methods),
+// emit out-of-line after the class, and require at least one own parameter
+// bound. Member var templates are implicitly static in the emission because
+// C++ only allows static member templates.
+class Holder<T> {
+[pub]:
+	field const T x<U> = (U)0;
+	field const T x<T=int, U=int> = 7;
+	class Inner<V> {
+	[pub]:
+		field V v;
+	}
+	class Inner<T=int, V=f32> {
+	[pub]:
+		field f32 w;
+	}
+}
+
 // Constructor specializations and constructor templates: ctor specs bind
 // class parameters first and emit out-of-line like method specs; ctor template
 // arguments are always deduced.
@@ -181,6 +199,25 @@ class Wrap<T> {
 
 	ctor<U>( U u, T t ) { _v = t; }
 	ctor<T=f32, U=i32>( i32 u, f32 t ) { _v = t + 1.5; }
+}
+
+func run4() -> int
+{
+	var Holder<int> h;
+	if( Holder<int>::x<int> != 7 ) // member var spec via qualified name
+		return 1;
+	if( h.x<int> != 7 ) // member var spec via member access
+		return 2;
+	var Holder<f32> h2;
+	if( h2.x<int> != 0 ) // primary via member access
+		return 3;
+	var Holder<int>::Inner<f32> i;
+	if( i.w < 0.0 || i.w > 0.1 ) // nested class spec
+		return 4;
+	var Holder<f32>::Inner<i32> j;
+	if( j.v != 0 ) // nested class primary
+		return 5;
+	return 0;
 }
 
 func run3() -> int
