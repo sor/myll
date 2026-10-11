@@ -437,11 +437,7 @@ namespace Myll.Resolver
 			VarDecl? spec = FindMatchingSpecialization( primary, useArgs, expr, useModule ) as VarDecl;;
 			if( spec != null ) {
 				effective = spec;
-				expr.Type = TemplateInference.SubstituteTemplateParams(
-					spec.type,
-					spec.TplParams,
-					useArgs.ToList(),
-					result );
+				expr.Type = SubstituteVarTemplateType( spec, useArgs, expr );
 				return true;
 			}
 
@@ -451,12 +447,41 @@ namespace Myll.Resolver
 			if( specsByPrimary.ContainsKey( primary ) )
 				specInstantiations.Add( new SpecInstantiation( primary, useArgs.ToList(), useModule, expr.srcPos ) );
 
-			expr.Type = TemplateInference.SubstituteTemplateParams(
-				primary.type,
-				primary.TplParams,
-				useArgs.ToList(),
-				result );
+			expr.Type = SubstituteVarTemplateType( primary, useArgs, expr );
 			return true;
+		}
+
+		// Substitutes the variable template's own parameters, then — for a member
+		// variable template — the enclosing class's parameters with the qualified
+		// name's class arguments, so `Box<int>::x<int>` yields `int`, not `T`.
+		private Typespec SubstituteVarTemplateType( VarDecl primary, List<TplArg> useArgs, Expr expr )
+		{
+			Typespec substituted = TemplateInference.SubstituteTemplateParams(
+				primary.type, primary.TplParams, useArgs.ToList(), result );
+
+			Structural? enclosing = FindEnclosingStructuralOf( primary );
+			if( expr is not ScopedExpr scoped
+			 || scoped.idTpls.Count < 2
+			 || enclosing == null
+			 || enclosing.TplParams.Count == 0 )
+				return substituted;
+
+			List<TplArg>? ownerArgs = scoped.idTpls[scoped.idTpls.Count - 2].tplArgs;
+			if( ownerArgs == null || ownerArgs.Count < enclosing.TplParams.Count )
+				return substituted;
+
+			return TemplateInference.SubstituteTemplateParams(
+				substituted, enclosing.TplParams, ownerArgs.ToList(), result );
+		}
+
+		private static Structural? FindEnclosingStructuralOf( Decl decl )
+		{
+			for( Scope? cur = decl.scope?.parent; cur != null; cur = cur.parent ) {
+				if( cur.decl is Structural s )
+					return s;
+			}
+
+			return null;
 		}
 
 		/// <summary>
@@ -742,10 +767,16 @@ if( m.Context.IsPrototypeFile )
 					if( decl == null || decl.IsHidden )
 						continue;
 
-					if( decl is Namespace ns ) {
-						CollectSpecs( ns.scope, moduleName );
-						continue;
-					}
+if( decl is Namespace ns ) {
+					CollectSpecs( ns.scope, moduleName );
+					continue;
+				}
+				if( decl is Structural st ) {
+					// Member specializations (vars, nested classes) enter the index
+					// through their enclosing class's scope; the class itself may
+					// also be a specialization, so fall through to the collection.
+					CollectSpecs( st.scope, moduleName );
+				}
 
 					if( decl.SpecInfo == null )
 						continue;
@@ -843,14 +874,29 @@ if( m.Context.IsPrototypeFile )
 			  && visible.Contains( specModule );
 
 		// Canonical bound-signature of a specialization: the bound parameter
-		// names with their values, in primary parameter order.
+		// names with their values, in parameter order — the enclosing class's
+		// parameters first for member specializations.
 		private static string SpecSignature( Decl primary, Decl spec )
 		{
 			Decl.SpecData info = spec.SpecInfo!;
 			List<string> parts = new( info.Bound.Length );
-			var primaryParams = ((ITemplatedDecl)primary).TplParams;
+			List<TplParam> primaryParams = ((ITemplatedDecl)primary).TplParams;
+
+			// Member specializations: bound positions before the primary's own
+			// parameters are the enclosing class's.
+			int ownStart = primaryParams.Count;
+			if( info.Bound.Length > ownStart && ownStart > 0 ) {
+				Structural? owner = FindEnclosingStructuralOf( spec );
+				if( owner != null ) {
+					List<TplParam> target = new();
+					target.AddRange( owner.TplParams );
+					target.AddRange( primaryParams );
+					primaryParams = target;
+				}
+			}
+
 			for( int i = 0; i < info.Bound.Length; i++ ) {
-				if( info.Bound[ i ] )
+				if( info.Bound[ i ] && i < primaryParams.Count )
 					parts.Add( primaryParams[ i ].name + "=" + info.Args[ i ].Gen() );
 			}
 
@@ -2300,7 +2346,7 @@ if( m.Context.IsPrototypeFile )
 					return null;
 				}
 
-				current = TrySwapStructSpec( next, segments[i], module, usePos );
+				current = TrySwapStructSpec( next, segments[i], module, usePos, segments[i - 1].tplArgs );
 			}
 
 			return current;
@@ -2314,7 +2360,7 @@ if( m.Context.IsPrototypeFile )
 		/// no visible specialization matches is recorded as a primary instantiation
 		/// for the ODR guard.
 		/// </summary>
-		private Decl TrySwapStructSpec( Decl resolved, IdTplArgs segment, GlobalNamespace module, SrcPos? usePos )
+		private Decl TrySwapStructSpec( Decl resolved, IdTplArgs segment, GlobalNamespace module, SrcPos? usePos, List<TplArg>? ownerArgs = null )
 		{
 			if( resolved is not Structural primary
 			 || primary.SpecInfo != null
@@ -2322,15 +2368,25 @@ if( m.Context.IsPrototypeFile )
 			 || segment.tplArgs.Count == 0 )
 				return resolved;
 
-			Decl? spec = FindMatchingSpecialization( primary, segment.tplArgs, null, module.module );
+			List<TplArg> useArgs = segment.tplArgs;
+
+			// Nested class specializations bind the enclosing class's parameters
+			// first: prepend the class arguments from the qualified name's earlier
+			// segment, like method resolution does.
+			Structural? enclosing = FindEnclosingStructuralOf( primary );
+			if( enclosing != null && enclosing.TplParams.Count > 0
+			 && ownerArgs != null && ownerArgs.Count >= enclosing.TplParams.Count )
+				useArgs = ownerArgs.Concat( useArgs ).ToList();
+
+			Decl? spec = FindMatchingSpecialization( primary, useArgs, null, module.module );
 			if( spec != null )
 				return spec;
 
 			// Only the main resolution paths (name and type resolution) carry a source
-			// position here; secondary lookups that re-resolve the same use must not
+			// position here; secondary lookups that re-resolve the use must not
 			// record it twice.
 			if( usePos != null && specsByPrimary.ContainsKey( primary ) )
-				specInstantiations.Add( new SpecInstantiation( primary, segment.tplArgs.ToList(), module.module, usePos ) );
+				specInstantiations.Add( new SpecInstantiation( primary, useArgs.ToList(), module.module, usePos ) );
 
 			return resolved;
 		}

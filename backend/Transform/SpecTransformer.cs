@@ -58,12 +58,13 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 		{
 			List<Decl> children = hier.children.ToList();
 			string? nsFqn = NamespaceFqnOf( hier );
+			Myll.Core.Structural? owner = hier is Myll.Core.Structural s ? s : null;
 
 			FoldSpecBindings( children );
 
-			ValidateSpecsInScope( children.OfType<VarDecl>().ToList(), nsFqn );
-			ValidateStructSpecs( children.OfType<Myll.Core.Structural>().ToList(), nsFqn );
-			ValidateFuncSpecs( children.OfType<Func>().ToList(), hier is Myll.Core.Structural s ? s : null, nsFqn );
+			ValidateSpecsInScope( children.OfType<VarDecl>().ToList(), owner, nsFqn );
+			ValidateStructSpecs( children.OfType<Myll.Core.Structural>().ToList(), owner, nsFqn );
+			ValidateFuncSpecs( children.OfType<Func>().ToList(), owner, nsFqn );
 			if( hier is Myll.Core.Structural structHier )
 				ValidateCtorSpecs( children.OfType<Structor>().ToList(), structHier );
 
@@ -109,8 +110,13 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 			 && f.TplParams.Count > 0
 			 && !f.IsHidden;
 
-		private void ValidateSpecsInScope( List<VarDecl> vars, string? nsFqn )
+		private void ValidateSpecsInScope( List<VarDecl> vars, Myll.Core.Structural? owner, string? nsFqn )
 		{
+			if( owner != null ) {
+				ValidateMemberVarSpecs( vars, owner );
+				return;
+			}
+
 			// per primary: bound-value signatures already seen (duplicate check)
 			Dictionary<Decl, List<string>> seenSignatures = new();
 
@@ -288,8 +294,13 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 			}
 		}
 
-		private void ValidateStructSpecs( List<Myll.Core.Structural> structs, string? nsFqn )
+		private void ValidateStructSpecs( List<Myll.Core.Structural> structs, Myll.Core.Structural? owner, string? nsFqn )
 		{
+			if( owner != null ) {
+				ValidateNestedStructSpecs( structs, owner );
+				return;
+			}
+
 			// per primary: bound-value signatures already seen (duplicate check)
 			Dictionary<Decl, List<string>> seenSignatures = new();
 
@@ -693,6 +704,255 @@ Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 		/// names are compiler-divergent. Bodies emit out-of-line after the class,
 		/// like method specializations.
 		/// </summary>
+		/// <summary>
+		/// Validates member variable specializations inside one class: the bindings
+		/// name the class parameters first, then the variable's own parameters —
+		/// the same rule as method specializations. All class parameters must be
+		/// bound to concrete values (C++ requires concrete enclosing arguments),
+		/// and at least one of the variable's own parameters must be bound: an
+		/// all-open member specialization does not specialize anything (both
+		/// compilers reject it). The emission is out-of-line after the class.
+		/// </summary>
+		private void ValidateMemberVarSpecs( List<VarDecl> vars, Myll.Core.Structural owner )
+		{
+			if( owner.SpecInfo != null ) {
+				foreach( VarDecl spec in vars.Where( v => v.TplSpec.Count > 0 ) ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' sits inside the specialization of '{1}'; specialize the class instead",
+							spec.name, owner.name ) ) );
+					MarkInvalidSpec( spec );
+				}
+				return;
+			}
+
+			// per primary: bound-value signatures already seen (duplicate check)
+			Dictionary<Decl, List<string>> seenSignatures = new();
+
+			foreach( VarDecl spec in vars ) {
+				if( spec.TplSpec.Count == 0 )
+					continue;
+
+				(VarDecl? primary, _) = FindPrimary( vars, spec,
+					v => v != spec && v.SpecInfo == null && CoversBindings( owner, v, spec ),
+					null, null,
+					String.Format( "No matching variable template '{0}' in this class; a specialization must name class and variable parameters",
+						spec.name ) );
+				if( primary == null ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				List<TplParam> target = MemberTarget( owner, primary );
+
+				if( !MemberGuards( spec, owner, primary, target, "variable" ) )
+					continue;
+
+				if( !ValidateFollowOrder( spec, primary, false, String.Format( "Specialization of '{0}' must follow its primary template",
+					spec.name ) ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				if( !ValidateBindingShape( spec.name, spec.TplSpec, target, spec.srcPos ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				if( !ClassParamsBound( spec, owner, String.Format( "Specialization of '{0}' must bind all class template parameters of '{1}' with concrete types",
+						spec.name, owner.name ) ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				if( !HasConcreteBindings( spec.TplSpec, target, spec.name, spec.srcPos ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				if( !BindsMemberParam( spec, owner, target ) )
+					continue;
+
+				Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
+
+				Typespec specType = SubstituteBindings( spec.type, boundValues );
+				Typespec primaryType = SubstituteBindings( primary.type, boundValues );
+
+				context.UnresolvedTypes.RemoveAll( ut => ReferenceEquals( ut.Node, spec.type ) );
+
+				if( specType.Gen() != primaryType.Gen() ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' declares type '{1}' but the primary's substituted type is '{2}'",
+							spec.name, specType.Gen(), primaryType.Gen() ) ) );
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				if( !TryAddSpecSignature( primary, spec.name, spec.TplSpec, spec.srcPos, seenSignatures ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				List<TplArg> args = BuildSpecArgs( target, spec.TplSpec, out bool[] bound, out List<TplParam> unboundParams );
+
+				spec.SpecInfo = new Decl.SpecData {
+					Primary = primary,
+					Args    = args,
+					Bound   = bound,
+				};
+				spec.type = specType;
+				spec.TplParams = unboundParams;
+
+				InjectParams( spec.varScope, unboundParams, spec.srcPos );
+				InjectBoundAliases( spec.varScope, new List<Param>(), spec.srcPos, boundValues );
+				InjectOwnerAlias( spec, owner, spec.varScope );
+			}
+		}
+
+		/// <summary>
+		/// Validates nested class specializations inside one class: bindings name
+		/// the enclosing class parameters first, then the nested class's own.
+		/// Same rules as member variable specializations: concrete class
+		/// arguments, at least one own parameter bound, emission out-of-line.
+		/// </summary>
+		private void ValidateNestedStructSpecs( List<Myll.Core.Structural> structs, Myll.Core.Structural owner )
+		{
+			if( owner.SpecInfo != null ) {
+				foreach( Myll.Core.Structural spec in structs.Where( s => s.TplSpec.Count > 0 ) ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' sits inside the specialization of '{1}'; specialize the enclosing class instead",
+							spec.name, owner.name ) ) );
+					MarkInvalidSpec( spec );
+				}
+				return;
+			}
+
+			if( owner.scope?.parent?.decl is Myll.Core.Structural ) {
+				foreach( Myll.Core.Structural spec in structs.Where( s => s.TplSpec.Count > 0 ) ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specializations of nested classes inside another nested class are not supported yet; declare '{0}' at class or namespace scope",
+							spec.name ) ) );
+					MarkInvalidSpec( spec );
+				}
+				return;
+			}
+
+			// per primary: bound-value signatures already seen (duplicate check)
+			Dictionary<Decl, List<string>> seenSignatures = new();
+
+			foreach( Myll.Core.Structural spec in structs ) {
+				if( spec.TplSpec.Count == 0 )
+					continue;
+
+				(Myll.Core.Structural? primary, _) = FindPrimary( structs, spec,
+					s => s != spec && s.SpecInfo == null && CoversBindings( owner, s, spec ),
+					null, null,
+					String.Format( "No matching template '{0}' in this class; a specialization must name class and nested class parameters",
+						spec.name ) );
+				if( primary == null ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				List<TplParam> target = MemberTarget( owner, primary );
+
+				if( !MemberGuards( spec, owner, primary, target, "class" ) )
+					continue;
+
+				if( !ValidateFollowOrder( spec, primary, false, String.Format( "Specialization of '{0}' must follow its primary template",
+					spec.name ) ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				if( !ValidateBindingShape( spec.name, spec.TplSpec, target, spec.srcPos ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				if( !ClassParamsBound( spec, owner, String.Format( "Specialization of '{0}' must bind all class template parameters of '{1}' with concrete types",
+						spec.name, owner.name ) ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				if( !HasConcreteBindings( spec.TplSpec, target, spec.name, spec.srcPos ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				if( !BindsMemberParam( spec, owner, target ) )
+					continue;
+
+				if( !TryAddSpecSignature( primary, spec.name, spec.TplSpec, spec.srcPos, seenSignatures ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				List<TplArg> args = BuildSpecArgs( target, spec.TplSpec, out bool[] bound, out List<TplParam> unboundParams );
+
+				spec.SpecInfo = new Decl.SpecData {
+					Primary = primary,
+					Args    = args,
+					Bound   = bound,
+				};
+				spec.TplParams = unboundParams;
+
+				InjectParams( spec.scope, unboundParams, spec.srcPos );
+				InjectBoundAliases( spec.scope, new List<Param>(), spec.srcPos, BoundValuesOf( spec.TplSpec ) );
+			}
+		}
+
+		// Shared guards for member specializations: the shadow-name check and the
+		// at-least-one-bound-parameter rule. Returns true when the spec may
+		// continue validation.
+		private bool MemberGuards( Decl spec, Myll.Core.Structural owner, ITemplatedDecl primary, List<TplParam> target, string kindWord )
+		{
+			// Same-name class and member parameters make the bindings ambiguous;
+			// the bindings map by name, so rename one.
+			List<TplParam> probeTarget = new();
+			probeTarget.AddRange( owner.TplParams );
+			probeTarget.AddRange( primary.TplParams );
+			if( probeTarget.GroupBy( p => p.name ).Any( g => g.Count() > 1 ) ) {
+				Diagnostics.Add( new Diagnostic(
+					spec.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "The {0} '{1}' has a template parameter shadowing the class parameter of '{2}'; rename it",
+						kindWord, spec.name, owner.name ) ) );
+				MarkInvalidSpec( spec );
+				return false;
+			}
+
+			return true;
+		}
+
+		// A specialization that binds none of the member's own parameters does not
+		// specialize anything: both compilers reject it ("does not specialize any
+		// template argument").
+		private bool BindsMemberParam( Decl spec, Myll.Core.Structural owner, List<TplParam> target )
+		{
+			int classParamCount = owner.TplParams.Count;
+			bool anyMemberBound = TplBindings( spec ).Any( b => ( b.type != null || b.lit != null )
+				&& target.Any( p => p.name == b.name && target.IndexOf( p ) >= classParamCount ) );
+			if( anyMemberBound )
+				return true;
+
+			Diagnostics.Add( new Diagnostic(
+				spec.srcPos,
+				DiagnosticKind.Error,
+				String.Format( "Specialization of '{0}' must bind at least one of '{1}'s own template parameters",
+					spec.name, owner.name ) ) );
+			MarkInvalidSpec( spec );
+			return false;
+		}
+
 		private void ValidateCtorSpecs( List<Structor> ctors, Myll.Core.Structural owner )
 		{
 			if( ctors.All( c => c.TplSpec.Count == 0 ) )
@@ -817,10 +1077,18 @@ Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 				b => owner.TplParams.Any( p => p.name == b.name )
 				 || candidate.TplParams.Any( p => p.name == b.name ) );
 
-		private static bool CoversBindings( Myll.Core.Structural owner, Func candidate, Func spec )
-			=> spec.TplSpec.All(
+		private static bool CoversBindings( Myll.Core.Structural owner, ITemplatedDecl candidate, Decl spec )
+			=> TplBindings( spec ).All(
 				b => owner.TplParams.Any( p => p.name == b.name )
 				 || candidate.TplParams.Any( p => p.name == b.name ) );
+
+		private static List<TplParam> MemberTarget( Myll.Core.Structural owner, ITemplatedDecl primary )
+		{
+			List<TplParam> target = new();
+			target.AddRange( owner.TplParams );
+			target.AddRange( primary.TplParams );
+			return target;
+		}
 
 		// Bindings accessor shared by the hooks (each kind has its own TplSpec field).
 		private static List<TplBinding> TplBindings( Decl spec )

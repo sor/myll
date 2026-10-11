@@ -566,6 +566,11 @@ namespace Myll.Generator
 		/// </summary>
 		private void EmitVarSpecialization( VarDecl obj )
 		{
+			if( obj.IsInStruct ) {
+				EmitMemberVarSpec( obj );
+				return;
+			}
+
 			Decl.SpecData info = obj.SpecInfo!;
 
 			string tplPrefix = info.IsFull
@@ -622,7 +627,8 @@ namespace Myll.Generator
 			bool needsTypename = false;
 
 			bool isInsideStruct   = obj.IsInStruct;
-			bool isStatic         = obj.IsStatic;
+			bool isStatic         = obj.IsStatic
+			                        || ( isInsideStruct && obj.TplParams.Count > 0 ); // C++ member templates must be static
 			bool isHidden         = obj.IsHidden;
 			// const variable templates are implicitly [ct]: their values are
 			// compile-time constants like std::numbers::pi_v
@@ -1039,6 +1045,129 @@ namespace Myll.Generator
 		/// C++ rejects member specializations inside the class, so these never
 		/// emit in-class.
 		/// </summary>
+		/// <summary>
+		/// Emits a nested class specialization out-of-line, after the enclosing
+		/// class closes: `template<> template<> class Outer<int>::Inner<f32> { ... };`
+		/// for full bindings (member args on the nested name, class args on the
+		/// enclosing one), or `template<> template<typename V> ... Outer<int>::Inner<int, V> ...`
+		/// for partial ones. `static` does not apply; members are plain class
+		/// members of the specialization.
+		/// </summary>
+		private void EmitNestedStructSpec( Structural obj )
+		{
+			Decl.SpecData info = obj.SpecInfo!;
+			Myll.Core.Structural owner = (Myll.Core.Structural) hierarchical;
+
+			int classParamCount = owner.TplParams.Count;
+			List<TplArg> classArgs = info.Args
+				.Take( classParamCount )
+				.ToList();
+			List<TplArg> memberArgs = info.Args
+				.Skip( classParamCount )
+				.ToList();
+
+			string ownerPart = owner.ReferenceName;
+			if( classParamCount > 0 )
+				ownerPart = Format( "{0}<{1}>", ownerPart, classArgs.Select( a => a.Gen() ).Join( ", " ) );
+
+			string namePart = obj.name;
+			if( memberArgs.Count > 0 )
+				namePart = Format( "{0}<{1}>", namePart, memberArgs.Select( a => a.Gen() ).Join( ", " ) );
+
+			string qualifiedName = ownerPart + "::" + namePart;
+
+			string keyword = obj.kind switch {
+				Structural.Kind.Struct => StructFormat[3],
+				Structural.Kind.Class  => StructFormat[4],
+				Structural.Kind.Union  => StructFormat[5],
+				_                      => throw new Exception( Format( "no correct keyword determined: {0}", obj ) ),
+			};
+
+			// gen for the members of the specialization: members sit one level
+			// inside the out-of-line braces, which are at the enclosing class's
+			// own indent level
+			HierarchicalGen gen = new( obj, LevelDecl, LevelImpl, context: context );
+			obj.children.ForEach( c => c.AddToGen( gen ) );
+			Diagnostics.AddRange( gen.Diagnostics );
+
+			string outIndent = DeIndentDecl;
+			SourceLines ret = new();
+			ret.Add( Format( "{0}template<>", outIndent ) );
+			if( classParamCount > 0 )
+				ret.Add( obj.TplParams.Count > 0
+					? Format( "{0}template <{1}>", outIndent, GenTemplateParameterList( obj.TplParams ) )
+					: Format( "{0}template<>", outIndent ) );
+
+			ret.Add( Format(
+				"{0}{1} {2}",
+				outIndent,
+				keyword,
+				qualifiedName ) );
+			MarkDeclSourceMap( ret, obj, 0 );
+
+			ret.Add( Format( "{0}{{", outIndent ) );
+			ret.AddRange( gen.GenDecl() );
+			ret.Add( Format( "{0}}};", outIndent ) );
+
+			methodSpecDecls.Add( ret );
+		}
+
+		/// <summary>
+		/// Emits a member variable specialization out-of-line, after the enclosing
+		/// class closes: `template<> template<> inline constexpr int Outer<int>::x<int> = 7;`
+		/// for full bindings, or `template<> template<typename U> ... Outer<int>::x<int, U> ...`
+		/// for partial ones. C++ rejects in-class member specializations (both
+		/// compilers), and `static` is not repeated out-of-line. Member arguments
+		/// bind the class parameters first, like method specializations.
+		/// </summary>
+		private void EmitMemberVarSpec( VarDecl obj )
+		{
+			Decl.SpecData info = obj.SpecInfo!;
+			Myll.Core.Structural owner = (Myll.Core.Structural) obj.scope!.parent!.decl!;
+
+			int classParamCount = owner.TplParams.Count;
+			List<TplArg> classArgs = info.Args
+				.Take( classParamCount )
+				.ToList();
+			List<TplArg> memberArgs = info.Args
+				.Skip( classParamCount )
+				.ToList();
+
+			string ownerPart = owner.ReferenceName;
+			if( classParamCount > 0 )
+				ownerPart = Format( "{0}<{1}>", ownerPart, classArgs.Select( a => a.Gen() ).Join( ", " ) );
+
+			string namePart = obj.name;
+			if( memberArgs.Count > 0 )
+				namePart = Format( "{0}<{1}>", namePart, memberArgs.Select( a => a.Gen() ).Join( ", " ) );
+
+			string qualifiedName = ownerPart + "::" + namePart;
+
+			bool isConstType = ( obj.type.qual & Qualifier.Const ) != 0;
+
+			string outIndent = DeIndentDecl;
+			SourceLines ret = new();
+			ret.Add( Format( "{0}template<>", outIndent ) );
+			if( classParamCount > 0 )
+				ret.Add( obj.TplParams.Count > 0
+					? Format( "{0}template <{1}>", outIndent, GenTemplateParameterList( obj.TplParams ) )
+					: Format( "{0}template<>", outIndent ) );
+
+			ret.Add( Format(
+				VarFormat[0],
+				outIndent,
+				"",
+				"inline ",
+				"",
+				isConstType ? VarFormat[4] : "",
+				"",
+				( isConstType ? StripConstQualifier( obj.type ) : obj.type ).Gen( qualifiedName ),
+				obj.init != null ? Format( " = {0}", obj.init.Gen() ) : Format( " {0}", VarEmptyInitFormat ) ) );
+
+			MarkDeclSourceMap( ret, obj, 0 );
+			methodSpecDecls.Add( ret );
+		}
+
 		private void EmitMethodSpec( Func obj )
 		{
 			Decl.SpecData info = obj.SpecInfo!;
@@ -1274,6 +1403,15 @@ namespace Myll.Generator
 		{
 			if( obj.IsStatic )
 				throw new ArgumentOutOfRangeException( nameof( obj ), true, "Hierarchicals can not be static" );
+
+			// A nested class specialization emits out-of-line after the enclosing
+			// class closes: C++ rejects in-class member specializations.
+			if( obj is Structural nestedSpec
+			 && nestedSpec.SpecInfo != null
+			 && hierarchical is Structural ) {
+				EmitNestedStructSpec( nestedSpec );
+				return;
+			}
 
 			// this is a sub-gen for the child-hierarchical obj
 			HierarchicalGen gen = new( obj, LevelDecl + 1, LevelImpl, context: context );
