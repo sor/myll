@@ -288,6 +288,32 @@ Decisions (settled 2026-10-04):
   aliases: bodies spell the value like C++. Fully bound specializations emit
   the template<> form for non-type positions too.
 
+## Member variable and nested class specializations (phase F)
+
+- Member variable templates are implicitly `static` in the emission — C++ only
+  allows static member templates, and both compilers reject the non-static form
+  that Myll previously emitted (a pre-existing breakage with no test coverage).
+  Qualified uses substitute the enclosing class's parameters with the qualified
+  name's class arguments (`Box<int>::x<int>` yields `int`, not `T`).
+- Member variable and nested class specializations follow the method pattern:
+  bindings cover the enclosing class's parameters first (concrete values, since
+  C++ requires concrete enclosing arguments), and at least one of the member's
+  own parameters must be bound — an all-open member specialization does not
+  specialize anything (both compilers reject it; clang also rejects the nested
+  class form, g++ accepts it — a divergence, so Myll rejects).
+- Emission is out-of-line after the enclosing class closes (in-class member
+  specializations are rejected by both compilers): `template<> template<>
+  inline constexpr int Outer<int>::x<int> = 7;` and `template<> template<>
+  class Outer<int>::Inner<f32> { ... };`. `static` is not repeated out-of-line.
+- The spec collector recurses into class scopes, so member specializations enter
+  the `specsByPrimary` index (method and constructor specializations continue to
+  ride the overload candidate lists). The ODR signature includes the
+  class-parameter positions. Nested-class use matching prepends the enclosing
+  class's arguments from the qualified name's earlier segment, mirroring method
+  resolution. Nested classes inside nested classes (deeper than one level) are
+  rejected for now — the emission would need argument lists for every
+  enclosing level.
+
 ## Deferred inventory
 
 - Use-site named template arguments (`Arr<T=int, N=3>`): deferred — Myll has
@@ -301,10 +327,9 @@ Decisions (settled 2026-10-04):
   named constants or calls stay unfolded. Use sites fold the same way
   (`Arr<int, 2*8>` folds to 16 and matches the folded specialization). Known
   mini-wart: `<-5>` lexes as the left-arrow token; write `< -5>` or `0-5`.
-- Specialization of member (field-scope) variable and class templates: the transformer's
-  imported-primary search follows namespaces only; those stay same-module for now.
-  Method (member function) and constructor specializations are implemented (phases 5/6,
-  same-module).
+- Cross-module member specializations: the imported-primary search still follows
+  namespaces only. Same-module member variable and nested class specializations are
+  implemented (phase F, see below).
 - A future attribute to constrain class specializations: e.g. `[interface]` to enforce that a
   specialization exposes the primary's member set, or `[copy]` to copy the primary's members
   and only override the listed ones. The C++-first semantics (fresh member set, bound names
