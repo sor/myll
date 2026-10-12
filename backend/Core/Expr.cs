@@ -286,15 +286,26 @@ namespace Myll.Core
 			string leftStr  = left.Gen( doBraceLeft );
 			string rightStr = right.Gen( doBraceRight );
 
+			IdExpr? memberId = right as IdExpr;
+
+			// A member access always names its right side raw: C++ member lookup
+			// finds instance and static members alike, and a qualified name of a
+			// template-class member would carry symbolic class arguments that are
+			// unknown at the declaration level (`h.x` must not become
+			// `h.ns::Holder<T>::x`). Explicitly qualified spellings go through
+			// the ScopedExpr path.
+			bool isMemberAccess = op is Operand.MemberAccess
+			                     or Operand.NCMemberAccess
+			                     or Operand.MemberPtrAccess
+			                     or Operand.MemberAccessPtr
+			                     or Operand.NCMemberAccessPtr
+			                     or Operand.MemberPtrAccessPtr;
+			if( isMemberAccess && memberId != null )
+				rightStr = memberId.idTplArgs.Gen();
+
 			// Dependent member template calls need the `.template` / `->template`
 			// disambiguator in the generated C++.
-			bool isMemberAccess = op is Operand.MemberAccess
-				                 or Operand.NCMemberAccess
-				                 or Operand.MemberPtrAccess
-				                 or Operand.MemberAccessPtr
-				                 or Operand.NCMemberAccessPtr
-				                 or Operand.MemberPtrAccessPtr;
-			if( isMemberAccess && right is IdExpr memberId && memberId.idTplArgs.tplArgs.Count > 0
+			if( isMemberAccess && memberId != null && memberId.idTplArgs.tplArgs.Count > 0
 			 && left.Type?.IsDependentType() == true ) {
 				rightStr = "template " + rightStr;
 			}

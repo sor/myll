@@ -1174,6 +1174,10 @@ namespace Myll.Resolver
 				if( isExtern )                                                AddError( vd, "[extern] is only valid at module/namespace scope." );
 				if( isInline && !isStatic )                                   AddError( vd, "[inline] on a class field requires [static]." );
 				if( isCompileTime && !isStatic )                              AddError( vd, "[ct] on a class field requires [static]." );
+				// Member variable templates (primary or specialization) must
+				// carry [static]: C++ only allows static member templates.
+				if( ( vd.TplParams.Count > 0 || vd.TplSpec.Count > 0 ) && !isStatic )
+					AddError( vd, "Member variable templates must be [static]: C++ only allows static member templates." );
 			} else {
 				if( isStatic )                                                AddError( vd, "[static] is valid only on class fields; use [hide] for module variables." );
 				if( isInline && isHidden )                                    AddError( vd, "[inline] and [hide] are mutually exclusive." );

@@ -626,16 +626,17 @@ namespace Myll.Generator
 			// a duplicate prefix.
 			bool needsTypename = false;
 
-			bool isInsideStruct   = obj.IsInStruct;
-			bool isStatic         = obj.IsStatic
-			                        || ( isInsideStruct && obj.TplParams.Count > 0 ); // C++ member templates must be static
+bool isInsideStruct   = obj.IsInStruct;
+			bool isStatic         = obj.IsStatic;
 			bool isHidden         = obj.IsHidden;
-			// const variable templates are implicitly [ct]: their values are
-			// compile-time constants like std::numbers::pi_v
+			// Variable templates are implicitly [ct] when const in either spelling:
+			// the `const` keyword kind or a const-qualified type (`field const T x<U>`)
+			// — if you don't want constexpr, don't use const.
 			bool isCompileTime    = obj.IsCompileTime
 			                        || ( obj.TplParams.Count > 0
 			                         && ( obj.kind == VarDecl.Kind.Const
-			                            || obj.kind == VarDecl.Kind.Let ) );
+			                              || obj.kind == VarDecl.Kind.Let
+			                              || ( obj.type.qual & Qualifier.Const ) != 0 ) );
 			bool isExplicitInline = obj.IsInline;
 			bool isExplicitExtern = obj.IsExternal;
 			bool isConstType      = (obj.type.qual & Qualifier.Const) != 0;
@@ -762,8 +763,9 @@ namespace Myll.Generator
 				: obj.type;
 
 			bool isConstInit     = isCompileTime
+			                        && !isConstType
 			                        && ( obj.kind == VarDecl.Kind.Var
-			                        || obj.kind == VarDecl.Kind.Field );
+			                            || obj.kind == VarDecl.Kind.Field );
 
 			// 0 indent, 1 extern, 2 inline, 3 static, 4 constexpr, 5 typename, 6 type & name, 7 init
 			if( (emitAt & GenerateAt.Decl) != 0 ) {
