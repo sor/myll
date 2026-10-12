@@ -189,24 +189,36 @@ alias BadSpec<T=int> = BadSpec<int>; // FAIL: Alias templates cannot be speciali
 // member variable specialization validation (class params first, at least one own param bound)
 class MVBox<T> {
 [pub]:
-	field const T y<U> = (U)0;
-	field const T y<U=int> = 1; // FAIL: Specialization of 'y' must bind all class template parameters
+	[static] field const T y<U> = (U)0;
+	[static] field const T y<U=int> = 1; // FAIL: Specialization of 'y' must bind all class template parameters
 }
 
 class MVOpen<T> {
 [pub]:
-	field const T z<U> = (U)0;
-	field const T z<T=int> = 1; // FAIL: Specialization of 'z' must bind at least one of 'MVOpen's own template parameters
+	[static] field const T z<U> = (U)0;
+	[static] field const T z<T=int> = 1; // FAIL: Specialization of 'z' must bind at least one of 'MVOpen's own template parameters
 }
 
 class MVSpec<T> {
 [pub]:
-	field const T w<U> = (U)0;
+	[static] field const T w<U> = (U)0;
 }
 
 class MVSpec<T=int> {
 [pub]:
-	field const T w<U=int> = 1; // FAIL: Specialization of 'w' sits inside the specialization
+	[static] field const T w<U=int> = 1; // FAIL: Specialization of 'w' sits inside the specialization
+}
+
+class MVStatic<T> {
+[pub]:
+	field const T n<U> = (U)0; // FAIL: Member variable templates must be [static]
+}
+
+class MVStaticSpec<T> {
+[pub]:
+	[static] field const T m<U> = (U)0;
+	[static] field const T m<T=int, U=int> = 1;
+	field const T m2<T=int, U=int> = 2; // FAIL: Member variable templates must be [static]
 }
 
 class MVDeep {

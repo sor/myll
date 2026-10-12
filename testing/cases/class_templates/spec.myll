@@ -175,8 +175,8 @@ class OpBox<T> {
 // C++ only allows static member templates.
 class Holder<T> {
 [pub]:
-	field const T x<U> = (U)0;
-	field const T x<T=int, U=int> = 7;
+	[static] field const T x<U> = (U)0;
+	[static] const T x<T=int, U=int> = 7;
 	class Inner<V> {
 	[pub]:
 		field V v;

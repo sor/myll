@@ -317,7 +317,7 @@ namespace spec
             V v{};
         };
         template <typename U>
-        inline static const T x = static_cast<U>( 0 );
+        inline static constexpr T x = static_cast<U>( 0 );
     };
     template<>
     template<>
