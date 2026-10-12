@@ -290,11 +290,16 @@ Decisions (settled 2026-10-04):
 
 ## Member variable and nested class specializations (phase F)
 
-- Member variable templates are implicitly `static` in the emission — C++ only
-  allows static member templates, and both compilers reject the non-static form
-  that Myll previously emitted (a pre-existing breakage with no test coverage).
-  Qualified uses substitute the enclosing class's parameters with the qualified
-  name's class arguments (`Box<int>::x<int>` yields `int`, not `T`).
+- Member variable templates require `[static]` (both spellings, primary and
+  specialization); the resolver rejects the missing keyword instead of silently
+  emitting static. Const in either spelling — the `const` keyword or a
+  const-qualified type — is implicitly `[ct]` and emits `constexpr` (if you
+  don't want constexpr, don't use const); `[static,ct] var/field` emits
+  `constinit`. Qualified uses substitute the enclosing class's parameters with
+  the qualified name's class arguments (`Box<int>::x<int>` yields `int`, not
+  `T`). Member accesses name their right side raw (`h.x<int>`), because a
+  qualified template-class member name would carry symbolic class arguments
+  (a latent emission bug, fixed).
 - Member variable and nested class specializations follow the method pattern:
   bindings cover the enclosing class's parameters first (concrete values, since
   C++ requires concrete enclosing arguments), and at least one of the member's
