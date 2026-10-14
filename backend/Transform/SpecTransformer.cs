@@ -62,8 +62,15 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 
 			FoldSpecBindings( children );
 
+			// Every structural gets its [spec=...] attribute validated, even
+			// non-specializations: unknown values and attributes on primaries
+			// or plain classes are rejected.
+			List<Myll.Core.Structural> structs = children.OfType<Myll.Core.Structural>().ToList();
+			foreach( Myll.Core.Structural childStruct in structs )
+				ReadSpecAttrib( childStruct );
+
 			ValidateSpecsInScope( children.OfType<VarDecl>().ToList(), owner, nsFqn );
-			ValidateStructSpecs( children.OfType<Myll.Core.Structural>().ToList(), owner, nsFqn );
+			ValidateStructSpecs( structs, owner, nsFqn );
 			ValidateFuncSpecs( children.OfType<Func>().ToList(), owner, nsFqn );
 			if( hier is Myll.Core.Structural structHier )
 				ValidateCtorSpecs( children.OfType<Structor>().ToList(), structHier );
@@ -294,6 +301,44 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 			}
 		}
 
+		private enum SpecAttribKind { None, Fresh, Member }
+
+		// Reads the [spec=...] attribute of a class/struct/union: [spec=all]
+		// declares a specialization with a fresh body, [spec=some] a member
+		// specialization block. Unknown values are rejected on every
+		// structural, and the attribute only fits a specialization — a
+		// primary or plain class carrying it is rejected too.
+		private SpecAttribKind ReadSpecAttrib( Myll.Core.Structural s )
+		{
+			if( !s.HasAttrib( "spec" ) )
+				return SpecAttribKind.None;
+
+			string value = s.AttribValues( "spec" ).FirstOrDefault() ?? "";
+			SpecAttribKind kind = value == "all" ? SpecAttribKind.Fresh
+				: value == "some" ? SpecAttribKind.Member
+				: SpecAttribKind.None;
+
+			if( kind == SpecAttribKind.None ) {
+				Diagnostics.Add( new Diagnostic(
+					s.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "Unknown [spec={0}] on '{1}'; use [spec=all] for a fresh body or [spec=some] for a member specialization block",
+						value, s.name ) ) );
+				return SpecAttribKind.None;
+			}
+
+			if( s.TplSpec.Count == 0 ) {
+				Diagnostics.Add( new Diagnostic(
+					s.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "The [spec={0}] attribute of '{1}' applies only to template specializations",
+						value, s.name ) ) );
+				return SpecAttribKind.None;
+			}
+
+			return kind;
+		}
+
 		private void ValidateStructSpecs( List<Myll.Core.Structural> structs, Myll.Core.Structural? owner, string? nsFqn )
 		{
 			if( owner != null ) {
@@ -304,11 +349,32 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 			// per primary: bound-value signatures already seen (duplicate check)
 			Dictionary<Decl, List<string>> seenSignatures = new();
 
-			foreach( Myll.Core.Structural spec in structs ) {
-				if( spec.TplSpec.Count == 0 )
-					continue;
+foreach( Myll.Core.Structural spec in structs ) {
+			if( spec.TplSpec.Count == 0 )
+				continue;
 
-				(Myll.Core.Structural? primary, bool isImported) = FindPrimary( structs, spec,
+			// A specialization's kind must be declared: fresh body vs member
+			// block. Unknown values were already reported while scanning the
+			// scope.
+			if( !spec.IsAttrib( "spec", "all" ) ) {
+				if( !spec.HasAttrib( "spec" ) )
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' must declare its kind: [spec=all] for a fresh body or [spec=some] for a member specialization block",
+							spec.name ) ) );
+				else if( spec.IsAttrib( "spec", "some" ) )
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Member specialization block of '{0}' is not supported yet",
+							spec.name ) ) );
+
+				MarkInvalidSpec( spec );
+				continue;
+			}
+
+			(Myll.Core.Structural? primary, bool isImported) = FindPrimary( structs, spec,
 					s => s.name == spec.name && s.SpecInfo == null && s.TplParams.Count > 0,
 					IsStructPrimary, nsFqn,
 					String.Format( "No matching template '{0}' in this module or its imports; a class/struct/union specialization must live in the primary's module or import it",
@@ -859,6 +925,26 @@ Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 			foreach( Myll.Core.Structural spec in structs ) {
 				if( spec.TplSpec.Count == 0 )
 					continue;
+
+				// Same [spec=all] requirement as outer specializations; the
+				// fresh body of a nested class spec replaces all its members.
+				if( !spec.IsAttrib( "spec", "all" ) ) {
+					if( !spec.HasAttrib( "spec" ) )
+						Diagnostics.Add( new Diagnostic(
+							spec.srcPos,
+							DiagnosticKind.Error,
+							String.Format( "Specialization of '{0}' must declare its kind: [spec=all] for a fresh body or [spec=some] for a member specialization block",
+								spec.name ) ) );
+					else if( spec.IsAttrib( "spec", "some" ) )
+						Diagnostics.Add( new Diagnostic(
+							spec.srcPos,
+							DiagnosticKind.Error,
+							String.Format( "Member specialization block of '{0}' is not supported yet",
+								spec.name ) ) );
+
+					MarkInvalidSpec( spec );
+					continue;
+				}
 
 				(Myll.Core.Structural? primary, _) = FindPrimary( structs, spec,
 					s => s != spec && s.SpecInfo == null && CoversBindings( owner, s, spec ),

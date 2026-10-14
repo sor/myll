@@ -57,12 +57,17 @@ namespace Myll.Core
 		public bool IsFlags     => HasAttrib( "flags" );
 		public bool IsOpBitwise => IsAttrib( "operators", "bitwise" );
 
-		public bool HasAttrib( string attrib )
+public bool HasAttrib( string attrib )
 			=> attribs.ContainsKey( attrib );
 
 		public bool IsAttrib( string attrib, string value )
 			=> attribs.TryGetValue( attrib, out List<string>? values )
-			&& values.Contains( value );
+		 && values.Contains( value );
+
+		// Values of a value-carrying attribute ( [spec=all] ), in write order;
+		// empty when the attribute is absent or valueless.
+		public IReadOnlyList<string> AttribValues( string attrib )
+			=> attribs.TryGetValue( attrib, out List<string>? values ) ? values : Array.Empty<string>();
 
 		public virtual void AssignAttribs( Attribs inAttribs )
 		{

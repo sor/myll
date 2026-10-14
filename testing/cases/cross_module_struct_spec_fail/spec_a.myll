@@ -2,7 +2,7 @@ module spec_a;
 
 import nums;
 
-class Box<T=int>
+[spec=all] class Box<T=int>
 {
 [pub]:
 	field int _value;

@@ -2,7 +2,7 @@ module nums_spec;
 
 import nums;
 
-class Box<T=int>
+[spec=all] class Box<T=int>
 {
 [pub]:
 	field int _value;
@@ -11,7 +11,7 @@ class Box<T=int>
 	func read() -> int => _value + _extra;
 }
 
-class Pair<T, U=int>
+[spec=all] class Pair<T, U=int>
 {
 [pub]:
 	field T _a;

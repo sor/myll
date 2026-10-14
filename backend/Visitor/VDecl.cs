@@ -188,11 +188,23 @@ namespace Myll
 			HashSet<string> seen = new( StringComparer.Ordinal );
 			foreach( AttribContext a in c.attrib() ) {
 				string name = a.attribId().GetText();
-				if( !seen.Add( name ) )
+				if( seen.Add( name ) )
+					continue;
+
+				// [spec=all] and [spec=some] name opposite specialization kinds;
+				// combining them names none.
+				if( name == "spec" ) {
 					Context.Diagnostics.Add( new Diagnostic(
 						a.ToSrcPos(),
-						DiagnosticKind.Warning,
-						String.Format( "Duplicate attribute '{0}' ignored; the first one applies.", name ) ) );
+						DiagnosticKind.Error,
+						"Duplicate attribute 'spec'; [spec=all] and [spec=some] cannot be combined" ) );
+					continue;
+				}
+
+				Context.Diagnostics.Add( new Diagnostic(
+					a.ToSrcPos(),
+					DiagnosticKind.Warning,
+					String.Format( "Duplicate attribute '{0}' ignored; the first one applies.", name ) ) );
 			}
 		}
 

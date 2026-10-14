@@ -71,28 +71,36 @@ const T spec5<U=int> = (T)3; // FAIL: Duplicate specialization of 'spec5' for U=
 
 // class/struct/union specialization validation
 class SBox<T> { field int v; }
-class SBox<X=int> { field int v; } // FAIL: Unknown template parameter 'X' in specialization of 'SBox'
+[spec=all] class SBox<X=int> { field int v; } // FAIL: Unknown template parameter 'X' in specialization of 'SBox'
 
 class SOrder<T, U> { field int v; }
-class SOrder<U=int, T=f32> { field int v; } // FAIL: Bindings of 'SOrder' must follow the primary's parameter order
+[spec=all] class SOrder<U=int, T=f32> { field int v; } // FAIL: Bindings of 'SOrder' must follow the primary's parameter order
 
 class SSkip<T, U, V> { field int v; }
-class SSkip<T, V=int> { field int v; } // FAIL: Specialization 'SSkip' names 2 of 3 parameters
+[spec=all] class SSkip<T, V=int> { field int v; } // FAIL: Specialization 'SSkip' names 2 of 3 parameters
 
 class SSym<T, U> { field int v; }
-class SSym<T=T*> { field int v; } // FAIL: Specialization of 'SSym' must bind 'T' to a concrete type, not the parameter 'T'
+[spec=all] class SSym<T=T*> { field int v; } // FAIL: Specialization of 'SSym' must bind 'T' to a concrete type, not the parameter 'T'
 
 class SSym2<T, U> { field int v; }
-class SSym2<T=U*> { field int v; } // FAIL: Specialization of 'SSym2' must bind 'T' to a concrete type, not the parameter 'U'
+[spec=all] class SSym2<T=U*> { field int v; } // FAIL: Specialization of 'SSym2' must bind 'T' to a concrete type, not the parameter 'U'
+
+// [spec=...] attribute validation on class/struct/union specializations
+class SSkip2<T, U> { field int v; }
+class SSkip2<T=int> { field int v; } // FAIL: Specialization of 'SSkip2' must declare its kind
+[spec=some] class SSkip3<T=int> { field int v; } // FAIL: Member specialization block of 'SSkip3' is not supported yet
+[spec=partial] class SSkip4<T=int> { field int v; } // FAIL: Unknown [spec=partial] on 'SSkip4'
+[spec] class SSkip5<T=int> { field int v; } // FAIL: Unknown [spec=] on 'SSkip5'
+[spec=all] class SPlain { field int v; } // FAIL: The [spec=all] attribute of 'SPlain' applies only to template specializations
 
 class SDup<T> { field int v; }
-class SDup<T=int> { field int v; }
-class SDup<T=int> { field int v; } // FAIL: Duplicate specialization of 'SDup' for T=int
+[spec=all] class SDup<T=int> { field int v; }
+[spec=all] class SDup<T=int> { field int v; } // FAIL: Duplicate specialization of 'SDup' for T=int
 
-class SLate<T=int> { field int v; } // FAIL: Specialization of 'SLate' must follow its primary template
+[spec=all] class SLate<T=int> { field int v; } // FAIL: Specialization of 'SLate' must follow its primary template
 class SLate<T> { field int v; }
 
-class SNoTpl<T=int> { field int v; } // FAIL: No matching template 'SNoTpl' in this module
+[spec=all] class SNoTpl<T=int> { field int v; } // FAIL: No matching template 'SNoTpl' in this module
 
 // function template specialization validation (full-only, signature repeat)
 func fval<T, U>( T a, U b ) -> T => a;
@@ -141,7 +149,7 @@ class MHost<T> {
 	func shadow<T=int>( int a ) -> int => a; // FAIL: Method 'shadow' has a template parameter shadowing
 }
 
-class MSpec<T=int> {
+[spec=all] class MSpec<T=int> {
 [pub]:
 	func inner( int a ) -> int => a;
 	func inner<T=f32>( f32 a ) -> f32 => a; // FAIL: Specialization of 'inner' sits inside the specialization
@@ -210,7 +218,7 @@ class MVSpec<T> {
 	[static] field const T w<U> = (U)0;
 }
 
-class MVSpec<T=int> {
+[spec=all] class MVSpec<T=int> {
 [pub]:
 	[static] field const T w<U=int> = 1; // FAIL: Specialization of 'w' sits inside the specialization
 }
@@ -232,6 +240,6 @@ class MVDeep {
 	class Mid {
 	[pub]:
 		class Deep<V> { field V v; }
-		class Deep<V=int> { field int v; } // FAIL: Specializations of nested classes inside another nested class are not supported yet
+		[spec=all] class Deep<V=int> { field int v; } // FAIL: Specializations of nested classes inside another nested class are not supported yet
 	}
 }

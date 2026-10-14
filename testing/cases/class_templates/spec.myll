@@ -12,7 +12,7 @@ class Box<T>
 	func read() -> T => _value;
 }
 
-class Box<T=int>
+[spec=all] class Box<T=int>
 {
 [pub]:
 	field int _value;
@@ -34,7 +34,7 @@ class Pair<T, U>
 	func sum() -> T => _a;
 }
 
-class Pair<T, U=int>
+[spec=all] class Pair<T, U=int>
 {
 [pub]:
 	field T _a;
@@ -57,7 +57,7 @@ union Choice<T>
 	}
 }
 
-union Choice<T=f32>
+[spec=all] union Choice<T=f32>
 {
 	field {
 		f32 _val;
@@ -122,7 +122,7 @@ class SpecBox<T> {
 	ctor( T v ) { _v = v; }
 }
 
-class SpecBox<T=int> {
+[spec=all] class SpecBox<T=int> {
 [pub]:
 	field int _v;
 	ctor( int v ) { _v = v; }
@@ -138,7 +138,7 @@ class Rebind<T> {
 	func twice() -> T => _v + _v;
 }
 
-class Rebind<T=int> {
+[spec=all] class Rebind<T=int> {
 [pub]:
 	field T _v;
 	ctor( T v ) { _v = v; }
@@ -181,7 +181,7 @@ class Holder<T> {
 	[pub]:
 		field V v;
 	}
-	class Inner<T=int, V=f32> {
+	[spec=all] class Inner<T=int, V=f32> {
 	[pub]:
 		field f32 w;
 	}

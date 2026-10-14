@@ -23,7 +23,7 @@ class Fixed<T, int N> {
 	func first() -> T => 0;
 }
 
-class Fixed<T=int, N=1+2> {
+[spec=all] class Fixed<T=int, N=1+2> {
 [pub]:
 	ctor() {}
 	func len() -> int => 30;

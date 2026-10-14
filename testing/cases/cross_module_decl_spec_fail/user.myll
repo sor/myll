@@ -3,7 +3,7 @@ module user;
 import somelib;
 
 namespace Somelib {
-	class Box<T=int> // FAIL: Duplicate specialization of 'Box' for T=int (first defined in module 'somelib')
+	[spec=all] class Box<T=int> // FAIL: Duplicate specialization of 'Box' for T=int (first defined in module 'somelib')
 	{
 	[pub]:
 		ctor() {}

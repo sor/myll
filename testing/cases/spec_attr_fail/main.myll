@@ -1,0 +1,5 @@
+module spec_attr_fail;
+
+class T1<T> { field int v; }
+
+[spec=all, spec=some] class T1<T=int> { field int v; } // FAIL: Duplicate attribute 'spec'

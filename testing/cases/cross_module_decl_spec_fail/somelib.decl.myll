@@ -15,7 +15,7 @@ namespace Somelib {
 		func Get() -> T => _v;
 	};
 
-	class Box<T=int> {
+	[spec=all] class Box<T=int> {
 	[pub]:
 		ctor();
 
