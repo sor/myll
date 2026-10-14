@@ -79,6 +79,12 @@ class SOrder<U=int, T=f32> { field int v; } // FAIL: Bindings of 'SOrder' must f
 class SSkip<T, U, V> { field int v; }
 class SSkip<T, V=int> { field int v; } // FAIL: Specialization 'SSkip' names 2 of 3 parameters
 
+class SSym<T, U> { field int v; }
+class SSym<T=T*> { field int v; } // FAIL: Specialization of 'SSym' must bind 'T' to a concrete type, not the parameter 'T'
+
+class SSym2<T, U> { field int v; }
+class SSym2<T=U*> { field int v; } // FAIL: Specialization of 'SSym2' must bind 'T' to a concrete type, not the parameter 'U'
+
 class SDup<T> { field int v; }
 class SDup<T=int> { field int v; }
 class SDup<T=int> { field int v; } // FAIL: Duplicate specialization of 'SDup' for T=int

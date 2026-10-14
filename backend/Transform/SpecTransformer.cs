@@ -339,6 +339,15 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 					continue;
 				}
 
+				// Bindings must be concrete: a value naming one of the primary's
+				// parameters (T=U, T=T*) is a pattern specialization, which Myll
+				// does not model yet. Without this check the spec would never
+				// match any use and emit ill-formed C++.
+				if( !HasConcreteBindings( spec.TplSpec, primary.TplParams, spec.name, spec.srcPos ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
 				// Duplicate specialization signature check.
 				if( !TryAddSpecSignature( primary, spec.name, spec.TplSpec, spec.srcPos, seenSignatures ) ) {
 					MarkInvalidSpec( spec );
@@ -1112,8 +1121,9 @@ Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 		}
 
 		// Bindings must name concrete types: a value naming one of the target
-		// parameters (T=U) has no C++ equivalent because function templates
-		// have no partial specializations.
+		// parameters (T=U) has no C++ equivalent for function templates, and
+		// for class templates it is a pattern specialization, which Myll
+		// does not model yet.
 		private bool HasConcreteBindings( List<TplBinding> tplSpec, List<TplParam> target, string specName, SrcPos srcPos )
 		{
 			HashSet<string> names = new( target.Select( p => p.name ) );
