@@ -1,0 +1,57 @@
+import nums, spec_a;
+
+// Same-module block: the head must follow the primary by source position.
+class Pair<T>
+{
+[pub]:
+	ctor( T v ) { _v = v; }
+
+	field T _v;
+
+	func Get() -> T => _v;
+}
+
+[spec=some] class Pair<T=f32>
+{
+[pub]:
+	func Get() -> f32 => _v + 0.5;
+}
+
+func main() -> int
+{
+	// cross-module block: ctor spec (v*10) then method spec (result*2)
+	var Box<int> b( 1 );
+	if( b.Get() != 20 ) return 1;
+
+	// the primary stays in charge for other instantiations
+	var Box<f32> c( 1.5 );
+	if( c.Get() < 1.4 ) return 2;
+
+	// plain member still resolves through the implicit instantiation
+	if( b.Read() != 10 ) return 3;
+
+	// method template specialization via explicit member arguments
+	if( b.Find<f32>( 2.5 ) < 2.4 ) return 4;
+
+	// static field specialization through the qualified name
+	if( Box<int>::count != 7 ) return 5;
+
+	// same-module block
+	var Pair<f32> p( 1.5 );
+	if( p.Get() < 1.9 ) return 6;
+	var Pair<int> q( 2 );
+	if( q.Get() != 2 ) return 7;
+
+	// ctor overload disambiguation: only the one-argument ctor is specialized
+	var Box<f32> d( 1.0, 2.0 );
+	if( d._v2 != 2.0 ) return 8;
+
+	// nested class specialization from the block
+	var Box<int>::Inner<int> inner();
+	if( inner.W() != 15 ) return 9;
+
+	// the helper's uses resolve the primary, the C++ instantiation picks the specializations
+	if( helper() != 90 ) return 10;
+
+	return 0;
+}

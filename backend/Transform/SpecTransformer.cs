@@ -357,17 +357,16 @@ foreach( Myll.Core.Structural spec in structs ) {
 			// block. Unknown values were already reported while scanning the
 			// scope.
 			if( !spec.IsAttrib( "spec", "all" ) ) {
+				if( spec.IsAttrib( "spec", "some" ) ) {
+					ValidateMemberSpecBlock( spec, structs, nsFqn );
+					continue;
+				}
+
 				if( !spec.HasAttrib( "spec" ) )
 					Diagnostics.Add( new Diagnostic(
 						spec.srcPos,
 						DiagnosticKind.Error,
 						String.Format( "Specialization of '{0}' must declare its kind: [spec=all] for a fresh body or [spec=some] for a member specialization block",
-							spec.name ) ) );
-				else if( spec.IsAttrib( "spec", "some" ) )
-					Diagnostics.Add( new Diagnostic(
-						spec.srcPos,
-						DiagnosticKind.Error,
-						String.Format( "Member specialization block of '{0}' is not supported yet",
 							spec.name ) ) );
 
 				MarkInvalidSpec( spec );
@@ -438,9 +437,608 @@ foreach( Myll.Core.Structural spec in structs ) {
 				// resolves T to the bound value, and emission expands it, so the
 				// spelling concrete types stays optional.
 				InjectBoundAliases( spec.scope, new List<Param>(), spec.srcPos, BoundValuesOf( spec.TplSpec ) );
+
+				// A fresh body cannot coexist with a member specialization block
+				// of the same class+arguments: the class would be both a full
+				// specialization and an implicit instantiation.
+				Myll.Core.Structural? memberHead = FindVisibleSpecOfKind( primary, args, wantMemberHead: true, nsFqn, structs );
+				if( memberHead != null ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' conflicts with the member specialization block of the same arguments",
+							spec.name ) ) );
+					Diagnostics.Add( new Diagnostic(
+						memberHead.srcPos,
+						DiagnosticKind.Note,
+						String.Format( "The [spec=some] block of '{0}' is defined here.", memberHead.name ) ) );
+					MarkInvalidSpec( spec );
+				}
 			}
 		}
 
+		/// <summary>
+		/// Validates a [spec=some] block: the head names one concrete
+		/// instantiation of an imported (or same-module) class template, and
+		/// the body members specialize members of that instantiation. The head
+		/// itself is transparent to name lookup and emits no class — uses of
+		/// the class keep resolving to the primary, which stays implicitly
+		/// instantiated; each member validates and emits like an in-class
+		/// member specialization, with the head's class arguments standing in
+		/// for the class-parameter bindings.
+		/// </summary>
+		private void ValidateMemberSpecBlock( Myll.Core.Structural head, List<Myll.Core.Structural> structs, string? nsFqn )
+		{
+			(Myll.Core.Structural? primary, bool isImported) = FindPrimary( structs, head,
+				s => s.name == head.name && s.SpecInfo == null && s.TplParams.Count > 0,
+				IsStructPrimary, nsFqn,
+				String.Format( "No matching template '{0}' in this module or its imports; a member specialization block must live in the primary's module or import it",
+					head.name ) );
+			if( primary == null ) {
+				MarkInvalidSpec( head );
+				return;
+			}
+
+			if( !ValidateFollowOrder( head, primary, isImported, String.Format( "Member specialization of '{0}' must follow its primary template",
+				head.name ) ) ) {
+				MarkInvalidSpec( head );
+				return;
+			}
+
+			if( head.IsForwardDeclaration && !isDeclModule ) {
+				Diagnostics.Add( new Diagnostic(
+					head.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "Member specialization block of '{0}' must be a full definition",
+						head.name ) ) );
+				MarkInvalidSpec( head );
+				return;
+			}
+
+			if( !ValidateBindingShape( head.name, head.TplSpec, primary.TplParams, head.srcPos ) ) {
+				MarkInvalidSpec( head );
+				return;
+			}
+
+			// Members replace members of one concrete instantiation: the head
+			// must bind every class parameter to a concrete type (C++ requires
+			// concrete enclosing arguments for member specializations).
+			if( !ClassParamsBound( head, primary, String.Format( "Member specialization head of '{0}' must bind all class template parameters of '{1}'",
+					head.name, primary.name ) ) ) {
+				MarkInvalidSpec( head );
+				return;
+			}
+
+			if( !HasConcreteBindings( head.TplSpec, primary.TplParams, head.name, head.srcPos ) ) {
+				MarkInvalidSpec( head );
+				return;
+			}
+
+			List<TplArg> classArgs = BuildSpecArgs( primary.TplParams, head.TplSpec, out bool[] classBound, out List<TplParam> classUnbound );
+
+			// A fresh body cannot coexist with a member specialization block of
+			// the same class+arguments.
+			Myll.Core.Structural? freshSpec = FindVisibleSpecOfKind( primary, classArgs, wantMemberHead: false, nsFqn, structs );
+			if( freshSpec != null ) {
+				Diagnostics.Add( new Diagnostic(
+					head.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "Member specialization block of '{0}' conflicts with the full specialization of the same arguments",
+						head.name ) ) );
+				Diagnostics.Add( new Diagnostic(
+					freshSpec.srcPos,
+					DiagnosticKind.Note,
+					String.Format( "The [spec=all] specialization of '{0}' is defined here.", freshSpec.name ) ) );
+				MarkInvalidSpec( head );
+				return;
+			}
+
+			// The member emission splits its arguments at the class parameter
+			// count, so the head keeps the primary's parameter list.
+			head.SpecInfo = new Decl.SpecData {
+				Primary        = primary,
+				Args           = classArgs,
+				Bound          = classBound,
+				MemberSpecHead = true,
+			};
+			head.TplParams = primary.TplParams;
+
+			// Unqualified names inside member bodies fall back to the
+			// primary's members, like base-class lookup; the specialized
+			// members themselves come from the block.
+			if( !head.scope.importedScopes.Contains( primary.scope ) )
+				head.scope.importedScopes.Add( primary.scope );
+
+			// Bound class parameters stay usable in member signatures and
+			// bodies, like in a fresh specialization.
+			InjectBoundAliases( head.scope, new List<Param>(), head.srcPos, BoundValuesOf( head.TplSpec ) );
+
+			Dictionary<Decl, List<string>> seenSignatures = new();
+
+			foreach( Decl member in head.children ) {
+				switch( member ) {
+					case Func method:
+						ValidateBlockMethodSpec( method, head, primary, classArgs, seenSignatures );
+						break;
+					case Structor ctor:
+						ValidateBlockCtorSpec( ctor, head, primary, classArgs, seenSignatures );
+						break;
+					case VarDecl field:
+						ValidateBlockVarSpec( field, head, primary, classArgs, seenSignatures );
+						break;
+					case Myll.Core.Structural nested:
+						ValidateBlockNestedStructSpec( nested, head, primary, classArgs, seenSignatures );
+						break;
+					default:
+						Diagnostics.Add( new Diagnostic(
+							member.srcPos,
+							DiagnosticKind.Error,
+							String.Format( "Only functions, constructors, [static] fields and nested classes can be specialized in the block of '{0}'",
+								head.name ) ) );
+						break;
+				}
+			}
+		}
+
+		// A method member of a [spec=some] block: bindings address only the
+		// method's own template parameters (the class arguments come from the
+		// head). Plain methods specialize the concrete instantiation's method
+		// directly; method templates may stay partially open.
+		private void ValidateBlockMethodSpec( Func spec, Myll.Core.Structural head, Myll.Core.Structural primary, List<TplArg> classArgs, Dictionary<Decl, List<string>> seenSignatures )
+		{
+			if( spec.body == null && !isDeclModule ) {
+				Diagnostics.Add( new Diagnostic(
+					spec.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "Member specialization of '{0}' must be a full definition",
+						spec.name ) ) );
+				MarkInvalidSpec( spec );
+				return;
+			}
+
+			if( !RejectBlockMemberIssues( spec, primary ) )
+				return;
+
+			List<Func> candidates = primary.children
+				.OfType<Func>()
+				.Where( f => f.name == spec.name && f.SpecInfo == null )
+				.ToList();
+
+			if( candidates.Count == 0 ) {
+				Diagnostics.Add( new Diagnostic(
+					spec.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "Class '{0}' has no method '{1}'; a member specialization block cannot add members",
+						primary.name, spec.name ) ) );
+				MarkInvalidSpec( spec );
+				return;
+			}
+
+			Dictionary<string, Typespec> boundValues = BlockBoundValuesOf( head, spec );
+			Func? memberPrimary = null;
+			Func? coverageMatch = null;
+
+			foreach( Func candidate in candidates ) {
+				if( !BlockSpecCoversParams( spec, candidate ) )
+					continue;
+				coverageMatch ??= candidate;
+				if( SignatureMatchesParas( spec, candidate, boundValues ) ) {
+					memberPrimary = candidate;
+					break;
+				}
+			}
+
+			if( memberPrimary == null ) {
+				if( coverageMatch == null )
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "No matching method template '{0}' in '{1}'; a specialization must name its own template parameters",
+							spec.name, primary.name ) ) );
+				else if( IsAutoType( spec.retType ) || IsAutoType( coverageMatch.retType ) )
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Member specialization of '{0}' must repeat the primary's return type; inferred return cannot specialize",
+							spec.name ) ) );
+				else
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Member specialization of '{0}' must repeat the primary's substituted parameter and return types",
+							spec.name ) ) );
+				MarkInvalidSpec( spec );
+				return;
+			}
+
+			FinishBlockMemberSpec( spec, memberPrimary, head, classArgs, seenSignatures );
+		}
+
+		// A constructor member of a [spec=some] block: like methods, bindings
+		// address only the constructor's own template parameters. Copy and
+		// move constructor specializations are rejected: their parameters are
+		// generated per instantiation, so a specialization cannot repeat them
+		// portably.
+		private void ValidateBlockCtorSpec( Structor spec, Myll.Core.Structural head, Myll.Core.Structural primary, List<TplArg> classArgs, Dictionary<Decl, List<string>> seenSignatures )
+		{
+			if( spec.body == null && !isDeclModule ) {
+				Diagnostics.Add( new Diagnostic(
+					spec.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "Member specialization of the constructor of '{0}' must be a full definition",
+						primary.name ) ) );
+				MarkInvalidSpec( spec );
+				return;
+			}
+
+			if( IsCopyOrMoveBlockCtor( spec, head ) ) {
+				Diagnostics.Add( new Diagnostic(
+					spec.srcPos,
+					DiagnosticKind.Error,
+					"Copy and move constructor specializations are not supported in member specialization blocks" ) );
+				MarkInvalidSpec( spec );
+				return;
+			}
+
+			if( !RejectBlockMemberIssues( spec, primary ) )
+				return;
+
+			List<Structor> candidates = primary.children
+				.OfType<Structor>()
+				.Where( c => c.SpecInfo == null )
+				.ToList();
+
+			Dictionary<string, Typespec> boundValues = BlockBoundValuesOf( head, spec );
+			Structor? memberPrimary = null;
+
+			foreach( Structor candidate in candidates ) {
+				if( BlockSpecCoversParams( spec, candidate )
+				 && SignatureMatchesParas( spec, candidate, boundValues ) ) {
+					memberPrimary = candidate;
+					break;
+				}
+			}
+
+			if( memberPrimary == null ) {
+				Diagnostics.Add( new Diagnostic(
+					spec.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "Member specialization of the constructor of '{0}' must repeat the primary's substituted parameter types",
+						primary.name ) ) );
+				MarkInvalidSpec( spec );
+				return;
+			}
+
+			FinishBlockMemberSpec( spec, memberPrimary, head, classArgs, seenSignatures );
+		}
+
+		// A field member of a [spec=some] block: only [static] fields can be
+		// specialized (a value member would change the class layout, which
+		// C++ forbids), and the declared type must repeat the primary's
+		// substituted type.
+		private void ValidateBlockVarSpec( VarDecl spec, Myll.Core.Structural head, Myll.Core.Structural primary, List<TplArg> classArgs, Dictionary<Decl, List<string>> seenSignatures )
+		{
+			if( !spec.IsStatic ) {
+				Diagnostics.Add( new Diagnostic(
+					spec.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "Field specializations in the block of '{0}' must be [static]",
+						head.name ) ) );
+				MarkInvalidSpec( spec );
+				return;
+			}
+
+			if( spec.init == null && !isDeclModule ) {
+				Diagnostics.Add( new Diagnostic(
+					spec.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "Member specialization of '{0}' must be a full definition",
+						spec.name ) ) );
+				MarkInvalidSpec( spec );
+				return;
+			}
+
+			if( !RejectBlockMemberIssues( spec, primary ) )
+				return;
+
+			List<VarDecl> candidates = primary.children
+				.OfType<VarDecl>()
+				.Where( v => v.name == spec.name && v.SpecInfo == null )
+				.ToList();
+
+			if( candidates.Count == 0 ) {
+				Diagnostics.Add( new Diagnostic(
+					spec.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "Class '{0}' has no field '{1}'; a member specialization block cannot add members",
+						primary.name, spec.name ) ) );
+				MarkInvalidSpec( spec );
+				return;
+			}
+
+			Dictionary<string, Typespec> boundValues = BlockBoundValuesOf( head, spec );
+			VarDecl? memberPrimary = null;
+
+			foreach( VarDecl candidate in candidates ) {
+				if( BlockSpecCoversParams( spec, candidate )
+				 && SubstituteBindings( spec.type, boundValues ).Gen()
+				 == SubstituteBindings( candidate.type, boundValues ).Gen() ) {
+					memberPrimary = candidate;
+					break;
+				}
+			}
+
+			if( memberPrimary == null ) {
+				Diagnostics.Add( new Diagnostic(
+					spec.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "Member specialization of '{0}' must repeat the primary's substituted type",
+						spec.name ) ) );
+				MarkInvalidSpec( spec );
+				return;
+			}
+
+			FinishBlockMemberSpec( spec, memberPrimary, head, classArgs, seenSignatures );
+		}
+
+		// A nested class member of a [spec=some] block: a full specialization
+		// of the nested class for the concrete enclosing arguments, so it
+		// carries its own [spec=all] attribute and a fresh body.
+		private void ValidateBlockNestedStructSpec( Structural spec, Myll.Core.Structural head, Myll.Core.Structural primary, List<TplArg> classArgs, Dictionary<Decl, List<string>> seenSignatures )
+		{
+			if( !spec.IsAttrib( "spec", "all" ) ) {
+				Diagnostics.Add( new Diagnostic(
+					spec.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "Nested class specializations in a block must declare [spec=all] with a fresh body",
+						spec.name ) ) );
+				MarkInvalidSpec( spec );
+				return;
+			}
+
+			if( !RejectBlockMemberIssues( spec, primary ) )
+				return;
+
+			List<Structural> candidates = primary.children
+				.OfType<Structural>()
+				.Where( s => s.name == spec.name && s.SpecInfo == null && s.TplParams.Count > 0 )
+				.ToList();
+
+			if( candidates.Count == 0 ) {
+				Diagnostics.Add( new Diagnostic(
+					spec.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "Class '{0}' has no nested class template '{1}'",
+						primary.name, spec.name ) ) );
+				MarkInvalidSpec( spec );
+				return;
+			}
+
+			FinishBlockStructSpec( spec, candidates[0], head, classArgs, seenSignatures );
+		}
+
+		// Shared early guard for block members: bindings must not address
+		// class parameters, which the head carries.
+		private bool RejectBlockMemberIssues( Decl spec, Myll.Core.Structural primary )
+		{
+			if( TplBindings( spec ).Any( b => primary.TplParams.Any( p => p.name == b.name ) ) ) {
+				Diagnostics.Add( new Diagnostic(
+					spec.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "Member specialization of '{0}' must not bind class parameters; the block head carries the class arguments",
+						spec.name ) ) );
+				MarkInvalidSpec( spec );
+				return false;
+			}
+
+			return true;
+		}
+
+		// Merged bound values of the head's class bindings and the member's
+		// own bindings, for substituted-signature comparison.
+		private static Dictionary<string, Typespec> BlockBoundValuesOf( Myll.Core.Structural head, Decl memberSpec )
+		{
+			Dictionary<string, Typespec> boundValues = BoundValuesOf( head.TplSpec );
+			foreach( (string name, Typespec value) in BoundValuesOf( TplBindings( memberSpec ) ) )
+				boundValues[name] = value;
+			return boundValues;
+		}
+
+		// A block member's bindings may only name the member primary's own
+		// template parameters.
+		private static bool BlockSpecCoversParams( Decl spec, ITemplatedDecl memberPrimary )
+		{
+			HashSet<string> names = new( memberPrimary.TplParams.Select( p => p.name ) );
+			return TplBindings( spec ).All( b => names.Contains( b.name ) );
+		}
+
+		private static bool IsCopyOrMoveBlockCtor( Structor spec, Myll.Core.Structural head )
+		{
+			if( spec.kind != Structor.Kind.Constructor || spec.paras.Count != 1 )
+				return false;
+			if( spec.paras[0].type is not TypespecNested nested )
+				return false;
+			if( nested.idTpls.Count != 1 || nested.idTpls[0].id != head.name )
+				return false;
+			if( nested.ptrs == null || nested.ptrs.Count != 1 )
+				return false;
+
+			return nested.ptrs[0].kind == Pointer.Kind.LVRef
+			    || nested.ptrs[0].kind == Pointer.Kind.RVRef;
+		}
+
+		// Shared tail for func and ctor block members: shape and concreteness
+		// of own bindings, the at-least-one-bound rule, the in-block duplicate
+		// check, and the SpecInfo wiring with the head's class arguments.
+		private bool FinishBlockMemberSpec( Decl spec, ITemplatedDecl memberPrimary, Myll.Core.Structural head, List<TplArg> classArgs, Dictionary<Decl, List<string>> seenSignatures )
+		{
+			List<TplBinding> bindings = TplBindings( spec );
+
+			if( !ValidateBindingShape( spec.name, bindings, memberPrimary.TplParams, spec.srcPos ) ) {
+				MarkInvalidSpec( spec );
+				return false;
+			}
+
+			if( !HasConcreteBindings( bindings, memberPrimary.TplParams, spec.name, spec.srcPos ) ) {
+				MarkInvalidSpec( spec );
+				return false;
+			}
+
+			// A member template specialization must bind at least one of its
+			// own parameters: an all-open one specializes nothing.
+			if( bindings.Count > 0 && !bindings.Any( b => b.type != null || b.lit != null ) ) {
+				Diagnostics.Add( new Diagnostic(
+					spec.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "Member specialization of '{0}' must bind at least one of its own template parameters",
+						spec.name ) ) );
+				MarkInvalidSpec( spec );
+				return false;
+			}
+
+			if( !TryAddBlockMemberSignature( (Decl) memberPrimary, spec, seenSignatures ) ) {
+				MarkInvalidSpec( spec );
+				return false;
+			}
+
+			List<TplArg> memberArgs = BuildSpecArgs( memberPrimary.TplParams, bindings, out bool[] memberBound, out List<TplParam> unboundParams );
+
+			List<TplArg> args = new( classArgs );
+			args.AddRange( memberArgs );
+
+			bool[] boundFlags = new bool[classArgs.Count + memberBound.Length];
+			for( int i = 0; i < classArgs.Count; i++ )
+				boundFlags[i] = true;
+			memberBound.CopyTo( boundFlags, classArgs.Count );
+
+spec.SpecInfo = new Decl.SpecData {
+				Primary = (Decl) memberPrimary,
+				Args    = args,
+				Bound   = boundFlags,
+			};
+
+			Scope?       memberScope = null;
+			List<Param>  paras       = new();
+			switch( spec ) {
+				case Func f:
+					f.TplParams   = unboundParams;
+					memberScope   = f.funcScope;
+					paras         = f.paras;
+					break;
+				case Structor c:
+					c.TplParams   = unboundParams;
+					memberScope   = c.ctorScope;
+					paras         = c.paras;
+					break;
+				case VarDecl v:
+					v.TplParams   = unboundParams;
+					memberScope   = v.varScope;
+					break;
+				case Myll.Core.Structural s:
+					s.TplParams   = unboundParams;
+					break;
+			}
+			InjectParams( memberScope, unboundParams, spec.srcPos );
+			InjectBoundAliases( memberScope, paras, spec.srcPos, BoundValuesOf( bindings ) );
+
+			return true;
+		}
+
+		// Shared tail for nested class block members: the func/ctor tail plus
+		// class-scope bound aliases like a fresh specialization.
+		private void FinishBlockStructSpec( Structural spec, Structural memberPrimary, Myll.Core.Structural head, List<TplArg> classArgs, Dictionary<Decl, List<string>> seenSignatures )
+		{
+			if( !FinishBlockMemberSpec( spec, memberPrimary, head, classArgs, seenSignatures ) )
+				return;
+
+			InjectBoundAliases( spec.scope, new List<Param>(), spec.srcPos, BoundValuesOf( spec.TplSpec ) );
+		}
+
+		// Duplicate check inside one block, keyed by bound bindings plus the
+		// written signature: plain member overloads differ by their
+		// parameters, not by bindings.
+		private bool TryAddBlockMemberSignature( Decl memberPrimary, Decl spec, Dictionary<Decl, List<string>> seenSignatures )
+		{
+			string body = spec switch {
+				Func f     => String.Join( ",", f.paras.Select( p => p.type.Gen() ) ) + "|" + f.retType.Gen(),
+				Structor c => String.Join( ",", c.paras.Select( p => p.type.Gen() ) ),
+				VarDecl v  => v.type.Gen() + "|" + ( v.init?.Gen() ?? "" ),
+				_          => "",
+			};
+			string signature = String.Join( ",", TplBindings( spec ).Where( b => b.type != null || b.lit != null ).Select( b => bindingSignature( b ) ) )
+			                  + "|" + body;
+
+			if( !seenSignatures.TryGetValue( memberPrimary, out List<string>? seen ) ) {
+				seen = new();
+				seenSignatures[memberPrimary] = seen;
+			}
+
+			if( seen.Contains( signature ) ) {
+				Diagnostics.Add( new Diagnostic(
+					spec.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "Duplicate member specialization of '{0}' in the block",
+						spec.name ) ) );
+				return false;
+			}
+
+			seen.Add( signature );
+			return true;
+		}
+
+		// Finds a visible specialization of the requested kind for the same
+		// primary and class arguments: own module first, then directly
+		// imported modules (the same visibility as primary lookup).
+		private Myll.Core.Structural? FindVisibleSpecOfKind( Myll.Core.Structural primary, List<TplArg> args, bool wantMemberHead, string? nsFqn, List<Myll.Core.Structural> localStructs )
+		{
+			foreach( Myll.Core.Structural s in localStructs ) {
+				if( s.SpecInfo == null || s.SpecInfo.MemberSpecHead != wantMemberHead )
+					continue;
+				if( !ReferenceEquals( s.SpecInfo.Primary, primary ) || !ArgsMatch( s.SpecInfo.Args, args ) )
+					continue;
+
+				return s;
+			}
+
+			foreach( string importedName in ImportedModuleNames( moduleAst ) ) {
+				foreach( CompiledModuleResult m in allModules ) {
+					if( m.Module.module != importedName )
+						continue;
+
+					Myll.Core.Hierarchical? hier = FindNamespaceScope( m.Module, nsFqn );
+					if( hier == null || hier.scope == null
+					 || !hier.scope.children.TryGetValue( primary.name, out List<ScopeLeaf>? leaves ) )
+						continue;
+
+					foreach( ScopeLeaf leaf in leaves ) {
+						if( leaf.decl is not Myll.Core.Structural s || s.SpecInfo == null )
+							continue;
+						if( s.SpecInfo.MemberSpecHead != wantMemberHead )
+							continue;
+						if( !ReferenceEquals( s.SpecInfo.Primary, primary ) || !ArgsMatch( s.SpecInfo.Args, args ) )
+							continue;
+
+						return s;
+					}
+				}
+			}
+
+			return null;
+		}
+
+		private static bool ArgsMatch( List<TplArg> a, List<TplArg> b )
+		{
+			if( a.Count != b.Count )
+				return false;
+			for( int i = 0; i < a.Count; i++ ) {
+				if( a[i].Gen() != b[i].Gen() )
+					return false;
+			}
+
+			return true;
+		}
+		/// primary: a specialization is a full one (C++ allows no partial function
+		/// specializations), its parameters and return type must repeat the
 		/// <summary>
 		/// Validates function template specializations and links them to their
 		/// primary: a specialization is a full one (C++ allows no partial function
@@ -621,6 +1219,10 @@ foreach( Myll.Core.Structural spec in structs ) {
 		private void ValidateMethodSpecs( List<Func> funcs, Myll.Core.Structural owner )
 		{
 			if( owner.SpecInfo != null ) {
+				// A [spec=some] block's members are validated by the block pass.
+				if( owner.SpecInfo.MemberSpecHead )
+					return;
+
 				foreach( Func spec in funcs.Where( f => f.TplSpec.Count > 0 ) ) {
 					Diagnostics.Add( new Diagnostic(
 						spec.srcPos,
@@ -791,6 +1393,10 @@ Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 		private void ValidateMemberVarSpecs( List<VarDecl> vars, Myll.Core.Structural owner )
 		{
 			if( owner.SpecInfo != null ) {
+				// A [spec=some] block's members are validated by the block pass.
+				if( owner.SpecInfo.MemberSpecHead )
+					return;
+
 				foreach( VarDecl spec in vars.Where( v => v.TplSpec.Count > 0 ) ) {
 					Diagnostics.Add( new Diagnostic(
 						spec.srcPos,
@@ -896,6 +1502,10 @@ Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 		private void ValidateNestedStructSpecs( List<Myll.Core.Structural> structs, Myll.Core.Structural owner )
 		{
 			if( owner.SpecInfo != null ) {
+				// A [spec=some] block's members are validated by the block pass.
+				if( owner.SpecInfo.MemberSpecHead )
+					return;
+
 				foreach( Myll.Core.Structural spec in structs.Where( s => s.TplSpec.Count > 0 ) ) {
 					Diagnostics.Add( new Diagnostic(
 						spec.srcPos,
@@ -939,8 +1549,8 @@ Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 						Diagnostics.Add( new Diagnostic(
 							spec.srcPos,
 							DiagnosticKind.Error,
-							String.Format( "Member specialization block of '{0}' is not supported yet",
-								spec.name ) ) );
+							String.Format( "Member specialization blocks of nested classes are not supported; declare the block for '{1}' at module or namespace scope",
+								spec.name, owner.name ) ) );
 
 					MarkInvalidSpec( spec );
 					continue;
@@ -1054,6 +1664,10 @@ Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 				return;
 
 			if( owner.SpecInfo != null ) {
+				// A [spec=some] block's members are validated by the block pass.
+				if( owner.SpecInfo.MemberSpecHead )
+					return;
+
 				foreach( Structor spec in ctors.Where( c => c.TplSpec.Count > 0 ) ) {
 					Diagnostics.Add( new Diagnostic(
 						spec.srcPos,

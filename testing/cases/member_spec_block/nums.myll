@@ -1,0 +1,27 @@
+module nums;
+
+class Box<T>
+{
+[pub]:
+	ctor( T v ) { _v = v; }
+	ctor( T v, T w ) { _v = v; _v2 = w; }
+
+	field T _v;
+	field T _v2;
+
+	func Get() -> T => _v;
+
+	func Find<U>( U a ) -> U => a;
+
+	[static] field int count;
+
+	func Read() -> T => _v;
+
+	class Inner<V>
+	{
+	[pub]:
+		field V v;
+
+		func W() -> V => v;
+	}
+}

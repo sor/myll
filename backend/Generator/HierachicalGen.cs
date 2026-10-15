@@ -1150,7 +1150,9 @@ bool isInsideStruct   = obj.IsInStruct;
 			string outIndent = DeIndentDecl;
 			SourceLines ret = new();
 			ret.Add( Format( "{0}template<>", outIndent ) );
-			if( classParamCount > 0 )
+			// Only member templates carry a second template<>: a plain static
+			// field specializes the instantiation's field directly.
+			if( memberArgs.Count > 0 )
 				ret.Add( obj.TplParams.Count > 0
 					? Format( "{0}template <{1}>", outIndent, GenTemplateParameterList( obj.TplParams ) )
 					: Format( "{0}template<>", outIndent ) );
@@ -1439,6 +1441,15 @@ bool isInsideStruct   = obj.IsInStruct;
 			bool isEnum      = gen.hierarchical is Enumeration;
 			Structural? structSpec = gen.hierarchical as Structural;
 			bool isStructSpec = structSpec != null && structSpec.SpecInfo != null;
+
+			// A [spec=some] block emits no class: the members specialize the
+			// primary's implicit instantiation out-of-line, and the head itself
+			// stays transparent to name lookup.
+			if( structSpec?.SpecInfo?.MemberSpecHead ?? false ) {
+				foreach( SourceLines specDecl in gen.methodSpecDecls )
+					targetDecl.AddRange( specDecl );
+				return;
+			}
 
 			if( isStructSpec )
 				nameDecl = Format( "{0}<{1}>", nameDecl, structSpec.SpecInfo.Args.Select( a => a.Gen() ).Join( ", " ) );

@@ -1,0 +1,39 @@
+module spec_a;
+
+import nums;
+
+// Member specialization block: the head names the concrete instantiation
+// Box<int>; each body member specializes that instantiation's member. The
+// head itself emits no class — the primary stays implicitly instantiated.
+[spec=some] class Box<T=int>
+{
+[pub]:
+	ctor( int v ) { _v = v * 10; }
+
+	func Get() -> int => _v * 2;
+
+	func Find<U=f32>( f32 a ) -> f32 => a;
+
+	[static] field int count = 7;
+
+	// A nested class member: a full specialization of Inner for the concrete
+	// enclosing arguments, so it carries its own [spec=all].
+	[spec=all] class Inner<V=int>
+	{
+	[pub]:
+		ctor() { v = 5; }
+
+		field int v;
+
+		func W() -> int => v * 3;
+	}
+}
+
+// The head stays transparent: uses of the class resolve to the imported
+// primary, and member access sees the primary's members (Get is replaced
+// only at the C++ instantiation).
+func helper() -> int
+{
+	var Box<int> b( 3 );
+	return b.Get() + b.Read();
+}

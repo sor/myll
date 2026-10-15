@@ -88,10 +88,34 @@ class SSym2<T, U> { field int v; }
 // [spec=...] attribute validation on class/struct/union specializations
 class SSkip2<T, U> { field int v; }
 class SSkip2<T=int> { field int v; } // FAIL: Specialization of 'SSkip2' must declare its kind
-[spec=some] class SSkip3<T=int> { field int v; } // FAIL: Member specialization block of 'SSkip3' is not supported yet
+[spec=some] class SSkip3<T=int> { field int v; } // FAIL: No matching template 'SSkip3'
 [spec=partial] class SSkip4<T=int> { field int v; } // FAIL: Unknown [spec=partial] on 'SSkip4'
 [spec] class SSkip5<T=int> { field int v; } // FAIL: Unknown [spec=] on 'SSkip5'
 [spec=all] class SPlain { field int v; } // FAIL: The [spec=all] attribute of 'SPlain' applies only to template specializations
+
+// [spec=some] block validation
+class SB<T, U> { [pub]: field T v; func F() -> T => v; }
+
+[spec=some] class SB<T, U=int> { func F() -> int => 0; } // FAIL: Member specialization head of 'SB' must bind all class template parameters of 'SB'
+
+[spec=some] class SB<T=f32, U=f32> { func Missing() -> int => 0; } // FAIL: Class 'SB' has no method 'Missing'
+
+class SB2<T> { [pub]: field T v; func F() -> T => v; }
+
+[spec=some] class SB2<T=int> { func F<T=f32>() -> int => 0; } // FAIL: Member specialization of 'F' must not bind class parameters
+
+class SB3<T> { [pub]: field T v; }
+
+[spec=all] class SB3<T=f32> { [pub]: field f32 v; }
+
+[spec=some] class SB3<T=f32> { [pub]: func F() -> f32 => v; } // FAIL: Member specialization block of 'SB3' conflicts with the full specialization
+
+class SB4<T> { [pub]: field T v; func F() -> T => v; }
+
+[spec=some] class SB4<T=int> {
+	func F() -> int => 1;
+	func F() -> int => 2; // FAIL: Duplicate member specialization of 'F' in the block
+}
 
 class SDup<T> { field int v; }
 [spec=all] class SDup<T=int> { field int v; }

@@ -210,6 +210,10 @@ namespace Myll.Resolver
 						continue;
 					if( decl.IsHidden )
 						continue;
+					// [spec=some] block heads are not exported: they stay
+					// transparent, so importing modules see the primary.
+					if( decl.SpecInfo?.MemberSpecHead ?? false )
+						continue;
 
 					exports.Add( name, decl );
 
@@ -771,17 +775,22 @@ if( decl is Namespace ns ) {
 					CollectSpecs( ns.scope, moduleName );
 					continue;
 				}
-				if( decl is Structural st ) {
-					// Member specializations (vars, nested classes) enter the index
-					// through their enclosing class's scope; the class itself may
-					// also be a specialization, so fall through to the collection.
-					CollectSpecs( st.scope, moduleName );
-				}
+if( decl is Structural st ) {
+				// Member specializations (vars, nested classes) enter the index
+				// through their enclosing class's scope; the class itself may
+				// also be a specialization, so fall through to the collection.
+				CollectSpecs( st.scope, moduleName );
+			}
 
-					if( decl.SpecInfo == null )
-						continue;
-					if( ReferenceEquals( decl.SpecInfo.Primary, decl ) )
-						continue;
+				if( decl.SpecInfo == null )
+					continue;
+				if( ReferenceEquals( decl.SpecInfo.Primary, decl ) )
+					continue;
+				// [spec=some] block heads collect member specializations, but
+				// are no specializations themselves: uses of the class keep
+				// resolving to the primary.
+				if( decl.SpecInfo.MemberSpecHead )
+					continue;
 
 					if( !specsByPrimary.TryGetValue( decl.SpecInfo.Primary, out List<SpecEntry>? entries ) ) {
 						entries = new List<SpecEntry>();
@@ -3164,6 +3173,10 @@ if( decl is Namespace ns ) {
 				if( leaf.decl is UsingDecl )
 					continue;
 				if( filterHidden && leaf.decl.IsHidden )
+					continue;
+				// [spec=some] block heads are transparent: they only collect
+				// member specializations, so the primary stays the visible type.
+				if( leaf.decl.SpecInfo?.MemberSpecHead ?? false )
 					continue;
 
 				result.Add( leaf.decl );

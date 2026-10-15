@@ -43,6 +43,12 @@ namespace Myll.Core
 			public List<TplArg> Args  = new(); // all primary params, declaration order
 			public bool[]       Bound = System.Array.Empty<bool>();
 			public bool IsFull => Bound.Length > 0 && Bound.All( b => b );
+
+			// A [spec=some] block head: the declaration itself is not a
+			// specialization of the primary; it only collects member
+			// specializations for the concrete instantiation named by Args.
+			// Such heads stay transparent to name lookup and emit no class.
+			public bool MemberSpecHead { get; set; }
 		}
 
 		/// <summary>
