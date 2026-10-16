@@ -1,0 +1,42 @@
+import std_format, std_print;
+
+// A user type formattable through std::formatter: the specialization
+// replaces the whole disabled primary for Vec2 (the defaulted CharT fills
+// in as char), so the members are spelled fresh — parse for the
+// format-string check, format templated on the context's output iterator
+// exactly like libstdc++'s own enabled specializations.
+class Vec2
+{
+[pub]:
+	ctor( int x, int y ) { _x = x; _y = y; }
+
+	field int _x;
+	field int _y;
+}
+
+namespace std {
+	[spec=all] class formatter<T=Vec2>
+	{
+	[pub]:
+		// The parse iterator is basic_string_view<char>::const_iterator, a raw
+		// const char* in libstdc++.
+		[ct] func parse( std::basic_format_parse_context<char> & ctx ) -> const char[*]
+		{
+			return ctx.begin();
+		}
+
+		func format<Out>( const Vec2 & v, std::basic_format_context<Out, char> & ctx ) -> Out
+		{
+			return ctx.out();
+		}
+	}
+}
+
+func main() -> int
+{
+	// Compiling this line is the assertion: the format-string check requires
+	// an enabled std::formatter<Vec2, char>, and the disabled primary makes
+	// this ill-formed without the specialization above.
+	std::println( "{}", Vec2( 1, 2 ) );
+	return 0;
+}

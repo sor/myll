@@ -1,0 +1,29 @@
+module std_format;
+import <format>;
+
+namespace std {
+	// std::basic_format_parse_context backing declaration for Myll resolution.
+	// The real definition comes from the C++ standard library <format> header.
+	// The iterator is basic_string_view<C>::const_iterator, a raw pointer for
+	// libstdc++'s string_view implementation.
+	class basic_format_parse_context<C>
+	{
+	[pub]:
+		[pure] func begin() -> const C[*];
+	}
+
+	// std::basic_format_context backing declaration; its iterator is the
+	// output iterator itself.
+	class basic_format_context<Out, C>
+	{
+	[pub]:
+		[pure] func out() -> Out;
+	}
+
+	// The primary std::formatter is declared disabled in the real header: it
+	// only carries deleted constructors and no members. The defaulted second
+	// parameter (_CharT = char) is omitted, so an explicit specialization
+	// naming the value type only is enough; Myll specializations replace the
+	// whole class.
+	class formatter<T> { }
+}
