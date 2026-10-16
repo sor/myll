@@ -40,6 +40,16 @@ specialization series through phase F is complete (see `plan/template-specializa
    `<T=int>` specialization-only avoids ambiguity for readers. Folded
    expressions at use sites are done (phase E).
 
+## Exception specification axis (`except` ↔ `noexcept`)
+
+- **Rethink exceptions like the purity axis** (`plan/except-noexcept.md`,
+  added 2026-10-16). `[noexcept]` is a plain attribute today, `[throw]` is a
+  dangling lexer token, and the decl files sprinkle `noexcept` by hand.
+  Give it the const/pure/mutable treatment: an `except` opposite pole,
+  dialect-level per-kind defaults (`DefaultExcept*`), combination
+  validation, and the derived C++ default for destructors. Spelling and
+  default polarity are open (plan doc Q1/Q2).
+
 ## CTAD (class template argument deduction)
 
 - **Phase 1: implicit constructor deduction only.** `var Box b( 5 );` deduces
