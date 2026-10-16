@@ -15,17 +15,13 @@ specialization series through phase F is complete (see `plan/template-specializa
 
 ## Template specialization follow-ups
 
-1. **Cross-module member specializations** (methods, ctors, member vars, nested
-   classes). C++ has no class reopening — the native mechanism is out-of-line
-   qualified declarations at namespace scope, exactly what the emission already
-   produces (`template<> template<> int Outer<int>::x<int> = 7;`). Syntax
-   candidate agreed 2026-10-09: a `[specialize]` block —
-   `[specialize] class Box<T=int> { func Load<U>(...) {...} field int x; }` —
-   so several members specialize under one binding without repeating
-   `Box<T=int>` per member. Needs: grammar, transformer (primary lives in an
-   imported class), ODR guard extension for cross-module member specs. Worked
-   example: std headers specializing std templates via `.decl.myll` already
-   works (phase 6b); this is the authored-module direction.
+1. ~~Cross-module member specializations~~ — **done 2026-10-16** as `[spec=some]`
+   member specialization blocks with the `[spec=…]` specialization kind
+   attribute (`plan/member-spec-block.md`); includes `[spec=all]` now being
+   required on fresh class specs, `std::formatter` and `std::numeric_limits`
+   real-world cases, and the static-member/return-substitution fixes that
+   fell out. Remaining follow-ups from the same doc: deep-nested heads and
+   plain (non-template) enclosing classes.
 2. **Deep nesting**: specializations of nested classes inside nested classes
    (rejected today with a clean error). Needs argument lists for every
    enclosing level in emission.

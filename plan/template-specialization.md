@@ -319,6 +319,39 @@ Decisions (settled 2026-10-04):
   rejected for now — the emission would need argument lists for every
   enclosing level.
 
+## Specialization kind attribute + member specialization blocks (2026-10-16)
+
+Full design and implementation record: `plan/member-spec-block.md`. Summary:
+
+- Every class/struct/union specialization must declare its kind: `[spec=all]`
+  is the existing fresh body (now mandatory; bare `class Box<T=int>` is an
+  error), `[spec=some]` is a member specialization block — a head naming one
+  concrete instantiation whose body members specialize that instantiation's
+  members out-of-line, in any module that imports the primary. No grammar
+  change: attributes and `tplSpec` already parse it.
+- The head is transparent: name lookup, module exports and the spec index
+  skip it, so uses keep resolving the primary (implicit instantiation), and
+  the generator emits no class. Block members carry ordinary in-class member
+  spec `SpecInfo` (head class args + own args), so the existing out-of-line
+  emitters work. Unqualified names in block bodies fall back to the primary's
+  scope via the head's `importedScopes`.
+- Validation: head binds all class parameters concretely; members match a
+  primary member by name/kind/substituted signature (no new members); member
+  bindings address only own parameters; fields must be `[static]`; copy/move
+  ctor specs rejected; `[spec=all]`+`[spec=some]` of the same args cannot
+  coexist visibly. Duplicate `[spec]` in one attribute block is a parse-stage
+  error; unknown values or the attribute on non-template classes are errors
+  on structurals only — everywhere else the attribute is ignored.
+- Fixes that came with it: symbolic class-spec bindings are rejected (struct
+  specs were the only kind missing `HasConcreteBindings`); plain static
+  member var specs no longer emit a stray second `template<>`; static member
+  functions no longer emit a stray `const`; qualified member calls substitute
+  the enclosing class's template parameters in return types.
+- Real-world coverage: `std::formatter<T=Vec2>` via `[spec=all]`
+  (`std/std_format.decl.myll`, compile-time assertion through
+  `std::println`) and `std::numeric_limits<T=ByteCount>` via `[spec=some]`
+  (`std/std_limits.decl.myll`).
+
 ## Deferred inventory
 
 - Use-site named template arguments (`Arr<T=int, N=3>`): deferred — Myll has
@@ -332,19 +365,17 @@ Decisions (settled 2026-10-04):
   named constants or calls stay unfolded. Use sites fold the same way
   (`Arr<int, 2*8>` folds to 16 and matches the folded specialization). Known
   mini-wart: `<-5>` lexes as the left-arrow token; write `< -5>` or `0-5`.
-- Cross-module member specializations: the imported-primary search still follows
-  namespaces only. Same-module member variable and nested class specializations are
-  implemented (phase F, see below).
+- Cross-module member specializations are implemented through `[spec=some]`
+  blocks (see above); the follow-ups that remain are deep-nested heads
+  (rejected today) and plain (non-template) enclosing classes.
 - A future attribute to constrain class specializations: e.g. `[interface]` to enforce that a
   specialization exposes the primary's member set, or `[copy]` to copy the primary's members
   and only override the listed ones. The C++-first semantics (fresh member set, bound names
   not in scope) stay the default.
-- Cross-module method/constructor specializations: C++ has no class reopening.
-  The C++-native mechanism is out-of-line qualified declarations at namespace
-  scope — exactly what the emission already produces. Leading syntax candidate:
-  a `[specialize]` block (`[specialize] class Box<T=int> { func Load<U>(...) ... }`)
-  that groups several members under one binding, so the qualified args are not
-  repeated per member. TBD.
+- Dot-path return substitution: a member call through a receiver
+  (`b.Get()`) still returns the raw `T` when the enclosing class's parameters
+  are not concrete through the qualified spelling; qualified calls substitute
+  (`Box<int>::Get()` yields `int`).
 - Runtime primary instantiation from an importing module: the primary's definition lives in
   its module's `.cpp` while importers only see the `extern` declaration, so importing
   translation units cannot implicitly instantiate it. Same-module runtime primaries work.
