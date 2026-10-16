@@ -2483,14 +2483,14 @@ if( decl is Structural st ) {
 						else if( calleeIdDecl is Structural structural )
 							type = BuildClassValueType( structural, new[] { calleeId.idTplArgs } );
 					}
-					else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( calleeScoped, out Decl? calleeScopedDecl ) ) {
-						if( calleeScopedDecl is Func f )
-							type = f.retType;
-						else if( calleeScopedDecl is Structor s && s.kind == Structor.Kind.Constructor )
-							baseType = FindEnclosingStructural( s.scope )!;
-						else if( calleeScopedDecl is Structural structural )
-							type = BuildClassValueType( structural, calleeScoped.idTpls );
-					}
+else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( calleeScoped, out Decl? calleeScopedDecl ) ) {
+					if( calleeScopedDecl is Func f )
+						type = typeResolver.SubstituteCallTemplateArgs( f, calleeScoped );
+					else if( calleeScopedDecl is Structor s && s.kind == Structor.Kind.Constructor )
+						baseType = FindEnclosingStructural( s.scope )!;
+					else if( calleeScopedDecl is Structural structural )
+						type = BuildClassValueType( structural, calleeScoped.idTpls );
+				}
 					else if( call.expr is BinOp calleeBin
 					     && calleeBin.op.In( Operand.MemberAccess, Operand.MemberPtrAccess )
 					     && calleeBin.right is IdExpr member

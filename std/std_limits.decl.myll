@@ -1,0 +1,14 @@
+module std_limits;
+import <limits>;
+
+namespace std {
+	// std::numeric_limits backing declaration for Myll resolution.
+	// The real definition comes from the C++ standard library <limits> header;
+	// the members are static constexpr functions there.
+	class numeric_limits<T>
+	{
+	[pub]:
+		[static, ct, noexcept] func max() -> T;
+		[static, ct, noexcept] func min() -> T;
+	}
+}

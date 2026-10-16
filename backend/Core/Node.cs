@@ -44,7 +44,9 @@ namespace Myll.Core
 		public bool IsConst     => HasAttrib( "const" );
 		public bool IsPure      => HasAttrib( "pure" ) || HasAttrib( "const" );
 		public bool IsMutable   => HasAttrib( "mutable" ) || HasAttrib( "mut" );
-		public bool IsConstMethod => this is Decl decl && decl.IsInStruct && IsPure && !IsMutable;
+		// Static member functions cannot be const-qualified (C++ rejects it),
+		// so the method-purity does not apply.
+		public bool IsConstMethod => this is Decl decl && decl.IsInStruct && !IsStatic && IsPure && !IsMutable;
 		public bool IsOverride  => HasAttrib( "override" );
 		public bool IsNodiscard => HasAttrib( "nodiscard" );
 		public bool IsNoexcept  => HasAttrib( "noexcept" );

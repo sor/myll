@@ -1,0 +1,45 @@
+import std_limits;
+
+// A fixed-size byte counter type. std::numeric_limits is only specialized
+// for its max member: min keeps the primary's generic zero default, so a
+// full twenty-member specialization would say what one line says here.
+class ByteCount
+{
+[pub]:
+	ctor() { _v = 0; }
+	ctor( u64 v ) { _v = v; }
+
+	field u64 _v;
+
+	func value() -> u64 => _v;
+}
+
+namespace std {
+	[spec=some] class numeric_limits<T=ByteCount>
+	{
+	[pub]:
+		[static, ct, noexcept] func max() -> ByteCount
+		{
+			return ByteCount( 18446744073709551615 );
+		}
+	}
+}
+
+func main() -> int
+{
+	// The member specialization provides the max bound for the concrete
+	// instantiation...
+	if( std::numeric_limits<ByteCount>::max().value() != 18446744073709551615 )
+		return 1;
+
+	// ...while members left out of the block stay the primary's generic
+	// definitions (the C++ zero default for min).
+	if( std::numeric_limits<ByteCount>::min().value() != 0 )
+		return 2;
+
+	// Types without a specialization keep the primary's own members.
+	if( std::numeric_limits<u64>::max() != 18446744073709551615 )
+		return 3;
+
+	return 0;
+}

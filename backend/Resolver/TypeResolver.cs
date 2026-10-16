@@ -465,18 +465,41 @@ namespace Myll.Resolver
 
 		// A call to a function template keeps the raw template parameter in the callee's
 		// return type; substitute the resolved template arguments so the call's own type
-		// is concrete (var auto, chained calls, overload ranking).
-		private Typespec SubstituteCallTemplateArgs( Func func, Expr callee )
+		// is concrete (var auto, chained calls, overload ranking). A member of a class
+		// template substitutes the enclosing class's parameters with the qualified
+		// name's class arguments, so Box<int>::Get() yields int, not T.
+		internal Typespec SubstituteCallTemplateArgs( Func func, Expr callee )
 		{
 			Typespec retType = func.retType;
-			if( func.TplParams.Count == 0 )
-				return retType;
 
-			IReadOnlyList<TplArg>? args = TemplateInference.GetExplicitTemplateArgs( callee );
-			if( args == null || args.Count == 0 )
-				return retType;
+			if( func.TplParams.Count > 0 ) {
+				IReadOnlyList<TplArg>? args = TemplateInference.GetExplicitTemplateArgs( callee );
+				if( args != null && args.Count > 0 )
+					retType = TemplateInference.SubstituteTemplateParams( retType, func.TplParams, new List<TplArg>( args ), result );
+			}
 
-			return TemplateInference.SubstituteTemplateParams( retType, func.TplParams, new List<TplArg>( args ), result );
+			if( callee is ScopedExpr scoped
+			 && scoped.idTpls.Count >= 2 ) {
+				Structural? enclosing = FindEnclosingStructuralOf( func );
+				if( enclosing != null && enclosing.TplParams.Count > 0 ) {
+					List<TplArg>? ownerArgs = scoped.idTpls[scoped.idTpls.Count - 2].tplArgs;
+					if( ownerArgs != null && ownerArgs.Count >= enclosing.TplParams.Count )
+						retType = TemplateInference.SubstituteTemplateParams(
+							retType, enclosing.TplParams, ownerArgs.ToList(), result );
+				}
+			}
+
+			return retType;
+		}
+
+		private static Structural? FindEnclosingStructuralOf( Decl decl )
+		{
+			for( ScopeLeaf? cur = decl.scope; cur != null; cur = cur.parent ) {
+				if( cur.decl is Structural s )
+					return s;
+			}
+
+			return null;
 		}
 
 		private static Typespec? ClassValueType( Structural structural, IReadOnlyList<IdTplArgs> nameSegments )
