@@ -36,7 +36,7 @@ attrib		:	attribId
 				|	'(' idOrLit (COMMA idOrLit)* COMMA? ')'
 			//	|	'(' idOrLitx+=~')' (COMMA idOrLitx+=~')')* COMMA? ')'
 				)?;
-attribId	:	id | CONST | MUTABLE | FALL | THROW | DEFAULT | DELETE;
+attribId	:	id | CONST | MUTABLE | FALL | DEFAULT | DELETE;
 
 
 // DECLs

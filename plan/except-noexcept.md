@@ -1,7 +1,8 @@
 # Exception Specification: `except` ↔ `noexcept` (the purity-axis treatment)
 
-Status: **designed 2026-10-16, not implemented**. The settled decisions are
-below; the open pieces wait for the attr rework (see `plan/upcoming-work.md`).
+Status: **designed 2026-10-16; only the `throw` retirement implemented
+(same day), the rest not started**. The open pieces wait for the attr
+rework (see `plan/upcoming-work.md`).
 
 ## Background
 
@@ -31,6 +32,7 @@ The exception axis never got that treatment:
 - `throw` is removed from `attribId`: `[throw]` stops parsing as an attribute
   (a plain parse error is fine; no dedicated diagnostic — there is no
   preexisting code to migrate). `throw` stays the throw-statement keyword.
+  **Done 2026-10-16.**
 
 ### Polarity defaults (the default dialect)
 
