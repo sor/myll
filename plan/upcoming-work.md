@@ -42,13 +42,25 @@ specialization series through phase F is complete (see `plan/template-specializa
 
 ## Exception specification axis (`except` ↔ `noexcept`)
 
-- **Rethink exceptions like the purity axis** (`plan/except-noexcept.md`,
-  added 2026-10-16). `[noexcept]` is a plain attribute today, `[throw]` is a
-  dangling lexer token, and the decl files sprinkle `noexcept` by hand.
-  Give it the const/pure/mutable treatment: an `except` opposite pole,
-  dialect-level per-kind defaults (`DefaultExcept*`), combination
-  validation, and the derived C++ default for destructors. Spelling and
-  default polarity are open (plan doc Q1/Q2).
+- **Rethrow exceptions like the purity axis** — design settled 2026-10-16,
+  implementation not started (`plan/except-noexcept.md`). `except` is the
+  antonym of `noexcept` (both already parse as plain id attributes),
+  `throw` retires as an attribute, funcs default noexcept (pure's twin),
+  procs default except (mutable's twin), methods and ctors stay open,
+  dtors are implicitly noexcept, extern decls never default, plus
+  combination validation and a local throw-inside-noexcept check. Deferred
+  to the attr rework: the `[except=require/yes/no/default]` value-forms,
+  class-level prefill, and whether strictness is a global dialect knob or
+  per-thing controlled.
+
+## Attribute rework
+
+- **Parameterized attribute values** — `[except=require]` (must spell),
+  `[except=yes]` / `[except=no]` (polarity), `[except=default]` (dialect
+  default). The exception axis is the first customer; its deferred pieces
+  (see `plan/except-noexcept.md`) build on this. While at it, sweep the
+  attribute vocabulary for dangling tokens and decide the general
+  spelling/combination rules once.
 
 ## CTAD (class template argument deduction)
 

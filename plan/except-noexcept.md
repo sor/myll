@@ -1,16 +1,15 @@
 # Exception Specification: `except` ↔ `noexcept` (the purity-axis treatment)
 
-Status: **planned 2026-10-16, needs design decisions** (task list entry requested by the
-author; not started).
+Status: **designed 2026-10-16, not implemented**. The settled decisions are
+below; the open pieces wait for the attr rework (see `plan/upcoming-work.md`).
 
 ## Background
 
 The purity axis got the full treatment: `pure` (the Myll word) with `const`
-(the C++ word) as accepted alias, the opposite pole `mutable`/`mut`, and
-per-kind defaults on the dialect (`DefaultAttributesFunction = "pure"`,
-`DefaultAttributeProcedure = "mutable"`, method/convert/operator categories,
-`DefaultAttribute*` for class/struct/union/enum). Validation rejects
-nonsensical combinations instead of silently accepting attribute soup.
+(the C++ word) as accepted alias, the opposite pole `mutable`/`mut`, per-kind
+defaults on the dialect (`DefaultAttributesFunction = "pure"`,
+`DefaultAttributesProcedure = "mutable"`, …), and validation of nonsensical
+combinations.
 
 The exception axis never got that treatment:
 
@@ -18,67 +17,90 @@ The exception axis never got that treatment:
   nothing validates it, and nothing defaults it. The std decl files sprinkle
   it per member (`std_array`, `std_filesystem`, `std_initializer_list`,
   `std_limits` …).
-- `THROW` lexes (`attribId` accepts `throw`) but no attribute semantics,
-  validators or dialect defaults exist for it — a dangling token.
-- The `numeric_limits` member specialization needed `noexcept` repeated by
-  hand to satisfy g++ — a taste of what a defaults + validation pass would
-  own for free.
+- `THROW` lexes (`attribId` accepts `throw`) but has no attribute semantics —
+  a dangling token.
+- The `numeric_limits` member specialization had to repeat `noexcept` by hand
+  to satisfy g++ — a taste of what defaults + validation would own.
 
-## The sketch (analogous to const/pure/mutable)
+## Settled decisions
 
-| purity axis (done) | exception axis (this task) |
-|---|---|
-| `pure` / `const` | `noexcept` |
-| `mutable` / `mut` | `except` (spelling TBD, see Q1) |
-| `Dialect.DefaultAttributes*` | `Dialect.DefaultExcept*` (or one field per kind) |
-| validation of combos | validation of combos |
+### Words
 
-## Open questions
+- `[noexcept]` (existing) and `[except]` (new antonym, the `mutable` to
+  `pure`). Both parse as plain `id` attributes already — no grammar change.
+- `throw` is removed from `attribId`: `[throw]` stops parsing as an attribute
+  (a plain parse error is fine; no dedicated diagnostic — there is no
+  preexisting code to migrate). `throw` stays the throw-statement keyword.
 
-1. **Spelling of the throwing pole.** `except` reads as the natural antonym
-   and keeps `throw` free for the throw-statement. Alternatives: `throws`,
-   `may_throw`. Note C++17 removed dynamic exception specifications, so
-   `except(x)` lists are out of scope by construction.
-2. **Defaults.** Options:
-   - (a) `func` = noexcept by default (pairs with "func is pure" — the
-     functional core is const and cannot throw), `proc` = except, method =
-     except. Breaking change: every signature gains or keeps `noexcept`
-     emission; std decl files slim down.
-   - (b) Keep C++'s may-throw default; `except` then only documents intent
-     and would matter only in dialects that flip the default.
-   - (c) Purely dialect-driven: same mechanism as the purity defaults, ship
-     (b) as the default dialect, allow (a) per dialect.
-   - Recommendation shape: (c) — it is the least disruptive path to (a).
-3. **Conditional `noexcept(expr)`.** Needs constant-evaluation of
-   expressions; defer to a later phase (same bucket as
-   `noexcept(...)`-typed attributes).
-4. **Semantic validation depth.** Phase 1: signature-level only (defaults +
-   validation of combinations, emission). Phase 2 (optional): body analysis
-   so a `noexcept` function only calls `noexcept` callees. Keep phase 2 out
-   of the first cut; the C++ compiler is the gate it already is.
-5. **Derived defaults.** Destructors are implicitly noexcept in C++; Myll
-   `dtor` declarations should not need the attribute spelled. Whether ctors
-   of noexcept bases infer anything: no, C++ says nothing — keep it.
-6. **`[throw]` token.** Retire it or make it the deprecated alias for
-   `except` (the `const`-for-`pure` pattern suggests the latter).
-7. **Interaction with the purity pair.** Two independent effect axes
-   (`[except, pure]`, `[noexcept, pure]`, …) — both validated, neither
-   implies the other. `proc` default stays `mutable` + `except` under
-   option (a)/(c)-(a).
+### Polarity defaults (the default dialect)
 
-## Exact changes (draft, phase 1)
+| Kind | Default | Note |
+|---|---|---|
+| `func` (incl. class `func` members) | noexcept | the `pure` twin |
+| `proc` | except | the `mutable` twin |
+| `method` | open | no claim; nothing emitted |
+| `ctor` | open | do not assume all ctors throw — no-throw ctors are a thing |
+| `dtor` | noexcept | only noexcept makes sense there; hardcoded |
+| extern decls | never defaulted | the attrs communicate the real header |
 
-1. `backend/Core/Node.cs`: `IsNoexcept` stays; add `IsExcept` from
-   `except` (+ `throw` as alias per Q6).
-2. `backend/Core/Dialect.cs`: `DefaultExceptFunction` / `DefaultExceptProcedure`
-   / `DefaultExceptMethod` (+ convert/operator categories), applied by the
-   existing per-kind default merge pass.
-3. `backend/Resolver/TypeChecker.cs`: reject `except`+`noexcept` combined
-   (same shape as the `[inline]`/`[hide]` mutual exclusion).
-4. `backend/Generator/HierachicalGen.cs`: emission is already ` noexcept`
-   on the attribute; the flip adds nothing (`except` emits nothing).
-5. `std/*.decl.myll`: thin out the `[noexcept]` sprinkles once the default
-   lands; `std_limits` keeps the matching case green either way.
-6. Cases: a `std_limits_member_spec` follow-up already exercises the
-   signature-matching side; add `template_fail` markers for the rejected
-   combinations and a default-behavior case.
+An explicit spelling always wins over the default; the default injects only
+when neither side is spelled.
+
+### Explicit (strict) mode
+
+- `proc`, `method`, and `ctor` must spell `[noexcept]` or `[except]`.
+- `func` and `dtor` stay noexcept-defaulted (the kinds where noexcept makes
+  most sense), so they never need spelling.
+- Mechanism **undecided**: a global dialect knob (à la `switchFallthrough:
+  Explicit`; candidate name `exceptionSpelling: Implicit | Explicit`) vs
+  per-thing control via the attr value-forms. Decide together with the attr
+  rework.
+
+### Validation
+
+- `[noexcept]` and `[except]` on one declaration → error (impossible
+  combination).
+- `[except]` on a dtor → error (only noexcept makes sense there).
+- A `throw` statement inside a noexcept (explicit or defaulted) func/ctor →
+  hard error. Local body walk only: no interprocedural checking, and calling
+  possibly-throwing functions stays fine.
+
+## Undecided — deferred to the attr rework
+
+- **Value-forms**: `[except=require]` (must spell), `[except=yes]` ≡
+  `[except]`, `[except=no]` ≡ `[noexcept]`, `[except=default]` (dialect
+  default for the kind). They should arrive with the attr rework, not
+  before it.
+- **Class-level prefill**: `[noexcept] class … {…}` / `[except] class …`
+  prefills all members. Open details: whether it overrides the per-kind
+  defaults for every member kind (procs included) or fills only the open
+  kinds; and a possible extension — `[except=possible]` /
+  `[except=impossible]` — where an `impossible` class would forbid members
+  from flipping to throwing at all. Too entangled with the value-forms, so
+  it waits.
+- **Strictness shape**: global dialect knob vs per-thing control (see
+  Explicit mode above).
+
+## Work impact when the time comes (not a design question)
+
+- `func` noexcept-by-default adds ` noexcept` to nearly every generated
+  signature: full golden regeneration sweep across `testing/golden/`.
+- Sources that throw from funcs need `[except]` spelled
+  (`synthetic_sugar/throw_if.myll`, `control_flow/try_catch.myll`);
+  coreutil build check.
+- New cases: `except_basics` (run), `except_fail` (combination, dtor,
+  throw-inside-noexcept), plus whatever the strict mechanism turns out to
+  be.
+
+## Exact changes (draft)
+
+1. `backend/Core/Dialect.cs`: `DefaultNoexceptFunction = true`,
+   `DefaultNoexceptProcedure = false`, plus the strict mechanism once
+   decided.
+2. `backend/Core/Node.cs`: `IsExcept`.
+3. `backend/Grammar/MyllParser.g4`: remove `THROW` from `attribId`.
+4. `backend/Transform/DefaultAttributesTransformer.cs`: polarity injection
+   per the table, dtor auto-noexcept, strict-mode errors.
+5. `backend/Resolver/TypeChecker.cs`: the three validation rules.
+6. Emission needs no new work — the existing ` noexcept` suffix is driven
+   by the injected attribs.
