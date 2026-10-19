@@ -70,6 +70,32 @@ specialization series through phase F is complete (see `plan/template-specializa
 
 ## CTAD (class template argument deduction)
 
+- ~~Phase 1: implicit constructor deduction~~ — **done 2026-10-16**
+  (`plan/ctad.md`): `var Box b( 5 );`, ctor-call expressions
+  (`var auto b = Box( 3 );`, `var Box b = Box( 3 );`, return positions) and
+  `new Box*!( 5 )` deduce the class arguments from the constructor
+  arguments; every constructor is an implicit guide; ctor template
+  parameters join the deduction; emission writes the deduced arguments
+  explicitly. Ambiguous and failed deductions are hard errors (partial
+  ordering — the same bidirectional unification pattern specs need — is
+  deferred and erroring now keeps that door open). Deferred: user-written
+  guides (`guide Vec<T>( T* first, T* last ) -> Vec<T>;` leading
+  candidate), aggregates, alias CTAD, return-type inference, deduction
+  against specializations.
+- **Template parameter defaults** — take the bare `<T=int>` spelling on
+  primaries (`class Box<T=int>` without an attribute = default; specs keep
+  requiring `[spec=…]`, which disambiguates). The redefinition error a
+  forgotten-attribute spec now produces gets a "did you mean `[spec=…]`?"
+  hint. Non-type defaults use the same spelling (`class Fixed<int N=5>`).
+  When defaults land, CTAD fills non-deducible parameters from them
+  (mirroring C++); until then CTAD rejects them.
+- **Source annotations** (`--annotate`) — post-resolution pass writing
+  tagged comments back into the sources: inline where the deduction sits
+  (`var Box/*<int>*/ i(9);`), trailing otherwise (`// @myll Box<int>`).
+  Strips prior `@myll` annotations before writing (idempotent, hand edits
+  do not go stale); off by default so goldens are unaffected. Annotates
+  CTAD and `var auto` first; lambda returns and overload picks later.
+
 - **Phase 1: implicit constructor deduction only.** `var Box b( 5 );` deduces
   `Box<int>` from constructor arguments. No user-written deduction guides:
   cppreference confirms implicit guides cover the common case; explicit guides
