@@ -22,20 +22,26 @@ specialization series through phase F is complete (see `plan/template-specializa
    real-world cases, and the static-member/return-substitution fixes that
    fell out. Remaining follow-ups from the same doc: deep-nested heads and
    plain (non-template) enclosing classes.
-2. **Deep nesting**: specializations of nested classes inside nested classes
+2. ~~Variadic template parameters~~ — **done 2026-10-16**
+   (`plan/variadic-templates.md`): `<T...>` packs with derived expansion in
+   parameters, call arguments and `(forward)`, plus `std::format` /
+   variadic `std::println` bindings. Deferred from there: explicit fold
+   syntax (deliberately a Myll-native design, not C++ `(...)`),
+   `sizeof...`, pattern expansions, non-type packs, specializing variadics.
+3. **Deep nesting**: specializations of nested classes inside nested classes
    (rejected today with a clean error). Needs argument lists for every
    enclosing level in emission.
-3. **Non-type substitution inside declared types**: a variable specialization
+4. **Non-type substitution inside declared types**: a variable specialization
    whose declared type references a bound non-type parameter (array sizes).
    Class specializations are unaffected (no declared type).
-4. **Runtime primary instantiation from importing modules**: the runtime var
+5. **Runtime primary instantiation from importing modules**: the runtime var
    template primary's definition lives in its module's `.cpp` while importers
    only see the `extern` declaration. Same-module works.
-5. **`--program`-split** relaxation of the ODR guard (compile several
+6. **`--program`-split** relaxation of the ODR guard (compile several
    separately linked programs from overlapping modules).
-6. **Explicit instantiation syntax** (`template class Foo<int>;`).
-7. **Extern-template declarations**.
-8. **Use-site named template arguments** (`Arr<T=int, N=3>`) — deferred
+7. **Explicit instantiation syntax** (`template class Foo<int>;`).
+8. **Extern-template declarations**.
+9. **Use-site named template arguments** (`Arr<T=int, N=3>`) — deferred
    deliberately: Myll has no named non-template arguments either, and keeping
    `<T=int>` specialization-only avoids ambiguity for readers. Folded
    expressions at use sites are done (phase E).
