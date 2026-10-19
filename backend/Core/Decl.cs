@@ -358,6 +358,10 @@ namespace Myll.Core
 		public TplParamKind kind = TplParamKind.Type;
 		public Typespec?    type;
 
+		// The parameter was declared `<T...>`: a pack parameter. Types that
+		// resolve to this decl are pack-typed.
+		public bool isPack;
+
 		public TplParamDecl()
 		{
 			IsLocal = true;

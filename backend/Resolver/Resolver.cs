@@ -1590,9 +1590,30 @@ if( decl is Structural st ) {
 			}
 
 			// Prefer an arity match first; if only one candidate has the right arity, pick it.
+			// Exact-arity matches and pack absorbers both enter: the ranking pass
+			// may reject the exact one (e.g. a same-arity extern overload), and
+			// the pack candidate is the fallback.
 			List<Decl> sameArity = callable
 				.Where( d => GetParamCount( d ) == call.args.Count )
 				.ToList();
+
+			if( sameArity.Count == 0 ) {
+				// Only pack absorbers match: a trailing pack parameter absorbs
+				// the remaining arguments.
+				sameArity = callable
+					.Where( d => {
+						int packIndex = TemplateInference.PackParamIndexOf( d );
+						return packIndex >= 0 && packIndex <= call.args.Count;
+					} )
+					.ToList();
+			}
+			else {
+				sameArity.AddRange( callable.Where( d => {
+					int packIndex = TemplateInference.PackParamIndexOf( d );
+					return GetParamCount( d ) != call.args.Count
+					  && packIndex >= 0 && packIndex <= call.args.Count;
+				} ) );
+			}
 
 			LogOverloadResolution( "  {0} candidate(s) match arity {1}", sameArity.Count, call.args.Count );
 
@@ -1903,7 +1924,11 @@ if( decl is Structural st ) {
 					combinedArgs.AddRange( candidateArgs );
 
 				string rankDetails = "";
-				for( int i = 0; i < paras.Count; i++ ) {
+				// A pack parameter absorbs the trailing arguments and deduces their
+				// types exactly, so only the fixed prefix gets a conversion rank.
+				int packIndex = TemplateInference.PackParamIndexOf( candidate );
+				int rankCount = packIndex >= 0 ? packIndex : paras.Count;
+				for( int i = 0; i < rankCount; i++ ) {
 					Typespec paramType = combinedParams.Count > 0 && combinedArgs.Count > 0
 						? TemplateInference.SubstituteTemplateParams( paras[i].type, combinedParams, combinedArgs, result )
 						: paras[i].type;
@@ -1960,6 +1985,19 @@ if( decl is Structural st ) {
 				}
 			}
 
+			// An exact-arity match without a pack beats pack absorbers.
+			if( viable.Count > 1 ) {
+				List<(Decl Candidate, ConversionRank WorstRank)> exactArities = viable
+					.Where( v => GetParamCount( v.Candidate ) == call.args.Count
+					          && TemplateInference.PackParamIndexOf( v.Candidate ) < 0 )
+					.ToList();
+
+				if( exactArities.Count > 0 ) {
+					LogOverloadResolution( "  tie-breaker: preferring {0} exact-arity candidate(s)", exactArities.Count );
+					viable = exactArities;
+				}
+			}
+
 			if( viable.Count == 1 ) {
 				Decl chosen = viable[0].Candidate;
 				LogOverloadResolution( "  chosen: {0}{1}", chosen.name, FormatParamsForDebug( chosen ) );
@@ -1969,8 +2007,19 @@ if( decl is Structural st ) {
 				bool shouldApplyDeduced = chosen is Func chosenFunc
 				                         && !( chosenFunc.IsForwardDeclaration || chosenFunc.IsExternal );
 				if( shouldApplyDeduced
-				 && deducedArgsByCandidate.TryGetValue( chosen, out List<TplArg>? deduced ) )
-					TemplateInference.ApplyTemplateArgs( callee, deduced );
+				 && deducedArgsByCandidate.TryGetValue( chosen, out List<TplArg>? deduced ) ) {
+					// Deduced args that still name template parameters (a pack
+					// forwarded from another pack) stay unexpanded: the C++
+					// deduction redoes them, which is the idiom C++ libraries
+					// use for pass-through forwarding.
+					bool IsSymbolic( Typespec? t )
+						=> t is TypespecNested { resolvedDecl: TplParamDecl };
+					bool isSymbolicPack = deduced.Any( a => a.packArgs != null
+						? a.packArgs.Any( s => IsSymbolic( s.typespec ) )
+						: IsSymbolic( a.typespec ) );
+					if( !isSymbolicPack )
+						TemplateInference.ApplyTemplateArgs( callee, deduced );
+				}
 
 				// A template call that did not pick a specialization instantiates the
 				// primary; record it for the ODR guard. Calls re-resolve across

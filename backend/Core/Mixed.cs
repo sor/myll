@@ -46,8 +46,15 @@ namespace Myll.Core
 		public Typespec type = null!;
 		public string?  name;
 
+		// The parameter's type names a pack template parameter (`<T...>`):
+		// the parameter is the expansion.
+		public bool IsPack
+			=> type is TypespecNested { resolvedDecl: TplParamDecl { isPack: true } };
+
 		public string Gen()
-			=> type.Gen( name ?? "" );
+			=> IsPack
+				? Format( "{0}... {1}", type.Gen(), name ?? "" )
+				: type.Gen( name ?? "" );
 	}
 
 	// blah(  n:   1+2   )
@@ -58,6 +65,8 @@ namespace Myll.Core
 		public string?  name;
 		public Expr     expr = null!;
 
+		public bool IsPack => expr.Type is TypespecNested { resolvedDecl: TplParamDecl { isPack: true } };
+
 		public string Gen()
 		{
 			if( !IsNullOrEmpty( name ) )
@@ -66,7 +75,12 @@ namespace Myll.Core
 					DiagnosticKind.Error,
 					"named function arguments are not implemented yet" ) );
 
-			return expr.Gen();
+			// A pack-typed argument expands: `args` emits `args...`. The
+			// (forward) cast emits its pack template argument, so the
+			// expansion suffix applies there alike.
+			return expr.Type is TypespecNested { resolvedDecl: TplParamDecl { isPack: true } }
+				? expr.Gen() + "..."
+				: expr.Gen();
 		}
 	}
 
@@ -136,11 +150,17 @@ namespace Myll.Core
 		public Typespec? typespec;
 		public Expr?     lit;
 
-		public bool IsTypeArgument  => typespec != null;
+		// A deduced or explicitly bound pack: the trailing arguments of a
+		// pack parameter, comma-separated on emission.
+		public List<TplArg>? packArgs;
+
+		public bool IsTypeArgument  => typespec != null || packArgs != null;
 		public bool IsValueArgument => lit      != null;
 
 		public string Gen()
-			=> lit?.Gen()
+			=> packArgs != null
+				? packArgs.Select( a => a.Gen() ).Join( ", " )
+			: lit?.Gen()
 			?? typespec?.Gen()
 			?? throw new InvalidOperationException( "TplArg has neither literal nor typespec" );
 	}
@@ -157,6 +177,11 @@ namespace Myll.Core
 		public string       name = null!;
 		public TplParamKind kind = TplParamKind.Type;
 		public Typespec?    type;
+
+		// A pack parameter (`<T...>`); must be the last of the list. The
+		// `...` is only ever written here: parameter lists, call arguments
+		// and the forward cast derive their expansion from this marker.
+		public bool isPack;
 	}
 
 	/// <summary>

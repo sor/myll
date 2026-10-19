@@ -651,6 +651,9 @@ foreach( Myll.Core.Structural spec in structs ) {
 				return;
 			}
 
+			if( !RejectVariadicPrimary( memberPrimary, spec, "method" ) )
+				return;
+
 			FinishBlockMemberSpec( spec, memberPrimary, head, classArgs, seenSignatures );
 		}
 
@@ -708,6 +711,9 @@ foreach( Myll.Core.Structural spec in structs ) {
 				MarkInvalidSpec( spec );
 				return;
 			}
+
+			if( !RejectVariadicPrimary( memberPrimary, spec, "constructor" ) )
+				return;
 
 			FinishBlockMemberSpec( spec, memberPrimary, head, classArgs, seenSignatures );
 		}
@@ -1075,21 +1081,24 @@ spec.SpecInfo = new Decl.SpecData {
 					continue;
 				}
 
-(Func? primary, bool isImported) = FindPrimary( funcs, spec,
+				(Func? primary, bool isImported) = FindPrimary( funcs, spec,
 					f => f.name == spec.name && f.SpecInfo == null && f.TplParams.Count > 0,
 					IsFuncPrimary, nsFqn,
 					String.Format( "No matching function template '{0}' in this module or its imports; a specialization must live in the primary's module or import it",
 						spec.name ) );
-			if( primary == null ) {
-				MarkInvalidSpec( spec );
-				continue;
-			}
+				if( primary == null ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
 
-			if( !ValidateFollowOrder( spec, primary, isImported, String.Format( "Specialization of '{0}' must follow its primary template",
-				spec.name ) ) ) {
-				MarkInvalidSpec( spec );
-				continue;
-			}
+				if( !RejectVariadicPrimary( primary, spec, "function" ) )
+					continue;
+
+				if( !ValidateFollowOrder( spec, primary, isImported, String.Format( "Specialization of '{0}' must follow its primary template",
+					spec.name ) ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
 
 				// Function templates allow only full specializations: every
 				// parameter must be bound, so no bare names and a full count.
@@ -1263,6 +1272,9 @@ spec.SpecInfo = new Decl.SpecData {
 					MarkInvalidSpec( spec );
 					continue;
 				}
+
+				if( !RejectVariadicPrimary( primary, spec, "method" ) )
+					continue;
 
 				// Same-name class and method parameters make the bindings ambiguous;
 				// the bindings map by name, so rename one.
@@ -1718,6 +1730,9 @@ Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 					MarkInvalidSpec( spec );
 					continue;
 				}
+
+				if( !RejectVariadicPrimary( primary, spec, "constructor" ) )
+					continue;
 
 				List<TplParam> target = new();
 				target.AddRange( owner.TplParams );
@@ -2194,6 +2209,23 @@ Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 		/// </summary>
 		private static void MarkInvalidSpec( Decl spec )
 			=> spec.SpecInfo = new Decl.SpecData { Primary = spec };
+
+		// Specializing a variadic template is not modeled yet: the bindings
+		// would have to name pack elements.
+		private bool RejectVariadicPrimary( Decl primary, Decl spec, string kindWord )
+		{
+			if( primary is not ITemplatedDecl td
+			 || !td.TplParams.Any( p => p.isPack ) )
+				return true;
+
+			Diagnostics.Add( new Diagnostic(
+				spec.srcPos,
+				DiagnosticKind.Error,
+				String.Format( "Specializing the variadic {0} template '{1}' is not supported yet",
+					kindWord, primary.name ) ) );
+			MarkInvalidSpec( spec );
+			return false;
+		}
 
 		/// <summary>
 		/// Syntactic substitution of bound parameter names with their values. Unlike

@@ -132,6 +132,7 @@ namespace Myll.Resolver
 		{
 			switch( decl ) {
 			case Func func:
+				ValidatePackShape( func.TplParams, func.paras, func );
 				if( func.kind == Func.Kind.Convert )
 					ValidateConvertAttributes( func );
 				if( IsAutoKind( func.retType ) )
@@ -143,6 +144,7 @@ namespace Myll.Resolver
 				break;
 
 			case Structor stc:
+				ValidatePackShape( stc.TplParams, stc.paras, stc );
 				if( stc.isConversionCtor )
 					ValidateConvertAttributes( stc );
 				if( ( stc.IsDefault || stc.IsDisabled ) && stc.body != null )
@@ -151,6 +153,14 @@ namespace Myll.Resolver
 					AddError( stc, "Defaulted or deleted constructors must be declared with ';', not a body." );
 				if( stc.body != null )
 					ValidateStmt( stc.body, null );
+				break;
+
+			case Hierarchical h:
+				if( h is Structural structural )
+					ValidateClassPackShape( structural );
+				ValidateUniqueVarNames( h );
+				foreach( Decl child in h.children )
+					ValidateDecl( child );
 				break;
 
 			case VarDecl vd:
@@ -176,14 +186,86 @@ namespace Myll.Resolver
 					vd.init = BindToBitType( vd.init, vd.type );
 				}
 				break;
-
-				case Hierarchical h:
-					ValidateUniqueVarNames( h );
-					foreach( Decl child in h.children )
-						ValidateDecl( child );
-					break;
 			}
 		}
+
+		// A pack template parameter must be the last template parameter, and a
+		// parameter expanding a pack must be the last parameter; the arity and
+		// deduction machinery treats the pack as "everything after the fixed
+		// prefix".
+		private void ValidatePackShape( List<TplParam> tplParams, List<Param> paras, Decl decl )
+		{
+			if( tplParams.Count > 0
+			 && tplParams.Any( p => p.isPack )
+			 && !tplParams.Last().isPack )
+				AddError( decl, "A pack template parameter must be the last template parameter: '" + tplParams.First( p => p.isPack ).name + "'" );
+
+			HashSet<string> packNames = new( tplParams.Where( p => p.isPack ).Select( p => p.name ),
+				StringComparer.Ordinal );
+			for( int i = 0; i < paras.Count - 1; i++ ) {
+				if( paras[i].type is TypespecNested n
+				 && n.idTpls.Count == 1
+				 && ( n.idTpls[0].tplArgs == null || n.idTpls[0].tplArgs.Count == 0 )
+				 && packNames.Contains( n.idTpls[0].id ) )
+					AddError( decl, "The pack parameter '" + n.idTpls[0].id + "' must be the last parameter" );
+			}
+		}
+
+		// Class/struct/union template packs are not modeled yet: a pack-typed
+		// member is a pattern expansion.
+		private void ValidateClassPackShape( Structural structural )
+		{
+			if( structural.TplParams.Count > 0
+			 && structural.TplParams.Any( p => p.isPack ) )
+				AddError( structural, "Pack template parameters on class/struct/union templates are not supported yet" );
+		}
+
+		/// <summary>
+		/// Rejects pack-typed expressions outside the two legal positions: as
+		/// a direct call argument (the argument expands), and as the operand of
+		/// a `(forward)` cast (the cast forwards the pack). Anything else would
+		/// be a pattern expansion Myll does not model.
+		/// </summary>
+		private void CheckPackUsage( Expr? expr )
+		{
+			switch( expr ) {
+				case null:
+					return;
+
+// A call: its arguments are the expansion positions. A whole
+					// argument may be pack-typed; sub-expressions inside a
+					// non-pack argument recurse.
+					case FuncCallExpr call:
+					CheckPackUsage( call.expr );
+					foreach( Arg arg in call.funcCall.args ) {
+						if( !IsPackType( arg.expr?.Type ) )
+							CheckPackUsage( arg.expr );
+					}
+					return;
+
+				// (forward) over a pack forwards the whole pack.
+				case CastExpr { op: Operand.ForwardCast } fwd:
+					if( !IsPackType( fwd.expr?.Type ) )
+						CheckPackUsage( fwd.expr );
+					return;
+
+				case CastExpr cast:
+					CheckPackUsage( cast.expr );
+					return;
+
+				default:
+					if( IsPackType( expr.Type ) ) {
+						AddError( expr, "A pack parameter can only be passed as a whole call argument or through a (forward) cast" );
+						return;
+					}
+
+					expr.VisitSubExprs( CheckPackUsage );
+					return;
+			}
+		}
+
+		private static bool IsPackType( Typespec? type )
+			=> type is TypespecNested { resolvedDecl: TplParamDecl { isPack: true } };
 
 		private void ValidateStmt( Stmt stmt, Func? currentFunction )
 		{
@@ -193,37 +275,39 @@ namespace Myll.Resolver
 						ValidateStmt( s, currentFunction );
 					break;
 
-			case VarStmt vs:
-				if( vs.init != null ) {
-					bool isLambdaInit = vs.init is Lambda;
-					if( IsAutoKind( vs.type ) ) {
-						if( isLambdaInit ) {
-							// keep `auto`; C++ deduces the closure type
+				case VarStmt vs:
+					if( vs.init != null ) {
+						CheckPackUsage( vs.init );
+						bool isLambdaInit = vs.init is Lambda;
+						if( IsAutoKind( vs.type ) ) {
+							if( isLambdaInit ) {
+								// keep `auto`; C++ deduces the closure type
+							}
+							else if( vs.init is InitListExpr il && il.args.Count == 0 ) {
+								AddError( il, "Cannot infer element type of an empty initializer list for `auto`" );
+							}
+							else {
+								vs.type = InferAutoType( typeResolver.Resolve( vs.init ) ) ?? vs.type;
+								if( vs.decl != null )
+									vs.decl.type = vs.type;
+							}
 						}
-						else if( vs.init is InitListExpr il && il.args.Count == 0 ) {
-							AddError( il, "Cannot infer element type of an empty initializer list for `auto`" );
-						}
-						else {
-							vs.type = InferAutoType( typeResolver.Resolve( vs.init ) ) ?? vs.type;
+						else if( IsUnspecifiedInitList( vs.type ) ) {
+							InferInitListElementFromInit( vs.type, vs.init );
 							if( vs.decl != null )
-								vs.decl.type = vs.type;
+								InferInitListElementFromInit( vs.decl.type, vs.init );
+						}
+
+						if( !isLambdaInit ) {
+							CheckAssignment( vs.type, vs.init, vs.init.srcPos );
+							vs.init = BindToBitType( vs.init, vs.type );
 						}
 					}
-					else if( IsUnspecifiedInitList( vs.type ) ) {
-						InferInitListElementFromInit( vs.type, vs.init );
-						if( vs.decl != null )
-							InferInitListElementFromInit( vs.decl.type, vs.init );
-					}
-
-					if( !isLambdaInit ) {
-						CheckAssignment( vs.type, vs.init, vs.init.srcPos );
-						vs.init = BindToBitType( vs.init, vs.type );
-					}
-				}
-				break;
+					break;
 
 				case ReturnStmt ret:
 					ValidateReturn( ret, currentFunction );
+					CheckPackUsage( ret.expr );
 					break;
 
 				case MultiAssign multiAssign:
@@ -232,13 +316,14 @@ namespace Myll.Resolver
 
 				case AggrAssign aggrAssign:
 					CheckAssignment( aggrAssign.leftExpr, aggrAssign.rightExpr, aggrAssign.rightExpr.srcPos );
+					CheckPackUsage( aggrAssign.rightExpr );
 					aggrAssign.rightExpr = BindToBitType( aggrAssign.rightExpr, typeResolver.Resolve( aggrAssign.leftExpr ) );
 					break;
 
-				case ExprStmt exprStmt: {
+				case ExprStmt exprStmt:
 					ValidateExpression( exprStmt.expr );
+					CheckPackUsage( exprStmt.expr );
 					break;
-				}
 
 				case IfStmt ifStmt:
 					foreach( IfStmt.CondThen ifThen in ifStmt.ifThens ) {
@@ -249,28 +334,28 @@ namespace Myll.Resolver
 						ValidateStmt( ifStmt.els, currentFunction );
 					break;
 
-			case ForStmt forStmt:
-				if( forStmt.init != null )
-					ValidateStmt( forStmt.init, currentFunction );
-				if( forStmt.cond != null )
-					ValidateCondition( forStmt.cond, forStmt.cond.srcPos, "for" );
-				if( forStmt.body != null )
-					ValidateStmt( forStmt.body, currentFunction );
-				if( forStmt.els != null )
-					ValidateStmt( forStmt.els, currentFunction );
-				break;
+				case ForStmt forStmt:
+					if( forStmt.init != null )
+						ValidateStmt( forStmt.init, currentFunction );
+					if( forStmt.cond != null )
+						ValidateCondition( forStmt.cond, forStmt.cond.srcPos, "for" );
+					if( forStmt.body != null )
+						ValidateStmt( forStmt.body, currentFunction );
+					if( forStmt.els != null )
+						ValidateStmt( forStmt.els, currentFunction );
+					break;
 
-			case RangeForStmt rangeForStmt:
-				ValidateExpression( rangeForStmt.range );
-				if( rangeForStmt.varDecl != null )
-					ValidateStmt( rangeForStmt.varDecl, currentFunction );
-				if( rangeForStmt.body != null )
-					ValidateStmt( rangeForStmt.body, currentFunction );
-				if( rangeForStmt.els != null )
-					ValidateStmt( rangeForStmt.els, currentFunction );
-				break;
+				case RangeForStmt rangeForStmt:
+					ValidateExpression( rangeForStmt.range );
+					if( rangeForStmt.varDecl != null )
+						ValidateStmt( rangeForStmt.varDecl, currentFunction );
+					if( rangeForStmt.body != null )
+						ValidateStmt( rangeForStmt.body, currentFunction );
+					if( rangeForStmt.els != null )
+						ValidateStmt( rangeForStmt.els, currentFunction );
+					break;
 
-			case WhileStmt whileStmt:
+				case WhileStmt whileStmt:
 					ValidateCondition( whileStmt.cond, whileStmt.cond.srcPos, "while" );
 					ValidateStmt( whileStmt.body, currentFunction );
 					if( whileStmt.els != null )

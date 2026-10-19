@@ -61,7 +61,11 @@ namespace Myll
 			}
 
 			if( c is TypeTplParamContext type )
-				return new TplParam { name = type.id().Visit(), kind = TplParamKind.Type };
+				return new TplParam {
+					name   = type.id().Visit(),
+					kind   = TplParamKind.Type,
+					isPack = type.TRP_POINT() != null,
+				};
 
 			throw new Exception( "unknown template parameter kind" );
 		}

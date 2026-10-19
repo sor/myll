@@ -549,6 +549,8 @@ namespace Myll.Generator
 		private string GenTemplateParameter( TplParam p )
 			=> p.kind == TplParamKind.NonType && p.type != null
 				? p.type.Gen( p.name )
+				: p.isPack
+				? Format( "{0}... {1}", TemplateTypeParameterKeyword, p.name )
 				: Format( "{0} {1}", TemplateTypeParameterKeyword, p.name );
 
 		private string GenTemplateParameterList( IReadOnlyList<TplParam> parameters )

@@ -91,7 +91,8 @@ namespace Myll.Resolver
 			Decl                   candidate,
 			IReadOnlyList<TplArg>? explicitArgs )
 		{
-			int expected = GetTemplateParamCount( candidate );
+			List<TplParam>? parameters = ( PrimaryOf( candidate ) as ITemplatedDecl )?.TplParams;
+			int expected = parameters?.Count ?? 0;
 			int actual   = explicitArgs?.Count ?? 0;
 
 			if( expected == 0 )
@@ -107,14 +108,33 @@ namespace Myll.Resolver
 					: new TemplateArgValidation( true, TemplateArgMismatchKind.Arity, null, null, null, null );
 			}
 
-			if( actual != expected )
+			// A pack parameter absorbs the trailing arguments; it must be the
+			// last parameter, so everything before it is fixed. parameters is
+			// non-null here: expected > 0 only when the list exists.
+			bool hasPack = parameters!.Any( p => p.isPack );
+			int  fixedCount = hasPack ? expected - 1 : expected;
+
+			if( ( hasPack && actual < fixedCount )
+			 || ( !hasPack && actual != expected ) )
 				return new TemplateArgValidation( true, TemplateArgMismatchKind.Arity, null, null, null, null );
 
-			List<TplParam> parameters = ( PrimaryOf( candidate ) as ITemplatedDecl )!.TplParams;
 			for( int i = 0; i < parameters.Count; i++ ) {
 				TplParam param = parameters[i];
-				TplArg   arg   = explicitArgs![i];
 
+				if( param.isPack ) {
+					// the pack consumes the remaining arguments
+					for( int a = i; a < actual; a++ ) {
+						if( explicitArgs![a].IsTypeArgument )
+							continue;
+
+						return new TemplateArgValidation(
+							true, TemplateArgMismatchKind.ArgumentKind, a, param.name,
+							"type", explicitArgs[a].IsValueArgument ? "value" : "unknown" );
+					}
+					break;
+				}
+
+				TplArg arg   = explicitArgs![i];
 				bool isTypeArg  = arg.IsTypeArgument;
 				bool isValueArg = arg.IsValueArgument;
 
@@ -133,6 +153,38 @@ namespace Myll.Resolver
 
 			return new TemplateArgValidation();
 		}
+
+		/// <summary>
+		/// Index of the trailing parameter that expands a pack template
+		/// parameter (`<T...>`), or -1 when the list has no pack. Name-based:
+		/// deduction runs before parameter types resolve.
+		/// </summary>
+		public static int PackParamIndex( List<TplParam> tplParams, List<Param> paras )
+		{
+			if( tplParams == null || paras == null || tplParams.Count == 0 )
+				return -1;
+
+			List<string> packNames = tplParams.Where( p => p.isPack ).Select( p => p.name ).ToList();
+			if( packNames.Count == 0 )
+				return -1;
+
+			for( int i = paras.Count - 1; i >= 0; i-- ) {
+				if( paras[i].type is TypespecNested n
+				 && n.idTpls.Count == 1
+				 && ( n.idTpls[0].tplArgs == null || n.idTpls[0].tplArgs.Count == 0 )
+				 && packNames.Contains( n.idTpls[0].id ) )
+					return i;
+			}
+
+			return -1;
+		}
+
+		public static int PackParamIndexOf( Decl decl )
+			=> decl switch {
+				Func f     => PackParamIndex( f.TplParams, f.paras ),
+				Structor c => PackParamIndex( c.TplParams, c.paras ),
+				_          => -1,
+			};
 
 		public static bool HasTemplateArityMismatch(
 			Decl                   candidate,
@@ -187,15 +239,35 @@ namespace Myll.Resolver
 			if( tplParams.Any( p => p.kind == TplParamKind.NonType ) )
 				return false;
 
-			if( call.args.Count != paras.Count )
+			// A pack parameter (`<T...>`) absorbs the remaining call arguments;
+			// everything before its parameter is fixed. Name-based, since
+			// deduction runs before parameter types resolve.
+			int packIndex = PackParamIndex( tplParams, paras );
+			int fixedParas = packIndex >= 0 ? packIndex : paras.Count;
+
+			if( call.args.Count != fixedParas
+			 && ( packIndex < 0 || call.args.Count < fixedParas ) )
 				return false;
+
+			// The pack binds to the trailing argument types (an empty pack is fine)
+			List<Typespec>? packTypes = null;
+			if( packIndex >= 0 && call.args.Count > fixedParas ) {
+				packTypes = new List<Typespec>( call.args.Count - fixedParas );
+				for( int i = fixedParas; i < call.args.Count; i++ ) {
+					Typespec? argType = typeResolver.Resolve( call.args[i].expr );
+					if( argType == null )
+						return false;
+
+					packTypes.Add( argType );
+				}
+			}
 
 			bool substituteEnclosing = enclosingParameters is { Count: > 0 }
 			                        && enclosingArguments  is { Count: > 0 };
 
 			var bindings = new Dictionary<string, Typespec>( StringComparer.Ordinal );
 
-			for( int i = 0; i < paras.Count; i++ ) {
+			for( int i = 0; i < fixedParas; i++ ) {
 				Typespec? argType = typeResolver.Resolve( call.args[i].expr );
 				if( argType == null )
 					return false;
@@ -208,11 +280,17 @@ namespace Myll.Resolver
 					return false;
 			}
 
-			if( bindings.Count != tplParams.Count )
+			if( bindings.Count != tplParams.Count - ( packIndex >= 0 ? 1 : 0 ) )
 				return false;
 
 			deduced = tplParams
-				.Select( p => new TplArg { typespec = NormalizeDeducedType( bindings[p.name] ).Clone( true ) } )
+				.Select( p => p.isPack
+					? new TplArg {
+						packArgs = ( packTypes ?? new List<Typespec>() )
+							.Select( t => new TplArg { typespec = NormalizeDeducedType( t ).Clone( true ) } )
+							.ToList(),
+					}
+					: new TplArg { typespec = NormalizeDeducedType( bindings[p.name] ).Clone( true ) } )
 				.ToList();
 			return true;
 		}

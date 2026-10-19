@@ -54,6 +54,7 @@ namespace Myll.Transform
 					name   = parameter.name,
 					kind   = parameter.kind,
 					type   = parameter.type,
+					isPack = parameter.isPack,
 					srcPos = scope.decl?.srcPos ?? new SrcPos(),
 				};
 

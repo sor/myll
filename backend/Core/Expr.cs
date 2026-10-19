@@ -679,6 +679,14 @@ namespace Myll.Core
 
 		public override string Gen( bool doBrace = false )
 		{
+			// (forward) over a pack parameter forwards the whole pack:
+			// `std::forward<Args>( args )`. The expansion suffix (`...`) is
+			// appended by the surrounding argument position, so there is
+			// exactly one expansion point.
+			if( op == Operand.ForwardCast
+			 && expr.Type is TypespecNested { resolvedDecl: TplParamDecl { isPack: true } pack } )
+				return Format( "std::forward<{0}>( {1} )", pack.name, expr.Gen() ).Brace( doBrace );
+
 			// Casting a float literal to another float size can be emitted as the
 			// appropriately suffixed literal instead of `static_cast<f64>( 9.15f )`.
 			if( type is TypespecBasic basic

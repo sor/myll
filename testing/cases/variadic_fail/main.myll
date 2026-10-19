@@ -1,0 +1,24 @@
+module variadic_fail;
+
+// A pack parameter may only be passed as a whole call argument or through a
+// (forward) cast.
+func badArith<T...>( T args ) -> int => args + 1; // FAIL: A pack parameter can only be passed as a whole call argument
+
+func badReturn<T...>( T args ) -> T => args; // FAIL: A pack parameter can only be passed as a whole call argument
+
+func badMember<T...>( T args ) -> int => args.size(); // FAIL: Unresolved member
+
+// The pack template parameter must be the last template parameter.
+func badPackOrder<T..., U>( T args ) -> int => 0; // FAIL: A pack template parameter must be the last
+
+// The pack parameter must be the last parameter.
+func badParamOrder<T...>( T args, int x ) -> int => 0; // FAIL: The pack parameter 'T' must be the last parameter
+
+// Class/struct/union packs are not modeled yet.
+class BadPack<T...> { field int v; } // FAIL: Pack template parameters on class/struct/union templates are not supported yet
+
+// Specializing a variadic template is not modeled yet.
+func vd<T...>( T args ) -> int => 0;
+func vd<T=int>( int args ) -> int => 1; // FAIL: Specializing the variadic function template 'vd' is not supported yet
+
+func main() -> int { return 0; }

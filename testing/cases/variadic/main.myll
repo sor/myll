@@ -1,0 +1,61 @@
+module variadic;
+
+import std_format, std_print;
+
+// Pass-through forwarding: the whole pack goes to std::format; the C++
+// format-string check validates the pairing (two placeholders, two pack
+// elements).
+func relay<T...>( T args ) -> std::string
+{
+	return std::format( "{}|{}", args );
+}
+
+// A zero-element pack is a legal call.
+func relayEmpty<T...>( T args ) -> std::string
+{
+	return std::format( "empty", args );
+}
+
+// Variadic-to-variadic forwarding through (forward): the cast emits
+// std::forward<T>(args)... and C++ redoes the deduction on the other side.
+func forwardChain<T...>( T args ) -> std::string
+{
+	return relay( (forward) args );
+}
+
+// Mixed lists: fixed parameter first, pack after.
+func logMixed<T, U...>( T first, U rest ) -> void
+{
+	std::println( "first {} rest {}", first, rest );
+}
+
+// Fixed templates keep working beside variadic ones.
+func takeOne<T>( T x ) -> T => x;
+
+class Builder
+{
+[pub]:
+	ctor<T...>( T args ) { count = 3; }
+
+	[static] field int count = 0;
+}
+
+func main() -> int
+{
+	var std::string expect = "1|2.5";
+	if( forwardChain( 1, 2.5 ) != expect ) return 1;
+
+	if( relayEmpty() != "empty" ) return 2;
+
+	if( takeOne<int>( 5 ) != 5 ) return 3;
+
+	logMixed( 7, 1.5, 2.5 );
+
+	var Builder b( 1, 2.5 );
+	if( Builder::count != 3 ) return 4;
+
+	var Builder nothing();
+	if( Builder::count != 3 ) return 5;
+
+	return 0;
+}
