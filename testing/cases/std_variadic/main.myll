@@ -1,0 +1,21 @@
+module std_variadic;
+
+import std_format, std_print;
+
+func main() -> int
+{
+	// The variadic std::format binding: the raw emitted call resolves against
+	// the real std::format, and its constexpr format-string check validates
+	// the placeholder/argument pairing.
+	var std::string s = std::format( "{}|{}", 1, 2.5 );
+	var std::string expect = "1|2.5";
+	if( s != expect ) return 1;
+
+	// Variadic std::println beside the fixed-arity overloads.
+	std::println( "values: {} and {}", 1, 2.5 );
+
+	var std::string one = std::format( "just {}", 7 );
+	if( one != "just 7" ) return 2;
+
+	return 0;
+}

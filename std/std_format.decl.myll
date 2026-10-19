@@ -1,7 +1,13 @@
 module std_format;
 import <format>;
+import std_string;
 
 namespace std {
+	// std::format: loose binding — the emitted raw call passes the format
+	// string literal and the arguments directly, and the C++ constexpr
+	// format-string check validates the pairing.
+	func format<T...>( const std::string & fmt, T args ) -> std::string;
+
 	// std::basic_format_parse_context backing declaration for Myll resolution.
 	// The real definition comes from the C++ standard library <format> header.
 	// The iterator is basic_string_view<C>::const_iterator, a raw pointer for
