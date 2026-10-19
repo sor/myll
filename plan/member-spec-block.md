@@ -96,9 +96,10 @@ bound-parameter aliases (`T` means the bound value).
   const-qualified static member functions (`Node.IsConstMethod` now excludes
   static).
 - Qualified member calls now substitute the enclosing class's template
-  parameters in return types (`TypeResolver.SubstituteCallTemplateArgs` +
+  parameter in return types (`TypeResolver.SubstituteCallTemplateArgs` +
   `Resolver.TryGetMemberAccessBaseType`), so `Box<int>::Get()` yields `int`,
-  not `T`. The dot-path (`b.Get()`) return substitution stays a follow-up.
+  not `T`. The dot-path (`b.Get()`) return substitution landed on 2026-10-16
+  as its own commit (see `testing/cases/member_return_type/`).
 
 ## Cases
 

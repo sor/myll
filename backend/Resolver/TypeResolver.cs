@@ -466,8 +466,12 @@ namespace Myll.Resolver
 		// A call to a function template keeps the raw template parameter in the callee's
 		// return type; substitute the resolved template arguments so the call's own type
 		// is concrete (var auto, chained calls, overload ranking). A member of a class
-		// template substitutes the enclosing class's parameters with the qualified
-		// name's class arguments, so Box<int>::Get() yields int, not T.
+		// template substitutes the enclosing class's parameters with the arguments the
+		// callee carries: the qualified name's class arguments for Box<int>::Get(),
+		// and the receiver's class arguments for b.Get() — a concrete Box<int> receiver
+		// yields int, not T. Receivers that are unresolved or still dependent keep the
+		// raw template parameter, mirroring the overload ranking's progressive
+		// substitution.
 		internal Typespec SubstituteCallTemplateArgs( Func func, Expr callee )
 		{
 			Typespec retType = func.retType;
@@ -489,7 +493,39 @@ namespace Myll.Resolver
 				}
 			}
 
-			return retType;
+			if( callee is BinOp binOp
+			 && OperatorRules.IsMemberAccess( binOp.op ) ) {
+				List<Structural> ownerChain = OwnerTemplateArgs.GetStructuralChain( func );
+				if( ownerChain.Count > 0 ) {
+					List<TplParam> ownerParams = ownerChain.SelectMany( s => s.TplParams ).ToList();
+					List<TplArg>? ownerArgs = OwnerTemplateArgs.TryExtract( binOp, ownerChain, this, result );
+					if( ownerArgs != null
+					 && OwnerTemplateArgs.AreConcrete( ownerArgs, ownerParams ) )
+						retType = TemplateInference.SubstituteTemplateParams( retType, ownerParams, ownerArgs, result );
+				}
+			}
+
+			// Expression value types never carry reference qualifiers (C++
+			// semantics): a member returning T& used in an expression is its
+			// referred type, so `arr.at(0) != 1` compares int, not int&.
+			// The raw dependent form keeps the reference, as today.
+			return StripReferenceQualifiers( retType );
+		}
+
+		private static Typespec StripReferenceQualifiers( Typespec type )
+		{
+			if( type.ptrs == null
+			 || type.ptrs.Count == 0
+			 || type.ptrs[type.ptrs.Count - 1].kind is not (Pointer.Kind.LVRef or Pointer.Kind.RVRef) )
+				return type;
+
+			// Strip on a clone: the declared return type must stay untouched.
+			Typespec clone = type.Clone();
+			while( clone.ptrs is { Count: > 0 }
+			 && clone.ptrs[clone.ptrs.Count - 1].kind is Pointer.Kind.LVRef or Pointer.Kind.RVRef )
+				clone.ptrs.RemoveAt( clone.ptrs.Count - 1 );
+
+			return clone;
 		}
 
 		private static Structural? FindEnclosingStructuralOf( Decl decl )

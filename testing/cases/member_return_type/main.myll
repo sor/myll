@@ -1,0 +1,68 @@
+module member_return_type;
+
+// A member call through a receiver substitutes the enclosing class template
+// parameters from the receiver's concrete type: b.Get() yields int, not T.
+class Box<T>
+{
+[pub]:
+	ctor( T v ) { _v = v; }
+
+	field T _v;
+
+	func Get() -> T => _v;
+	func GetTwice() -> T => _v + _v;
+	func Self() -> Box<T> => *this;
+}
+
+// Inherited members: the receiver is a derived instantiation, the member
+// lives in the base.
+class Base<T>
+{
+[pub]:
+	func Zero() -> T => (T)0;
+}
+
+class Derived<T> : Base<T>
+{
+}
+
+// Nested chains: the receiver's arguments cover every enclosing level.
+class Outer<T>
+{
+[pub]:
+	class Inner<V>
+	{
+	[pub]:
+		func Combine( T a, V b ) -> T => a;
+	}
+}
+
+func main() -> int
+{
+	var Box<int> b( 5 );
+
+	// var auto materializes the concrete member return type
+	var auto x = b.Get();
+	if( x != 5 ) return 1;
+
+	// chained call: the receiver is itself a member call result
+	if( b.Self().Get() != 5 ) return 2;
+
+	// the substituted type participates in arithmetic
+	var auto y = b.GetTwice();
+	if( y != 10 ) return 3;
+
+	// raw pointer receiver
+	var Box<int>* p = new Box<int>( 7 );
+	if( p->Get() != 7 ) return 4;
+
+	// inherited member through a derived receiver
+	var Derived<int> d;
+	if( d.Zero() != 0 ) return 5;
+
+	// nested chain receiver
+	var Outer<int>::Inner<f32> inner;
+	if( inner.Combine( 4, 1.5 ) != 4 ) return 6;
+
+	return 0;
+}

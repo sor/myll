@@ -3017,220 +3017,28 @@ else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( cal
 		// ------------------------------------------------------------------------
 
 		/// <summary>
-		/// Returns the chain of enclosing class/struct/union declarations, from outermost
-		/// to innermost, for a method or constructor candidate.
-		/// </summary>
-		private static List<Structural> GetOwnerStructuralChain( Decl decl )
-		{
-			List<Structural> result = new();
-			// Start at the parent scope so we do not include the candidate itself.
-			for( ScopeLeaf? cur = decl.scope?.parent; cur != null; cur = cur.parent ) {
-				if( cur.decl is Structural s )
-					result.Add( s );
-			}
-			result.Reverse();
-			return result;
-		}
-
-		private (List<TplParam> ownerParams, List<TplArg> ownerArgs) GetOwnerTemplateInfo(
+private (List<TplParam> ownerParams, List<TplArg> ownerArgs) GetOwnerTemplateInfo(
 			Decl candidate,
 			Expr callee )
 		{
-			List<Structural> ownerChain = GetOwnerStructuralChain( candidate );
+			List<Structural> ownerChain = OwnerTemplateArgs.GetStructuralChain( candidate );
 			if( ownerChain.Count == 0 )
 				return (new List<TplParam>(), new List<TplArg>());
 
 			List<TplParam> ownerParams = ownerChain.SelectMany( s => s.TplParams ).ToList();
-			List<TplArg>? ownerArgs = TryExtractOwnerTemplateArgs( callee, ownerChain );
+			List<TplArg>? ownerArgs = OwnerTemplateArgs.TryExtract( callee, ownerChain, typeResolver, result );
 
 			// If the receiver type is unavailable or still dependent, do not substitute
 			// owner parameters. This keeps the old behaviour for unqualified calls inside
 			// class-template methods and for chained member calls whose receiver type has
 			// not been materialised yet; when the receiver is concrete, substitution will
-			// happen on the next resolver pass.
-			if( ownerArgs == null || !AreConcreteTemplateArgs( ownerArgs, ownerParams ) )
+			// happen on a next resolver pass.
+			if( ownerArgs == null || !OwnerTemplateArgs.AreConcrete( ownerArgs, ownerParams ) )
 				return (new List<TplParam>(), new List<TplArg>());
 
 			return (ownerParams, ownerArgs);
 		}
 
-		private static bool AreConcreteTemplateArgs( List<TplArg> args, List<TplParam> ownerParams )
-		{
-			HashSet<string> ownerNames = new( ownerParams.Select( p => p.name ) );
-			return args.All( a => a.typespec != null && !ContainsTemplateParameterName( a.typespec, ownerNames ) );
-		}
-
-		private static bool ContainsTemplateParameterName( Typespec type, HashSet<string> names )
-		{
-			while( true ) {
-				if( type is TypespecNested { resolvedDecl: TplParamDecl tpl }
-				 && names.Contains( tpl.name ) )
-					return true;
-
-				if( type is not TypespecNested nested || nested.idTpls == null )
-					return false;
-
-				foreach( IdTplArgs segment in nested.idTpls ) {
-					foreach( TplArg arg in segment.tplArgs ) {
-						if( arg.typespec != null && ContainsTemplateParameterName( arg.typespec, names ) )
-							return true;
-					}
-				}
-
-				return false;
-			}
-		}
-
-		private List<TplArg>? TryExtractOwnerTemplateArgs( Expr callee, List<Structural> ownerChain )
-		{
-			return callee switch {
-				BinOp binOp when OperatorRules.IsMemberAccess( binOp.op )
-					=> TryExtractOwnerArgsFromReceiver( binOp.left, ownerChain ),
-				ScopedExpr scoped
-					=> TryExtractOwnerArgsFromScopedPrefix( scoped, ownerChain ),
-				_ => null,
-			};
-		}
-
-		private List<TplArg>? TryExtractOwnerArgsFromReceiver(
-			Expr             receiverExpr,
-			List<Structural> ownerChain )
-		{
-			Typespec? receiverType = typeResolver.Resolve( receiverExpr );
-			if( receiverType == null )
-				return null;
-
-			Typespec baseType = StripReferenceAndPointerWrappers( ConversionRules.UnwrapAlias( receiverType, result ) );
-			if( baseType is TypespecNested nested ) {
-				List<TplArg>? direct = TryExtractOwnerArgsFromTypePath( nested, ownerChain );
-				if( direct != null )
-					return direct;
-
-				return TryExtractOwnerArgsFromBases( nested, ownerChain );
-			}
-
-			return null;
-		}
-
-		private List<TplArg>? TryExtractOwnerArgsFromScopedPrefix(
-			ScopedExpr       scoped,
-			List<Structural> ownerChain )
-		{
-			TypespecNested prefix = new() {
-				idTpls = scoped.idTpls
-					.Select( s => new IdTplArgs {
-						id      = s.id,
-						tplArgs = s.tplArgs
-							.Select( a => new TplArg { typespec = a.typespec } )
-							.ToList(),
-					} )
-					.ToList(),
-			};
-
-			return TryExtractOwnerArgsFromTypePath( prefix, ownerChain );
-		}
-
-		private List<TplArg>? TryExtractOwnerArgsFromTypePath(
-			TypespecNested   typePath,
-			List<Structural> ownerChain )
-		{
-			List<TplArg> ownerArgs = new();
-			int segIdx = 0;
-
-			foreach( Structural owner in ownerChain ) {
-				while( segIdx < typePath.idTpls.Count
-				    && !TypeSegmentMatchesStructural( typePath.idTpls[segIdx], owner ) )
-					segIdx++;
-
-				if( segIdx >= typePath.idTpls.Count )
-					return null;
-
-				IdTplArgs segment = typePath.idTpls[segIdx];
-				if( segment.tplArgs.Count != owner.TplParams.Count )
-					return null;
-
-				foreach( TplArg arg in segment.tplArgs ) {
-					if( arg.typespec is TypespecNested unresolved && unresolved.resolvedDecl == null
-					 && this.result.TryGetResolved( unresolved, out Decl? decl ) )
-						unresolved.resolvedDecl = decl;
-
-					ownerArgs.Add( arg );
-				}
-
-				segIdx++;
-			}
-
-			return ownerArgs;
-		}
-
-		private static bool TypeSegmentMatchesStructural( IdTplArgs segment, Structural structural )
-			=> segment.id == structural.name;
-
-		private List<TplArg>? TryExtractOwnerArgsFromBases(
-			TypespecNested   receiverType,
-			List<Structural> ownerChain )
-		{
-			Decl? derivedDecl = receiverType.resolvedDecl;
-			if( derivedDecl == null && this.result.TryGetResolved( receiverType, out Decl? d ) )
-				derivedDecl = d;
-			if( derivedDecl is not Structural derived )
-				return null;
-
-			IdTplArgs? derivedSegment = receiverType.idTpls.LastOrDefault();
-			if( derivedSegment == null || derived.TplParams.Count != derivedSegment.tplArgs.Count )
-				return null;
-
-			List<TplArg> derivedArgs = derivedSegment.tplArgs;
-
-			foreach( BaseType baseType in derived.basetypes ) {
-				Typespec concreteBase = TemplateInference.SubstituteTemplateParams(
-					baseType.type, derived.TplParams, derivedArgs, this.result );
-
-				if( concreteBase is not TypespecNested baseNested )
-					continue;
-
-				Decl? baseDecl = baseNested.resolvedDecl;
-				if( baseDecl == null && this.result.TryGetResolved( baseNested, out Decl? bd ) )
-					baseDecl = bd;
-
-				if( baseDecl is not Structural baseStruct )
-					continue;
-
-				foreach( Structural owner in ownerChain ) {
-					if( baseStruct == owner || GetDefiningStructural( baseStruct ) == owner ) {
-						IdTplArgs? baseSegment = baseNested.idTpls.LastOrDefault();
-						if( baseSegment != null && baseSegment.tplArgs.Count == owner.TplParams.Count )
-							return baseSegment.tplArgs;
-					}
-				}
-
-				List<TplArg>? inherited = TryExtractOwnerArgsFromBases( baseNested, ownerChain );
-				if( inherited != null )
-					return inherited;
-			}
-
-			return null;
-		}
-
-		private static Typespec StripReferenceAndPointerWrappers( Typespec type )
-		{
-			Typespec current = type.Clone();
-
-			while( current.ptrs is { Count: > 0 } ) {
-				Pointer last = current.ptrs[current.ptrs.Count - 1];
-				if( last.kind == Pointer.Kind.RawPtr
-				 || last.kind == Pointer.Kind.LVRef
-				 || last.kind == Pointer.Kind.RVRef
-				 || last.kind.Between( Pointer.Kind.SmartPtr_Begin, Pointer.Kind.SmartPtr_End ) ) {
-					current.ptrs.RemoveAt( current.ptrs.Count - 1 );
-				}
-				else {
-					break;
-				}
-			}
-
-			return current;
-		}
 
 		private static Typespec? BuildClassValueType(
 			Structural              structural,
