@@ -1,0 +1,93 @@
+module ctad;
+
+class Box<T>
+{
+[pub]:
+	ctor( T v ) { _v = v; }
+	ctor( T a, T b ) { _v = a; _v2 = b; }
+	ctor<U...>( T first, U rest )
+	{
+		count = 1;
+	}
+
+	[static] field int count = 0;
+
+	field T _v;
+	field T _v2;
+
+	func Get() -> T => _v;
+	func Get2() -> T => _v2;
+}
+
+// Constructor templates join the deduction: U deduces, T stays a class
+// parameter to deduce.
+class Wrap<T>
+{
+[pub]:
+	ctor<U>( U u, T t ) { _v = t; _u = u; }
+
+	field T _v;
+	field int _u;
+
+	func Value() -> T => _v;
+}
+
+class Pair<A, B>
+{
+[pub]:
+	ctor( A a, B b ) { _a = a; _b = b; }
+
+	field A _a;
+	field B _b;
+
+	func First() -> A => _a;
+	func Second() -> B => _b;
+}
+
+func make() -> Box<f32>
+{
+	return Box<f32>( 1.5 );
+}
+
+func main() -> int
+{
+	// Direct construction with a bare type
+	var Box a( 5 );
+	if( a.Get() != 5 ) return 1;
+
+	// Constructor overload picks the two-argument one
+	var Box b( 6, 7 );
+	if( b.Get() != 6 ) return 2;
+	if( b.Get2() != 7 ) return 3;
+
+	// Variadic constructor pack deduction
+	var Box c( 8, 9, 10 );
+	if( c.count != 1 ) return 4;
+
+	// Constructor-call expression in initializer position
+	var auto d = Box( 8 );
+	if( d.Get() != 8 ) return 5;
+
+	// Declared bare type plus constructor-call initializer
+	var Box e = Box( 9 );
+	if( e.Get() != 9 ) return 6;
+
+	// Constructor templates deduce alongside the class parameters
+	var Wrap w( 1.5, 3 );
+	if( w.Value() != 3 ) return 7;
+
+	// Multiple class parameters
+	var Pair p( 1, 2.5 );
+	if( p.First() != 1 ) return 8;
+	if( p.Second() < 2.4 ) return 9;
+
+	// Explicit template arguments keep the explicit path
+	var Box<f32> f( 1.5 );
+	if( f.Get() < 1.4 ) return 10;
+
+	// New-expression deduction
+	var Box*! g = new Box*!( 11 );
+	if( g->Get() != 11 ) return 11;
+
+	return 0;
+}

@@ -847,13 +847,15 @@ namespace Myll.Resolver
 				break;
 			}
 
-			case NewExpr newExpr: {
-				if( currentDialect.StrictNew
-				 && ( newExpr.type.ptrs == null || newExpr.type.ptrs.Count == 0 ) )
-					AddError( newExpr, "StrictNew is enabled: bare `new T` is not allowed; use an explicit pointer type such as `new T*` or `new T*!`." );
+case NewExpr newExpr: {
+			// CTAD for `new Box( 5 )` runs during resolution (the visitor
+			// registers the constructor call); nothing to do here.
+			if( currentDialect.StrictNew
+			 && ( newExpr.type.ptrs == null || newExpr.type.ptrs.Count == 0 ) )
+				AddError( newExpr, "StrictNew is enabled: bare `new T` is not allowed; use an explicit pointer type such as `new T*` or `new T*!`." );
 
-				break;
-			}
+			break;
+		}
 
 
 				case CastExpr cast: {

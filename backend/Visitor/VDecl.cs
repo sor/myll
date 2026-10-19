@@ -1239,6 +1239,13 @@ namespace Myll
 					}
 					: q.expr()?.Visit( Context );
 
+				// The synthesized constructor call participates in resolution:
+				// CTAD deduces the template arguments for bare types.
+				if( init is FuncCallExpr directCall )
+					Context.UnresolvedCalls.Add( new UnresolvedCall( directCall.expr, directCall.funcCall, scopeStack.Peek(), true ) );
+
+				MarkCtadPending( type, init, isDirectConstruct );
+
 				if( varTplScope != null )
 					PopScope();
 

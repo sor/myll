@@ -39,6 +39,12 @@ namespace Myll.Core
 		public Qualifier      qual;
 		public List<Pointer>? ptrs;
 
+		// CTAD-pending: the type names a bare class template on a variable or
+		// new-expression whose construction arguments should deduce the
+		// arguments. The template-argument arity check skips such types until
+		// the deduction fills the arguments (or fails with its own error).
+		public bool IsCtadPending;
+
 		// Type resolvedType;
 
 		public abstract string GenType();

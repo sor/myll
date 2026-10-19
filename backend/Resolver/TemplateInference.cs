@@ -186,6 +186,59 @@ namespace Myll.Resolver
 				_          => -1,
 			};
 
+		public enum CtadResult { Deduced, Ambiguous, Failed }
+
+		/// <summary>
+		/// CTAD: deduces a class template's parameters from a constructor
+		/// call's arguments. Every constructor is an implicit deduction guide
+		/// (C++ model): its own template parameters join the class's, and the
+		/// class arguments are the deduced prefix. Ambiguous guides (viable
+		/// constructors deducing different class arguments) report their
+		/// variants through <paramref name="deductions"/> for the diagnostic.
+		/// </summary>
+		public static CtadResult TryDeduceClassTemplateArgs(
+			Structural           structural,
+			FuncCall             call,
+			TypeResolver         typeResolver,
+			ResolutionResult     result,
+			out List<TplArg>     classArgs,
+			out List<string>     deductions )
+		{
+			classArgs = new List<TplArg>();
+			deductions = new List<string>();
+
+			bool anyViable = false;
+			List<TplArg>? best = null;
+
+			foreach( Structor ctor in structural.children.OfType<Structor>()
+				.Where( c => c.kind == Structor.Kind.Constructor && c.SpecInfo == null ) ) {
+				List<TplParam> combined = new( structural.TplParams );
+				combined.AddRange( ctor.TplParams );
+
+				if( !TryDeduceTemplateArgs( combined, ctor.paras, call, typeResolver, result,
+					out List<TplArg>? deduced ) || deduced == null )
+					continue;
+
+				anyViable = true;
+				List<TplArg> ctorClassArgs = deduced
+					.Take( structural.TplParams.Count )
+					.ToList();
+				string variant = ctorClassArgs.Select( a => a.Gen() ).Join( "," );
+				if( !deductions.Contains( variant ) )
+					deductions.Add( variant );
+
+				best ??= ctorClassArgs;
+			}
+
+			if( !anyViable )
+				return CtadResult.Failed;
+			if( deductions.Count > 1 )
+				return CtadResult.Ambiguous;
+
+			classArgs = best ?? new List<TplArg>();
+			return CtadResult.Deduced;
+		}
+
 		public static bool HasTemplateArityMismatch(
 			Decl                   candidate,
 			IReadOnlyList<TplArg>? explicitArgs )
@@ -219,7 +272,7 @@ namespace Myll.Resolver
 			=> TryDeduceTemplateArgs( candidate.TplParams, candidate.paras, call, typeResolver, result,
 				out deduced, enclosingParameters, enclosingArguments );
 
-		private static bool TryDeduceTemplateArgs(
+		internal static bool TryDeduceTemplateArgs(
 			List<TplParam>    tplParams,
 			List<Param>       paras,
 			FuncCall          call,

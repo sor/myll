@@ -29,6 +29,23 @@ namespace Myll
 			=> context ?? throw new InvalidOperationException(
 				"No ModuleContext is available for this visitor." );
 
+		// CTAD-pending: a bare trailing template name on a variable whose
+		// construction should deduce the arguments. Marked for direct
+		// construction, constructor-call and new initializers; the resolver
+		// fills the arguments once the deduction succeeds.
+		protected static void MarkCtadPending( Typespec type, Expr? init, bool isDirectConstruct )
+		{
+			if( !( isDirectConstruct
+				|| init is NewExpr
+				|| init is FuncCallExpr { expr: IdExpr or ScopedExpr } ) )
+				return;
+
+			if( type is TypespecNested nested
+			 && nested.idTpls.Count >= 1
+			 && ( nested.idTpls[^1].tplArgs == null || nested.idTpls[^1].tplArgs.Count == 0 ) )
+				nested.IsCtadPending = true;
+		}
+
 		public GlobalNamespace GenerateGlobalScope( string module )
 		{
 			GlobalNamespace global = new() {

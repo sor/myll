@@ -110,6 +110,14 @@ namespace Myll
 					: new FuncCall(),
 			};
 			ret.Dialect = Context.Dialect;
+
+			// `new Box( 5 )`: the constructor call participates in resolution
+			// so CTAD deduces the bare type's arguments.
+			if( ret.type is TypespecNested )
+				Context.UnresolvedCalls.Add( new UnresolvedCall(
+					TypespecToExpr( ret.type, ret.srcPos ), ret.funcCall, scopeStack.Peek(), true ) );
+
+			MarkCtadPending( ret.type, null, isDirectConstruct: true );
 			return ret;
 		}
 

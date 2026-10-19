@@ -595,8 +595,17 @@ namespace Myll.Resolver
 					continue;
 				}
 
-				IReadOnlyList<TplArg> providedArgs = unresolved.Node.idTpls.Last().tplArgs;
-				TemplateArgValidation typeValidation = TemplateInference.ValidateTemplateArgs( resolved, providedArgs );
+IReadOnlyList<TplArg> providedArgs = unresolved.Node.idTpls.Last().tplArgs;
+
+			// CTAD-pending bare types wait for the deduction to fill the
+			// arguments; a failed deduction reports its own error.
+			if( unresolved.Node.IsCtadPending && providedArgs.Count == 0 ) {
+				result.Resolve( unresolved.Node, resolved );
+				progress = true;
+				continue;
+			}
+
+			TemplateArgValidation typeValidation = TemplateInference.ValidateTemplateArgs( resolved, providedArgs );
 				if( typeValidation.IsMismatch
 				 && !IsInjectedClassName( unresolved.Node, resolved, unresolved.Scope ) ) {
 					string message = typeValidation.MismatchKind == TemplateArgMismatchKind.Arity
@@ -1318,29 +1327,204 @@ if( decl is Structural st ) {
 
 			return progress;
 		}
-
-		private bool ResolveCalls( GlobalNamespace module, ModuleContext context )
+private bool ResolveCalls( GlobalNamespace module, ModuleContext context )
 		{
 			bool progress = false;
 			foreach( UnresolvedCall call in context.UnresolvedCalls ) {
 				progress |= ResolveSingleCall( call, module );
 			}
 
+			// Fill CTAD-pending variable types from their initializer's
+			// deduced arguments, so the next resolution pass sees concrete
+			// types. Runs with the call resolution so the fixed-point loop
+			// iterates on it.
+			CtadFiller filler = new( result );
+			filler.WalkModule( module );
+			progress |= filler.Progress;
+
 			return progress;
+		}
+
+		/// <summary>
+		/// Constructor-style CTAD: the callee named a class template without
+		/// template arguments. Every constructor is an implicit deduction
+		/// guide; the deduced class arguments are written onto the callee so
+		/// the call's type and the emission carry them. Ambiguous and failed
+		/// deductions are hard errors; argument types that have not resolved
+		/// yet wait for a later pass.
+		/// </summary>
+		private bool TryResolveCtadCall( Structural structural, UnresolvedCall call, GlobalNamespace module )
+		{
+			if( result.IsInvalidCall( call.Callee ) )
+				return false;
+
+			if( structural.TplParams.Count == 0 )
+				return false;
+
+			// Explicit template arguments keep today's path: no deduction.
+			if( TemplateInference.GetExplicitTemplateArgs( call.Callee ) is { Count: > 0 } )
+				return false;
+
+			// Argument types must be known before a failed deduction is
+			// final; wait for later passes otherwise.
+			if( call.Call.args.Count > 0
+			 && call.Call.args.Any( a => typeResolver.Resolve( a.expr ) == null ) )
+				return false;
+
+			TemplateInference.CtadResult ctad = TemplateInference.TryDeduceClassTemplateArgs(
+				structural, call.Call, typeResolver, result,
+				out List<TplArg> classArgs, out List<string> deductions );
+
+			switch( ctad ) {
+				case TemplateInference.CtadResult.Deduced:
+					TemplateInference.ApplyTemplateArgs( call.Callee, classArgs );
+					return true;
+
+				case TemplateInference.CtadResult.Ambiguous:
+					result.MarkInvalidCall( call.Callee, new InvalidCallInfo(
+						InvalidCallKind.Ambiguous, structural.name, null, 0 ) );
+					diagnostics.Add( new Diagnostic(
+						GetCalleeSrcPos( call.Callee ),
+						DiagnosticKind.Error,
+						String.Format(
+							"Ambiguous template argument deduction for '{0}': constructors deduce {1}",
+							structural.name,
+							deductions.Select( d => "'" + structural.name + "<" + d + ">" ).Join( " and " ) ) ) );
+					return false;
+
+				case TemplateInference.CtadResult.Failed:
+					result.MarkInvalidCall( call.Callee, new InvalidCallInfo(
+						InvalidCallKind.NoMatchingOverload, structural.name, null, 0 ) );
+					diagnostics.Add( new Diagnostic(
+						GetCalleeSrcPos( call.Callee ),
+						DiagnosticKind.Error,
+						String.Format(
+							"Could not deduce template arguments for '{0}' from the constructor arguments; specify them explicitly ('{0}<...>')",
+							structural.name ) ) );
+					return false;
+			}
+
+			return false;
+		}
+
+		// Fills CTAD-pending variable types from their initializer's deduced
+		// class arguments, and unmarks types whose initializer is no
+		// constructor call so the regular arity check takes over.
+		private sealed class CtadFiller : DeclWalker
+		{
+			private readonly ResolutionResult result;
+
+			public bool Progress;
+
+			public CtadFiller( ResolutionResult result )
+				=> this.result = result;
+
+			protected override void TransformDecl( Decl decl )
+			{
+				if( decl is VarDecl vd )
+					Fill( vd.type, vd.init );
+
+				base.TransformDecl( decl );
+			}
+
+			protected override Stmt TransformStmt( Stmt stmt )
+			{
+				if( stmt is VarStmt vs )
+					Fill( vs.type, vs.init );
+
+				return base.TransformStmt( stmt );
+			}
+
+			private void Fill( Typespec type, Expr? init )
+			{
+				if( type is not TypespecNested nested || !nested.IsCtadPending )
+					return;
+
+				IdTplArgs segment = nested.idTpls[^1];
+				if( segment.tplArgs.Count > 0 )
+					return;
+
+				// A new-expression initializer: its own (deduced) type
+				// arguments become the declared type's arguments.
+				if( init is NewExpr { type: TypespecNested newType } ) {
+					List<TplArg> newArgs = newType.idTpls[^1].tplArgs;
+					if( newArgs.Count > 0 ) {
+						segment.tplArgs.AddRange( newArgs );
+						nested.IsCtadPending = false;
+						Progress = true;
+					}
+					return;
+				}
+
+				// Only a constructor-call initializer whose callee resolved to a
+				// class carries CTAD-deduced arguments; explicit arguments of
+				// function calls belong to those functions, not to this type.
+				Expr? calleeExpr = (init as FuncCallExpr)?.expr;
+				Decl? calleeDecl = null;
+				if( calleeExpr is IdExpr id ) {
+					if( !result.Ids.TryGetValue( id, out calleeDecl ) )
+						return;
+				}
+				else if( calleeExpr is ScopedExpr sc ) {
+					if( !result.Scopeds.TryGetValue( sc, out calleeDecl ) )
+						return;
+				}
+				else
+					return;
+
+				if( calleeDecl is not Structural structural )
+					return;
+
+				// The initializer's deduced class arguments become the declared
+				// type's arguments.
+				IReadOnlyList<TplArg>? deducedArgs = TemplateInference.GetExplicitTemplateArgs( calleeExpr );
+				if( deducedArgs is { Count: > 0 } ) {
+					segment.tplArgs.AddRange( deducedArgs );
+					nested.IsCtadPending = false;
+					Progress = true;
+					return;
+				}
+
+				// The class was resolved but nothing was deduced (yet): leave
+				// the type pending; the CTAD pass reports failures.
+				if( structural.TplParams.Count > 0 )
+					return;
+
+				// A non-template class needs no arguments.
+				nested.IsCtadPending = false;
+				Progress = true;
+			}
 		}
 
 		private bool ResolveSingleCall( UnresolvedCall call, GlobalNamespace module )
 		{
 			switch( call.Callee ) {
-				case IdExpr id: {
-					bool alreadyResolved = result.Ids.TryGetValue( id, out Decl? resolved );
-					// A call that already resolved to a specialization stays resolved:
-					// re-resolving it would lose the primary from its candidate list.
-					if( alreadyResolved && ( resolved is not Func || resolved.SpecInfo != null ) ) {
-						// Callee resolved to a non-function (builtin variable, external type, ...).
-						// Do not re-validate; the C++ compiler handles the call.
-						return false;
+case IdExpr id: {
+				bool alreadyResolved = result.Ids.TryGetValue( id, out Decl? resolved );
+
+				// A synthesized constructor call routes to CTAD when bare;
+				// explicit arguments carried by the declared type need no
+				// validation (the pre-CTAD behavior).
+				if( call.IsSynthesizedCtorCall ) {
+					Decl? calleeDecl = resolved;
+					if( calleeDecl == null ) {
+						List<Decl> lookup = LookupNameCandidates( id.idTplArgs.id, call.Scope, module );
+						calleeDecl = lookup.Count == 1 ? lookup[0] : null;
 					}
+
+					return calleeDecl is Structural structural
+						&& TemplateInference.GetExplicitTemplateArgs( call.Callee ) is not { Count: > 0 }
+						? TryResolveCtadCall( structural, call, module )
+						: false;
+				}
+
+				// A call that already resolved to a specialization stays resolved:
+				// re-resolving it would lose the primary from its candidate list.
+				if( alreadyResolved && ( resolved is not Func || resolved.SpecInfo != null ) ) {
+					// Callee resolved to a non-function (builtin variable, external type, ...).
+					// Do not re-validate; the C++ compiler handles the call.
+					return false;
+				}
 
 					List<Decl> candidates = alreadyResolved
 						? new List<Decl> { resolved! }
@@ -1352,6 +1536,23 @@ if( decl is Structural st ) {
 				}
 				case ScopedExpr scoped: {
 					bool alreadyResolved = result.Scopeds.TryGetValue( scoped, out Decl? resolved );
+
+					// Synthesized scoped constructor calls follow the IdExpr
+					// treatment: CTAD when bare, no validation when explicit.
+					if( call.IsSynthesizedCtorCall ) {
+						Decl? calleeDecl = alreadyResolved ? resolved : ResolveSynthesizedScopedCallee( scoped, call.Scope, module );
+						return calleeDecl is Structural structural
+							&& TemplateInference.GetExplicitTemplateArgs( call.Callee ) is not { Count: > 0 }
+							? TryResolveCtadCall( structural, call, module )
+							: false;
+					}
+
+					// Constructor-style CTAD through a qualified name: ns::Box( 5 );
+					// explicit arguments keep the regular handling.
+					if( alreadyResolved && resolved is Structural structural2
+					 && TemplateInference.GetExplicitTemplateArgs( call.Callee ) is not { Count: > 0 } )
+						return TryResolveCtadCall( structural2, call, module );
+
 					if( alreadyResolved && ( resolved is not Func || resolved.SpecInfo != null ) ) {
 						// Scoped callee resolved to a type/namespace; accept constructor-style
 						// calls without Myll-side validation.
@@ -1494,6 +1695,11 @@ if( decl is Structural st ) {
 			List<Decl> single = LookupNameCandidates( segments[0].id, scope, module );
 			return TryResolveOverload( single, call, scope, module, callee );
 		}
+
+		// The class a synthesized scoped constructor call names: resolve the
+		// qualified name as a type, not a call.
+		private Decl? ResolveSynthesizedScopedCallee( ScopedExpr scoped, Scope scope, GlobalNamespace module )
+			=> ResolvePath( scoped.idTpls, scope, module, out _, callSite: false ) is Structural structural ? structural : null;
 
 		private static bool IsArrowMemberAccess( Operand op )
 			=> op is Operand.MemberAccessPtr

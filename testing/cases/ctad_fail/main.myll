@@ -1,0 +1,34 @@
+module ctad_fail;
+
+class Box<T>
+{
+[pub]:
+	ctor( T v ) { _v = v; }
+	ctor( T* p ) { _v = 0; }
+
+	field T _v;
+}
+
+class NoDeduce<T>
+{
+[pub]:
+	ctor( int v ) { _v = v; }
+
+	field T _v;
+}
+
+func main() -> int
+{
+	var int x = 5;
+
+	// ctor(T) deduces Box<int*>, ctor(T*) deduces Box<int>: both are viable
+	var Box a( &x ); // FAIL: Ambiguous template argument deduction for 'Box'
+
+	// T appears in no constructor parameter
+	var NoDeduce n( 1 ); // FAIL: Could not deduce template arguments for 'NoDeduce'
+
+	// A bare type without construction is not CTAD
+	var Box b; // FAIL: Template argument count mismatch for type 'Box'
+
+	return 0;
+}

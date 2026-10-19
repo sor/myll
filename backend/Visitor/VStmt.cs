@@ -211,17 +211,24 @@ namespace Myll
 								"Local template specializations are not supported" ) );
 						}
 
-						Expr? init              = q.funcCall() != null
-							? new FuncCallExpr {
-								srcPos     = srcPos,
-								expr       = TypespecToExpr( type, srcPos ),
-								funcCall   = VisitFuncCall( q.funcCall() ),
-							}
-							: q.expr()?.Visit( Context );
-						bool  isDirectConstruct = q.funcCall() != null;
-						Expr? finalInit         = TransformInit( init, kind );
-						isDirectConstruct      &= finalInit != null;
-						VarStmt stmt = new() {
+Expr? init              = q.funcCall() != null
+						? new FuncCallExpr {
+							srcPos     = srcPos,
+							expr       = TypespecToExpr( type, srcPos ),
+							funcCall   = VisitFuncCall( q.funcCall() ),
+						}
+						: q.expr()?.Visit( Context );
+					bool  isDirectConstruct = q.funcCall() != null;
+					Expr? finalInit         = TransformInit( init, kind );
+					isDirectConstruct      &= finalInit != null;
+
+					// The synthesized constructor call participates in resolution:
+					// CTAD deduces the template arguments for bare types.
+					if( init is FuncCallExpr directCall )
+						Context.UnresolvedCalls.Add( new UnresolvedCall( directCall.expr, directCall.funcCall, scopeStack.Peek(), true ) );
+
+					MarkCtadPending( type, finalInit, isDirectConstruct );
+					VarStmt stmt = new() {
 							srcPos             = srcPos,
 							name               = q.id().GetText(),
 							kind               = kind,
