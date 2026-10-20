@@ -54,7 +54,7 @@ namespace Myll.Transform
 			ValidateScope( moduleAst );
 		}
 
-private void ValidateScope( Myll.Core.Hierarchical hier )
+		private void ValidateScope( Myll.Core.Hierarchical hier )
 		{
 			List<Decl> children = hier.children.ToList();
 			string? nsFqn = NamespaceFqnOf( hier );
@@ -62,8 +62,8 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 
 			FoldSpecBindings( children );
 
-// Every declaration that consumes [spec=...] gets its values validated:
-// structurals (kind), functions and variables (shape markers/primary).
+			// Every declaration that consumes [spec=...] gets its values validated:
+			// structurals (kind), functions and variables (shape markers/primary).
 			// Unknown values are rejected there — typo protection where the
 			// attribute means something; other declarations ignore it.
 			List<Myll.Core.Structural> structs = children.OfType<Myll.Core.Structural>().ToList();
@@ -290,7 +290,7 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 
 		// The bound values of a specialization's bindings, keyed by parameter
 		// name; unbound placeholders are skipped.
-private static Dictionary<string, Typespec> BoundValuesOf( List<TplBinding> tplSpec )
+		private static Dictionary<string, Typespec> BoundValuesOf( List<TplBinding> tplSpec )
 		{
 			Dictionary<string, Typespec> boundValues = new( StringComparer.Ordinal );
 			foreach( TplBinding binding in tplSpec ) {
@@ -535,31 +535,31 @@ private static Dictionary<string, Typespec> BoundValuesOf( List<TplBinding> tplS
 			// per primary: bound-value signatures already seen (duplicate check)
 			Dictionary<Decl, List<string>> seenSignatures = new();
 
-foreach( Myll.Core.Structural spec in structs ) {
-			if( spec.TplSpec.Count == 0 )
-				continue;
+			foreach( Myll.Core.Structural spec in structs ) {
+				if( spec.TplSpec.Count == 0 )
+					continue;
 
-			// A specialization's kind must be declared: fresh body vs member
-			// block. Unknown values were already reported while scanning the
-			// scope.
-			if( !spec.IsAttrib( "spec", "all" ) ) {
-				if( spec.IsAttrib( "spec", "some" ) ) {
-					ValidateMemberSpecBlock( spec, structs, nsFqn );
+				// A specialization's kind must be declared: fresh body vs member
+				// block. Unknown values were already reported while scanning the
+				// scope.
+				if( !spec.IsAttrib( "spec", "all" ) ) {
+					if( spec.IsAttrib( "spec", "some" ) ) {
+						ValidateMemberSpecBlock( spec, structs, nsFqn );
+						continue;
+					}
+
+					if( !spec.HasAttrib( "spec" ) )
+						Diagnostics.Add( new Diagnostic(
+							spec.srcPos,
+							DiagnosticKind.Error,
+							String.Format( "Specialization of '{0}' must declare its kind: [spec=all] for a fresh body or [spec=some] for a member specialization block",
+								spec.name ) ) );
+
+					MarkInvalidSpec( spec );
 					continue;
 				}
 
-				if( !spec.HasAttrib( "spec" ) )
-					Diagnostics.Add( new Diagnostic(
-						spec.srcPos,
-						DiagnosticKind.Error,
-						String.Format( "Specialization of '{0}' must declare its kind: [spec=all] for a fresh body or [spec=some] for a member specialization block",
-							spec.name ) ) );
-
-				MarkInvalidSpec( spec );
-				continue;
-			}
-
-			(Myll.Core.Structural? primary, bool isImported) = FindPrimary( structs, spec,
+				(Myll.Core.Structural? primary, bool isImported) = FindPrimary( structs, spec,
 					s => s.name == spec.name && s.SpecInfo == null && s.TplParams.Count > 0,
 					IsStructPrimary, nsFqn,
 					String.Format( "No matching template '{0}' in this module or its imports; a class/struct/union specialization must live in the primary's module or import it",
@@ -1120,7 +1120,7 @@ foreach( Myll.Core.Structural spec in structs ) {
 				boundFlags[i] = true;
 			memberBound.CopyTo( boundFlags, classArgs.Count );
 
-spec.SpecInfo = new Decl.SpecData {
+			spec.SpecInfo = new Decl.SpecData {
 				Primary = (Decl) memberPrimary,
 				Args    = args,
 				Bound   = boundFlags,
@@ -1246,6 +1246,7 @@ spec.SpecInfo = new Decl.SpecData {
 
 			return true;
 		}
+
 		/// primary: a specialization is a full one (C++ allows no partial function
 		/// specializations), its parameters and return type must repeat the
 		/// <summary>
@@ -1551,7 +1552,7 @@ spec.SpecInfo = new Decl.SpecData {
 					continue;
 				}
 
-Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
+				Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 
 				if( !SignatureMatchesParas( spec, primary, boundValues ) ) {
 					Diagnostics.Add( new Diagnostic(
@@ -1699,7 +1700,7 @@ Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 					Args    = args,
 					Bound   = bound,
 				};
-				spec.type = specType;
+				spec.type      = specType;
 				spec.TplParams = unboundParams;
 
 				InjectParams( spec.varScope, unboundParams, spec.srcPos );

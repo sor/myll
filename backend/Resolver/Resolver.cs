@@ -120,45 +120,45 @@ namespace Myll.Resolver
 			resolver.BuildVarSpecData( modules );
 			resolver.ResolveDialectBackings( modules, exports );
 
-		bool progress;
-		do {
-			progress = false;
-			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
-				resolver.SetDialect( context.Dialect );
-				progress |= resolver.ResolveUsings( module, context );
-				progress |= resolver.ResolveAliases( module, context );
-				progress |= resolver.ResolveIds( module, context );
-				progress |= resolver.ResolveScopeds( module, context );
-				progress |= resolver.ResolveTypes( module, context );
-				progress |= resolver.ResolveMemberAccesses( module, context );
-			}
+			bool progress;
+			do {
+				progress = false;
+				foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
+					resolver.SetDialect( context.Dialect );
+					progress |= resolver.ResolveUsings( module, context );
+					progress |= resolver.ResolveAliases( module, context );
+					progress |= resolver.ResolveIds( module, context );
+					progress |= resolver.ResolveScopeds( module, context );
+					progress |= resolver.ResolveTypes( module, context );
+					progress |= resolver.ResolveMemberAccesses( module, context );
+				}
 
-			// Commit resolved declarations after type/member resolution and before
-			// overload resolution so that conversion checks (e.g., derived-to-base
-			// pointer/reference) see populated resolvedDecl fields. Any resolutions
-			// made later will be committed again in the final Apply() below.
-			result.Apply();
+				// Commit resolved declarations after type/member resolution and before
+				// overload resolution so that conversion checks (e.g., derived-to-base
+				// pointer/reference) see populated resolvedDecl fields. Any resolutions
+				// made later will be committed again in the final Apply() below.
+				result.Apply();
 
-			foreach( (GlobalNamespace module, ModuleContext context) in modules )
-				resolver.SetDialect( context.Dialect );
+				foreach( (GlobalNamespace module, ModuleContext context) in modules )
+					resolver.SetDialect( context.Dialect );
 
-			// Infer the concrete type of range-based for loop variables declared with
-			// 'auto' as soon as the range expression type is known. This must happen
-			// before overload resolution so that uses of the loop variable inside the
-			// body are checked against the real element type.
-			var rangeForTransformer = new RangeForAutoTypeTransformer();
-			foreach( CompiledModuleResult module in modules ) {
-				if( module.Context.IsPrototypeFile )
-					continue;
-				diagnostics.AddRange( rangeForTransformer.DoPostTransform(
-					new TransformContext( module, result ) ) );
-			}
+				// Infer the concrete type of range-based for loop variables declared with
+				// 'auto' as soon as the range expression type is known. This must happen
+				// before overload resolution so that uses of the loop variable inside the
+				// body are checked against the real element type.
+				var rangeForTransformer = new RangeForAutoTypeTransformer();
+				foreach( CompiledModuleResult module in modules ) {
+					if( module.Context.IsPrototypeFile )
+						continue;
+					diagnostics.AddRange( rangeForTransformer.DoPostTransform(
+						new TransformContext( module, result ) ) );
+				}
 
-			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
-				resolver.SetDialect( context.Dialect );
-				progress |= resolver.ResolveCalls( module, context );
-			}
-		} while( progress );
+				foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
+					resolver.SetDialect( context.Dialect );
+					progress |= resolver.ResolveCalls( module, context );
+				}
+			} while( progress );
 
 			// Commit resolved declarations to the AST so that type checking can use
 			// resolvedDecl directly on identifiers, member accesses, and type specs.
@@ -318,12 +318,12 @@ namespace Myll.Resolver
 		}
 
 		private bool ResolveNameReferences<TNode>(
-			GlobalNamespace                         module,
-			ModuleContext                           context,
-			IEnumerable<NameRef<TNode>>             refs,
-			IReadOnlyDictionary<TNode, Decl>        alreadyResolved,
-			Action<TNode, Decl>                     recordResolution,
-			Action<TNode, Decl?>                    markInvalid )
+			GlobalNamespace                   module,
+			ModuleContext                     context,
+			IEnumerable<NameRef<TNode>>       refs,
+			IReadOnlyDictionary<TNode, Decl>  alreadyResolved,
+			Action<TNode, Decl>               recordResolution,
+			Action<TNode, Decl?>              markInvalid )
 			where TNode : Expr
 		{
 			bool progress = false;
@@ -536,7 +536,7 @@ namespace Myll.Resolver
 			return best;
 		}
 
-// A specialization matches a use when every bound parameter position has
+		// A specialization matches a use when every bound parameter position has
 		// the same type and every pattern position (T=T*) unifies; unbound
 		// positions are wildcards.
 		private static bool MatchesBoundArgs( Decl.SpecData info, IReadOnlyList<TplArg> useArgs )
@@ -605,17 +605,17 @@ namespace Myll.Resolver
 					continue;
 				}
 
-IReadOnlyList<TplArg> providedArgs = unresolved.Node.idTpls.Last().tplArgs;
+				IReadOnlyList<TplArg> providedArgs = unresolved.Node.idTpls.Last().tplArgs;
 
-			// CTAD-pending bare types wait for the deduction to fill the
-			// arguments; a failed deduction reports its own error.
-			if( unresolved.Node.IsCtadPending && providedArgs.Count == 0 ) {
-				result.Resolve( unresolved.Node, resolved );
-				progress = true;
-				continue;
-			}
+				// CTAD-pending bare types wait for the deduction to fill the
+				// arguments; a failed deduction reports its own error.
+				if( unresolved.Node.IsCtadPending && providedArgs.Count == 0 ) {
+					result.Resolve( unresolved.Node, resolved );
+					progress = true;
+					continue;
+				}
 
-			TemplateArgValidation typeValidation = TemplateInference.ValidateTemplateArgs( resolved, providedArgs );
+				TemplateArgValidation typeValidation = TemplateInference.ValidateTemplateArgs( resolved, providedArgs );
 				if( typeValidation.IsMismatch
 				 && !IsInjectedClassName( unresolved.Node, resolved, unresolved.Scope ) ) {
 					string message = typeValidation.MismatchKind == TemplateArgMismatchKind.Arity
@@ -718,8 +718,8 @@ IReadOnlyList<TplArg> providedArgs = unresolved.Node.idTpls.Last().tplArgs;
 
 			foreach( CompiledModuleResult m in modules ) {
 				GlobalNamespace module = m.Module;
-if( m.Context.IsPrototypeFile )
-				continue;
+				if( m.Context.IsPrototypeFile )
+					continue;
 
 				CollectModuleDecls( module.scope, "", m, declsByKey );
 			}
@@ -790,26 +790,26 @@ if( m.Context.IsPrototypeFile )
 					if( decl == null || decl.IsHidden )
 						continue;
 
-if( decl is Namespace ns ) {
-					CollectSpecs( ns.scope, moduleName );
-					continue;
-				}
-if( decl is Structural st ) {
-				// Member specializations (vars, nested classes) enter the index
-				// through their enclosing class's scope; the class itself may
-				// also be a specialization, so fall through to the collection.
-				CollectSpecs( st.scope, moduleName );
-			}
+					if( decl is Namespace ns ) {
+						CollectSpecs( ns.scope, moduleName );
+						continue;
+					}
+					if( decl is Structural st ) {
+						// Member specializations (vars, nested classes) enter the index
+						// through their enclosing class's scope; the class itself may
+						// also be a specialization, so fall through to the collection.
+						CollectSpecs( st.scope, moduleName );
+					}
 
-				if( decl.SpecInfo == null )
-					continue;
-				if( ReferenceEquals( decl.SpecInfo.Primary, decl ) )
-					continue;
-				// [spec=some] block heads collect member specializations, but
-				// are no specializations themselves: uses of the class keep
-				// resolving to the primary.
-				if( decl.SpecInfo.MemberSpecHead )
-					continue;
+					if( decl.SpecInfo == null )
+						continue;
+					if( ReferenceEquals( decl.SpecInfo.Primary, decl ) )
+						continue;
+					// [spec=some] block heads collect member specializations, but
+					// are no specializations themselves: uses of the class keep
+					// resolving to the primary.
+					if( decl.SpecInfo.MemberSpecHead )
+						continue;
 
 					if( !specsByPrimary.TryGetValue( decl.SpecInfo.Primary, out List<SpecEntry>? entries ) ) {
 						entries = new List<SpecEntry>();
@@ -1078,25 +1078,25 @@ if( decl is Structural st ) {
 
 		private static string KindName( Decl d )
 			=> d is Structural or Enumeration ? "type"
-			 : d is Func                     ? "function"
-			 : d is Structor                 ? "constructor"
-			 : d is VarDecl                  ? "variable"
-			 : d is AliasDecl                ? "alias"
-			 :                                 "declaration";
+			 : d is Func                      ? "function"
+			 : d is Structor                  ? "constructor"
+			 : d is VarDecl                   ? "variable"
+			 : d is AliasDecl                 ? "alias"
+			 :                                  "declaration";
 
 		private static bool SameKind( Decl a, Decl b )
-			=> ( a is Func ) == ( b is Func )
-			&& ( a is Structor ) == ( b is Structor )
-			&& ( a is VarDecl ) == ( b is VarDecl )
-			&& ( a is Structural ) == ( b is Structural )
+			=> ( a is Func )        == ( b is Func )
+			&& ( a is Structor )    == ( b is Structor )
+			&& ( a is VarDecl )     == ( b is VarDecl )
+			&& ( a is Structural )  == ( b is Structural )
 			&& ( a is Enumeration ) == ( b is Enumeration )
-			&& ( a is AliasDecl ) == ( b is AliasDecl );
+			&& ( a is AliasDecl )   == ( b is AliasDecl );
 
 		private static bool IsLinkSafeVar( VarDecl v )
-			=> v.IsHidden          // emitted as `static` (internal linkage) only
-			 || v.IsCompileTime   // emitted as `constexpr`, no symbol
-			 || v.IsExternal      // declaration only, no definition
-			 || ( v.type.qual & Qualifier.Const ) != 0; // const global: no symbol
+			=> v.IsHidden        // emitted as `static` (internal linkage) only
+			|| v.IsCompileTime   // emitted as `constexpr`, no symbol
+			|| v.IsExternal      // declaration only, no definition
+			|| ( v.type.qual & Qualifier.Const ) != 0; // const global: no symbol
 
 		private static bool FunctionParamsEqual( Func a, Func b )
 		{
@@ -1340,7 +1340,8 @@ if( decl is Structural st ) {
 
 			return progress;
 		}
-private bool ResolveCalls( GlobalNamespace module, ModuleContext context )
+
+		private bool ResolveCalls( GlobalNamespace module, ModuleContext context )
 		{
 			bool progress = false;
 			foreach( UnresolvedCall call in context.UnresolvedCalls ) {
@@ -1512,32 +1513,32 @@ private bool ResolveCalls( GlobalNamespace module, ModuleContext context )
 		private bool ResolveSingleCall( UnresolvedCall call, GlobalNamespace module )
 		{
 			switch( call.Callee ) {
-case IdExpr id: {
-				bool alreadyResolved = result.Ids.TryGetValue( id, out Decl? resolved );
+				case IdExpr id: {
+					bool alreadyResolved = result.Ids.TryGetValue( id, out Decl? resolved );
 
-				// A synthesized constructor call routes to CTAD when bare;
-				// explicit arguments carried by the declared type need no
-				// validation (the pre-CTAD behavior).
-				if( call.IsSynthesizedCtorCall ) {
-					Decl? calleeDecl = resolved;
-					if( calleeDecl == null ) {
-						List<Decl> lookup = LookupNameCandidates( id.idTplArgs.id, call.Scope, module );
-						calleeDecl = lookup.Count == 1 ? lookup[0] : null;
+					// A synthesized constructor call routes to CTAD when bare;
+					// explicit arguments carried by the declared type need no
+					// validation (the pre-CTAD behavior).
+					if( call.IsSynthesizedCtorCall ) {
+						Decl? calleeDecl = resolved;
+						if( calleeDecl == null ) {
+							List<Decl> lookup = LookupNameCandidates( id.idTplArgs.id, call.Scope, module );
+							calleeDecl = lookup.Count == 1 ? lookup[0] : null;
+						}
+
+						return calleeDecl is Structural structural
+							&& TemplateInference.GetExplicitTemplateArgs( call.Callee ) is not { Count: > 0 }
+							? TryResolveCtadCall( structural, call, module )
+							: false;
 					}
 
-					return calleeDecl is Structural structural
-						&& TemplateInference.GetExplicitTemplateArgs( call.Callee ) is not { Count: > 0 }
-						? TryResolveCtadCall( structural, call, module )
-						: false;
-				}
-
-				// A call that already resolved to a specialization stays resolved:
-				// re-resolving it would lose the primary from its candidate list.
-				if( alreadyResolved && ( resolved is not Func || resolved.SpecInfo != null ) ) {
-					// Callee resolved to a non-function (builtin variable, external type, ...).
-					// Do not re-validate; the C++ compiler handles the call.
-					return false;
-				}
+					// A call that already resolved to a specialization stays resolved:
+					// re-resolving it would lose the primary from its candidate list.
+					if( alreadyResolved && ( resolved is not Func || resolved.SpecInfo != null ) ) {
+						// Callee resolved to a non-function (builtin variable, external type, ...).
+						// Do not re-validate; the C++ compiler handles the call.
+						return false;
+					}
 
 					List<Decl> candidates = alreadyResolved
 						? new List<Decl> { resolved! }
@@ -1757,10 +1758,10 @@ case IdExpr id: {
 				} ) );
 			string prefix = type.qual == Qualifier.Const ? "const " : "";
 			string name = type switch {
-				TypespecBasic b         => b.kind.ToString(),
-				TypespecNested n        => String.Join( "::", n.idTpls.Select( it => it.id ) ),
-				TypespecFunc f          => "<func>",
-				_                       => "<?>",
+				TypespecBasic  b  => b.kind.ToString(),
+				TypespecNested n  => String.Join( "::", n.idTpls.Select( it => it.id ) ),
+				TypespecFunc   f  => "<func>",
+				_                 => "<?>",
 			};
 			return prefix + name + suffix;
 		}
@@ -1795,10 +1796,10 @@ case IdExpr id: {
 			List<(Typespec source, Typespec target)> rejectedPairs = new();
 
 			string calleeName = callee switch {
-				IdExpr id                                => id.idTplArgs.id,
-				ScopedExpr scoped                        => scoped.idTpls.Count > 0 ? scoped.idTpls.Last().id : "?",
-				BinOp binOp when binOp.right is IdExpr m => m.idTplArgs.id,
-				_                                        => "?",
+				IdExpr     id                                 => id.idTplArgs.id,
+				ScopedExpr scoped                             => scoped.idTpls.Count > 0 ? scoped.idTpls.Last().id : "?",
+				BinOp      binOp when binOp.right is IdExpr m => m.idTplArgs.id,
+				_                                             => "?",
 			};
 			LogOverloadResolution( "Resolving '{0}' with {1} arg(s) among {2} candidate(s)",
 				calleeName, call.args.Count, callable.Count );
@@ -1902,54 +1903,54 @@ case IdExpr id: {
 					continue;
 				}
 
-			if( candidate is Func func ) {
-				(List<TplParam> ownerParams, List<TplArg> ownerArgs) = GetOwnerTemplateInfo( func, callee );
+				if( candidate is Func func ) {
+					(List<TplParam> ownerParams, List<TplArg> ownerArgs) = GetOwnerTemplateInfo( func, callee );
 
-				bool deductionOk = TemplateInference.TryDeduceTemplateArgs(
-					func, call, typeResolver, result, out List<TplArg>? deduced,
-					ownerParams.Count > 0 ? ownerParams : null,
-					ownerArgs.Count > 0 ? ownerArgs : null );
+					bool deductionOk = TemplateInference.TryDeduceTemplateArgs(
+						func, call, typeResolver, result, out List<TplArg>? deduced,
+						ownerParams.Count > 0 ? ownerParams : null,
+						ownerArgs.Count > 0 ? ownerArgs : null );
 
-				if( deductionOk && deduced != null ) {
-					LogOverloadResolution( "    candidate {0}: internal template deduced ({1}), accepted",
-						candidate.name, String.Join( ", ", deduced.Select( a => FormatTypeForDebug( a.typespec ) ) ) );
-					deducedArgsByCandidate[candidate] = deduced;
-					templateViable.Add( candidate );
+					if( deductionOk && deduced != null ) {
+						LogOverloadResolution( "    candidate {0}: internal template deduced ({1}), accepted",
+							candidate.name, String.Join( ", ", deduced.Select( a => FormatTypeForDebug( a.typespec ) ) ) );
+						deducedArgsByCandidate[candidate] = deduced;
+						templateViable.Add( candidate );
+						continue;
+					}
+
+					if( deductionOk && deduced == null && func.TplParams.Count == 0 ) {
+						LogOverloadResolution( "    candidate {0}: non-template method, accepted", candidate.name );
+						templateViable.Add( candidate );
+						continue;
+					}
+
+					LogOverloadResolution( "    candidate {0}: internal template deduction failed", candidate.name );
 					continue;
 				}
 
-				if( deductionOk && deduced == null && func.TplParams.Count == 0 ) {
-					LogOverloadResolution( "    candidate {0}: non-template method, accepted", candidate.name );
-					templateViable.Add( candidate );
+				if( candidate is Structor ctor && ctor.TplParams.Count > 0 ) {
+					// Constructor template arguments are always deduced from the call
+					// arguments; the class arguments come from the callee's own
+					// template-id, which the enclosing substitution covers.
+					(List<TplParam> ownerParams, List<TplArg> ownerArgs) = GetOwnerTemplateInfo( ctor, callee );
+
+					bool ctorDeductionOk = TemplateInference.TryDeduceTemplateArgs(
+						ctor, call, typeResolver, result, out List<TplArg>? ctorDeduced,
+						ownerParams.Count > 0 ? ownerParams : null,
+						ownerArgs.Count > 0 ? ownerArgs : null );
+
+					if( ctorDeductionOk && ctorDeduced != null ) {
+						LogOverloadResolution( "    candidate ctor: template deduced ({0}), accepted",
+							String.Join( ", ", ctorDeduced.Select( a => FormatTypeForDebug( a.typespec ) ) ) );
+						deducedArgsByCandidate[candidate] = ctorDeduced;
+						templateViable.Add( candidate );
+						continue;
+					}
+
+					LogOverloadResolution( "    candidate ctor: template deduction failed" );
 					continue;
 				}
-
-				LogOverloadResolution( "    candidate {0}: internal template deduction failed", candidate.name );
-				continue;
-			}
-
-			if( candidate is Structor ctor && ctor.TplParams.Count > 0 ) {
-				// Constructor template arguments are always deduced from the call
-				// arguments; the class arguments come from the callee's own
-				// template-id, which the enclosing substitution covers.
-				(List<TplParam> ownerParams, List<TplArg> ownerArgs) = GetOwnerTemplateInfo( ctor, callee );
-
-				bool ctorDeductionOk = TemplateInference.TryDeduceTemplateArgs(
-					ctor, call, typeResolver, result, out List<TplArg>? ctorDeduced,
-					ownerParams.Count > 0 ? ownerParams : null,
-					ownerArgs.Count > 0 ? ownerArgs : null );
-
-				if( ctorDeductionOk && ctorDeduced != null ) {
-					LogOverloadResolution( "    candidate ctor: template deduced ({0}), accepted",
-						String.Join( ", ", ctorDeduced.Select( a => FormatTypeForDebug( a.typespec ) ) ) );
-					deducedArgsByCandidate[candidate] = ctorDeduced;
-					templateViable.Add( candidate );
-					continue;
-				}
-
-				LogOverloadResolution( "    candidate ctor: template deduction failed" );
-				continue;
-			}
 
 				if( TemplateInference.GetTemplateParamCount( candidate ) == 0 ) {
 					LogOverloadResolution( "    candidate {0}: non-template, accepted", candidate.name );
@@ -1976,7 +1977,7 @@ case IdExpr id: {
 					if( explicitTemplateArgs is { Count: > 0 } )
 						matchArgs = explicitTemplateArgs.ToList();
 					else if( deducedArgsByCandidate.TryGetValue( candidate.SpecInfo.Primary, out List<TplArg>? deduced )
-					         && deduced != null )
+					      && deduced != null )
 						matchArgs = deduced.ToList();
 
 					if( matchArgs != null ) {
@@ -2526,42 +2527,43 @@ case IdExpr id: {
 		private bool ResolveAliases( GlobalNamespace module, ModuleContext context )
 		{
 			bool progress = false;
-		foreach( UnresolvedAlias unresolved in context.UnresolvedAliases ) {
-			if( unresolved.Node.type is not TypespecNested path )
-				continue;
+			foreach( UnresolvedAlias unresolved in context.UnresolvedAliases ) {
+				if( unresolved.Node.type is not TypespecNested path )
+					continue;
 
-			// The alias body is resolved in the alias's own scope so that template
-			// parameters are visible; the alias name itself lives in the parent scope.
-			Scope aliasScope = unresolved.Scope;
-			Scope parentScope = aliasScope.parent!;
+				// The alias body is resolved in the alias's own scope so that template
+				// parameters are visible; the alias name itself lives in the parent scope.
+				Scope aliasScope = unresolved.Scope;
+				Scope parentScope = aliasScope.parent!;
 
-			Decl? resolved = ResolvePath( path.idTpls, aliasScope, module, out _, callSite: false );
-			if( resolved == null )
-				continue;
+				Decl? resolved = ResolvePath( path.idTpls, aliasScope, module, out _, callSite: false );
+				if( resolved == null )
+					continue;
 
-			bool isNamespaceTarget = resolved is Namespace;
-			if( unresolved.Node.IsNamespaceAlias != isNamespaceTarget ) {
-				unresolved.Node.IsNamespaceAlias = isNamespaceTarget;
-				progress = true;
+				bool isNamespaceTarget = resolved is Namespace;
+				if( unresolved.Node.IsNamespaceAlias != isNamespaceTarget ) {
+					unresolved.Node.IsNamespaceAlias = isNamespaceTarget;
+					progress = true;
+				}
+
+				if( isNamespaceTarget && !parentScope.importedScopes.Contains( ( (Namespace)resolved ).scope ) ) {
+					parentScope.importedScopes.Add( ( (Namespace)resolved ).scope );
+					progress = true;
+				}
+
+				// Non-namespace aliases must be registered under their AliasDecl so that uses
+				// of the alias name keep the concrete template arguments stored on the alias.
+				Decl target = isNamespaceTarget ? resolved : unresolved.Node;
+				progress |= AddImportedName( parentScope, unresolved.Node.name, target );
+
+				if( !isNamespaceTarget
+				 && unresolved.Node.type is TypespecNested aliasPath
+				 && aliasPath.resolvedDecl == null )
+				{
+					aliasPath.resolvedDecl = resolved;
+					progress = true;
+				}
 			}
-
-			if( isNamespaceTarget && !parentScope.importedScopes.Contains( ( (Namespace)resolved ).scope ) ) {
-				parentScope.importedScopes.Add( ( (Namespace)resolved ).scope );
-				progress = true;
-			}
-
-			// Non-namespace aliases must be registered under their AliasDecl so that uses
-			// of the alias name keep the concrete template arguments stored on the alias.
-			Decl target = isNamespaceTarget ? resolved : unresolved.Node;
-			progress |= AddImportedName( parentScope, unresolved.Node.name, target );
-
-			if( !isNamespaceTarget
-			 && unresolved.Node.type is TypespecNested aliasPath
-			 && aliasPath.resolvedDecl == null ) {
-				aliasPath.resolvedDecl = resolved;
-				progress = true;
-			}
-		}
 
 			return progress;
 		}
@@ -2669,13 +2671,13 @@ case IdExpr id: {
 		}
 
 		private bool TryGetMemberAccessBaseType(
-			Expr expr,
-			Scope scope,
-			GlobalNamespace module,
+			Expr             expr,
+			Scope            scope,
+			GlobalNamespace  module,
 			out Hierarchical baseType,
-			bool viaArrow = false )
+			bool             viaArrow = false )
 		{
-			baseType = null!;
+			baseType       = null!;
 			Typespec? type = null;
 
 			if( expr is SelfExpr selfExpr ) {
@@ -2723,10 +2725,10 @@ case IdExpr id: {
 				if( TryGetMemberAccessBaseType( derefUnop.expr, scope, module, out Hierarchical inner, viaArrow: false ) ) {
 					Typespec? operandType = typeResolver.Resolve( derefUnop.expr );
 					if( operandType != null
-					 && OperatorResolver.TryGetOperatorReturnType(
-					 	operandType, "operator*", result, out Typespec? starReturnType )
+					 && OperatorResolver.TryGetOperatorReturnType( operandType, "operator*", result, out Typespec? starReturnType )
 					 && starReturnType != null
-					 && TryGetBaseHierarchical( starReturnType, module, out Hierarchical operatorBase, viaArrow: false ) ) {
+					 && TryGetBaseHierarchical( starReturnType, module, out Hierarchical operatorBase, viaArrow: false ) )
+					{
 						baseType = operatorBase;
 						return true;
 					}
@@ -2751,18 +2753,19 @@ case IdExpr id: {
 						else if( calleeIdDecl is Structural structural )
 							type = BuildClassValueType( structural, new[] { calleeId.idTplArgs } );
 					}
-else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( calleeScoped, out Decl? calleeScopedDecl ) ) {
-					if( calleeScopedDecl is Func f )
-						type = typeResolver.SubstituteCallTemplateArgs( f, calleeScoped );
-					else if( calleeScopedDecl is Structor s && s.kind == Structor.Kind.Constructor )
-						baseType = FindEnclosingStructural( s.scope )!;
-					else if( calleeScopedDecl is Structural structural )
-						type = BuildClassValueType( structural, calleeScoped.idTpls );
-				}
+					else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( calleeScoped, out Decl? calleeScopedDecl ) ) {
+						if( calleeScopedDecl is Func f )
+							type = typeResolver.SubstituteCallTemplateArgs( f, calleeScoped );
+						else if( calleeScopedDecl is Structor s && s.kind == Structor.Kind.Constructor )
+							baseType = FindEnclosingStructural( s.scope )!;
+						else if( calleeScopedDecl is Structural structural )
+							type = BuildClassValueType( structural, calleeScoped.idTpls );
+					}
 					else if( call.expr is BinOp calleeBin
-					     && calleeBin.op.In( Operand.MemberAccess, Operand.MemberPtrAccess )
-					     && calleeBin.right is IdExpr member
-					     && result.Members.TryGetValue( member, out Decl? memberDecl ) ) {
+					      && calleeBin.op.In( Operand.MemberAccess, Operand.MemberPtrAccess )
+					      && calleeBin.right is IdExpr member
+					      && result.Members.TryGetValue( member, out Decl? memberDecl ) )
+					{
 						switch( memberDecl ) {
 							case VarDecl vd:
 								type = vd.type;
@@ -2816,7 +2819,8 @@ else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( cal
 			}
 			else if( expr is BinOp binop && OperatorRules.IsMemberAccess( binop.op )
 			     && binop.right is IdExpr member
-			     && result.Members.TryGetValue( member, out Decl? memberDecl ) ) {
+			     && result.Members.TryGetValue( member, out Decl? memberDecl ) )
+			{
 				switch( memberDecl ) {
 					case VarDecl vd:
 						receiverType = vd.type;
@@ -2946,7 +2950,7 @@ else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( cal
 		}
 
 		private Typespec UnwrapAliasWithIndirection(
-			Typespec           type,
+			Typespec            type,
 			HashSet<AliasDecl>? visited = null )
 		{
 			visited ??= new HashSet<AliasDecl>();
@@ -2973,10 +2977,10 @@ else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( cal
 		}
 
 		private bool TryGetBaseHierarchical(
-			Typespec type,
-			GlobalNamespace module,
+			Typespec         type,
+			GlobalNamespace  module,
 			out Hierarchical baseType,
-			bool viaArrow = false )
+			bool             viaArrow = false )
 		{
 			baseType = null!;
 
@@ -3013,12 +3017,13 @@ else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( cal
 				if( outer.kind == Pointer.Kind.RawPtr
 				 || outer.kind == Pointer.Kind.LVRef
 				 || outer.kind == Pointer.Kind.RVRef
-				 || outer.kind.Between( Pointer.Kind.SmartPtr_Begin, Pointer.Kind.SmartPtr_End ) ) {
+				 || outer.kind.Between( Pointer.Kind.SmartPtr_Begin, Pointer.Kind.SmartPtr_End ) )
+				{
 					Typespec inner = type.Clone();
 					if( inner.ptrs == null )
 						return false;
-				inner.ptrs.RemoveAt( inner.ptrs.Count - 1 );
-				return TryGetBaseHierarchical( inner, module, out baseType, viaArrow );
+					inner.ptrs.RemoveAt( inner.ptrs.Count - 1 );
+					return TryGetBaseHierarchical( inner, module, out baseType, viaArrow );
 				}
 			}
 
@@ -3039,7 +3044,7 @@ else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( cal
 				return (new List<TplParam>(), new List<TplArg>());
 
 			List<TplParam> ownerParams = ownerChain.SelectMany( s => s.TplParams ).ToList();
-			List<TplArg>? ownerArgs = OwnerTemplateArgs.TryExtract( callee, ownerChain, typeResolver, result );
+			List<TplArg>?  ownerArgs   = OwnerTemplateArgs.TryExtract( callee, ownerChain, typeResolver, result );
 
 			// If the receiver type is unavailable or still dependent, do not substitute
 			// owner parameters. This keeps the old behaviour for unqualified calls inside
@@ -3054,7 +3059,7 @@ else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( cal
 
 
 		private static Typespec? BuildClassValueType(
-			Structural              structural,
+			Structural               structural,
 			IReadOnlyList<IdTplArgs> nameSegments )
 		{
 			return new TypespecNested {
@@ -3095,61 +3100,63 @@ else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( cal
 			return PickSingleCandidate( candidates );
 		}
 
-	private List<Decl> LookupNameCandidates( string name, Scope scope, GlobalNamespace module )
-	{
-		List<Decl> result = new();
+		private List<Decl> LookupNameCandidates( string name, Scope scope, GlobalNamespace module )
+		{
+			List<Decl> result = new();
 
-		for( Scope? cur = scope; cur != null; cur = cur.parent ) {
-			AddVisibleChildren( result, cur, name, filterHidden: false );
+			for( Scope? cur = scope; cur != null; cur = cur.parent ) {
+				AddVisibleChildren( result, cur, name, filterHidden: false );
 
-			foreach( Scope imported in cur.importedScopes )
-				AddVisibleChildren( result, imported, name, filterHidden: true );
+				foreach( Scope imported in cur.importedScopes )
+					AddVisibleChildren( result, imported, name, filterHidden: true );
 
-			if( cur.importedNames.TryGetValue( name, out List<Decl>? importedNameList ) )
-				result.AddRange( importedNameList );
+				if( cur.importedNames.TryGetValue( name, out List<Decl>? importedNameList ) )
+					result.AddRange( importedNameList );
 
-			// Inside a class/struct, the unqualified class name refers to the
-			// class itself (C++ injected-class-name), not just the constructor.
-			if( cur.decl is Hierarchical h && h.name == name )
-				result.Add( h );
+				// Inside a class/struct, the unqualified class name refers to the
+				// class itself (C++ injected-class-name), not just the constructor.
+				if( cur.decl is Hierarchical h && h.name == name )
+					result.Add( h );
 
-			// Inner scopes shadow outer scopes. Once we have found any visible
-			// declaration at this scope level, stop looking further out.
-			if( result.Count > 0 )
-				break;
-		}
+				// Inner scopes shadow outer scopes. Once we have found any visible
+				// declaration at this scope level, stop looking further out.
+				if( result.Count > 0 )
+					break;
+			}
 
-		// If no visible declaration was found in the enclosing scopes, consider
-		// configured class aliases and names exported by imported modules.
-		// This mirrors C++ behavior: inner-scope names hide imported ones.
-			if( result.Count == 0 ) {
-				if( FindEnclosingStructural( scope ) is Structural structural ) {
-					Dialect dialect = GetContext( module ).Dialect;
-				if( !String.IsNullOrEmpty( dialect.BaseClassAliasName )
-				 && name == dialect.BaseClassAliasName ) {
-					Structural? baseClass = GetFirstBaseStructural( structural );
-					if( baseClass != null )
-						result.Add( baseClass );
+			// If no visible declaration was found in the enclosing scopes, consider
+			// configured class aliases and names exported by imported modules.
+			// This mirrors C++ behavior: inner-scope names hide imported ones.
+				if( result.Count == 0 ) {
+					if( FindEnclosingStructural( scope ) is Structural structural ) {
+						Dialect dialect = GetContext( module ).Dialect;
+					if( !String.IsNullOrEmpty( dialect.BaseClassAliasName )
+					 && name == dialect.BaseClassAliasName )
+					{
+						Structural? baseClass = GetFirstBaseStructural( structural );
+						if( baseClass != null )
+							result.Add( baseClass );
+					}
+					else if( !String.IsNullOrEmpty( dialect.OwnClassAliasName )
+					      && name == dialect.OwnClassAliasName )
+					{
+						result.Add( structural );
+					}
 				}
-				else if( !String.IsNullOrEmpty( dialect.OwnClassAliasName )
-				      && name == dialect.OwnClassAliasName ) {
-					result.Add( structural );
+
+				List<string> activeNs = GetActiveNamespaceFqns( scope );
+				foreach( string importedModule in ImportedModuleNames( module ) ) {
+					if( !moduleExports.TryGetValue( importedModule, out ModuleExports? exports ) )
+						continue;
+
+					result.AddRange(
+						exports.LookupAll( name )
+						       .Where( d => IsEnclosingNamespaceActive( d, activeNs ) ) );
 				}
 			}
 
-			List<string> activeNs = GetActiveNamespaceFqns( scope );
-			foreach( string importedModule in ImportedModuleNames( module ) ) {
-				if( !moduleExports.TryGetValue( importedModule, out ModuleExports? exports ) )
-					continue;
-
-				result.AddRange(
-					exports.LookupAll( name )
-					        .Where( d => IsEnclosingNamespaceActive( d, activeNs ) ) );
-			}
+			return DistinctCandidates( result );
 		}
-
-		return DistinctCandidates( result );
-	}
 
 		private static List<string> GetActiveNamespaceFqns( Scope lookupScope )
 		{
@@ -3198,8 +3205,8 @@ else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( cal
 		}
 
 		private List<Decl> LookupInHierarchicalCandidates(
-			string      name,
-			Hierarchical h,
+			string          name,
+			Hierarchical    h,
 			GlobalNamespace module )
 		{
 			List<Decl> result = new();
@@ -3389,109 +3396,109 @@ else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( cal
 			}
 		}
 
-	private void ResolveSyntheticInitListTypes( IReadOnlyList<CompiledModuleResult> modules )
-	{
-		bool added;
-		do {
-			added = false;
-			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
-				added |= RegisterSyntheticInitListTypes( module, context );
-			}
-		} while( added );
+		private void ResolveSyntheticInitListTypes( IReadOnlyList<CompiledModuleResult> modules )
+		{
+			bool added;
+			do {
+				added = false;
+				foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
+					added |= RegisterSyntheticInitListTypes( module, context );
+				}
+			} while( added );
 
-		bool progress;
-		do {
-			progress = false;
-			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
-				progress |= ResolveTypes( module, context );
-				progress |= ResolveMemberAccesses( module, context );
-			}
-		} while( progress );
-	}
-
-	private bool RegisterSyntheticInitListTypes( GlobalNamespace module, ModuleContext context )
-	{
-		var collector = new InitListTypeCollector();
-		collector.Collect( module );
-		foreach( (Decl local, _) in context.LocalDecls )
-			collector.Collect( local );
-
-		bool added = false;
-		foreach( TypespecNested type in collector.Types ) {
-			if( type.resolvedDecl != null )
-				continue;
-			if( result.Types.ContainsKey( type ) )
-				continue;
-			if( context.UnresolvedTypes.Any( ut => ReferenceEquals( ut.Node, type ) ) )
-				continue;
-
-			context.UnresolvedTypes.Add( new UnresolvedType( type, module.scope ) );
-			added = true;
+			bool progress;
+			do {
+				progress = false;
+				foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
+					progress |= ResolveTypes( module, context );
+					progress |= ResolveMemberAccesses( module, context );
+				}
+			} while( progress );
 		}
 
-		return added;
-	}
-
-	private sealed class InitListTypeCollector
-	{
-		private readonly HashSet<TypespecNested> collected = new();
-
-		public IEnumerable<TypespecNested> Types => collected;
-
-		public void Collect( Decl decl )
+		private bool RegisterSyntheticInitListTypes( GlobalNamespace module, ModuleContext context )
 		{
-			if( decl == null )
-				return;
+			var collector = new InitListTypeCollector();
+			collector.Collect( module );
+			foreach( (Decl local, _) in context.LocalDecls )
+				collector.Collect( local );
 
-			switch( decl ) {
-				case VarDecl vd:
-					CollectType( vd.type );
-					break;
+			bool added = false;
+			foreach( TypespecNested type in collector.Types ) {
+				if( type.resolvedDecl != null )
+					continue;
+				if( result.Types.ContainsKey( type ) )
+					continue;
+				if( context.UnresolvedTypes.Any( ut => ReferenceEquals( ut.Node, type ) ) )
+					continue;
 
-				case Func func:
-					CollectType( func.retType );
-					foreach( Param para in func.paras )
-						CollectType( para.type );
-					break;
-
-				case Structor stc:
-					foreach( Param para in stc.paras )
-						CollectType( para.type );
-					break;
+				context.UnresolvedTypes.Add( new UnresolvedType( type, module.scope ) );
+				added = true;
 			}
 
-			if( decl is Structural s ) {
-				foreach( BaseType bt in s.basetypes )
-					CollectType( bt.type );
-			}
-
-			if( decl is Hierarchical h ) {
-				foreach( Decl child in h.children )
-					Collect( child );
-			}
+			return added;
 		}
 
-		private void CollectType( Typespec? type )
+		private sealed class InitListTypeCollector
 		{
-			if( type is not TypespecNested nested )
-				return;
+			private readonly HashSet<TypespecNested> collected = new();
 
-			if( nested.idTpls.Count >= 2
-			 && nested.idTpls[0].id == "std"
-			 && nested.idTpls[1].id == "initializer_list" )
-				collected.Add( nested );
+			public IEnumerable<TypespecNested> Types => collected;
 
-			foreach( IdTplArgs segment in nested.idTpls ) {
-				foreach( TplArg arg in segment.tplArgs ) {
-					if( arg.typespec != null )
-						CollectType( arg.typespec );
+			public void Collect( Decl decl )
+			{
+				if( decl == null )
+					return;
+
+				switch( decl ) {
+					case VarDecl vd:
+						CollectType( vd.type );
+						break;
+
+					case Func func:
+						CollectType( func.retType );
+						foreach( Param para in func.paras )
+							CollectType( para.type );
+						break;
+
+					case Structor stc:
+						foreach( Param para in stc.paras )
+							CollectType( para.type );
+						break;
+				}
+
+				if( decl is Structural s ) {
+					foreach( BaseType bt in s.basetypes )
+						CollectType( bt.type );
+				}
+
+				if( decl is Hierarchical h ) {
+					foreach( Decl child in h.children )
+						Collect( child );
+				}
+			}
+
+			private void CollectType( Typespec? type )
+			{
+				if( type is not TypespecNested nested )
+					return;
+
+				if( nested.idTpls.Count >= 2
+				 && nested.idTpls[0].id == "std"
+				 && nested.idTpls[1].id == "initializer_list" )
+					collected.Add( nested );
+
+				foreach( IdTplArgs segment in nested.idTpls ) {
+					foreach( TplArg arg in segment.tplArgs ) {
+						if( arg.typespec != null )
+							CollectType( arg.typespec );
+					}
 				}
 			}
 		}
-	}
 
 		private void ReportUnresolved( IReadOnlyList<CompiledModuleResult> modules )
-	{
+		{
 			foreach( (GlobalNamespace module, ModuleContext context) in modules ) {
 				HashSet<Expr> callCallees = context.UnresolvedCalls
 					.Select( c => c.Callee )
@@ -3550,8 +3557,8 @@ else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( cal
 							member.idTplArgs.id,
 							typeName ) ) );
 				}
+			}
 		}
-	}
 
 		private void ReportUnresolvedPath(
 			string                   kind,
@@ -3609,9 +3616,9 @@ else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( cal
 		}
 
 		private void ReportAmbiguous(
-			string       kind,
-			SrcPos       srcPos,
-			string       name,
+			string              kind,
+			SrcPos              srcPos,
+			string              name,
 			IReadOnlyList<Decl> candidates )
 		{
 			string locations = candidates

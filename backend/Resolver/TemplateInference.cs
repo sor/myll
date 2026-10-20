@@ -512,67 +512,69 @@ namespace Myll.Resolver
 
 			return false;
 		}
-private static bool TryBindParameter(
-		Typespec                      parameterType,
-		Typespec                      argumentType,
-		Dictionary<string, Typespec>  bindings,
-		ResolutionResult?             result )
-	{
-		Decl? parameterDecl = parameterType is TypespecNested nested
-			? GetResolvedDecl( nested, result )
-			: null;
 
-		if( parameterDecl is not TplParamDecl tpl )
-			return true; // no template parameter to bind; let overload resolution decide
+		private static bool TryBindParameter(
+			Typespec                      parameterType,
+			Typespec                      argumentType,
+			Dictionary<string, Typespec>  bindings,
+			ResolutionResult?             result )
+		{
+			Decl? parameterDecl = parameterType is TypespecNested nested
+				? GetResolvedDecl( nested, result )
+				: null;
 
-		Typespec strippedArgument = argumentType;
-		bool wrappersMatched = false;
+			if( parameterDecl is not TplParamDecl tpl )
+				return true; // no template parameter to bind; let overload resolution decide
 
-		// Strip matching outer pointer/reference/smart-pointer wrappers.
-		if( parameterType.ptrs is { Count: > 0 } pPtrs
-		 && argumentType.ptrs is { Count: > 0 } aPtrs
-		 && pPtrs.Count == aPtrs.Count ) {
-			wrappersMatched = true;
-			for( int i = 0; i < pPtrs.Count; i++ ) {
-				if( pPtrs[i].kind != aPtrs[i].kind || pPtrs[i].qual != aPtrs[i].qual ) {
-					wrappersMatched = false;
-					break;
+			Typespec strippedArgument = argumentType;
+			bool wrappersMatched = false;
+
+			// Strip matching outer pointer/reference/smart-pointer wrappers.
+			if( parameterType.ptrs is { Count: > 0 } pPtrs
+			 && argumentType.ptrs is { Count: > 0 } aPtrs
+			 && pPtrs.Count == aPtrs.Count )
+			{
+				wrappersMatched = true;
+				for( int i = 0; i < pPtrs.Count; i++ ) {
+					if( pPtrs[i].kind != aPtrs[i].kind || pPtrs[i].qual != aPtrs[i].qual ) {
+						wrappersMatched = false;
+						break;
+					}
 				}
+
+				if( wrappersMatched )
+					strippedArgument = StripOutermostPointers( argumentType, aPtrs.Count );
 			}
 
-			if( wrappersMatched )
-				strippedArgument = StripOutermostPointers( argumentType, aPtrs.Count );
-		}
-
-		if( !wrappersMatched && parameterType.ptrs is { Count: > 0 } ) {
-			// A reference wrapper around the template parameter can bind to an
-			// argument with different or no outer wrappers; in that case T is
-			// the argument type itself and the C++ compiler decides whether the
-			// reference can be formed (e.g. const T& to a temporary is fine).
-			if( parameterType.ptrs.Count == 1 && IsReferenceKind( parameterType.ptrs[0].kind ) )
-				strippedArgument = argumentType;
-			else
-				return true; // wrappers differ; can't bind, let overload resolution decide
-		}
-
-		if( bindings.TryGetValue( tpl.name, out Typespec? existing ) ) {
-			if( IsUntypedLiteral( strippedArgument ) )
-				return true;
-
-			if( IsUntypedLiteral( existing ) ) {
-				bindings[tpl.name] = strippedArgument;
-				return true;
+			if( !wrappersMatched && parameterType.ptrs is { Count: > 0 } ) {
+				// A reference wrapper around the template parameter can bind to an
+				// argument with different or no outer wrappers; in that case T is
+				// the argument type itself and the C++ compiler decides whether the
+				// reference can be formed (e.g. const T& to a temporary is fine).
+				if( parameterType.ptrs.Count == 1 && IsReferenceKind( parameterType.ptrs[0].kind ) )
+					strippedArgument = argumentType;
+				else
+					return true; // wrappers differ; can't bind, let overload resolution decide
 			}
 
-			return IsSameType( existing, strippedArgument );
+			if( bindings.TryGetValue( tpl.name, out Typespec? existing ) ) {
+				if( IsUntypedLiteral( strippedArgument ) )
+					return true;
+
+				if( IsUntypedLiteral( existing ) ) {
+					bindings[tpl.name] = strippedArgument;
+					return true;
+				}
+
+				return IsSameType( existing, strippedArgument );
+			}
+
+			bindings[tpl.name] = strippedArgument;
+			return true;
 		}
 
-		bindings[tpl.name] = strippedArgument;
-		return true;
-	}
-
-	private static bool IsReferenceKind( Pointer.Kind kind )
-		=> kind is Pointer.Kind.LVRef or Pointer.Kind.RVRef;
+		private static bool IsReferenceKind( Pointer.Kind kind )
+			=> kind is Pointer.Kind.LVRef or Pointer.Kind.RVRef;
 
 		/// <summary>
 		/// Deduces template parameters of a conversion operator from a required
@@ -594,12 +596,12 @@ private static bool TryBindParameter(
 			TryBindParameter( pattern, concrete, bindings, null );
 		}
 
-	private static bool IsUntypedLiteral( Typespec type )
-		=> type is TypespecBasic b
-		 && ( b.kind == TypespecBasic.Kind.UntypedInteger
-		   || b.kind == TypespecBasic.Kind.UntypedFloat );
+		private static bool IsUntypedLiteral( Typespec type )
+			=> type is TypespecBasic b
+			 && ( b.kind == TypespecBasic.Kind.UntypedInteger
+			   || b.kind == TypespecBasic.Kind.UntypedFloat );
 
-	private static Typespec NormalizeDeducedType( Typespec type )
+		private static Typespec NormalizeDeducedType( Typespec type )
 		{
 			if( type is not TypespecBasic basic )
 				return type;
@@ -621,6 +623,7 @@ private static bool TryBindParameter(
 
 			return type;
 		}
+
 		private static Decl? GetResolvedDecl( TypespecNested type, ResolutionResult? result )
 		{
 			if( type.resolvedDecl != null )

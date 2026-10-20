@@ -138,9 +138,11 @@ namespace Myll.Core
 				else if( includeTplParams
 				 && decl is ITemplatedDecl curStruct
 				 && curStruct.TplParams.Count >= 1 )
+				{
 					declName += "<" + curStruct.TplParams
 						.Select( t => t.name )
 						.Join( ", " ) + ">";
+				}
 				ret.Add( declName );
 			}
 			// WTF dot net framework?
@@ -336,14 +338,14 @@ namespace Myll.Core
 			Let,
 		}
 
-		public Kind           kind;
-		public Typespec       type     = null!; // contains Qualifier
-		public List<Accessor> accessor = new(); // opt, structural or global
-		public Expr?          init;
-		public bool           isDirectConstruct;
-		public List<TplParam> TplParams { get; set; } = new();
-		public List<TplBinding> TplSpec { get; init; } = new(); // non-empty: specialization of a primary (same module or imported)
-		public Scope?         varScope;
+		public Kind             kind;
+		public Typespec         type     = null!; // contains Qualifier
+		public List<Accessor>   accessor = new(); // opt, structural or global
+		public Expr?            init;
+		public bool             isDirectConstruct;
+		public List<TplParam>   TplParams { get; set;  } = new();
+		public List<TplBinding> TplSpec   { get; init; } = new(); // non-empty: specialization of a primary (same module or imported)
+		public Scope?           varScope;
 
 		public Scope? TemplateParamScope => varScope;
 
@@ -436,7 +438,7 @@ namespace Myll.Core
 
 	public class GlobalNamespace : Namespace
 	{
-		public string          module  = null!;
+		public string           module  = null!;
 		public List<ImportSpec> imports = new();
 	}
 
@@ -456,11 +458,11 @@ namespace Myll.Core
 			Union,
 		}
 
-public Kind                 kind;
-		public List<TplParam>       TplParams { get; set; } = new();
-		public List<TplBinding>     TplSpec { get; init; } = new(); // non-empty: specialization of a primary (same module or imported)
+		public Kind                 kind;
+		public List<TplParam>       TplParams { get; set;  } = new();
+		public List<TplBinding>     TplSpec   { get; init; } = new(); // non-empty: specialization of a primary (same module or imported)
 		public List<BaseType>       basetypes = new();
-		public List<TypespecNested> reqs = new();
+		public List<TypespecNested> reqs      = new();
 
 		public Scope? TemplateParamScope => scope;
 
