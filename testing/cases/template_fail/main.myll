@@ -79,19 +79,45 @@ class SOrder<T, U> { field int v; }
 class SSkip<T, U, V> { field int v; }
 [spec=all] class SSkip<T, V=int> { field int v; } // FAIL: Specialization 'SSkip' names 2 of 3 parameters
 
-class SSym<T, U> { field int v; }
-[spec=all] class SSym<T=T*> { field int v; } // FAIL: Specialization of 'SSym' must bind 'T' to a concrete type, not the parameter 'T'
+// Pattern bindings with unsupported shapes
+class PSym<T> { field int v; }
+[spec=all] class PSym<T=T> { field int v; } // FAIL: bare parameter binding matches every instantiation
 
-class SSym2<T, U> { field int v; }
-[spec=all] class SSym2<T=U*> { field int v; } // FAIL: Specialization of 'SSym2' must bind 'T' to a concrete type, not the parameter 'U'
+class PNest<T> { field int v; }
+[spec=all] class PNest<T=Box<T>> { field int v; } // FAIL: nested patterns are not supported yet
+
+class PArr<T> { field int v; }
+[spec=all] class PArr<T=T[3]> { field int v; } // FAIL: array patterns are not supported yet
+
+class PQual<T> { field int v; }
+[spec=all] class PQual<T=const T*> { field int v; } // FAIL: qualified patterns are not supported yet
+
+class PBoth<T, U> { field int v; }
+[spec=all] class PBoth<T=int, U=T*> { field int v; } // FAIL: parameter 'T' cannot be concretely bound and pattern-deduced at once
 
 // [spec=...] attribute validation on class/struct/union specializations
 class SSkip2<T, U> { field int v; }
 class SSkip2<T=int> { field int v; } // FAIL: Specialization of 'SSkip2' must declare its kind
 [spec=some] class SSkip3<T=int> { field int v; } // FAIL: No matching template 'SSkip3'
-[spec=partial] class SSkip4<T=int> { field int v; } // FAIL: Unknown [spec=partial] on 'SSkip4'
-[spec] class SSkip5<T=int> { field int v; } // FAIL: Unknown [spec=] on 'SSkip5'
-[spec=all] class SPlain { field int v; } // FAIL: The [spec=all] attribute of 'SPlain' applies only to template specializations
+[spec=partial] class SSkip4<T=int> { field int v; } // FAIL: must name its kind: [spec=all]
+[spec] class SSkip5<T=int> { field int v; } // FAIL: must name its kind: [spec=all]
+[spec=all] class SPlain { field int v; } // FAIL: The [spec=...] values of 'SPlain' apply only to specializations
+[spec=primary] class SSkip6<T=int> { field int v; } // FAIL: marks the primary template, not a specialization
+class SSkip7<T, U> { field int v; }
+[spec(all, full)] class SSkip7<T, U=int> { field int v; } // FAIL: declares [spec=(all, full)] but the bindings are partial
+class SSkip8<T, U> { field int v; }
+[spec(all, partial)] class SSkip8<T=int, U=int> { field int v; } // FAIL: declares [spec=(all, partial)] but every parameter is concretely bound
+[spec(all, some)] class SSkip9<T=int> { field int v; } // FAIL: names both
+
+// [spec=...] attribute validation on functions and variables
+[spec=all] func fBad<T>( T a ) -> T => a; // FAIL: apply only to specializations
+func fBad2<T>( T a ) -> T => a;
+[spec=partial] func fBad2<T=int>( int a ) -> int => a; // FAIL: Function specializations are always full
+func fBad3<T>( T a ) -> T => a;
+[spec=primary] func fBad3<T=int>( int a ) -> int => a; // FAIL: marks the primary template, not a specialization
+const T vSpec<T> = (T)0;
+[spec=all] const T vSpec<T=int> = 5; // FAIL: the all/some kinds apply to class/struct/union specializations
+[spec=banana] func fBanana<T>( T a ) -> T => a; // FAIL: Unknown [spec=banana] on 'fBanana'
 
 // [spec=some] block validation
 class SB<T, U> { [pub]: field T v; func F() -> T => v; }
