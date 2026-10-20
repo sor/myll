@@ -3031,11 +3031,13 @@ namespace Myll.Resolver
 			return false;
 		}
 
-		// ------------------------------------------------------------------------
-		// Owner template-parameter handling for class-template method ranking.
-		// ------------------------------------------------------------------------
-
 		/// <summary>
+		/// Collects the template parameters of the class chain enclosing a method
+		/// candidate, plus the template arguments the call carries for them (from
+		/// the callee's receiver or qualified prefix). Unavailable or still
+		/// dependent receivers yield empty lists; the substitution happens on a
+		/// later resolver pass.
+		/// </summary>
 		private (List<TplParam> ownerParams, List<TplArg> ownerArgs) GetOwnerTemplateInfo(
 			Decl candidate,
 			Expr callee )

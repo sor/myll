@@ -15,6 +15,10 @@ namespace Myll.Resolver
 	/// </summary>
 	internal static class OwnerTemplateArgs
 	{
+		/// <summary>
+		/// Returns the chain of enclosing class/struct/union declarations, from outermost
+		/// to innermost, for a method or constructor candidate.
+		/// </summary>
 		public static List<Structural> GetStructuralChain( Decl decl )
 		{
 			List<Structural> result = new();
