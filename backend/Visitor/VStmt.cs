@@ -223,8 +223,11 @@ Expr? init              = q.funcCall() != null
 					isDirectConstruct      &= finalInit != null;
 
 					// The synthesized constructor call participates in resolution:
-					// CTAD deduces the template arguments for bare types.
-					if( init is FuncCallExpr directCall )
+					// CTAD deduces the template arguments for bare types. Only the
+					// direct-construction form needs this entry: copy-init
+					// constructor calls (var Box e = Box( 9 )) are real registered
+					// expressions that the IdExpr CTAD branch picks up.
+					if( isDirectConstruct && init is FuncCallExpr directCall )
 						Context.UnresolvedCalls.Add( new UnresolvedCall( directCall.expr, directCall.funcCall, scopeStack.Peek(), true ) );
 
 					MarkCtadPending( type, finalInit, isDirectConstruct );

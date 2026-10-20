@@ -1532,6 +1532,12 @@ namespace Myll.Resolver
 							: false;
 					}
 
+					// Constructor-style CTAD through a plain name: Box( 5 );
+					// explicit arguments keep the regular handling.
+					if( alreadyResolved && resolved is Structural structural2
+					 && TemplateInference.GetExplicitTemplateArgs( call.Callee ) is not { Count: > 0 } )
+						return TryResolveCtadCall( structural2, call, module );
+
 					// A call that already resolved to a specialization stays resolved:
 					// re-resolving it would lose the primary from its candidate list.
 					if( alreadyResolved && ( resolved is not Func || resolved.SpecInfo != null ) ) {
@@ -1795,12 +1801,7 @@ namespace Myll.Resolver
 			// whether the failure is definitive or just premature (types not resolved yet).
 			List<(Typespec source, Typespec target)> rejectedPairs = new();
 
-			string calleeName = callee switch {
-				IdExpr     id                                 => id.idTplArgs.id,
-				ScopedExpr scoped                             => scoped.idTpls.Count > 0 ? scoped.idTpls.Last().id : "?",
-				BinOp      binOp when binOp.right is IdExpr m => m.idTplArgs.id,
-				_                                             => "?",
-			};
+			string calleeName = GetTemplateCalleeName( callee );
 			LogOverloadResolution( "Resolving '{0}' with {1} arg(s) among {2} candidate(s)",
 				calleeName, call.args.Count, callable.Count );
 			for( int i = 0; i < callable.Count; i++ ) {
@@ -2406,7 +2407,7 @@ namespace Myll.Resolver
 		{
 			return callee switch {
 				IdExpr     id                                       => id.idTplArgs.id,
-				ScopedExpr scoped                                   => scoped.idTpls.Last().id,
+				ScopedExpr scoped                                   => scoped.idTpls.Count > 0 ? scoped.idTpls.Last().id : "?",
 				BinOp      binOp when binOp.right is IdExpr member  => member.idTplArgs.id,
 				_                                                   => "?",
 			};
