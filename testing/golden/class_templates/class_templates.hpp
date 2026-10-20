@@ -96,6 +96,10 @@ namespace spec
     class Pair;
     template <typename T>
     union Choice;
+    template <typename T>
+    class PtrBox;
+    template <typename T>
+    class IsPtr;
     class Num;
     template <typename T>
     class SpecBox;
@@ -179,6 +183,57 @@ namespace spec
         float _val;
         int _idx;
         float _alt;
+    };
+    template <typename T>
+    class PtrBox
+    {
+    public:
+        T _v{};
+        explicit PtrBox(T v)
+        {
+            _v = v;
+        }
+        inline T read() const
+        {
+            return _v;
+        }
+    };
+    template <typename T>
+    class PtrBox<T*>
+    {
+    public:
+        T _v{};
+        explicit PtrBox(T v)
+        {
+            _v = v;
+        }
+        inline T read() const
+        {
+            return _v + 1;
+        }
+    };
+    template <typename T>
+    class Pair<T, T*>
+    {
+    public:
+        T _a{};
+        Pair() = default;
+        inline T first() const
+        {
+            return _a;
+        }
+    };
+    template <typename T>
+    class IsPtr
+    {
+    public:
+        inline static bool value = false;
+    };
+    template <typename T>
+    class IsPtr<T*>
+    {
+    public:
+        inline static bool value = true;
     };
     class Num
     {

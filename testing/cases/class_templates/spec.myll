@@ -66,6 +66,49 @@ union Choice<T>
 	}
 }
 
+// Pattern specialization: the binding names a parameter with pointer
+// decorations, the parameter stays open and deduces per use
+[spec=primary] class PtrBox<T>
+{
+[pub]:
+	field T _v;
+
+	ctor( T v ) { _v = v; }
+	func read() -> T => _v;
+}
+
+[spec=all] class PtrBox<T=T*>
+{
+[pub]:
+	field T _v;
+
+	ctor( T v ) { _v = v; }
+	func read() -> T => _v + 1;
+}
+
+// A pattern over another parameter's positions; the named parameter deduces
+[spec=all] class Pair<T, U=T*>
+{
+[pub]:
+	field T _a;
+
+	[default] ctor();
+	func first() -> T => _a;
+}
+
+// The trait idiom: primary says false, the pattern says true for pointers
+[spec=primary] class IsPtr<T>
+{
+[pub]:
+	[static] field bool value = false;
+}
+
+[spec=all] class IsPtr<T=T*>
+{
+[pub]:
+	[static] field bool value = true;
+}
+
 func run() -> int
 {
 	var Box<int> a( 3, 4 );
@@ -97,6 +140,22 @@ func run() -> int
 	d._idx = 3;
 	if( d._idx != 3 )
 		return 6;
+
+	// pattern specialization: pointer instantiations use the pattern body
+	var PtrBox<int*> w( 41 );
+	if( w.read() != 42 )
+		return 7;
+
+	// non-pointer instantiations stay with the primary
+	var PtrBox<int> v( 7 );
+	if( v.read() != 7 )
+		return 8;
+
+	// the trait idiom
+	if( IsPtr<int>::value )
+		return 9;
+	if( !IsPtr<int*>::value )
+		return 10;
 
 	return 0;
 }

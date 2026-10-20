@@ -30,6 +30,12 @@ template <typename T>
 inline constexpr T rtv = static_cast<T>( 0 );
 template<> inline constexpr int rtv<int> = static_cast<int>( 21 );
 template <typename T>
+inline constexpr T sizeOf = static_cast<T>( 0 );
+template <typename T> inline constexpr T sizeOf<T*> = static_cast<T>( 8 );
+template <typename T>
+inline constexpr T sizeOf2 = static_cast<T>( 0 );
+template<> inline constexpr float sizeOf2<float> = static_cast<float>( 4 );
+template <typename T>
 inline constexpr Pair<T, T> pairDup = Pair<T, T>();
 template <typename T, typename U>
 class Pair

@@ -37,3 +37,17 @@ public:
         _sum = s;
     }
 };
+template <typename T>
+class Box<T*>
+{
+public:
+    int _value{};
+    explicit Box(int v)
+    {
+        _value = v;
+    }
+    inline int read() const
+    {
+        return _value * 2;
+    }
+};

@@ -31,6 +31,15 @@ var T rt<T=int> = 5;
 var T rtq<T, U> = (T)7;
 var T rtq<T, U=int> = (T)70;
 
+// pattern specialization: pointer instantiations deduce T
+const T sizeOf<T> = (T)0;
+[spec=partial] const T sizeOf<T=T*> = (T)8;
+
+// a shape assertion is optional: [spec=full] below declares every position
+// concretely bound
+const T sizeOf2<T> = (T)0;
+[spec=full] const T sizeOf2<T=f32> = (T)4;
+
 class Pair<T, U> {
 [pub]:
 	field {
@@ -89,6 +98,13 @@ func main() -> int {
 		return 17;
 	if( rtq<int, i64> != 7 )
 		return 18;
+
+	if( sizeOf<int> != 0 )
+		return 19;
+	if( sizeOf<int*> != 8 )
+		return 20;
+	if( sizeOf2<f32> < 3.9 )
+		return 21;
 
 	return 0;
 }

@@ -90,6 +90,20 @@ int spec::run()
     if( d._idx != 3 ) {
         return 6;
     }
+    spec::PtrBox<int*> w( 41 );
+    if( w.read() != 42 ) {
+        return 7;
+    }
+    spec::PtrBox<int> v( 7 );
+    if( v.read() != 7 ) {
+        return 8;
+    }
+    if( IsPtr<int>::value ) {
+        return 9;
+    }
+    if( !IsPtr<int*>::value ) {
+        return 10;
+    }
     return 0;
 }
 int spec::run4()

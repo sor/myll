@@ -18,3 +18,12 @@ import nums;
 	field int _sum;
 	ctor( T a, int s ) { _a = a; _sum = s; }
 }
+
+// Cross-module pattern specialization: pointer instantiations pick this body
+[spec=all] class Box<T=T*>
+{
+[pub]:
+	field int _value;
+	ctor( int v ) { _value = v; }
+	func read() -> int => _value * 2;
+}

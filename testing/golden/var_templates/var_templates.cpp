@@ -63,5 +63,14 @@ int main()
     if( rtq<int, std::int64_t> != 7 ) {
         return 18;
     }
+    if( sizeOf<int> != 0 ) {
+        return 19;
+    }
+    if( sizeOf<int*> != 8 ) {
+        return 20;
+    }
+    if( sizeOf2<float> < 3.9f ) {
+        return 21;
+    }
     return 0;
 }

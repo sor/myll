@@ -14,5 +14,9 @@ int main()
     if( q._sum != 6 ) {
         return 3;
     }
+    Box<int*> pb( 21 );
+    if( pb.read() != 42 ) {
+        return 4;
+    }
     return 0;
 }
