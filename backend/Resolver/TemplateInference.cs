@@ -62,6 +62,31 @@ namespace Myll.Resolver
 			=> ( PrimaryOf( decl ) as ITemplatedDecl )?.TplParams.Count ?? 0;
 
 		/// <summary>
+		/// Pattern unification: a specialization pattern (the `T*` of `T=T*`)
+		/// matches an argument when the argument carries exactly the same
+		/// pointer/reference decorations; the named parameter deduces to the
+		/// remainder. The same engine CTAD partial ordering will use later.
+		/// </summary>
+		public static bool TryUnifyPattern( Typespec pattern, Typespec? argument )
+		{
+			if( argument == null
+			 || pattern is not TypespecNested pn
+			 || pn.ptrs == null || pn.ptrs.Count == 0 )
+				return false;
+
+			if( argument.ptrs == null
+			 || argument.ptrs.Count != pn.ptrs.Count )
+				return false;
+
+			for( int i = 0; i < pn.ptrs.Count; i++ ) {
+				if( pn.ptrs[ i ].kind != argument.ptrs[ i ].kind )
+					return false;
+			}
+
+			return true;
+		}
+
+		/// <summary>
 		/// Returns all template parameters in scope for a declaration: the template parameters
 		/// of every enclosing class/struct/union/template-class, followed by the declaration's
 		/// own template parameters. This is what should be substituted when ranking the
@@ -386,6 +411,14 @@ namespace Myll.Resolver
 
 			return Substitute( type, substitution, result ) ?? type;
 		}
+
+		/// <summary>
+		/// Substitutes template parameters by name with concrete types (used
+		/// for specialization member returns, where concrete and
+		/// pattern-deduced values are derived per position).
+		/// </summary>
+		public static Typespec SubstituteNamedParams( Typespec type, Dictionary<string, Typespec> substitution, ResolutionResult result )
+			=> substitution.Count == 0 ? type : Substitute( type, substitution, result ) ?? type;
 
 		private static Typespec? Substitute( Typespec type, Dictionary<string, Typespec> substitution, ResolutionResult result )
 		{

@@ -44,6 +44,11 @@ namespace Myll.Core
 			public bool[]       Bound = System.Array.Empty<bool>();
 			public bool IsFull => Bound.Length > 0 && Bound.All( b => b );
 
+			// Pattern positions (`T=T*`): the Args entry carries the written
+			// pattern and the named parameter stays open (deduced per use);
+			// matching unifies instead of comparing.
+			public bool[] Pattern = System.Array.Empty<bool>();
+
 			// A [spec=some] block head: the declaration itself is not a
 			// specialization of the primary; it only collects member
 			// specializations for the concrete instantiation named by Args.

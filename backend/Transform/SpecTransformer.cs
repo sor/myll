@@ -62,12 +62,33 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 
 			FoldSpecBindings( children );
 
-			// Every structural gets its [spec=...] attribute validated, even
-			// non-specializations: unknown values and attributes on primaries
-			// or plain classes are rejected.
+// Every declaration that consumes [spec=...] gets its values validated:
+// structurals (kind), functions and variables (shape markers/primary).
+			// Unknown values are rejected there — typo protection where the
+			// attribute means something; other declarations ignore it.
 			List<Myll.Core.Structural> structs = children.OfType<Myll.Core.Structural>().ToList();
-			foreach( Myll.Core.Structural childStruct in structs )
-				ReadSpecAttrib( childStruct );
+			foreach( Myll.Core.Structural childStruct in structs ) {
+				SpecAttribValues? values = ParseSpecAttrib( childStruct, "class", "" );
+				if( values != null )
+					ValidateSpecAttribUsage( childStruct, values,
+						childStruct.TplParams.Count > 0, childStruct.TplSpec.Count > 0, "class" );
+			}
+
+			foreach( Func func in children.OfType<Func>() ) {
+				if( func.kind == Func.Kind.Convert )
+					continue; // converts do not consume the attribute
+				SpecAttribValues? values = ParseSpecAttrib( func, "func", "" );
+				if( values != null )
+					ValidateSpecAttribUsage( func, values,
+						func.TplParams.Count > 0, func.TplSpec.Count > 0, "func" );
+			}
+
+			foreach( VarDecl var in children.OfType<VarDecl>() ) {
+				SpecAttribValues? values = ParseSpecAttrib( var, "var", "" );
+				if( values != null )
+					ValidateSpecAttribUsage( var, values,
+						var.TplParams.Count > 0, var.TplSpec.Count > 0, "var" );
+			}
 
 			ValidateSpecsInScope( children.OfType<VarDecl>().ToList(), owner, nsFqn );
 			ValidateStructSpecs( structs, owner, nsFqn );
@@ -155,11 +176,30 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 					continue;
 				}
 
+				// Bindings must be concrete or patterns (same rule as class specs).
+				if( !ClassifySpecBindings( spec, primary.TplParams, out List<TplBinding> patternBindings ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				// Pattern binding types name template parameters, which only
+				// exist inside the specialization's scope; the visitor
+				// registered them at the outer scope. They are fully handled
+				// by the pattern machinery and need no name resolution.
+				RemovePatternTypeRegistrations( patternBindings );
+
+				// The asserted shape ([spec=full] / [spec=partial]) must match
+				// the derived binding shape.
+				if( !ValidateAssertedSpecShape( spec, patternBindings ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
 				// Substitute the bound values into the declared type, then compare
 				// with the primary's substituted type. The original symbolic type was
 				// registered as unresolved at visit time; the substituted type needs
 				// no resolution of its own.
-				Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
+				Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec, patternBindings );
 
 				Typespec specType = SubstituteBindings( spec.type, boundValues );
 				Typespec primaryType = SubstituteBindings( primary.type, boundValues );
@@ -185,12 +225,13 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 				// Fill the spec info: every primary parameter in order, bound or symbolic.
 				// Unbound parameters become the specialization's own template
 				// parameters, injected into its scope so initializers can use them.
-				List<TplArg> args = BuildSpecArgs( primary.TplParams, spec.TplSpec, out bool[] bound, out List<TplParam> unboundParams );
+				List<TplArg> args = BuildSpecArgs( primary.TplParams, spec.TplSpec, out bool[] bound, out List<TplParam> unboundParams, out bool[] pattern );
 
 				spec.SpecInfo = new Decl.SpecData {
 					Primary = primary,
 					Args    = args,
 					Bound   = bound,
+					Pattern = pattern,
 				};
 				spec.type = specType;
 				spec.TplParams = unboundParams;
@@ -249,14 +290,23 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 
 		// The bound values of a specialization's bindings, keyed by parameter
 		// name; unbound placeholders are skipped.
-		private static Dictionary<string, Typespec> BoundValuesOf( List<TplBinding> tplSpec )
+private static Dictionary<string, Typespec> BoundValuesOf( List<TplBinding> tplSpec )
 		{
 			Dictionary<string, Typespec> boundValues = new( StringComparer.Ordinal );
 			foreach( TplBinding binding in tplSpec ) {
 				if( binding.type != null )
 					boundValues[ binding.name ] = binding.type;
 			}
+			return boundValues;
+		}
 
+		// Bound values without pattern bindings: a pattern position's value is
+		// the written pattern, not a concrete type, so it gets no alias.
+		private static Dictionary<string, Typespec> BoundValuesOf( List<TplBinding> tplSpec, List<TplBinding> patternBindings )
+		{
+			Dictionary<string, Typespec> boundValues = BoundValuesOf( tplSpec );
+			foreach( TplBinding pattern in patternBindings )
+				boundValues.Remove( pattern.name );
 			return boundValues;
 		}
 
@@ -303,6 +353,151 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 
 		private enum SpecAttribKind { None, Fresh, Member }
 
+		// Normalized [spec=...] values: `all`/`class` name the fresh-body kind,
+		// `some`/`member` the member-block kind, `full`/`explicit` and
+		// `partial`/`part` the binding shapes (assertable), `primary`/`prime`
+		// the primary-template marker. The list spelling `[spec=(all, full)]`
+		// combines a kind with a shape; the `|` spelling is deferred to the
+		// attr rework.
+		private sealed class SpecAttribValues
+		{
+			public SpecAttribKind Kind;
+			public bool? IsFull;      // shape: true = full, false = partial, null = not asserted
+			public bool IsPrimary;    // the primary marker
+
+			public bool HasKind  => Kind != SpecAttribKind.None;
+			public bool HasShape => IsFull != null;
+		}
+
+		private SpecAttribValues? ParseSpecAttrib( Decl decl, string kindWord, string what )
+		{
+			if( !decl.HasAttrib( "spec" ) )
+				return null;
+
+			IReadOnlyList<string> values = decl.AttribValues( "spec" );
+			SpecAttribValues parsed = new();
+			bool anyUnknown = false;
+
+			foreach( string raw in values ) {
+				string value = raw == "class" ? "all"
+					: raw == "member" ? "some"
+					: raw == "explicit" ? "full"
+					: raw == "part" ? "partial"
+					: raw == "prime" ? "primary"
+					: raw;
+
+				bool known = true;
+				if( value == "all" || value == "some" ) {
+					SpecAttribKind kind = value == "all" ? SpecAttribKind.Fresh : SpecAttribKind.Member;
+					if( parsed.HasKind ) {
+						Diagnostics.Add( new Diagnostic(
+							decl.srcPos, DiagnosticKind.Error,
+							String.Format( "The [spec=...] attribute of '{0}' names both '{1}' and '{2}'; pick one",
+								decl.name, parsed.Kind == SpecAttribKind.Fresh ? "all" : "some", value ) ) );
+						known = false;
+					}
+					else
+						parsed.Kind = kind;
+				}
+				else if( value == "full" || value == "partial" ) {
+					bool isFull = value == "full";
+					if( parsed.HasShape ) {
+						Diagnostics.Add( new Diagnostic(
+							decl.srcPos, DiagnosticKind.Error,
+							String.Format( "The [spec=...] attribute of '{0}' asserts both '{1}' and '{2}'; pick one",
+								decl.name, parsed.IsFull == true ? "full" : "partial", value ) ) );
+						known = false;
+					}
+					else
+						parsed.IsFull = isFull;
+				}
+				else if( value == "primary" ) {
+					if( parsed.HasKind || parsed.HasShape ) {
+						Diagnostics.Add( new Diagnostic(
+							decl.srcPos, DiagnosticKind.Error,
+							String.Format( "The [spec=primary] marker of '{0}' cannot combine with kind or shape values", decl.name ) ) );
+						known = false;
+					}
+					else
+						parsed.IsPrimary = true;
+				}
+				else {
+					Diagnostics.Add( new Diagnostic(
+						decl.srcPos, DiagnosticKind.Error,
+						String.Format( "Unknown [spec={0}] on '{1}'; the known values are 'all', 'some', 'full', 'partial' and 'primary' (with aliases 'class', 'member', 'explicit', 'part', 'prime')",
+							raw, decl.name ) ) );
+					known = false;
+				}
+
+				anyUnknown |= !known;
+			}
+
+			if( anyUnknown )
+				return null;
+			return parsed;
+		}
+
+		// Validates the parsed [spec=...] values against the declaration kind.
+		// Returns false when the combination is invalid (diagnostics fired).
+		private bool ValidateSpecAttribUsage( Decl decl, SpecAttribValues values, bool isTemplate, bool isSpec, string kindWord )
+		{
+			// Primary marker: only on a template primary.
+			if( values.IsPrimary ) {
+				if( isSpec ) {
+					Diagnostics.Add( new Diagnostic(
+						decl.srcPos, DiagnosticKind.Error,
+						String.Format( "The [spec=primary] marker of '{0}' marks the primary template, not a specialization", decl.name ) ) );
+					return false;
+				}
+				if( !isTemplate ) {
+					Diagnostics.Add( new Diagnostic(
+						decl.srcPos, DiagnosticKind.Error,
+						String.Format( "The [spec=primary] marker of '{0}' requires a template", decl.name ) ) );
+					return false;
+				}
+				return true;
+			}
+
+			if( isSpec ) {
+				// Specialization: func/var specs may assert their shape
+				// (funcs only full, vars also partial); class specs take kinds.
+				if( kindWord == "func" || kindWord == "var" ) {
+					if( !values.HasShape || values.HasKind ) {
+						Diagnostics.Add( new Diagnostic(
+							decl.srcPos, DiagnosticKind.Error,
+							String.Format( "The [spec=...] attribute of this {0} specialization must be '[spec=full]'{1}; the all/some kinds apply to class/struct/union specializations",
+								kindWord, kindWord == "var" ? " or '[spec=partial]'" : "" ) ) );
+						return false;
+					}
+					if( kindWord == "func" && values.IsFull == false ) {
+						Diagnostics.Add( new Diagnostic(
+							decl.srcPos, DiagnosticKind.Error,
+							"Function specializations are always full; partial (open or pattern bindings) has no function form" ) );
+						return false;
+					}
+					return true;
+				}
+
+				// Class spec: a kind is required; a bare shape must combine with one.
+				if( !values.HasKind ) {
+					Diagnostics.Add( new Diagnostic(
+						decl.srcPos, DiagnosticKind.Error,
+						String.Format( "The '{0}' specialization of '{1}' must name its kind: [spec=all]{2}",
+							kindWord == "var" ? "var" : "class", decl.name,
+							values.HasShape ? " and combine the shape: [spec(all, " + ( values.IsFull == true ? "full" : "partial" ) + ")]" : "" ) ) );
+					return false;
+				}
+				return true;
+			}
+
+			// Primary: no kind/shape values apply.
+			Diagnostics.Add( new Diagnostic(
+				decl.srcPos, DiagnosticKind.Error,
+				String.Format( "The [spec=...] values of '{0}' apply only to specializations; the primary takes [spec=primary] or nothing",
+					decl.name ) ) );
+			return false;
+		}
+
 		// Reads the [spec=...] attribute of a class/struct/union: [spec=all]
 		// declares a specialization with a fresh body, [spec=some] a member
 		// specialization block. Unknown values are rejected on every
@@ -310,33 +505,24 @@ private void ValidateScope( Myll.Core.Hierarchical hier )
 		// primary or plain class carrying it is rejected too.
 		private SpecAttribKind ReadSpecAttrib( Myll.Core.Structural s )
 		{
-			if( !s.HasAttrib( "spec" ) )
+			SpecAttribValues? values = ParseSpecAttrib( s, "class", "" );
+			if( values == null )
 				return SpecAttribKind.None;
 
-			string value = s.AttribValues( "spec" ).FirstOrDefault() ?? "";
-			SpecAttribKind kind = value == "all" ? SpecAttribKind.Fresh
-				: value == "some" ? SpecAttribKind.Member
-				: SpecAttribKind.None;
-
-			if( kind == SpecAttribKind.None ) {
-				Diagnostics.Add( new Diagnostic(
-					s.srcPos,
-					DiagnosticKind.Error,
-					String.Format( "Unknown [spec={0}] on '{1}'; use [spec=all] for a fresh body or [spec=some] for a member specialization block",
-						value, s.name ) ) );
+			if( values.IsPrimary || ( values.HasShape && !values.HasKind ) )
 				return SpecAttribKind.None;
-			}
 
-			if( s.TplSpec.Count == 0 ) {
-				Diagnostics.Add( new Diagnostic(
-					s.srcPos,
-					DiagnosticKind.Error,
-					String.Format( "The [spec={0}] attribute of '{1}' applies only to template specializations",
-						value, s.name ) ) );
-				return SpecAttribKind.None;
-			}
+			return values.Kind;
+		}
 
-			return kind;
+		// Pattern binding types are fully handled by the pattern machinery (shape
+		// checks, unification, emission read them structurally); drop their
+		// visitor-time unresolved registrations so they do not error at the
+		// outer scope where the named parameters do not exist.
+		private void RemovePatternTypeRegistrations( List<TplBinding> patternBindings )
+		{
+			foreach( TplBinding pattern in patternBindings )
+				context.UnresolvedTypes.RemoveAll( ut => ReferenceEquals( ut.Node, pattern.type ) );
 		}
 
 		private void ValidateStructSpecs( List<Myll.Core.Structural> structs, Myll.Core.Structural? owner, string? nsFqn )
@@ -404,11 +590,24 @@ foreach( Myll.Core.Structural spec in structs ) {
 					continue;
 				}
 
-				// Bindings must be concrete: a value naming one of the primary's
-				// parameters (T=U, T=T*) is a pattern specialization, which Myll
-				// does not model yet. Without this check the spec would never
-				// match any use and emit ill-formed C++.
-				if( !HasConcreteBindings( spec.TplSpec, primary.TplParams, spec.name, spec.srcPos ) ) {
+				// Bindings must be concrete or patterns: a value naming one of the
+				// primary's parameters is only legal as a pattern (T=T*), which
+				// deduces the parameter per use; anything else (T=U bare,
+				// nested, array or qualified patterns) is rejected.
+				if( !ClassifySpecBindings( spec, primary.TplParams, out List<TplBinding> patternBindings ) ) {
+					MarkInvalidSpec( spec );
+					continue;
+				}
+
+				// Pattern binding types name template parameters, which only
+				// exist inside the specialization's scope; the visitor
+				// registered them at the outer scope. They are fully handled
+				// by the pattern machinery and need no name resolution.
+				RemovePatternTypeRegistrations( patternBindings );
+
+				// The declared shape ([spec=(all, full)] / (all, partial))
+				// must match the derived binding shape.
+				if( !ValidateAssertedSpecShape( spec, patternBindings ) ) {
 					MarkInvalidSpec( spec );
 					continue;
 				}
@@ -421,13 +620,16 @@ foreach( Myll.Core.Structural spec in structs ) {
 
 				// Unbound parameters become the specialization's own template
 				// parameters, injected into its class scope like
-				// TemplateParamTransformer does for primaries.
-				List<TplArg> args = BuildSpecArgs( primary.TplParams, spec.TplSpec, out bool[] bound, out List<TplParam> unboundParams );
+				// TemplateParamTransformer does for primaries. Pattern-bound
+				// positions stay open the same way: their parameter is the
+				// deduced one.
+				List<TplArg> args = BuildSpecArgs( primary.TplParams, spec.TplSpec, out bool[] bound, out List<TplParam> unboundParams, out bool[] pattern );
 
 				spec.SpecInfo = new Decl.SpecData {
 					Primary = primary,
 					Args    = args,
 					Bound   = bound,
+					Pattern = pattern,
 				};
 				spec.TplParams = unboundParams;
 				InjectParams( spec.scope, unboundParams, spec.srcPos );
@@ -435,8 +637,9 @@ foreach( Myll.Core.Structural spec in structs ) {
 				// Bound parameter names stay usable in member signatures and
 				// bodies: field T _v; or func get() -> T inside class Box<T=int>
 				// resolves T to the bound value, and emission expands it, so the
-				// spelling concrete types stays optional.
-				InjectBoundAliases( spec.scope, new List<Param>(), spec.srcPos, BoundValuesOf( spec.TplSpec ) );
+				// spelling concrete types stays optional. Pattern positions get
+				// no alias: their parameter is the deduced one.
+				InjectBoundAliases( spec.scope, new List<Param>(), spec.srcPos, BoundValuesOf( spec.TplSpec, patternBindings ) );
 
 				// A fresh body cannot coexist with a member specialization block
 				// of the same class+arguments: the class would be both a full
@@ -1860,6 +2063,152 @@ Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 			return true;
 		}
 
+		/// <summary>
+		/// A valid pattern binding: the written type names one of the primary's
+		/// type parameters with at least one pointer/reference decoration and
+		/// no qualifiers — `T*`, `T&`, `T**`. The named parameter is deduced
+		/// per use by unification.
+		/// </summary>
+		private static bool IsPatternShape( Typespec? type, IReadOnlyList<TplParam> primaryParams, out string? paramName )
+		{
+			paramName = null;
+			if( type is not TypespecNested nested
+			 || nested.idTpls.Count != 1
+			 || nested.idTpls[0].tplArgs.Count != 0 )
+				return false;
+
+			TplParam? named = primaryParams
+				.FirstOrDefault( p => p.name == nested.idTpls[0].id && p.kind != TplParamKind.NonType );
+			if( named == null )
+				return false;
+
+			paramName = named.name;
+			return nested.qual == Qualifier.None
+			 && nested.ptrs is { Count: >= 1 }
+			 && nested.ptrs.All( p => p.kind is Pointer.Kind.RawPtr or Pointer.Kind.LVRef or Pointer.Kind.RVRef );
+		}
+
+		// Whether the type mentions any of the names symbolically at any depth
+		// (bare ids or nested template arguments): such bindings must be valid
+		// patterns, anything else is a deferred pattern form.
+		private static bool MentionsPrimaryParam( Typespec? type, HashSet<string> names )
+		{
+			if( type is not TypespecNested nested )
+				return false;
+
+			foreach( IdTplArgs segment in nested.idTpls ) {
+				if( names.Contains( segment.id ) )
+					return true;
+				if( segment.tplArgs == null )
+					continue;
+				foreach( TplArg arg in segment.tplArgs ) {
+					if( arg.typespec != null && MentionsPrimaryParam( arg.typespec, names ) )
+						return true;
+				}
+			}
+
+			return false;
+		}
+
+		/// <summary>
+		/// Classifies every binding of a class or variable specialization:
+		/// concrete values pass, valid patterns are collected into
+		/// <paramref name="patternBindings"/>, and anything naming a primary
+		/// parameter otherwise is rejected (bare self, nested, array or
+		/// qualified patterns — deferred forms). A parameter named by a pattern
+		/// must not also be concretely bound.
+		/// </summary>
+		private bool ClassifySpecBindings( Decl spec, IReadOnlyList<TplParam> primaryParams, out List<TplBinding> patternBindings )
+		{
+			patternBindings = new();
+			List<TplBinding> bindings = TplBindings( spec );
+			HashSet<string> names = new( primaryParams.Select( p => p.name ) );
+			HashSet<string> patternNamed = new( StringComparer.Ordinal );
+
+			foreach( TplBinding binding in bindings ) {
+				if( binding.type == null )
+					continue;
+
+				if( IsPatternShape( binding.type, primaryParams, out string? named ) ) {
+					patternBindings.Add( binding );
+					patternNamed.Add( named! );
+					continue;
+				}
+
+				if( MentionsPrimaryParam( binding.type, names ) ) {
+					string reason;
+					TypespecNested? n2 = binding.type as TypespecNested;
+					if( n2 != null && n2.idTpls.Count == 1 && n2.idTpls[0].tplArgs.Count == 0
+					 && ( n2.ptrs == null || n2.ptrs.Count == 0 ) )
+						reason = "a bare parameter binding matches every instantiation like the primary; make it concrete or a pattern (e.g. "
+							+ binding.name + "=" + binding.name + "*)";
+					else if( n2 != null && n2.qual != Qualifier.None )
+						reason = "qualified patterns are not supported yet";
+					else if( n2 != null && n2.ptrs != null
+					 && n2.ptrs.Any( p => p.kind != Pointer.Kind.RawPtr && p.kind != Pointer.Kind.LVRef && p.kind != Pointer.Kind.RVRef ) )
+						reason = "array patterns are not supported yet";
+					else
+						reason = "nested patterns are not supported yet";
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' has an unsupported pattern binding '{1}': {2}",
+							spec.name, binding.name + "=" + binding.type.Gen(), reason ) ) );
+					return false;
+				}
+			}
+
+			foreach( TplBinding binding in bindings ) {
+				if( patternNamed.Contains( binding.name )
+				 && ( binding.type != null || binding.lit != null )
+				 && !patternBindings.Any( p => p.name == binding.name ) ) {
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}': the parameter '{1}' cannot be concretely bound and pattern-deduced at once",
+							spec.name, binding.name ) ) );
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+		/// <summary>
+		/// The asserted shape ([spec=(all, full)] / (all, partial)) must match
+		/// the derived shape: full means every position concretely bound,
+		/// partial means any open or pattern position.
+		/// </summary>
+		private bool ValidateAssertedSpecShape( Decl spec, List<TplBinding> patternBindings )
+		{
+			SpecAttribValues? values = ParseSpecAttrib( spec, "class", "" );
+			if( values == null || !values.HasShape )
+				return true;
+
+			bool hasBare = TplBindings( spec ).Any( b => b.type == null && b.lit == null );
+			bool derivedFull = patternBindings.Count == 0 && !hasBare;
+
+			if( values.IsFull == true && !derivedFull ) {
+				Diagnostics.Add( new Diagnostic(
+					spec.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "Specialization of '{0}' declares [spec=(all, full)] but the bindings are partial",
+						spec.name ) ) );
+				return false;
+			}
+
+			if( values.IsFull == false && derivedFull ) {
+				Diagnostics.Add( new Diagnostic(
+					spec.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "Specialization of '{0}' declares [spec=(all, partial)] but every parameter is concretely bound",
+						spec.name ) ) );
+				return false;
+			}
+
+			return true;
+		}
+
 		// A bound parameter keeps its meaning inside the specialization through a
 		// hidden alias: `T` resolves to the alias, the alias resolves to the bound
 		// value, and emission expands it so no `T` reaches the generated C++.
@@ -2035,9 +2384,16 @@ Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 		// declaration order, bound values for bound positions and symbolic
 		// placeholders for unbound ones; the unbound parameters become the
 		// specialization's own template parameters.
-		private static List<TplArg> BuildSpecArgs( IReadOnlyList<TplParam> primaryParams, List<TplBinding> tplSpec, out bool[] bound, out List<TplParam> unboundParams )
+		// Builds the specialization argument list: every primary parameter in
+		// declaration order, concrete values for concrete positions, the written
+		// pattern for pattern positions, and symbolic placeholders for unbound
+		// ones; both pattern and unbound positions' parameters become the
+		// specialization's own template parameters.
+		private static List<TplArg> BuildSpecArgs( IReadOnlyList<TplParam> primaryParams, List<TplBinding> tplSpec,
+			out bool[] bound, out List<TplParam> unboundParams, out bool[] pattern )
 		{
 			bound = new bool[ primaryParams.Count ];
+			pattern = new bool[ primaryParams.Count ];
 			List<TplArg> args = new( primaryParams.Count );
 			unboundParams = new();
 
@@ -2046,7 +2402,16 @@ Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 				TplBinding? binding = tplSpec
 					.FirstOrDefault( b => b.name == param.name );
 
-				if( binding != null && ( binding.type != null || binding.lit != null ) ) {
+				if( binding != null && binding.type != null
+				 && IsPatternShape( binding.type, primaryParams, out string? named ) ) {
+					pattern[ i ] = true;
+					args.Add( new TplArg { typespec = binding.type } );
+					// The pattern-named parameter deduces; the position's own
+					// parameter only exists if named or bare elsewhere.
+					if( !unboundParams.Any( p => p.name == named ) )
+						unboundParams.Add( primaryParams.First( p => p.name == named ) );
+				}
+				else if( binding != null && ( binding.type != null || binding.lit != null ) ) {
 					bound[ i ] = true;
 					args.Add( new TplArg {
 						typespec = binding.type,
@@ -2063,6 +2428,12 @@ Dictionary<string, Typespec> boundValues = BoundValuesOf( spec.TplSpec );
 				}
 			}
 
+			return args;
+		}
+
+		private static List<TplArg> BuildSpecArgs( IReadOnlyList<TplParam> primaryParams, List<TplBinding> tplSpec, out bool[] bound, out List<TplParam> unboundParams )
+		{
+			List<TplArg> args = BuildSpecArgs( primaryParams, tplSpec, out bound, out unboundParams, out _ );
 			return args;
 		}
 

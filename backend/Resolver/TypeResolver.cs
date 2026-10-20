@@ -493,17 +493,30 @@ namespace Myll.Resolver
 				}
 			}
 
-			if( callee is BinOp binOp
+if( callee is BinOp binOp
 			 && OperatorRules.IsMemberAccess( binOp.op ) ) {
-				List<Structural> ownerChain = OwnerTemplateArgs.GetStructuralChain( func );
-				if( ownerChain.Count > 0 ) {
-					List<TplParam> ownerParams = ownerChain.SelectMany( s => s.TplParams ).ToList();
-					List<TplArg>? ownerArgs = OwnerTemplateArgs.TryExtract( binOp, ownerChain, this, result );
-					if( ownerArgs != null
-					 && OwnerTemplateArgs.AreConcrete( ownerArgs, ownerParams ) )
-						retType = TemplateInference.SubstituteTemplateParams( retType, ownerParams, ownerArgs, result );
+			Structural? enclosing = FindEnclosingStructuralOf( func );
+			if( enclosing != null
+			 && enclosing.SpecInfo != null
+			 && !enclosing.SpecInfo.MemberSpecHead ) {
+				// A member of a (partial or pattern) specialization: the
+				// receiver's arguments map concrete positions directly and
+				// unify pattern positions (the remainder deduces).
+				List<TplArg> receiverArgs = OwnerTemplateArgs.TryExtract( binOp, new List<Structural> { enclosing }, this, result )?.ToList();
+				if( receiverArgs != null ) {
+					Dictionary<string, Typespec>? values = OwnerTemplateArgs.DeriveSpecParamValues( enclosing, receiverArgs, result );
+					if( values != null )
+						retType = TemplateInference.SubstituteNamedParams( retType, values, result );
 				}
 			}
+			else if( enclosing != null && enclosing.TplParams.Count > 0 ) {
+				List<TplParam> ownerParams = enclosing.TplParams;
+				List<TplArg>? ownerArgs = OwnerTemplateArgs.TryExtract( binOp, OwnerTemplateArgs.GetStructuralChain( func ), this, result );
+				if( ownerArgs != null
+				 && OwnerTemplateArgs.AreConcrete( ownerArgs, ownerParams ) )
+					retType = TemplateInference.SubstituteTemplateParams( retType, ownerParams, ownerArgs, result );
+			}
+		}
 
 			// Expression value types never carry reference qualifiers (C++
 			// semantics): a member returning T& used in an expression is its

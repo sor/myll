@@ -536,19 +536,29 @@ namespace Myll.Resolver
 			return best;
 		}
 
-		// A specialization matches a use when every bound parameter position has
-		// the same type; unbound positions are wildcards.
+// A specialization matches a use when every bound parameter position has
+		// the same type and every pattern position (T=T*) unifies; unbound
+		// positions are wildcards.
 		private static bool MatchesBoundArgs( Decl.SpecData info, IReadOnlyList<TplArg> useArgs )
 		{
 			bool[] bound = info.Bound;
 			for( int i = 0; i < bound.Length; i++ ) {
-				if( !bound[ i ] )
+				bool isPattern = i < info.Pattern.Length && info.Pattern[ i ];
+				if( !bound[ i ] && !isPattern )
 					continue;
+
 				Typespec? argType   = i < useArgs.Count ? useArgs[ i ].typespec : null;
 				Typespec? boundType = info.Args[ i ].typespec;
-				if( argType == null || boundType == null
-				 || argType.Gen() != boundType.Gen() )
+				if( argType == null || boundType == null )
 					return false;
+
+				if( isPattern ) {
+					if( !TemplateInference.TryUnifyPattern( boundType, argType ) )
+						return false;
+				}
+				else if( argType.Gen() != boundType.Gen() ) {
+					return false;
+				}
 			}
 
 			return true;
@@ -914,7 +924,10 @@ if( decl is Structural st ) {
 			}
 
 			for( int i = 0; i < info.Bound.Length; i++ ) {
-				if( info.Bound[ i ] && i < primaryParams.Count )
+				// Pattern positions (T=T*) are part of the signature as much as
+				// concrete ones; only truly open positions are omitted.
+				bool isPatternPosition = i < info.Pattern.Length && info.Pattern[ i ];
+				if( ( info.Bound[i] || isPatternPosition ) && i < primaryParams.Count )
 					parts.Add( primaryParams[ i ].name + "=" + info.Args[ i ].Gen() );
 			}
 
@@ -3017,7 +3030,7 @@ else if( call.expr is ScopedExpr calleeScoped && result.Scopeds.TryGetValue( cal
 		// ------------------------------------------------------------------------
 
 		/// <summary>
-private (List<TplParam> ownerParams, List<TplArg> ownerArgs) GetOwnerTemplateInfo(
+		private (List<TplParam> ownerParams, List<TplArg> ownerArgs) GetOwnerTemplateInfo(
 			Decl candidate,
 			Expr callee )
 		{

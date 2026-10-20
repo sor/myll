@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Myll.Core;
@@ -210,6 +211,55 @@ namespace Myll.Resolver
 		{
 			HashSet<string> ownerNames = new( ownerParams.Select( p => p.name ) );
 			return args.All( a => a.typespec != null && !ContainsTemplateParameterName( a.typespec, ownerNames ) );
+		}
+
+		/// <summary>
+		/// Derives the enclosing class's parameter values for a member of a
+		/// (partial or pattern) specialization: concrete positions map the use
+		/// argument directly, pattern positions unify the written pattern with
+		/// the use argument (the remainder deduces the parameter), open
+		/// positions map the use argument. Returns null when a pattern fails
+		/// to unify.
+		/// </summary>
+		public static Dictionary<string, Typespec>? DeriveSpecParamValues(
+			Structural           enclosing,
+			List<TplArg>         ownerArgs,
+			ResolutionResult     result )
+		{
+			Decl.SpecData info = enclosing.SpecInfo!;
+			List<TplParam> primaryParams = ( (ITemplatedDecl)info.Primary ).TplParams;
+
+			if( ownerArgs.Count < info.Bound.Length )
+				return null;
+
+			Dictionary<string, Typespec> values = new( StringComparer.Ordinal );
+			for( int i = 0; i < info.Bound.Length; i++ ) {
+				Typespec? argType = ownerArgs[ i ].typespec;
+				if( argType == null )
+					continue;
+
+				bool isPattern = i < info.Pattern.Length && info.Pattern[ i ];
+				if( isPattern ) {
+					Typespec pattern = info.Args[ i ].typespec!;
+					if( pattern is not TypespecNested pn || pn.ptrs == null
+					 || argType.ptrs == null || argType.ptrs.Count != pn.ptrs.Count )
+						return null;
+
+					for( int d = 0; d < pn.ptrs.Count; d++ ) {
+						if( pn.ptrs[ d ].kind != argType.ptrs[ d ].kind )
+							return null;
+					}
+
+					Typespec deduced = argType.Clone();
+					deduced.ptrs = null;
+					values[ primaryParams[ i ].name ] = deduced;
+				}
+				else {
+					values[ primaryParams[ i ].name ] = argType;
+				}
+			}
+
+			return values;
 		}
 
 		private static bool ContainsTemplateParameterName( Typespec type, HashSet<string> names )

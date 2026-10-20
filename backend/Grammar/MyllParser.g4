@@ -279,7 +279,7 @@ wildId		:	AUTOINDEX | USCORE;
 // but it is not a general-purpose identifier.
 id			:	ID;
 typeId		:	ID | STRING;
-idOrLit		:	id | lit;
+idOrLit		:	id | lit | CLASS;
 
 // +++ handled
 specialType	:	v=( AUTO | VOID | BOOL );
