@@ -352,6 +352,35 @@ Full design and implementation record: `plan/member-spec-block.md`. Summary:
   `std::println`) and `std::numeric_limits<T=ByteCount>` via `[spec=some]`
   (`std/std_limits.decl.myll`).
 
+## Pattern specializations `<T=T*>` (2026-10-16)
+
+Full design and implementation record: `plan/pattern-specialization.md`.
+Summary:
+
+- `<T=T*>` bindings under `[spec=all]` mark a pattern position: the written
+  pattern deduces the named parameter per use by unification (decorations
+  must match exactly), the parameter stays open (the spec's own template
+  parameter, injected into its scope), and cross-parameter patterns
+  (`Pair<T, U=T*>` → `template<typename T> class Pair<T, T*>`) dedupe the
+  named parameter. Function specs keep full-only (C++ has no partial
+  function specializations); variable templates get pattern specializations.
+- The `[spec=…]` attribute became a two-axis vocabulary: the kind axis
+  (`all`/`class`, `some`/`member`, `primary`/`prime`) and the shape axis
+  (`full`/`explicit`, `partial`/`part`), derived from the bindings and
+  assertable via the value list (`[spec(all, full)]`). Funcs and vars consume
+  the attribute now (`[spec=full]` on func specs, `[spec=partial]` on var
+  specs, `[spec=primary]` on any templated primary); unknown values are
+  rejected on consuming kinds (typo protection) and ignored elsewhere. The
+  `CLASS` keyword became a legal attribute value.
+- Ranking: full specs win, then most-concrete-bound, then pattern specs;
+  ties are ambiguity errors (partial ordering deferred — the same
+  bidirectional unification CTAD needs). Cross-module pattern specs ride
+  the existing visibility index; the ODR signature includes pattern
+  positions.
+- Pattern shape v1: pointer/reference decorations only; bare self (`T=T`),
+  nested (`T=Box<T>`), array, and qualified patterns are rejected as deferred
+  forms.
+
 ## Deferred inventory
 
 - Use-site named template arguments (`Arr<T=int, N=3>`): deferred — Myll has

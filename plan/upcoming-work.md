@@ -31,6 +31,15 @@ specialization series through phase F is complete (see `plan/template-specializa
 3. **Deep nesting**: specializations of nested classes inside nested classes
    (rejected today with a clean error). Needs argument lists for every
    enclosing level in emission.
+   ~~Pattern specializations~~ — **done 2026-10-16**
+   (`plan/pattern-specialization.md`): `<T=T*>` bindings under `[spec=all]`
+   with unification matching, the two-axis `[spec=…]` vocabulary
+   (kind/shape/primary with aliases), func/var consumption of the attribute,
+   var-template pattern specs, and cross-module support. Deferred: partial
+   ordering among patterns (CTAD's unification engine), nested/array/
+   qualified/non-type/pack patterns, pattern specs in `.decl.myll`
+   prototypes, the `|` value spelling (attr rework), cross-position
+   deduction consistency.
 4. **Non-type substitution inside declared types**: a variable specialization
    whose declared type references a bound non-type parameter (array sizes).
    Class specializations are unaffected (no declared type).
