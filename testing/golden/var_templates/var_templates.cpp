@@ -66,6 +66,9 @@ int main()
     if( sizeOf<int> != 0 ) {
         return 19;
     }
+    if( answer2<int> != 41 ) {
+        return 22;
+    }
     if( sizeOf<int*> != 8 ) {
         return 20;
     }

@@ -167,6 +167,14 @@ int spec::run3()
 }
 int spec::run2()
 {
+    spec::Dflt<int> d{};
+    d._v = 7;
+    if( d.read() != 7 ) {
+        return 0;
+    }
+    if( spec::FixedBox<int>().size() != 3 ) {
+        return 11;
+    }
     spec::Num n( 2 );
     if( n.Get<int>( 40 ) != 42 ) {
         return 1;
@@ -236,6 +244,9 @@ int main()
     }
     if( spec::run() != 0 ) {
         return 5;
+    }
+    if( spec::run2() != 0 ) {
+        return 6;
     }
     if( spec::run2() != 0 ) {
         return 6;

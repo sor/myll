@@ -25,5 +25,5 @@ func Kind() -> int // FAIL: Name 'Test::Kind' is used for both a function and a 
 	return 4;
 }
 namespace Test {
-	const T val<T=int> = 2; // FAIL: No matching variable template 'val' in this module
+	[spec] const T val<T=int> = 2; // FAIL: No matching variable template 'val' in this module
 }

@@ -536,7 +536,7 @@ namespace Myll.Generator
 				target.Add( Format(
 					"{0}template <{1}>",
 					indent,
-					GenTemplateParameterList( obj.TplParams ) ) );
+					GenTemplateParameterListBare( obj.TplParams ) ) );
 			}
 
 			target.Add( Format(
@@ -547,14 +547,34 @@ namespace Myll.Generator
 		}
 
 		private string GenTemplateParameter( TplParam p )
-			=> p.kind == TplParamKind.NonType && p.type != null
-				? p.type.Gen( p.name )
+		{
+			if( p.kind == TplParamKind.NonType && p.type != null ) {
+				// non-type defaults: int N = 5
+				return p.defaultArg?.lit != null
+					? Format( "{0} = {1}", p.type.Gen( p.name ), p.defaultArg.lit.Gen() )
+					: p.type.Gen( p.name );
+			}
+
+			// type defaults: typename T = int
+			return p.defaultArg != null && p.defaultArg.typespec != null
+				? Format( "{0} {1} = {2}", TemplateTypeParameterKeyword, p.name, p.defaultArg.typespec.Gen() )
 				: p.isPack
 				? Format( "{0}... {1}", TemplateTypeParameterKeyword, p.name )
 				: Format( "{0} {1}", TemplateTypeParameterKeyword, p.name );
+		}
 
 		private string GenTemplateParameterList( IReadOnlyList<TplParam> parameters )
 			=> parameters.Select( GenTemplateParameter ).Join( ", " );
+
+		// Forward declarations spell their parameters bare (defaults live on the
+		// definition: C++ rejects redefining a default across declarations).
+		private string GenTemplateParameterListBare( IReadOnlyList<TplParam> parameters )
+			=> parameters.Select( p => p.kind == TplParamKind.NonType && p.type != null
+					? p.type.Gen( p.name )
+					: p.isPack
+						? Format( "{0}... {1}", TemplateTypeParameterKeyword, p.name )
+						: Format( "{0} {1}", TemplateTypeParameterKeyword, p.name ) )
+				.Join( ", " );
 
 		// Those need to be kept in adding order
 		/// <summary>
@@ -1472,8 +1492,16 @@ bool isInsideStruct   = obj.IsInStruct;
 					indent,
 					GenTemplateParameterList( hierWithTpl.TplParams ) );
 
-				if( !isStructSpec )
-					targetProto.Add( tpl );
+				// C++ rejects redefining a default argument across
+				// declarations: the proto line spells bare names, the
+				// definition carries the defaults.
+				if( !isStructSpec ) {
+					string tplProto = Format(
+						"{0}template <{1}>",
+						indent,
+						GenTemplateParameterListBare( hierWithTpl.TplParams ) );
+					targetProto.Add( tplProto );
+				}
 				targetDecl.Add( tpl );
 			}
 
@@ -1797,10 +1825,12 @@ bool isInsideStruct   = obj.IsInStruct;
 
 			int mark = target.Count;
 			if( structural.TplParams.Count >= 1 ) {
+				// C++ rejects redefining a default across declarations; the
+				// definition carries it, the forward spells bare names.
 				target.Add( Format(
 					"{0}template <{1}>",
 					indent,
-					GenTemplateParameterList( structural.TplParams ) ) );
+					GenTemplateParameterListBare( structural.TplParams ) ) );
 			}
 
 			target.Add( Format( "{0}{1} {2};", indent, keyword, structural.name ) );

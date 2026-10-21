@@ -8,5 +8,6 @@ func main() -> int
 	if( static_member::run() != 0 ) return 4;
 	if( spec::run() != 0 )          return 5;
 	if( spec::run2() != 0 )         return 6;
+	if( spec::run2() != 0 )         return 6;
 	return 0;
 }

@@ -6,30 +6,33 @@ const T * ptrValue<T> = null;
 // specializations: full (all parameters bound) and partial (subset bound, in
 // primary parameter order)
 const T pi<T> = (T)3.1415;
-const T pi<T=int> = 3;
-const T pi<T=f32> = (f32)3.5;
+[spec] const T pi<T=int> = 3;
+[spec] const T pi<T=f32> = (f32)3.5;
 
 // partial specializations: full form (name every parameter) ...
 const T q<T, U> = (T)7;
-const T q<T, U=int> = (T)70;
-const T q<T, U=f32> = (T)71;
+[spec] const T q<T, U=int> = (T)70;
+[spec] const T q<T, U=f32> = (T)71;
 
 // ... and the subset form (name only the bound ones), same semantics
 const T z<T, U> = (T)17;
-const T z<U=int> = (T)170;
-const T z<U=f32> = (T)171;
+[spec] const T z<U=int> = (T)170;
+[spec] const T z<U=f32> = (T)171;
 
 // bound parameter names stay usable in the initializer: the (T) below names
 // the bound parameter, which the alias expands to int
 const T rtv<T> = (T)0;
-const T rtv<T=int> = (T)21;
+[spec] const T rtv<T=int> = (T)21;
 
 // runtime variable templates specialize as inline variables; constexpr is
 // const-only and the extern-declaration split does not exist for them
 var T rt<T> = (T)0;
-var T rt<T=int> = 5;
+[spec] var T rt<T=int> = 5;
 var T rtq<T, U> = (T)7;
-var T rtq<T, U=int> = (T)70;
+[spec] var T rtq<T, U=int> = (T)70;
+
+// defaulted primary: bare uses and omitted trailing args fill
+const T answer2<T=int> = 41;
 
 // pattern specialization: pointer instantiations deduce T
 const T sizeOf<T> = (T)0;
@@ -101,6 +104,8 @@ func main() -> int {
 
 	if( sizeOf<int> != 0 )
 		return 19;
+	if( answer2 != 41 )
+		return 22;
 	if( sizeOf<int*> != 8 )
 		return 20;
 	if( sizeOf2<f32> < 3.9 )

@@ -139,9 +139,16 @@ namespace Myll.Resolver
 			bool hasPack = parameters!.Any( p => p.isPack );
 			int  fixedCount = hasPack ? expected - 1 : expected;
 
+			// Trailing defaulted parameters may be omitted at the use; the
+			// fill (FillOmittedDefaultArgs) supplies them.
+			bool canOmit = !hasPack && actual < expected && CanFillOmitted( parameters, actual );
+
 			if( ( hasPack && actual < fixedCount )
-			 || ( !hasPack && actual != expected ) )
+			 || ( !hasPack && actual != expected && !canOmit ) )
 				return new TemplateArgValidation( true, TemplateArgMismatchKind.Arity, null, null, null, null );
+
+			if( !hasPack && canOmit )
+				return new TemplateArgValidation();
 
 			for( int i = 0; i < parameters.Count; i++ ) {
 				TplParam param = parameters[i];
@@ -269,6 +276,50 @@ namespace Myll.Resolver
 			IReadOnlyList<TplArg>? explicitArgs )
 			=> ValidateTemplateArgs( candidate, explicitArgs ).IsMismatch;
 
+		// Whether every parameter after the provided count carries a default
+		// (the trailing-defaults rule makes them a suffix).
+		private static bool CanFillOmitted( List<TplParam> parameters, int providedCount )
+		{
+			for( int i = providedCount; i < parameters.Count; i++ )
+				if( parameters[i].defaultArg == null )
+					return false;
+
+			return true;
+		}
+
+		/// <summary>
+		/// Builds the full argument list for a use that omits trailing
+		/// defaulted parameters: the provided arguments plus the defaults,
+		/// substituted with them (`vector&lt;T, Alloc=std::allocator&lt;T&gt;&gt;`
+		/// with `vector&lt;f32&gt;` fills `std::allocator&lt;f32&gt;`). Returns null when
+		/// the omission is not legal (over count or a missing default).
+		/// </summary>
+		public static List<TplArg>? FillOmittedDefaultArgs( Decl primary, IReadOnlyList<TplArg> provided, ResolutionResult result )
+		{
+			List<TplParam> parameters = ((ITemplatedDecl)PrimaryOf( primary )).TplParams;
+			if( provided.Count > parameters.Count )
+				return null;
+
+			List<TplArg> full = new( parameters.Count );
+			full.AddRange( provided );
+
+			for( int i = provided.Count; i < parameters.Count; i++ ) {
+				TplParam param = parameters[i];
+				if( param.defaultArg == null )
+					return null;
+
+				if( param.defaultArg.typespec != null ) {
+					Typespec substituted = SubstituteTemplateParams(
+						param.defaultArg.typespec, parameters, full, result );
+					full.Add( new TplArg { typespec = substituted } );
+				}
+				else
+					full.Add( new TplArg { lit = param.defaultArg.lit } );
+			}
+
+			return full;
+		}
+
 		/// <summary>
 		/// Tries to deduce the candidate's own template arguments after first substituting any
 		/// concrete enclosing (owner-class) template arguments into the parameter types. This
@@ -313,8 +364,9 @@ namespace Myll.Resolver
 				return true;
 
 			// Non-type parameters can not be deduced from call arguments; they must be
-			// supplied explicitly. Reject mixed parameter lists immediately.
-			if( tplParams.Any( p => p.kind == TplParamKind.NonType ) )
+			// supplied explicitly or defaulted. Reject parameter lists with a
+			// default-less non-type parameter immediately.
+			if( tplParams.Any( p => p.kind == TplParamKind.NonType && p.defaultArg == null ) )
 				return false;
 
 			// A pack parameter (`<T...>`) absorbs the remaining call arguments;
@@ -358,8 +410,13 @@ namespace Myll.Resolver
 					return false;
 			}
 
-			if( bindings.Count != tplParams.Count - ( packIndex >= 0 ? 1 : 0 ) )
-				return false;
+			if( bindings.Count != tplParams.Count - ( packIndex >= 0 ? 1 : 0 ) ) {
+				// Unbound parameters with defaults fill after deduction (C++
+				// semantics: a parameter deduction leaves untouched takes its
+				// default); the substituted binding flows into the fill.
+				if( !FillUnboundDefaults( bindings, tplParams, result ) )
+					return false;
+			}
 
 			deduced = tplParams
 				.Select( p => p.isPack
@@ -371,6 +428,29 @@ namespace Myll.Resolver
 					: new TplArg { typespec = NormalizeDeducedType( bindings[p.name] ).Clone( true ) } )
 				.ToList();
 			return true;
+		}
+
+		// After deduction, unbound parameters take their default (with the
+		// bound names substituted into it); a parameter without a default
+		// stays unbound and the deduction fails.
+		private static bool FillUnboundDefaults( Dictionary<string, Typespec> bindings, List<TplParam> tplParams, ResolutionResult result )
+		{
+			List<TplArg> boundArgs = tplParams.Select( p =>
+				bindings.TryGetValue( p.name, out Typespec? bound )
+					? new TplArg { typespec = bound }
+					: new TplArg() ).ToList();
+
+			foreach( TplParam param in tplParams ) {
+				if( bindings.ContainsKey( param.name ) || param.isPack )
+					continue;
+				if( param.defaultArg == null || param.defaultArg.typespec == null )
+					return false;
+
+				bindings[param.name] = SubstituteTemplateParams(
+					param.defaultArg.typespec, tplParams, boundArgs, result );
+			}
+
+			return bindings.Count == tplParams.Count;
 		}
 
 		public static void ApplyTemplateArgs( Expr callee, List<TplArg> args )

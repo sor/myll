@@ -7,11 +7,11 @@ namespace spec {
 // parameter names stay usable in the signature and the body.
 func half<T>( T a ) -> T => a;
 
-func half<T=int>( T a ) -> T => a * 2;
+[spec] func half<T=int>( T a ) -> T => a * 2;
 
 func combine<T, U>( T a, U b ) -> T => a;
 
-func combine<T=int, U=f32>( int a, f32 b ) -> int => a * 100 + (int)b; // spelling the bound values out works too
+[spec] func combine<T=int, U=f32>( int a, f32 b ) -> int => a * 100 + (int)b; // spelling the bound values out works too
 
 func run() -> int
 {

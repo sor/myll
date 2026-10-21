@@ -2,4 +2,4 @@ module spec_b;
 
 import nums;
 
-const T pi<T=int> = 4; // FAIL: Duplicate specialization of 'pi' for T=int
+[spec] const T pi<T=int> = 4; // FAIL: Duplicate specialization of 'pi' for T=int

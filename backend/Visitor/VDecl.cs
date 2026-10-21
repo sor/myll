@@ -1278,11 +1278,23 @@ namespace Myll
 				return new();
 
 			return c.tplSpecEntry()
-				.Select( e => new TplBinding {
-					name = ( e.tplBind() != null ? e.tplBind().id() : e.id() ).Visit(),
-					// null type marks an unbound placeholder (the "name everything" form)
-					type = e.tplBind() != null && e.tplBind().typespec() != null ? VisitTypespec( e.tplBind().typespec() ) : null,
-					lit  = e.tplBind() != null && e.tplBind().expr() != null ? e.tplBind().expr().Visit( Context ) : null,
+				.Select( e => {
+					if( e.tplBind() is TypeTplBindContext typeBind )
+						// null type marks an unbound placeholder (the "name everything" form)
+						return new TplBinding {
+							name = typeBind.id().Visit(),
+							type = typeBind.typespec() != null ? VisitTypespec( typeBind.typespec() ) : null,
+							lit  = typeBind.expr() != null ? typeBind.expr().Visit( Context ) : null,
+						};
+
+					if( e.tplBind() is NonTypeTplBindContext nonTypeBind )
+						return new TplBinding {
+							name         = nonTypeBind.id().Visit(),
+							declaredType = VisitTypespec( nonTypeBind.typespec() ),
+							lit          = nonTypeBind.expr().Visit( Context ),
+						};
+
+					return new TplBinding { name = e.id().Visit() };
 				} )
 				.ToList();
 		}

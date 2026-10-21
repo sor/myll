@@ -29,6 +29,8 @@ template <typename T> inline constexpr T z<T, float> = static_cast<T>( 171 );
 template <typename T>
 inline constexpr T rtv = static_cast<T>( 0 );
 template<> inline constexpr int rtv<int> = static_cast<int>( 21 );
+template <typename T = int>
+inline constexpr T answer2 = 41;
 template <typename T>
 inline constexpr T sizeOf = static_cast<T>( 0 );
 template <typename T> inline constexpr T sizeOf<T*> = static_cast<T>( 8 );

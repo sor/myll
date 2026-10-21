@@ -66,6 +66,24 @@ union Choice<T>
 	}
 }
 
+// Defaulted primary: bare uses fill the defaults
+[spec=primary] class Dflt<U=int>
+{
+[pub]:
+	field U _v;
+	[default] ctor();
+	func read() -> U => _v;
+}
+
+// Non-type defaulted primary
+class FixedBox<T, int N=3>
+{
+[pub]:
+	field int _n;
+	ctor() { _n = N; }
+	func size() -> int => N;
+}
+
 // Pattern specialization: the binding names a parameter with pointer
 // decorations, the parameter stays open and deduces per use
 [spec=primary] class PtrBox<T>
@@ -170,7 +188,7 @@ class Num {
 [pub]:
 	ctor( int v ) { _v = v; }
 	func Get<T>( T t ) -> T => t;
-	func Get<T=int>( T t ) -> T => t + _v;
+	[spec] func Get<T=int>( T t ) -> T => t + _v;
 }
 
 // Constructor templates compose inside class specializations: the class spec
@@ -211,11 +229,11 @@ class Store<T> {
 [pub]:
 	ctor( T v ) { _v = v; }
 	func Val( T t ) -> T => t;
-	func Val<T=int>( T t ) -> T => t + _v;
+	[spec] func Val<T=int>( T t ) -> T => t + _v;
 
 	func Load<U>( U u ) -> U => u;
-	func Load<T=int>( U u ) -> U => u + 1;
-	func Load<T=int, U=int>( U u ) -> U => u + 3;
+	[spec] func Load<T=int>( U u ) -> U => u + 1;
+	[spec] func Load<T=int, U=int>( U u ) -> U => u + 3;
 }
 
 class OpBox<T> {
@@ -225,7 +243,7 @@ class OpBox<T> {
 [pub]:
 	ctor( T v ) { _v = v; }
 	operator +( OpBox other ) -> OpBox => OpBox( other._v + _v );
-	operator +<T=int>( OpBox other ) -> OpBox => OpBox( other._v + _v + 100 );
+	[spec] operator +<T=int>( OpBox other ) -> OpBox => OpBox( other._v + _v + 100 );
 }
 
 // Member variable specializations bind class parameters first (like methods),
@@ -254,10 +272,10 @@ class Wrap<T> {
 	field T _v;
 
 	ctor( T v ) { _v = v; }
-	ctor<T=int>( T v ) { _v = v + 100; }
+	[spec] ctor<T=int>( T v ) { _v = v + 100; }
 
 	ctor<U>( U u, T t ) { _v = t; }
-	ctor<T=f32, U=i32>( i32 u, f32 t ) { _v = t + 1.5; }
+	[spec] ctor<T=f32, U=i32>( i32 u, f32 t ) { _v = t + 1.5; }
 }
 
 func run4() -> int
@@ -312,6 +330,14 @@ func run3() -> int
 
 func run2() -> int
 {
+	// defaulted primaries: bare use fills U=int; N fills too
+	var Dflt d;
+	d._v = 7;
+	if( d.read() != 7 )
+		return 0;
+	if( FixedBox<int>().size() != 3 )
+		return 11;
+
 	var Num n( 2 );
 	if( n.Get( 40 ) != 42 ) // spec via deduction
 		return 1;

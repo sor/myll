@@ -71,7 +71,8 @@ namespace Myll.Transform
 				SpecAttribValues? values = ParseSpecAttrib( childStruct, "class", "" );
 				if( values != null )
 					ValidateSpecAttribUsage( childStruct, values,
-						childStruct.TplParams.Count > 0, childStruct.TplSpec.Count > 0, "class" );
+						childStruct.TplParams.Count > 0 || childStruct.TplSpec.Count > 0,
+						childStruct.TplSpec.Count > 0 && !values.IsPrimary, "class" );
 			}
 
 			foreach( Func func in children.OfType<Func>() ) {
@@ -80,14 +81,24 @@ namespace Myll.Transform
 				SpecAttribValues? values = ParseSpecAttrib( func, "func", "" );
 				if( values != null )
 					ValidateSpecAttribUsage( func, values,
-						func.TplParams.Count > 0, func.TplSpec.Count > 0, "func" );
+						func.TplParams.Count > 0 || func.TplSpec.Count > 0,
+						func.TplSpec.Count > 0 && !values.IsPrimary, "func" );
 			}
 
 			foreach( VarDecl var in children.OfType<VarDecl>() ) {
 				SpecAttribValues? values = ParseSpecAttrib( var, "var", "" );
 				if( values != null )
 					ValidateSpecAttribUsage( var, values,
-						var.TplParams.Count > 0, var.TplSpec.Count > 0, "var" );
+						var.TplParams.Count > 0 || var.TplSpec.Count > 0,
+						var.TplSpec.Count > 0 && !values.IsPrimary, "var" );
+			}
+
+			foreach( Structor ctor in children.OfType<Structor>() ) {
+				SpecAttribValues? values = ParseSpecAttrib( ctor, "ctor", "" );
+				if( values != null )
+					ValidateSpecAttribUsage( ctor, values,
+						ctor.TplParams.Count > 0 || ctor.TplSpec.Count > 0,
+						ctor.TplSpec.Count > 0 && !values.IsPrimary, "ctor" );
 			}
 
 			ValidateSpecsInScope( children.OfType<VarDecl>().ToList(), owner, nsFqn );
@@ -101,12 +112,25 @@ namespace Myll.Transform
 					continue;
 				// C++ has no spelling for specializing an alias template; the
 				// C++ way is to specialize the underlying template instead.
-				Diagnostics.Add( new Diagnostic(
-					alias.srcPos,
-					DiagnosticKind.Error,
-					String.Format( "Alias templates cannot be specialized; specialize the underlying template instead ('{0}')",
-						alias.name ) ) );
-				alias.SpecInfo = new Decl.SpecData { Primary = alias };
+				if( alias.HasAttrib( "spec" ) ) {
+					Diagnostics.Add( new Diagnostic(
+						alias.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Alias templates cannot be specialized; specialize the underlying template instead ('{0}')",
+							alias.name ) ) );
+					alias.SpecInfo = new Decl.SpecData { Primary = alias };
+					continue;
+				}
+
+				// Bare bindings declare the alias primary with defaults.
+				List<TplParam>? parameters = ConvertBindingsToParams( alias, alias.TplSpec );
+				if( parameters == null )
+					continue;
+
+				alias.TplParams.Clear();
+				alias.TplParams.AddRange( parameters );
+				alias.TplSpec.Clear();
+				InjectParams( alias.aliasScope, parameters, alias.srcPos );
 			}
 
 			foreach( Decl child in children.OfType<Myll.Core.Hierarchical>() )
@@ -151,6 +175,27 @@ namespace Myll.Transform
 			foreach( VarDecl spec in vars ) {
 				if( spec.TplSpec.Count == 0 )
 					continue;
+
+				// Bare bindings declare a primary with defaults; [spec] marks
+				// the specialization.
+				if( DeclaresDefaultedPrimary( spec ) ) {
+					bool primaryExists = vars.Any( v =>
+						v != spec && v.name == spec.name && v.SpecInfo == null && v.TplParams.Count > 0 );
+					if( !primaryExists && nsFqn != null )
+						primaryExists = FindImportedPrimary( spec.name, nsFqn, IsVarPrimary ) != null;
+
+					if( !ConvertBareBindings( spec, primaryExists, "variable" ) )
+						continue;
+
+					List<TplParam>? parameters = ConvertBindingsToParams( spec, spec.TplSpec );
+					if( parameters == null )
+						continue;
+
+					spec.TplParams = parameters;
+					spec.TplSpec.Clear();
+					InjectParams( spec.varScope, parameters, spec.srcPos );
+					continue;
+				}
 
 				(VarDecl? primary, bool isImported) = FindPrimary( vars, spec,
 					v => v.name == spec.name && v.SpecInfo == null && v.TplParams.Count > 0,
@@ -459,20 +504,25 @@ namespace Myll.Transform
 			}
 
 			if( isSpec ) {
-				// Specialization: func/var specs may assert their shape
-				// (funcs only full, vars also partial); class specs take kinds.
-				if( kindWord == "func" || kindWord == "var" ) {
-					if( !values.HasShape || values.HasKind ) {
+				// Specialization: funcs/vars/ctors take a bare [spec] (the
+				// shape derives from the bindings — funcs are always full);
+				// explicit shape spellings are assertions checked later; the
+				// all/some kinds apply only to class/struct/union specs.
+				if( kindWord is "func" or "var" or "ctor" ) {
+					if( values.HasKind ) {
 						Diagnostics.Add( new Diagnostic(
 							decl.srcPos, DiagnosticKind.Error,
-							String.Format( "The [spec=...] attribute of this {0} specialization must be '[spec=full]'{1}; the all/some kinds apply to class/struct/union specializations",
-								kindWord, kindWord == "var" ? " or '[spec=partial]'" : "" ) ) );
+							String.Format( "The [spec=...] attribute of this {0} specialization takes '[spec]' or a shape ('[spec=full]'{1}); the all/some kinds apply to class/struct/union specializations",
+								kindWord == "func" ? "function" : kindWord == "var" ? "variable" : "constructor",
+								kindWord == "var" ? " or '[spec=partial]'" : "" ) ) );
 						return false;
 					}
-					if( kindWord == "func" && values.IsFull == false ) {
+					if( values.IsFull == false && kindWord != "var" ) {
 						Diagnostics.Add( new Diagnostic(
 							decl.srcPos, DiagnosticKind.Error,
-							"Function specializations are always full; partial (open or pattern bindings) has no function form" ) );
+							kindWord == "ctor"
+								? "Constructor specializations are always full; partial (open or pattern bindings) has no constructor form"
+								: "Function specializations are always full; partial (open or pattern bindings) has no function form" ) );
 						return false;
 					}
 					return true;
@@ -525,6 +575,107 @@ namespace Myll.Transform
 				context.UnresolvedTypes.RemoveAll( ut => ReferenceEquals( ut.Node, pattern.type ) );
 		}
 
+		/// <summary>
+		/// Converts bare bindings into the declared primary's parameters with
+		/// defaults (`class Box<T=int>`, `const T pi<T=int>`,
+		/// `func f<T=int>`, `alias A<T=int>`): bare entries are plain
+		/// parameters, bound values are defaults. Follows C++'s trailing
+		/// rule — once a parameter is defaulted, every following one needs a
+		/// default. Returns null and fires a diagnostic when a binding cannot
+		/// express a parameter.
+		/// </summary>
+		private List<TplParam>? ConvertBindingsToParams( Decl decl, List<TplBinding> bindings )
+		{
+			List<TplParam> parameters = new( bindings.Count );
+			bool seenDefault = false;
+
+			foreach( TplBinding binding in bindings ) {
+				TplParam param = new() { name = binding.name };
+
+				if( binding.declaredType != null ) {
+					param.kind = TplParamKind.NonType;
+					param.type = binding.declaredType;
+					param.defaultArg = new TplArg { lit = binding.lit };
+				}
+				else if( binding.type != null ) {
+					param.defaultArg = new TplArg { typespec = binding.type };
+				}
+				else if( binding.lit != null ) {
+					Diagnostics.Add( new Diagnostic(
+						decl.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "The default of '{0}' on '{1}' needs its parameter's declared type (e.g. int {0}=5)",
+							binding.name, decl.name ) ) );
+					return null;
+				}
+
+				if( param.defaultArg != null )
+					seenDefault = true;
+				else if( seenDefault ) {
+					Diagnostics.Add( new Diagnostic(
+						decl.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Parameter '{0}' of '{1}' needs a default: template parameter defaults must be trailing",
+							binding.name, decl.name ) ) );
+					return null;
+				}
+
+				parameters.Add( param );
+			}
+
+			return parameters;
+		}
+
+		// Bare bindings (no attribute) and the [spec=primary] marker on bindings
+		// both declare the primary with defaults; specs carry kind/shape values.
+		private static bool DeclaresDefaultedPrimary( Decl spec )
+		{
+			if( !spec.HasAttrib( "spec" ) )
+				return true;
+
+			IReadOnlyList<string> values = spec.AttribValues( "spec" );
+			return values.Count > 0 && values.All( v => v == "primary" || v == "prime" );
+		}
+
+		// The shared tail of every bare-bindings conversion: the error (with
+		// the [spec] hint) when a same-name template is already visible, or
+		// the parameter conversion otherwise.
+		private bool ConvertBareBindings( Decl decl, bool primaryExists, string kindWord )
+		{
+			if( primaryExists ) {
+				Diagnostics.Add( new Diagnostic(
+					decl.srcPos,
+					DiagnosticKind.Error,
+					String.Format( "A {1} template '{0}' is already declared; bare bindings declare a new primary with defaults — did you mean a [spec=...] specialization?",
+						decl.name, kindWord ) ) );
+				MarkInvalidSpec( decl );
+				return false;
+			}
+
+			return ConvertBindingsToParams( decl, TplBindings( decl ) ) != null;
+		}
+
+		// Converts a bare-bindings function declaration (module funcs and
+		// class methods): no same-name template primary anywhere visible →
+		// the declaration is a new primary with defaults; a visible
+		// same-name primary → error with the [spec] hint (the
+		// forgotten-attribute case; bare-bindings overloads of an existing
+		// template are rejected v1).
+		private void ConvertBareBindingsFunc( Func spec, List<Func> funcs, string? nsFqn )
+		{
+			bool primaryExists = funcs.Any( f =>
+				f != spec && f.name == spec.name && f.SpecInfo == null && f.TplParams.Count > 0 );
+			if( !primaryExists && nsFqn != null )
+				primaryExists = FindImportedPrimary( spec.name, nsFqn, IsFuncPrimary ) != null;
+
+			if( !ConvertBareBindings( spec, primaryExists, "function" ) )
+				return;
+
+			spec.TplParams = ConvertBindingsToParams( spec, spec.TplSpec )!;
+			spec.TplSpec.Clear();
+			InjectParams( spec.funcScope, spec.TplParams, spec.srcPos );
+		}
+
 		private void ValidateStructSpecs( List<Myll.Core.Structural> structs, Myll.Core.Structural? owner, string? nsFqn )
 		{
 			if( owner != null ) {
@@ -548,12 +699,29 @@ namespace Myll.Transform
 						continue;
 					}
 
-					if( !spec.HasAttrib( "spec" ) )
-						Diagnostics.Add( new Diagnostic(
-							spec.srcPos,
-							DiagnosticKind.Error,
-							String.Format( "Specialization of '{0}' must declare its kind: [spec=all] for a fresh body or [spec=some] for a member specialization block",
-								spec.name ) ) );
+					// Bare bindings declare a primary with defaults; [spec]
+					// marks the specialization (with a kind, since struct
+					// kinds are not derivable).
+					if( DeclaresDefaultedPrimary( spec ) ) {
+						bool primaryExists = structs.Any( s =>
+							s != spec && s.name == spec.name && s.SpecInfo == null && s.TplParams.Count > 0 );
+						if( !primaryExists && nsFqn != null )
+							primaryExists = FindImportedPrimary( spec.name, nsFqn, IsStructPrimary ) != null;
+
+						if( !ConvertBareBindings( spec, primaryExists, "class" ) )
+							continue;
+
+						spec.TplParams = ConvertBindingsToParams( spec, spec.TplSpec )!;
+						spec.TplSpec.Clear();
+						InjectParams( spec.scope, spec.TplParams, spec.srcPos );
+						continue;
+					}
+
+					Diagnostics.Add( new Diagnostic(
+						spec.srcPos,
+						DiagnosticKind.Error,
+						String.Format( "Specialization of '{0}' must declare its kind: [spec=all] for a fresh body or [spec=some] for a member specialization block",
+							spec.name ) ) );
 
 					MarkInvalidSpec( spec );
 					continue;
@@ -1275,6 +1443,13 @@ namespace Myll.Transform
 				if( spec.TplSpec.Count == 0 )
 					continue;
 
+				// Bare bindings declare a primary with defaults; [spec] marks
+				// the specialization.
+				if( DeclaresDefaultedPrimary( spec ) ) {
+					ConvertBareBindingsFunc( spec, funcs, nsFqn );
+					continue;
+				}
+
 				if( spec.body == null && !isDeclModule ) {
 					Diagnostics.Add( new Diagnostic(
 						spec.srcPos,
@@ -1453,6 +1628,13 @@ namespace Myll.Transform
 			foreach( Func spec in funcs ) {
 				if( spec.TplSpec.Count == 0 )
 					continue;
+
+				// Bare bindings declare a method template with defaults;
+				// [spec] marks the specialization.
+				if( DeclaresDefaultedPrimary( spec ) ) {
+					ConvertBareBindingsFunc( spec, funcs, null );
+					continue;
+				}
 
 				if( spec.body == null && !isDeclModule ) {
 					Diagnostics.Add( new Diagnostic(
@@ -1901,6 +2083,20 @@ namespace Myll.Transform
 			foreach( Structor spec in ctors ) {
 				if( spec.TplSpec.Count == 0 )
 					continue;
+
+				// Bare bindings declare a constructor template with its own
+				// defaulted parameters; [spec] marks the specialization
+				// (whose bindings cover the class parameters first).
+				if( DeclaresDefaultedPrimary( spec ) ) {
+					List<TplParam>? parameters = ConvertBindingsToParams( spec, spec.TplSpec );
+					if( parameters == null )
+						continue;
+
+					spec.TplParams = parameters;
+					spec.TplSpec.Clear();
+					InjectParams( spec.ctorScope, parameters, spec.srcPos );
+					continue;
+				}
 
 				if( spec.body == null && !isDeclModule ) {
 					Diagnostics.Add( new Diagnostic(

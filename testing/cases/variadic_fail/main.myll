@@ -19,6 +19,6 @@ class BadPack<T...> { field int v; } // FAIL: Pack template parameters on class/
 
 // Specializing a variadic template is not modeled yet.
 func vd<T...>( T args ) -> int => 0;
-func vd<T=int>( int args ) -> int => 1; // FAIL: Specializing the variadic function template 'vd' is not supported yet
+[spec] func vd<T=int>( int args ) -> int => 1; // FAIL: Specializing the variadic function template 'vd' is not supported yet
 
 func main() -> int { return 0; }

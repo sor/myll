@@ -96,6 +96,10 @@ namespace spec
     class Pair;
     template <typename T>
     union Choice;
+    template <typename U>
+    class Dflt;
+    template <typename T, int N>
+    class FixedBox;
     template <typename T>
     class PtrBox;
     template <typename T>
@@ -183,6 +187,31 @@ namespace spec
         float _val;
         int _idx;
         float _alt;
+    };
+    template <typename U = int>
+    class Dflt
+    {
+    public:
+        U _v{};
+        Dflt() = default;
+        inline U read() const
+        {
+            return _v;
+        }
+    };
+    template <typename T, int N = 3>
+    class FixedBox
+    {
+    public:
+        int _n{};
+        FixedBox()
+        {
+            _n = N;
+        }
+        inline int size() const
+        {
+            return N;
+        }
     };
     template <typename T>
     class PtrBox

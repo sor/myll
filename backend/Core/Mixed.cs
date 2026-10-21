@@ -172,7 +172,7 @@ namespace Myll.Core
 		Unknown,
 	}
 
-	public class TplParam
+public class TplParam
 	{
 		public string       name = null!;
 		public TplParamKind kind = TplParamKind.Type;
@@ -180,8 +180,13 @@ namespace Myll.Core
 
 		// A pack parameter (`<T...>`); must be the last of the list. The
 		// `...` is only ever written here: parameter lists, call arguments
-		// and the forward cast derive their expansion from this marker.
+		// and the forward cast derive the expansion from this marker.
 		public bool isPack;
+
+		// The parameter's default (bare `T=int`, `int N=5`): fills at use
+		// sites that omit the parameter, and CTAD after deduction. Defaults
+		// must be trailing (once defaulted, every following parameter too).
+		public TplArg? defaultArg;
 	}
 
 	/// <summary>
@@ -195,5 +200,6 @@ namespace Myll.Core
 		public string    name = null!;
 		public Typespec? type; // null: unbound placeholder
 		public Expr?     lit;  // non-type parameter binding: N = 5
+		public Typespec? declaredType; // the non-type spelling: int N = 5
 	}
 }

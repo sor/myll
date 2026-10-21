@@ -5,6 +5,6 @@ module nums_spec;
 
 import nums;
 
-func half<T=int>( T a ) -> T => a * 2;
+[spec] func half<T=int>( T a ) -> T => a * 2;
 
-func combine<T=int, U=f32>( int a, f32 b ) -> int => a * 100 + (int)b;
+[spec] func combine<T=int, U=f32>( int a, f32 b ) -> int => a * 100 + (int)b;

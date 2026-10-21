@@ -12,7 +12,7 @@ import nums;
 
 	func Get() -> int => _v * 2;
 
-	func Find<U=f32>( f32 a ) -> f32 => a;
+	[spec] func Find<U=f32>( f32 a ) -> f32 => a;
 
 	[static] field int count = 7;
 

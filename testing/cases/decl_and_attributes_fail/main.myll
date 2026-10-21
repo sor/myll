@@ -53,5 +53,5 @@ class ConvertNoAttr
 [pub]:
 	field int i;
 
-	ctor convert <- int { i = other; } // FAIL: convert declaration must be [implicit] or [explicit]
+	[spec] ctor convert <- int { i = other; } // FAIL: convert declaration must be [implicit] or [explicit]
 }

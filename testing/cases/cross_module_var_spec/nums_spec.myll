@@ -5,6 +5,6 @@ module nums_spec;
 
 import nums;
 
-const T pi<T=int> = 3;
-const T q<T, U=int> = (T)70;
-var T rt<T=i32> = 5;
+[spec] const T pi<T=int> = 3;
+[spec] const T q<T, U=int> = (T)70;
+[spec] var T rt<T=i32> = 5;

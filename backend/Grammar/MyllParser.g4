@@ -346,7 +346,10 @@ tplSpec	:	LT	tplSpecEntry	(COMMA tplSpecEntry)*	COMMA?	GT;
 tplSpecEntry	:	tplBind
 			|	id				// unbound placeholder
 			;
-tplBind	:	id	ASSIGN	(typespec	|	expr);
+// Unmarked bindings on a declaration declare a primary with defaults; the
+// non-type spelling ( int N=5 ) carries the declared type.
+tplBind	:	id	ASSIGN	(typespec	|	expr)	# TypeTplBind
+		|	typespec	id	ASSIGN	expr		# NonTypeTplBind;
 //tplParams2	:	LT	cs[id]							GT;
 //cs[object id] returns [object[] ret]:	ret+=id (COMMA ret+=id)* COMMA?;
 

@@ -415,6 +415,15 @@ namespace Myll.Resolver
 					return true;
 			}
 
+			// Omitted trailing defaulted parameters fill at the use.
+			if( useArgs.Count != primary.TplParams.Count ) {
+				List<TplArg>? filled = TemplateInference.FillOmittedDefaultArgs( primary, useArgs, result );
+				if( filled != null ) {
+					idTpl.tplArgs = filled;
+					useArgs = filled;
+				}
+			}
+
 			TemplateArgValidation validation = TemplateInference.ValidateTemplateArgs( primary, useArgs );
 			if( validation.IsMismatch ) {
 				string message = validation.MismatchKind == TemplateArgMismatchKind.Arity
@@ -605,17 +614,40 @@ namespace Myll.Resolver
 					continue;
 				}
 
-				IReadOnlyList<TplArg> providedArgs = unresolved.Node.idTpls.Last().tplArgs;
+IReadOnlyList<TplArg> providedArgs = unresolved.Node.idTpls.Last().tplArgs;
 
-				// CTAD-pending bare types wait for the deduction to fill the
-				// arguments; a failed deduction reports its own error.
-				if( unresolved.Node.IsCtadPending && providedArgs.Count == 0 ) {
-					result.Resolve( unresolved.Node, resolved );
+			// CTAD-pending bare types wait for the deduction to fill the
+			// arguments; a failed deduction reports its own error.
+			if( unresolved.Node.IsCtadPending && providedArgs.Count == 0 ) {
+				result.Resolve( unresolved.Node, resolved );
+				progress = true;
+				continue;
+			}
+
+			// Omitted trailing defaulted parameters fill at the use; the
+			// synthesized arguments become the type's own (emission and
+			// member lookup see the full list).
+			if( providedArgs.Count > 0 ) {
+				List<TplArg>? filledArgs = TemplateInference.FillOmittedDefaultArgs( resolved, providedArgs, result );
+				if( filledArgs != null && filledArgs.Count != providedArgs.Count ) {
+					TypespecNested useNode = unresolved.Node;
+					useNode.idTpls.Last().tplArgs = filledArgs;
+					providedArgs = filledArgs;
 					progress = true;
-					continue;
 				}
+			}
+			else if( resolved is ITemplatedDecl defaulted
+			     && defaulted.TplParams.Count > 0
+			     && defaulted.TplParams.All( p => p.defaultArg != null ) ) {
+				List<TplArg>? filledArgs = TemplateInference.FillOmittedDefaultArgs( resolved, new List<TplArg>(), result );
+				if( filledArgs != null && filledArgs.Count > 0 ) {
+					unresolved.Node.idTpls.Last().tplArgs = filledArgs;
+					providedArgs = filledArgs;
+					progress = true;
+				}
+			}
 
-				TemplateArgValidation typeValidation = TemplateInference.ValidateTemplateArgs( resolved, providedArgs );
+			TemplateArgValidation typeValidation = TemplateInference.ValidateTemplateArgs( resolved, providedArgs );
 				if( typeValidation.IsMismatch
 				 && !IsInjectedClassName( unresolved.Node, resolved, unresolved.Scope ) ) {
 					string message = typeValidation.MismatchKind == TemplateArgMismatchKind.Arity

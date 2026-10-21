@@ -43,31 +43,31 @@ func main() -> int {
 
 // variable template specialization validation
 const T spec_pi<T> = (T)3;
-const T spec_pi<X=int> = 4; // FAIL: Unknown template parameter 'X' in specialization of 'spec_pi'
+[spec] const T spec_pi<X=int> = 4; // FAIL: Unknown template parameter 'X' in specialization of 'spec_pi'
 
 const T spec_r<T, U, V> = (T)1;
-const T spec_r<V=int, U=f32> = (T)2; // FAIL: Bindings of 'spec_r' must follow the primary's parameter order
+[spec] const T spec_r<V=int, U=f32> = (T)2; // FAIL: Bindings of 'spec_r' must follow the primary's parameter order
 
-const T spec_noPrimary<T=int> = 3; // FAIL: No matching variable template 'spec_noPrimary' in this module
+const T spec_noPrimary<T=int> = 3; // legal now: a new defaulted primary
 
-const T spec_late<T=int> = 4; // FAIL: Specialization of 'spec_late' must follow its primary template
+[spec] const T spec_late<T=int> = 4; // FAIL: Specialization of 'spec_late' must follow its primary template
 const T spec_late<T> = (T)1;
 
 const T spec_dup<T> = (T)1;
-const T spec_dup<T=int> = 4;
-const T spec_dup<T=int> = 5; // FAIL: Duplicate specialization of 'spec_dup' for T=int
+[spec] const T spec_dup<T=int> = 4;
+[spec] const T spec_dup<T=int> = 5; // FAIL: Duplicate specialization of 'spec_dup' for T=int
 
 const T spec_mm<T> = (T)1;
-const f32 spec_mm<T=int> = 2.0; // FAIL: Specialization of 'spec_mm' declares type 'const float' but the primary's substituted type is 'const int'
+[spec] const f32 spec_mm<T=int> = 2.0; // FAIL: Specialization of 'spec_mm' declares type 'const float' but the primary's substituted type is 'const int'
 
 // full-form specialization validation: skip form and wrong position
 const T spec3<T, U, V> = (T)1;
-const T spec3<T, V=int> = (T)2; // FAIL: Specialization 'spec3' names 2 of 3 parameters
+[spec] const T spec3<T, V=int> = (T)2; // FAIL: Specialization 'spec3' names 2 of 3 parameters
 const T spec4<T, U> = (T)1;
-const T spec4<U, T=int> = (T)2; // FAIL: Specialization 'spec4' names 'U' at parameter 'T''s position
+[spec] const T spec4<U, T=int> = (T)2; // FAIL: Specialization 'spec4' names 'U' at parameter 'T''s position
 const T spec5<T, U> = (T)1;
-const T spec5<T, U=int> = (T)2;
-const T spec5<U=int> = (T)3; // FAIL: Duplicate specialization of 'spec5' for U=int
+[spec] const T spec5<T, U=int> = (T)2;
+[spec] const T spec5<U=int> = (T)3; // FAIL: Duplicate specialization of 'spec5' for U=int
 
 // class/struct/union specialization validation
 class SBox<T> { field int v; }
@@ -97,12 +97,17 @@ class PBoth<T, U> { field int v; }
 
 // [spec=...] attribute validation on class/struct/union specializations
 class SSkip2<T, U> { field int v; }
-class SSkip2<T=int> { field int v; } // FAIL: Specialization of 'SSkip2' must declare its kind
+class SSkip2<T=int> { field int v; } // FAIL: A class template 'SSkip2' is already declared
+
+// Defaults must be trailing and defaulted parameters cannot be bound twice
+class DfltFail<T=int, U> { field int v; } // FAIL: Parameter 'U' of 'DfltFail' needs a default
+class NonTypeFail<int N=5> { field int v; } // legal non-type default: no error
 [spec=some] class SSkip3<T=int> { field int v; } // FAIL: No matching template 'SSkip3'
 [spec=partial] class SSkip4<T=int> { field int v; } // FAIL: must name its kind: [spec=all]
 [spec] class SSkip5<T=int> { field int v; } // FAIL: must name its kind: [spec=all]
 [spec=all] class SPlain { field int v; } // FAIL: The [spec=...] values of 'SPlain' apply only to specializations
-[spec=primary] class SSkip6<T=int> { field int v; } // FAIL: marks the primary template, not a specialization
+class SSkip6<T> { field int v; }
+[spec=primary] class SSkip6<T=int> { field int v; } // FAIL: A class template 'SSkip6' is already declared
 class SSkip7<T, U> { field int v; }
 [spec(all, full)] class SSkip7<T, U=int> { field int v; } // FAIL: declares [spec=(all, full)] but the bindings are partial
 class SSkip8<T, U> { field int v; }
@@ -114,7 +119,7 @@ class SSkip8<T, U> { field int v; }
 func fBad2<T>( T a ) -> T => a;
 [spec=partial] func fBad2<T=int>( int a ) -> int => a; // FAIL: Function specializations are always full
 func fBad3<T>( T a ) -> T => a;
-[spec=primary] func fBad3<T=int>( int a ) -> int => a; // FAIL: marks the primary template, not a specialization
+[spec=primary] func fBad3<T=int>( int a ) -> int => a; // FAIL: A function template 'fBad3' is already declared
 const T vSpec<T> = (T)0;
 [spec=all] const T vSpec<T=int> = 5; // FAIL: the all/some kinds apply to class/struct/union specializations
 [spec=banana] func fBanana<T>( T a ) -> T => a; // FAIL: Unknown [spec=banana] on 'fBanana'
@@ -154,86 +159,86 @@ class SLate<T> { field int v; }
 
 // function template specialization validation (full-only, signature repeat)
 func fval<T, U>( T a, U b ) -> T => a;
-func fval<T=int>( int a, int b ) -> int => a; // FAIL: Function templates allow only full specializations
+[spec] func fval<T=int>( int a, int b ) -> int => a; // FAIL: Function templates allow only full specializations
 
 func fno<T>( T a ) -> T => a;
-func fno<X=int>( int a ) -> int => a; // FAIL: Unknown template parameter 'X' in specialization of 'fno'
+[spec] func fno<X=int>( int a ) -> int => a; // FAIL: Unknown template parameter 'X' in specialization of 'fno'
 
 func forder<T, U>( T a, U b ) -> T => a;
-func forder<U=int, T=f32>( f32 a, int b ) -> f32 => a; // FAIL: Bindings of 'forder' must follow the primary's parameter order
+[spec] func forder<U=int, T=f32>( f32 a, int b ) -> f32 => a; // FAIL: Bindings of 'forder' must follow the primary's parameter order
 
 func fdup<T>( T a ) -> T => a;
-func fdup<T=int>( int a ) -> int => a;
-func fdup<T=int>( int a ) -> int => a; // FAIL: Duplicate specialization of 'fdup' for T=int
+[spec] func fdup<T=int>( int a ) -> int => a;
+[spec] func fdup<T=int>( int a ) -> int => a; // FAIL: Duplicate specialization of 'fdup' for T=int
 
-func flate<T=int>( int a ) -> int => a; // FAIL: Specialization of 'flate' must follow its primary template
+[spec] func flate<T=int>( int a ) -> int => a; // FAIL: Specialization of 'flate' must follow its primary template
 func flate<T>( T a ) -> T => a;
 
-func fnoprimary<T=int>( int a ) -> int => a; // FAIL: No matching function template 'fnoprimary'
+[spec] func fnoprimary<T=int>( int a ) -> int => a; // FAIL: No matching function template 'fnoprimary'
 
 func fparam<T>( T a ) -> T => a;
-func fparam<T=int>( int a, int b ) -> int => a; // FAIL: Specialization of 'fparam' must repeat the primary's substituted parameter and return types
+[spec] func fparam<T=int>( int a, int b ) -> int => a; // FAIL: Specialization of 'fparam' must repeat the primary's substituted parameter and return types
 
 func fret<T>( T a ) -> T => a;
-func fret<T=int>( int a ) -> f32 => 1.5; // FAIL: Specialization of 'fret' must repeat the primary's substituted parameter and return types
+[spec] func fret<T=int>( int a ) -> f32 => 1.5; // FAIL: Specialization of 'fret' must repeat the primary's substituted parameter and return types
 
 func fauto<T>( T a ) => a;
-func fauto<T=int>( int a ) => a; // FAIL: Specialization of 'fauto' must repeat the primary's return type
+[spec] func fauto<T=int>( int a ) => a; // FAIL: Specialization of 'fauto' must repeat the primary's return type
 
 // method specialization validation (class params first, then method params)
 class MHost<T> {
 [pub]:
 	func open<U>( U a ) -> U => a;
-	func open<U=int>( U a ) -> U => a; // FAIL: Specialization of 'open' must bind all class template parameters
+	[spec] func open<U=int>( U a ) -> U => a; // FAIL: Specialization of 'open' must bind all class template parameters
 
-	func named<X=int>( int a ) -> int => a; // FAIL: No matching method template 'named'
+	[spec] func named<X=int>( int a ) -> int => a; // FAIL: No matching method template 'named'
 
 	func sym<U>( U a ) -> U => a;
-	func sym<T=U>( int a ) -> int => a; // FAIL: Specialization of 'sym' must bind 'T' to a concrete type
+	[spec] func sym<T=U>( int a ) -> int => a; // FAIL: Specialization of 'sym' must bind 'T' to a concrete type
 
 	func dup<U>( U a ) -> U => a;
-	func dup<T=int, U=f32>( f32 a ) -> f32 => a;
-	func dup<T=int, U=f32>( f32 a ) -> f32 => a; // FAIL: Duplicate specialization of 'dup' for T=int,U=float
+	[spec] func dup<T=int, U=f32>( f32 a ) -> f32 => a;
+	[spec] func dup<T=int, U=f32>( f32 a ) -> f32 => a; // FAIL: Duplicate specialization of 'dup' for T=int,U=float
 
 	func shadow<T>( T a ) -> T => a;
-	func shadow<T=int>( int a ) -> int => a; // FAIL: Method 'shadow' has a template parameter shadowing
+	[spec] func shadow<T=int>( int a ) -> int => a; // FAIL: Method 'shadow' has a template parameter shadowing
 }
 
 [spec=all] class MSpec<T=int> {
 [pub]:
 	func inner( int a ) -> int => a;
-	func inner<T=f32>( f32 a ) -> f32 => a; // FAIL: Specialization of 'inner' sits inside the specialization
+	[spec] func inner<T=f32>( f32 a ) -> f32 => a; // FAIL: Specialization of 'inner' sits inside the specialization
 }
 
 class MPlain {
 [pub]:
 	func partial<A, B>( A a, B b ) -> A => a;
-	func partial<A=int, B>( int a, int b ) -> int => a; // FAIL: Function templates allow only full specializations
+	[spec] func partial<A=int, B>( int a, int b ) -> int => a; // FAIL: Function templates allow only full specializations
 }
 
 // constructor specialization validation
 class CPlain {
 [pub]:
 	ctor( int v ) { }
-	ctor<T=int>( int v ) { } // FAIL: Constructor specializations need a class template
+	[spec] ctor<T=int>( int v ) { } // FAIL: Constructor specializations need a class template
 }
 
 class CCover<T> {
 [pub]:
 	ctor( T v ) { }
-	ctor<X=int>( int v ) { } // FAIL: No matching constructor template in 'CCover'
+	[spec] ctor<X=int>( int v ) { } // FAIL: No matching constructor template in 'CCover'
 }
 
 class CSym<T> {
 [pub]:
 	ctor<U>( U u, T t ) { }
-	ctor<T=U>( int u, int t ) { } // FAIL: Specialization of 'CSym' must bind 'T' to a concrete type
+	[spec] ctor<T=U>( int u, int t ) { } // FAIL: Specialization of 'CSym' must bind 'T' to a concrete type
 }
 
 class CSig<T> {
 [pub]:
 	ctor( T v ) { }
-	ctor<T=int>( int v, int b ) { } // FAIL: Specialization of the constructor of 'CSig' must repeat the primary's substituted parameters
+	[spec] ctor<T=int>( int v, int b ) { } // FAIL: Specialization of the constructor of 'CSig' must repeat the primary's substituted parameters
 }
 
 // non-type binding kind validation
@@ -241,14 +246,14 @@ class BadKind<T> {
 [pub]:
 	ctor() {}
 	func f() -> int => 0;
-	func f<T=5>() -> int => 1; // FAIL: Specialization of 'f' must bind the type parameter 'T' to a type
+	[spec] func f<T=5>() -> int => 1; // FAIL: Specialization of 'f' must bind the type parameter 'T' to a type
 	func g<int N>() -> int => N;
-	func g<N=int>() -> int => 1; // FAIL: Specialization of 'g' must bind the non-type parameter 'N' to a value
+	[spec] func g<N=int>() -> int => 1; // FAIL: Specialization of 'g' must bind the non-type parameter 'N' to a value
 }
 
 // alias templates cannot be specialized (C++ has no spelling for it)
 alias BadSpec<T> = BadSpec<T>;
-alias BadSpec<T=int> = BadSpec<int>; // FAIL: Alias templates cannot be specialized
+[spec] alias BadSpec<T=int> = BadSpec<int>; // FAIL: Alias templates cannot be specialized
 
 // member variable specialization validation (class params first, at least one own param bound)
 class MVBox<T> {

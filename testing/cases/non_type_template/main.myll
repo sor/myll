@@ -9,11 +9,11 @@ func add<int N>( int x ) -> int {
 const int twice<int N> = N * 2;
 
 // non-type specialization bindings: N=8 binds the value parameter
-const int twice<N=8> = 5;
+[spec] const int twice<N=8> = 5;
 
 // folded constant expressions fold to their value: N=4+5 binds N=9
 const int folded<int N> = N;
-const int folded<N=4+5> = 111;
+[spec] const int folded<N=4+5> = 111;
 
 // mixed type and non-type class specialization
 class Fixed<T, int N> {

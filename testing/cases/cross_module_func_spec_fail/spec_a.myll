@@ -2,4 +2,4 @@ module spec_a;
 
 import nums;
 
-func half<T=int>( T a ) -> T => a * 2;
+[spec] func half<T=int>( T a ) -> T => a * 2;
