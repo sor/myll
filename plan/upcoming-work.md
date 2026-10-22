@@ -151,9 +151,14 @@ specialization series through phase F is complete (see `plan/template-specializa
   fine; verify bindings by writing a minimal `.cpp`.
 - **Robin Hood deletions are reported.** Regular line churn from the task at
   hand is not.
-- **Failing-case stage rule**: all markers in one case must fire at the same
-  stage (compile-stage diagnostics get their own case, e.g. `ctor_passing_fail`);
-  the harness bails at the first error stage.
+- **Failing-case stage rule**: all markers in one case must be visible in the
+   same compile run — visitor-stage diagnostics (`visit_fail`) abort the
+   compile before resolver passes and would suppress resolution-stage markers
+   (`template_fail`); parse-stage errors (`spec_attr_fail`) abort before the
+   visitor. Same-stage cases are consolidated into one per stage+topic (e.g.
+   `cross_module_spec_fail` carries the var/struct/func/decl guards);
+   a second batch of stage-conflicting cases stays separate when merging
+   would hide markers (lambda capture vs method).
 - **Commits**: impl → tests → docs, small and focused; never push.
 - **Usable-scratch test syntax note**: member var templates at field scope now
   REQUIRE `[static]` once `plan/member-var-static.md` is executed.
