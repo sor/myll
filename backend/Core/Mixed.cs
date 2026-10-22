@@ -172,7 +172,7 @@ namespace Myll.Core
 		Unknown,
 	}
 
-public class TplParam
+	public class TplParam
 	{
 		public string       name = null!;
 		public TplParamKind kind = TplParamKind.Type;
