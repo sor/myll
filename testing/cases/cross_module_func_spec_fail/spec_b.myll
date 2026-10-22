@@ -1,5 +1,0 @@
-module spec_b;
-
-import nums;
-
-[spec] func half<T=int>( T a ) -> T => a * 3; // FAIL: Duplicate specialization of 'half' for T=int

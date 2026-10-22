@@ -1,3 +1,5 @@
+import std_vector, std_array;
+
 func max<T>( T a, T b ) -> T => a > b ? a : b;
 
 class Box<T> {
@@ -297,4 +299,19 @@ class MVDeep {
 		class Deep<V> { field V v; }
 		[spec=all] class Deep<V=int> { field int v; } // FAIL: Specializations of nested classes inside another nested class are not supported yet
 	}
+}
+
+
+// Alias template argument kind checks (compile-stage).
+namespace tplfail_alias {
+	alias Vec<T> = std::vector<T>;
+	alias FixedArray<T, int N> = std::array<T, N>;
+}
+
+func test_type_arg_for_type_param() -> void {
+	var tplfail_alias::Vec<42> a; // FAIL: Template argument kind mismatch
+}
+
+func test_value_arg_for_non_type_param() -> void {
+	var tplfail_alias::FixedArray<float, int> b; // FAIL: Template argument kind mismatch
 }

@@ -1,0 +1,23 @@
+// Visitor-stage template rejections (AST construction): these diagnostics
+// abort the compile before resolver passes, so they live in their own case
+// rather than template_fail (resolution-stage markers).
+
+// Copy/move constructor template rejection: C++ forbids copy/move
+// constructor templates, and the passing forms take no parameter lists, so
+// a type parameter there is always a mistake.
+class CCopy {
+[pub]:
+	ctor copy<int> { } // FAIL: 'copy' constructors cannot be parameterized
+	ctor move<T> other { } // FAIL: 'move' constructors cannot be parameterized
+	ctor() {}
+}
+
+func local_var_tpl_fail() -> int {
+	var int value<int N> = 0; // FAIL: Local variable templates are not supported
+	return 0;
+}
+
+func main() -> int {
+	alias Local<T> = int; // FAIL: Local alias templates are not supported
+	return 0;
+}

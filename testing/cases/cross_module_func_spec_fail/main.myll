@@ -1,5 +1,0 @@
-module main;
-
-import nums, spec_a, spec_b;
-
-func main() -> int { return 0; }

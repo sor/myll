@@ -2,6 +2,8 @@ module spec_a;
 
 import nums;
 
+[spec] const T pi<T=int> = 3;
+
 [spec=all] class Box<T=int>
 {
 [pub]:
@@ -9,3 +11,5 @@ import nums;
 	field int _extra;
 	ctor( int v, int e ) { _value = v; _extra = e; }
 }
+
+[spec] func half<T=int>( T a ) -> T => a * 2;

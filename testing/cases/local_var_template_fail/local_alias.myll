@@ -1,9 +1,0 @@
-// This case is intentionally separate from alias_template_fail.
-// Local alias templates are rejected during AST construction/visiting, which
-// aborts later compiler passes; mixing it with resolution-time errors in the
-// same folder would hide those other diagnostics.
-
-func main() -> int {
-	alias Local<T> = int; // FAIL: Local alias templates are not supported
-	return 0;
-}

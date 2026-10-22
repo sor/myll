@@ -1,0 +1,31 @@
+// The cross-module specialization ODR guard, consolidated: two violations
+// rejected as hard errors for every specialization kind. (1) nums uses
+// pi/Box/half for concrete arguments but cannot see the specializations
+// spec_a and spec_b attach to them: its translation unit would instantiate
+// the primaries while theirs use the specializations. (2) spec_a and spec_b
+// both specialize the same signatures with different bodies.
+module nums;
+
+const T pi<T> = (T)3.1415;
+
+class Box<T>
+{
+[pub]:
+	field T _value;
+	[default] ctor();
+}
+
+func half<T>( T a ) -> T => a;
+
+func probe() -> int
+{
+	var int p = pi<int>; // FAIL: 'pi' is specialized for T=int in module 'spec_a'
+	var Box<int> b; // FAIL: 'Box' is specialized for T=int in module 'spec_a'
+	return p;
+}
+
+func probe_half() -> int
+{
+	var int h = half( 21 ); // FAIL: 'half' is specialized for T=int in module 'spec_a'
+	return h;
+}

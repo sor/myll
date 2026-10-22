@@ -1,5 +1,0 @@
-module spec_a;
-
-import nums;
-
-[spec] func half<T=int>( T a ) -> T => a * 2;
