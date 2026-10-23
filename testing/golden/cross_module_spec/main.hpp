@@ -8,9 +8,6 @@
 #include <string>
 #include <type_traits>
 #include <utility>
-template <typename T>
-inline constexpr T pi = static_cast<T>( 3.1415f );
-template <typename T, typename U>
-inline constexpr T q = static_cast<T>( 7 );
-template <typename T>
-extern T rt;
+#include "nums.hpp"
+#include "nums_spec.hpp"
+#include "somelib.hpp"

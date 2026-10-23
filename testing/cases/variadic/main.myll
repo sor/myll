@@ -2,6 +2,38 @@ module variadic;
 
 import std_format, std_print;
 
+// The variadic std::format binding: the raw emitted call resolves against
+// the real std::format, and its constexpr format-string check validates
+// the placeholder/argument pairing.
+func main() -> int
+{
+	var std::string s = std::format( "{}|{}", 1, 2.5 );
+	var std::string expect = "1|2.5";
+	if( s != expect ) return 1;
+
+	// Variadic std::println beside the fixed-arity overloads.
+	std::println( "values: {} and {}", 1, 2.5 );
+
+	var std::string one = std::format( "just {}", 7 );
+	if( one != "just 7" ) return 2;
+
+	if( forwardChain( 1, 2.5 ) != expect ) return 3;
+
+	if( relayEmpty() != "empty" ) return 4;
+
+	if( takeOne<int>( 5 ) != 5 ) return 5;
+
+	logMixed( 7, 1.5, 2.5 );
+
+	var Builder b( 1, 2.5 );
+	if( Builder::count != 3 ) return 6;
+
+	var Builder nothing();
+	if( Builder::count != 3 ) return 7;
+
+	return 0;
+}
+
 // Pass-through forwarding: the whole pack goes to std::format; the C++
 // format-string check validates the pairing (two placeholders, two pack
 // elements).
@@ -38,24 +70,4 @@ class Builder
 	ctor<T...>( T args ) { count = 3; }
 
 	[static] field int count = 0;
-}
-
-func main() -> int
-{
-	var std::string expect = "1|2.5";
-	if( forwardChain( 1, 2.5 ) != expect ) return 1;
-
-	if( relayEmpty() != "empty" ) return 2;
-
-	if( takeOne<int>( 5 ) != 5 ) return 3;
-
-	logMixed( 7, 1.5, 2.5 );
-
-	var Builder b( 1, 2.5 );
-	if( Builder::count != 3 ) return 4;
-
-	var Builder nothing();
-	if( Builder::count != 3 ) return 5;
-
-	return 0;
 }

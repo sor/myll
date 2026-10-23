@@ -1,0 +1,30 @@
+// The primary home of the cross-module specialization case: nums owns the
+// primaries, nums_spec imports nums and adds specializations, main imports
+// both and mixes specialized and primary instantiations.
+module nums;
+
+// variable templates
+const T pi<T> = (T)3.1415;
+const T q<T, U> = (T)7;
+var T rt<T> = (T)0;
+
+// class templates
+class Box<T>
+{
+[pub]:
+	field T _value;
+	[default] ctor();
+	func read() -> T => _value;
+}
+
+class Pair<T, U>
+{
+[pub]:
+	field T _a;
+	[default] ctor();
+}
+
+// function templates
+func half<T>( T a ) -> T => a;
+
+func combine<T, U>( T a, U b ) -> T => a;

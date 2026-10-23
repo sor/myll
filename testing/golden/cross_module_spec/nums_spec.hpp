@@ -9,6 +9,8 @@
 #include <type_traits>
 #include <utility>
 #include "nums.hpp"
+template<> inline constexpr int pi<int> = 3;
+template <typename T> inline constexpr T q<T, int> = static_cast<T>( 70 );
 template<>
 class Box<int>
 {
@@ -51,3 +53,18 @@ public:
         return _value * 2;
     }
 };
+template<> inline std::int32_t rt<std::int32_t> = 5;
+template<>
+inline int half<int>(int a);
+template<>
+inline int combine<int, float>(int a, float b);
+template<>
+inline int half<int>(int a)
+{
+    return a * 2;
+}
+template<>
+inline int combine<int, float>(int a, float b)
+{
+    return a * 100 + static_cast<int>( b );
+}

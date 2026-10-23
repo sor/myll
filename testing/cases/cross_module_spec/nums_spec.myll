@@ -1,0 +1,42 @@
+// Cross-module specializations: the primaries live in nums; this module
+// imports it and adds specializations. The generated header includes
+// nums.hpp, so the primary precedes every specialization.
+module nums_spec;
+
+import nums;
+
+// variable specializations: full (all parameters bound) and partial (subset
+[spec] const T pi<T=int> = 3;
+[spec] const T q<T, U=int> = (T)70;
+[spec] var T rt<T=i32> = 5;
+
+// class specializations: full fresh bodies and one pattern body
+[spec=all] class Box<T=int>
+{
+[pub]:
+	field int _value;
+	field int _extra;
+	ctor( int v, int e ) { _value = v; _extra = e; }
+	func read() -> int => _value + _extra;
+}
+
+[spec=all] class Pair<T, U=int>
+{
+[pub]:
+	field T _a;
+	field int _sum;
+	ctor( T a, int s ) { _a = a; _sum = s; }
+}
+
+[spec=all] class Box<T=T*>
+{
+[pub]:
+	field int _value;
+	ctor( int v ) { _value = v; }
+	func read() -> int => _value * 2;
+}
+
+// function specializations: full (bound values spelled out)
+[spec] func half<T=int>( int a ) -> int => a * 2;
+
+[spec] func combine<T=int, U=f32>( int a, f32 b ) -> int => a * 100 + (int)b;

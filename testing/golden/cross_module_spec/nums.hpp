@@ -13,6 +13,10 @@ class Box;
 template <typename T, typename U>
 class Pair;
 template <typename T>
+inline constexpr T pi = static_cast<T>( 3.1415f );
+template <typename T, typename U>
+inline constexpr T q = static_cast<T>( 7 );
+template <typename T>
 class Box
 {
 public:
@@ -30,3 +34,19 @@ public:
     T _a{};
     Pair() = default;
 };
+template <typename T>
+extern T rt;
+template <typename T>
+inline T half(T a);
+template <typename T, typename U>
+inline T combine(T a, U b);
+template <typename T>
+inline T half(T a)
+{
+    return a;
+}
+template <typename T, typename U>
+inline T combine(T a, U b)
+{
+    return a;
+}

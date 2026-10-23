@@ -1,0 +1,58 @@
+module main;
+
+import nums, nums_spec, somelib;
+
+func main() -> int
+{
+	// variable specializations: full and partial from nums_spec,
+	// primary instantiations otherwise
+	if( pi<int> != 3 )
+		return 1;
+	if( pi<f32> < 3.0 || pi<f32> > 3.3 )
+		return 2;
+	if( q<i64, int> != 70 )
+		return 3;
+	if( q<int, i64> != 7 )
+		return 4;
+	if( rt<i32> != 5 )
+		return 5;
+
+	// class specializations: fresh bodies and the pattern body
+	var Box<int> b( 3, 4 );
+	if( b.read() != 7 )
+		return 6;
+	var Box<f32> p;
+	p._value = 1.5;
+	if( p.read() < 1.4 )
+		return 7;
+	var Pair<f32, int> q( 9.5, 6 );
+	if( q._sum != 6 )
+		return 8;
+	var Box<int*> pb( 21 );
+	if( pb.read() != 42 )
+		return 9;
+
+	// function specializations: deduction and explicit arguments
+	if( half( 21 ) != 42 )
+		return 10;
+	if( combine( 2, 3.5 ) != 203 )
+		return 11;
+	if( half( 2.5 ) < 2.4 || half( 2.5 ) > 2.6 )
+		return 12;
+	if( combine( 2.5, 3.5 ) != 2.5 )
+		return 13;
+	if( half<int>( 3 ) != 6 )
+		return 14;
+
+	// declared specialization from the .decl.myll prototype
+	var Somelib::Box<int> s;
+	s._v = 3;
+	s._extra = 4;
+	if( s.Get() != 7 )
+		return 15;
+	var Somelib::Box<f64> sd;
+	sd._v = 1.5;
+	if( sd.Get() < 1.4 )
+		return 16;
+	return 0;
+}
