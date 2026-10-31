@@ -19,6 +19,12 @@ const T z<T, U> = (T)17;
 [spec] const T z<U=int> = (T)170;
 [spec] const T z<U=f32> = (T)171;
 
+// Same-tier specs rank by partial ordering: the pattern beats the plain
+// unbound parameter for pointer arguments.
+const T tv<T, U> = (T)0;
+[spec] const T tv<T=int, U> = (T)1;
+[spec] const T tv<T=int, U=U*> = (T)2;
+
 // bound parameter names stay usable in the initializer: the (T) below names
 // the bound parameter, which the alias expands to int
 const T rtv<T> = (T)0;
@@ -90,6 +96,13 @@ func main() -> int {
 		return 12;
 	if( z<int, f32> != 171 )
 		return 13;
+
+	if( tv<int, f32> != 1 )
+		return 20;
+	if( tv<int, int*> != 2 ) // pattern beats unbound at the same tier
+		return 21;
+	if( tv<f32, f32> != 0 ) // primary
+		return 22;
 
 	if( rt<int> != 5 )
 		return 14;

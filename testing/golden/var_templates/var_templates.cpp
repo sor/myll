@@ -48,6 +48,15 @@ int main()
     if( z<int, float> != 171 ) {
         return 13;
     }
+    if( tv<int, float> != 1 ) {
+        return 20;
+    }
+    if( tv<int, int*> != 2 ) {
+        return 21;
+    }
+    if( tv<float, float> != 0 ) {
+        return 22;
+    }
     if( rt<int> != 5 ) {
         return 14;
     }

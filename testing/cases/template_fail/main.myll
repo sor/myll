@@ -97,6 +97,14 @@ class PQual<T> { field int v; }
 class PBoth<T, U> { field int v; }
 [spec=all] class PBoth<T=int, U=T*> { field int v; } // FAIL: parameter 'T' cannot be concretely bound and pattern-deduced at once
 
+// Same-tier matches with no partial-order winner stay ambiguous
+class PTie<T, U> { field int v; }
+[spec=all] class PTie<T=int, U> { field int v; }
+[spec=all] class PTie<T, U=int*> { field int v; }
+func test_pattern_tie_ambiguous() -> void {
+	var PTie<int, int*> v; // FAIL: Ambiguous specialization match for 'PTie'
+}
+
 // [spec=...] attribute validation on class/struct/union specializations
 class SSkip2<T, U> { field int v; }
 class SSkip2<T=int> { field int v; } // FAIL: A class template 'SSkip2' is already declared

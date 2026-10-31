@@ -104,6 +104,15 @@ int spec::run()
     if( !IsPtr<int*>::value ) {
         return 10;
     }
+    if( Tri<int, int*>::tag != 2 ) {
+        return 11;
+    }
+    if( Tri<int, float>::tag != 1 ) {
+        return 12;
+    }
+    if( Tri<float, float>::tag != 0 ) {
+        return 13;
+    }
     return 0;
 }
 int spec::run4()

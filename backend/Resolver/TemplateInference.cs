@@ -241,6 +241,7 @@ namespace Myll.Resolver
 
 			bool anyViable = false;
 			List<TplArg>? best = null;
+			List<(Structor Ctor, List<TplArg> ClassArgs)> viable = new();
 
 			foreach( Structor ctor in structural.children.OfType<Structor>()
 				.Where( c => c.kind == Structor.Kind.Constructor && c.SpecInfo == null ) ) {
@@ -259,16 +260,30 @@ namespace Myll.Resolver
 				if( !deductions.Contains( variant ) )
 					deductions.Add( variant );
 
+				viable.Add( ( ctor, ctorClassArgs ) );
 				best ??= ctorClassArgs;
 			}
 
 			if( !anyViable )
 				return CtadResult.Failed;
-			if( deductions.Count > 1 )
-				return CtadResult.Ambiguous;
+			if( deductions.Count == 1 ) {
+				classArgs = best ?? new List<TplArg>();
+				return CtadResult.Deduced;
+			}
 
-			classArgs = best ?? new List<TplArg>();
-			return CtadResult.Deduced;
+			// Different class arguments from different constructors: rank the
+			// guides by partial ordering and keep the most specialized one
+			// (C++ [over.match.class]); equally specialized or incomparable
+			// guides stay the ambiguity.
+			Structor? guide = PartialOrdering.UniqueDominator(
+				viable.Select( v => v.Ctor ).ToList(),
+				( a, b ) => PartialOrdering.CompareGuides( structural, a, b ) );
+			if( guide != null ) {
+				classArgs = viable.First( v => v.Ctor == guide ).ClassArgs;
+				return CtadResult.Deduced;
+			}
+
+			return CtadResult.Ambiguous;
 		}
 
 		public static bool HasTemplateArityMismatch(

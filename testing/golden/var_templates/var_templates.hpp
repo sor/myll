@@ -26,6 +26,10 @@ template <typename T, typename U>
 inline constexpr T z = static_cast<T>( 17 );
 template <typename T> inline constexpr T z<T, int> = static_cast<T>( 170 );
 template <typename T> inline constexpr T z<T, float> = static_cast<T>( 171 );
+template <typename T, typename U>
+inline constexpr T tv = static_cast<T>( 0 );
+template <typename U> inline constexpr int tv<int, U> = static_cast<int>( 1 );
+template <typename U> inline constexpr int tv<int, U*> = static_cast<int>( 2 );
 template <typename T>
 inline constexpr T rtv = static_cast<T>( 0 );
 template<> inline constexpr int rtv<int> = static_cast<int>( 21 );

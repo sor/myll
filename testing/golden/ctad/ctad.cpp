@@ -47,5 +47,10 @@ int main()
     if( g->Get() != 11 ) {
         return 11;
     }
+    int x = 5;
+    Ptr<int> h( &x );
+    if( h._isPtr != 1 ) {
+        return 12;
+    }
     return 0;
 }

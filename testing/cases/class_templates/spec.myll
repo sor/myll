@@ -127,6 +127,27 @@ class FixedBox<T, int N=3>
 	[static] field bool value = true;
 }
 
+// Same-tier matches rank by partial ordering: the pattern specialization is
+// more specialized than the plain unbound parameter, so pointer
+// instantiations pick it and non-pointer ones fall back to the unbound one.
+class Tri<T, U>
+{
+[pub]:
+	[static] field int tag = 0;
+}
+
+[spec=all] class Tri<T=int, U>
+{
+[pub]:
+	[static] field int tag = 1;
+}
+
+[spec=all] class Tri<T=int, U=U*>
+{
+[pub]:
+	[static] field int tag = 2;
+}
+
 func run() -> int
 {
 	var Box<int> a( 3, 4 );
@@ -174,6 +195,14 @@ func run() -> int
 		return 9;
 	if( !IsPtr<int*>::value )
 		return 10;
+
+	// partial ordering picks the pattern over the unbound same-tier spec
+	if( Tri<int, int*>::tag != 2 )
+		return 11;
+	if( Tri<int, f32>::tag != 1 )
+		return 12;
+	if( Tri<f32, f32>::tag != 0 )
+		return 13;
 
 	return 0;
 }

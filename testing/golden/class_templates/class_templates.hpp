@@ -104,6 +104,8 @@ namespace spec
     class PtrBox;
     template <typename T>
     class IsPtr;
+    template <typename T, typename U>
+    class Tri;
     class Num;
     template <typename T>
     class SpecBox;
@@ -263,6 +265,24 @@ namespace spec
     {
     public:
         inline static bool value = true;
+    };
+    template <typename T, typename U>
+    class Tri
+    {
+    public:
+        inline static int tag = 0;
+    };
+    template <typename U>
+    class Tri<int, U>
+    {
+    public:
+        inline static int tag = 1;
+    };
+    template <typename U>
+    class Tri<int, U*>
+    {
+    public:
+        inline static int tag = 2;
     };
     class Num
     {

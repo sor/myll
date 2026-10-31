@@ -447,7 +447,7 @@ namespace Myll.Resolver
 
 			// Specializations visible to the use's module shadow the primary for
 			// matching explicit arguments.
-			VarDecl? spec = FindMatchingSpecialization( primary, useArgs, expr, useModule ) as VarDecl;;
+			VarDecl? spec = FindMatchingSpecialization( primary, useArgs, expr?.srcPos, useModule ) as VarDecl;;
 			if( spec != null ) {
 				effective = spec;
 				expr.Type = SubstituteVarTemplateType( spec, useArgs, expr );
@@ -503,7 +503,7 @@ namespace Myll.Resolver
 		/// can see. Full specializations win over partial ones; among partials the
 		/// most-bound wins; ties are ambiguous and error out.
 		/// </summary>
-		private Decl? FindMatchingSpecialization( Decl primary, List<TplArg> useArgs, Expr? expr, string useModule )
+		private Decl? FindMatchingSpecialization( Decl primary, List<TplArg> useArgs, SrcPos? usePos, string useModule )
 		{
 			if( !specsByPrimary.TryGetValue( primary, out List<SpecEntry>? entries ) )
 				return null;
@@ -515,6 +515,7 @@ namespace Myll.Resolver
 
 			Decl? best = null;
 			int bestBoundCount = -1;
+			List<Decl>? tier = null; // same-bound-count matches for partial ordering
 
 			foreach( SpecEntry entry in entries ) {
 				if( !visible.Contains( entry.Module ) )
@@ -531,15 +532,28 @@ namespace Myll.Resolver
 				if( boundCount > bestBoundCount ) {
 					best = spec;
 					bestBoundCount = boundCount;
+					tier = null;
 				}
 				else if( boundCount == bestBoundCount && best != null ) {
+					tier ??= new List<Decl> { best };
+					tier.Add( spec );
+				}
+			}
+
+			// Same-tier matches rank by partial ordering: the most specialized
+			// wins, equally specialized or incomparable stays the ambiguity.
+			if( tier != null ) {
+				Decl? dominator = PartialOrdering.UniqueDominator( tier, PartialOrdering.CompareSpecs );
+				if( dominator == null ) {
 					diagnostics.Add( new Diagnostic(
-						expr?.srcPos,
+						usePos,
 						DiagnosticKind.Error,
 						String.Format( "Ambiguous specialization match for '{0}': both '{1}' and '{2}' bind {3} parameters",
-							primary.name, best.name, spec.name, boundCount ) ) );
+							primary.name, tier[ 0 ].name, tier[ 1 ].name, bestBoundCount ) ) );
 					return null;
 				}
+
+				best = dominator;
 			}
 
 			return best;
@@ -2046,21 +2060,36 @@ namespace Myll.Resolver
 				foreach( (Decl primary, List<Decl> specs) in matchingSpecsByPrimary ) {
 					Decl? best = null;
 					int bestBoundCount = -1;
+					List<Decl>? tier = null; // same-bound-count matches for partial ordering
 					foreach( Decl spec in specs ) {
 						int boundCount = spec.SpecInfo!.Bound.Count( b => b );
 						if( boundCount > bestBoundCount ) {
 							best = spec;
 							bestBoundCount = boundCount;
+							tier = null;
 						}
 						else if( boundCount == bestBoundCount && best != null ) {
+							tier ??= new List<Decl> { best };
+							tier.Add( spec );
+						}
+					}
+
+					// Same-tier matches rank by partial ordering: the most
+					// specialized wins, equally specialized or incomparable stays
+					// the ambiguity.
+					if( tier != null ) {
+						Decl? dominator = PartialOrdering.UniqueDominator( tier, PartialOrdering.CompareSpecs );
+						if( dominator == null ) {
 							diagnostics.Add( new Diagnostic(
 								GetCalleeSrcPos( callee ),
 								DiagnosticKind.Error,
 								String.Format( "Ambiguous specialization match for '{0}': both '{1}' and '{2}' bind {3} parameters",
-									primary.name, best.name, spec.name, boundCount ) ) );
+									primary.name, tier[ 0 ].name, tier[ 1 ].name, bestBoundCount ) ) );
 							best = null;
 							break;
 						}
+
+						best = dominator;
 					}
 
 					if( best != null ) {
@@ -2690,7 +2719,7 @@ namespace Myll.Resolver
 			 && ownerArgs != null && ownerArgs.Count >= enclosing.TplParams.Count )
 				useArgs = ownerArgs.Concat( useArgs ).ToList();
 
-			Decl? spec = FindMatchingSpecialization( primary, useArgs, null, module.module );
+			Decl? spec = FindMatchingSpecialization( primary, useArgs, usePos, module.module );
 			if( spec != null )
 				return spec;
 

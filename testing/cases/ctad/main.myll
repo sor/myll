@@ -44,6 +44,18 @@ class Pair<A, B>
 	func Second() -> B => _b;
 }
 
+// Partial ordering among the guides: ctor(T*) is more specialized than
+// ctor(T), so a pointer argument deduces the bare type, not a pointer.
+class Ptr<T>
+{
+[pub]:
+	ctor( T v ) { _v = v; _isPtr = 0; }
+	ctor( T* p ) { _v = 0; _isPtr = 1; }
+
+	field T _v;
+	field int _isPtr;
+}
+
 func make() -> Box<f32>
 {
 	return Box<f32>( 1.5 );
@@ -88,6 +100,11 @@ func main() -> int
 	// New-expression deduction
 	var Box*! g = new Box*!( 11 );
 	if( g->Get() != 11 ) return 11;
+
+	// Guide partial ordering: ctor(T*) wins over ctor(T) for a pointer
+	var int x = 5;
+	var Ptr h( &x );
+	if( h._isPtr != 1 ) return 12;
 
 	return 0;
 }

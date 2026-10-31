@@ -15,6 +15,8 @@ class Wrap;
 template <typename A, typename B>
 class Pair;
 template <typename T>
+class Ptr;
+template <typename T>
 class Box
 {
 public:
@@ -79,6 +81,23 @@ public:
     inline B Second() const
     {
         return _b;
+    }
+};
+template <typename T>
+class Ptr
+{
+public:
+    T _v{};
+    int _isPtr{};
+    explicit Ptr(T v)
+    {
+        _v = v;
+        _isPtr = 0;
+    }
+    explicit Ptr(T* p)
+    {
+        _v = 0;
+        _isPtr = 1;
     }
 };
 Box<float> make();
