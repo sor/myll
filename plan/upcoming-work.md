@@ -54,6 +54,16 @@ specialization series through phase F is complete (see `plan/template-specializa
    deliberately: Myll has no named non-template arguments either, and keeping
    `<T=int>` specialization-only avoids ambiguity for readers. Folded
    expressions at use sites are done (phase E).
+10. ~~Partial ordering among same-tier specs and CTAD guides~~ — **done
+   2026-11-01**: `backend/Resolver/PartialOrdering.cs` implements C++
+   partial ordering (bidirectional deduction against synthesized unique
+   types). Same-tier spec ties resolve in `FindMatchingSpecialization` and
+   the call-site spec tier of `TryResolveOverload` (a pattern beats a plain
+   unbound position; equally specialized or incomparable ties stay the
+   ambiguity error, as C++ rejects those too), and CTAD ctors deducing
+   different class args pick the most specialized guide (`ctor(T*)` over
+   `ctor(T)` for pointers) instead of erroring. Guards keep member-spec
+   positions, non-type params, and packs on the old ambiguity.
 
 ## Exception specification axis (`except` ↔ `noexcept`)
 
@@ -133,8 +143,8 @@ specialization series through phase F is complete (see `plan/template-specializa
 
 ## Housekeeping
 
-- **CI/CD**: suite green at 157 cases; container image builds; the CI wiring
-  itself remains (AGENTS Planned Work item 3).
+- **CI/CD**: suite green at 158 cases; container image builds; the CI wiring
+   itself remains (AGENTS Planned Work item 3).
 - **oldParser/oldCodeGen removal** (salvage notes: `plan/old-parser-salvage.md`,
   `plan/old-codegen-salvage.md`).
 - **TODO triage**: ~59 TODO/FIXME/HACK comments in backend; ~15

@@ -26,10 +26,12 @@ var Box* p = new Box( 5 );        // new-expression deduction → Box<int>
   then Myll is strictly more conservative, and loosening later never flips
   an existing result.
 - Ambiguous deduction (two viable ctors deducing different class arguments)
-  is a hard error listing the variants. C++ resolves some of these with
-  partial ordering ("more specialized" = bidirectional unification, the
-  same engine pattern specializations need); deliberately deferred —
-  erroring now keeps that door open.
+  resolves by **guide partial ordering** (`backend/Resolver/PartialOrdering.cs`,
+  shipped 2026-11-01): the ctor parameter lists rank by C++ partial ordering
+  (the more specialized guide wins, e.g. `ctor(T*)` over `ctor(T)` for a
+  pointer argument, deducing `Box<int>`), and equally specialized or
+  incomparable guides stay the hard error listing the variants — an
+  approximation of [over.match.class] that never flips an existing result.
 - Emission always writes the deduced arguments (`Box<int> a( 5 );`,
   `new Box<int>( 5 );`): Myll's resolution is authoritative, goldens
   document the inference, and C++ never re-deduces differently. (This is
@@ -67,7 +69,6 @@ var Box* p = new Box( 5 );        // new-expression deduction → Box<int>
 - User-written deduction guides (spelling settled later; `guide Vec<T>(
   T* first, T* last ) -> Vec<T>;` is the leading candidate).
 - Aggregate CTAD, alias CTAD, return-type inference from ctor bodies.
-- Partial ordering among competing guides (see above).
 - Partial explicit arguments (`Box<int>( 1, 2.5 )` deducing the rest).
 - Deduction against `[spec=…]` specializations (primaries only today).
 

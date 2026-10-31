@@ -80,9 +80,13 @@ is still partial.
   string-compare — decorations must match, the remainder binds the named
   parameter. Concrete positions still require equality.
 - Ranking (`FindMatchingSpecialization`): full specs win (existing early
-  return), then most-concrete-bound, then pattern specs; two matching pattern
-  specs (or ties) are ambiguity errors. Partial ordering among patterns is
-  deferred — erroring now keeps that door open.
+  return), then most-concrete-bound; equal-bound-count ties rank by
+  **partial ordering** (`backend/Resolver/PartialOrdering.cs`): the spec
+  whose parameter list deduces from the other's synthesized list wins, a
+  pattern beats a plain unbound position at the same tier, and equally
+  specialized or incomparable ties stay the ambiguity error (C++ rejects
+  those too). Non-type parameters, packs, and member-spec positions keep
+  the ambiguity.
 - ODR: the specialization signature includes pattern-position Gens, so
   cross-module duplicate detection and invisible-use divergence work as for
   concrete specs. Cross-module pattern specs ride the existing
@@ -101,6 +105,8 @@ is still partial.
 
 ## Deferred
 
-Partial ordering among patterns (the same bidirectional unification CTAD
-needs), nested/non-type/array/pack patterns, pattern specs in `.decl.myll`
-prototypes, the `|` value spelling, pattern qualifiers.
+Nested/non-type/array/pack patterns, pattern specs in `.decl.myll`
+prototypes, the `|` value spelling, pattern qualifiers. Partial ordering
+among patterns shipped 2026-11-01: `PartialOrdering.CompareSpecs` ranks
+same-tier ties in both `FindMatchingSpecialization` and the call-site spec
+tier of `TryResolveOverload`.
