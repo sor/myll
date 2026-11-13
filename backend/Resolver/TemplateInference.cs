@@ -92,22 +92,25 @@ namespace Myll.Resolver
 		/// own template parameters. This is what should be substituted when ranking the
 		/// parameters of a class-template method or constructor.
 		/// </summary>
-		public static List<TplParam> GetAllTemplateParams( Decl decl )
+public static List<TplParam> GetAllTemplateParams( Decl decl )
 		{
 			List<TplParam> own = ( decl as ITemplatedDecl )?.TplParams
-				                 ?? new List<TplParam>();
+			                 ?? new List<TplParam>();
 
-			List<TplParam> enclosing = new();
+			// Walk innermost to outermost, then reverse the LEVEL order only:
+			// parameters keep their declaration order within every level.
+			List<List<TplParam>> levels = new();
 			// Start at the parent scope so the declaration's own parameters are not
 			// collected twice as "enclosing" template parameters.
 			for( ScopeLeaf? cur = decl.scope?.parent; cur != null; cur = cur.parent ) {
 				if( cur.decl is ITemplatedDecl td && td.TplParams.Count > 0 )
-					enclosing.AddRange( td.TplParams );
+					levels.Add( td.TplParams );
 			}
-			enclosing.Reverse();
+			levels.Reverse();
 
-			List<TplParam> result = new( enclosing.Count + own.Count );
-			result.AddRange( enclosing );
+			List<TplParam> result = new( levels.Sum( l => l.Count ) + own.Count );
+			foreach( List<TplParam> level in levels )
+				result.AddRange( level );
 			result.AddRange( own );
 			return result;
 		}

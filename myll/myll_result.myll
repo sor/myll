@@ -1,0 +1,80 @@
+module myll_result;
+
+namespace Myll {
+
+class Result<T, E> {
+field {
+	T    _value;
+	E    _error;
+	bool _ok = false;
+}
+
+[pub]:
+	ctor() {}
+
+	ctor( const Result& other ) {
+		_value = other._value;
+		_error = other._error;
+		_ok    = other._ok;
+	}
+
+	ctor move /*other*/ {
+		_value     = (move)other._value;
+		_error     = (move)other._error;
+		_ok        = other._ok;
+		other._ok  = false;
+	}
+
+	operator move = /*other*/ {
+		if( &self == &other )
+			return self;
+		_value     = (move)other._value;
+		_error     = (move)other._error;
+		_ok        = other._ok;
+		other._ok  = false;
+		return self;
+	}
+
+	operator = ( const Result& other ) {
+		if( &self == &other )
+			return self;
+		_value = other._value;
+		_error = other._error;
+		_ok    = other._ok;
+		return self;
+	}
+
+	[pure]
+	method isOk() -> bool => _ok;
+
+	[pure]
+	method isFail() -> bool => !_ok;
+
+	method value() -> T& => _value;
+
+	method error() -> E& => _error;
+
+	[pure]
+	method valueOr( T fallback ) -> T => _ok ? _value : fallback;
+
+	[pure]
+	method errorOr( E fallback ) -> E => _ok ? fallback : _error;
+
+	[static]
+	method ok( T val ) -> Result {
+		var Result result;
+		result._value = val;
+		result._ok    = true;
+		return result;
+	}
+
+	[static]
+	method fail( E err ) -> Result {
+		var Result result;
+		result._error = err;
+		result._ok    = false;
+		return result;
+	}
+}
+
+} // namespace Myll

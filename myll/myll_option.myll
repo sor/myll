@@ -1,0 +1,73 @@
+module myll_option;
+
+namespace Myll {
+
+class Option<T> {
+field {
+	T    _value;
+	bool _has = false;
+}
+
+[pub]:
+	ctor() {}
+
+	ctor( const T& value ) {
+		_value = value;
+		_has   = true;
+	}
+
+	ctor( const Option& other ) {
+		_value = other._value;
+		_has   = other._has;
+	}
+
+	ctor move /*other*/ {
+		_value   = (move)other._value;
+		_has     = other._has;
+		other._has = false;
+	}
+
+	operator move = /*other*/ {
+		if( &self == &other )
+			return self;
+		_value     = (move)other._value;
+		_has       = other._has;
+		other._has = false;
+		return self;
+	}
+
+	operator = ( const Option& other ) {
+		if( &self == &other )
+			return self;
+		_value = other._value;
+		_has   = other._has;
+		return self;
+	}
+
+	[pure]
+	method has() -> bool => _has;
+
+	method value() -> T& => _value;
+
+	[pure]
+	method valueOr( T fallback ) -> T => _has ? _value : fallback;
+
+	[chain]
+	method put( const T& value ) {
+		_value = value;
+		_has   = true;
+	}
+
+	[chain]
+	method reset() {
+		_has = false;
+	}
+
+	[static]
+	method some( const T& value ) -> Option => Option( value );
+
+	[static]
+	method none() -> Option => Option();
+}
+
+} // namespace Myll
