@@ -149,13 +149,25 @@ namespace Myll
 			if( !Directory.Exists( myllDir ) )
 				yield break;
 
-			HashSet<string> wanted = new( importedModules );
-			foreach( string file in Directory.EnumerateFiles( myllDir, "*.myll" ) ) {
-				string moduleName = Path.GetFileNameWithoutExtension( file );
-				if( wanted.Contains( moduleName ) ) {
-					compilerOwnedFiles.Add( file );
-					yield return file;
-				}
+			Dictionary<string, string> byName = new( StringComparer.Ordinal );
+			foreach( string file in Directory.EnumerateFiles( myllDir, "*.myll" ) )
+				byName[ Path.GetFileNameWithoutExtension( file ) ] = file;
+
+			// The library imports itself (myll_dyn_array imports myll_option),
+			// so the wanted set is the transitive closure of the inputs' imports.
+			Queue<string> pending = new( importedModules );
+			HashSet<string> visited = new( StringComparer.Ordinal );
+			while( pending.Count > 0 ) {
+				string moduleName = pending.Dequeue();
+				if( !byName.TryGetValue( moduleName, out string? file )
+				 || !visited.Add( moduleName ) )
+					continue;
+
+				foreach( string imported in ExtractImportedModules( file ) )
+					pending.Enqueue( imported );
+
+				compilerOwnedFiles.Add( file );
+				yield return file;
 			}
 		}
 

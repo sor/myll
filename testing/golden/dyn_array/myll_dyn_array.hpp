@@ -8,6 +8,7 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+#include "myll_option.hpp"
 namespace Myll
 {
     template <typename T>
@@ -251,6 +252,67 @@ namespace Myll
                 ++i;
             }
             return (*this);
+        }
+        inline Myll::DynArray<T>& insert(std::uint64_t index, const T& value)
+        {
+            if( index > _size ) {
+                index = _size;
+            }
+            if( _size >= _capacity ) {
+                grow();
+            }
+            std::uint64_t i = _size;
+            while( i > index ) {
+                _data[i] = _data[i - 1];
+                --i;
+            }
+            _data[index] = value;
+            ++_size;
+            return (*this);
+        }
+        inline Myll::DynArray<T>& erase(std::uint64_t index)
+        {
+            if( index >= _size ) {
+                return (*this);
+            }
+            std::uint64_t i = index;
+            while( i < _size - 1 ) {
+                _data[i] = _data[i + 1];
+                ++i;
+            }
+            --_size;
+            return (*this);
+        }
+        inline bool remove(const T& value)
+        {
+            Myll::Option<std::uint64_t> first = indexOf( value );
+            if( !first.has() ) {
+                return false;
+            }
+            erase( first.value() );
+            return true;
+        }
+        inline Myll::Option<std::uint64_t> indexOf(const T& value)
+        {
+            std::uint64_t i = 0;
+            while( i < _size ) {
+                if( _data[i] == value ) {
+                    return Myll::Option<std::uint64_t>::some( i );
+                }
+                ++i;
+            }
+            return Myll::Option<std::uint64_t>::none();
+        }
+        inline bool contains(const T& value)
+        {
+            std::uint64_t i = 0;
+            while( i < _size ) {
+                if( _data[i] == value ) {
+                    return true;
+                }
+                ++i;
+            }
+            return false;
         }
         inline Myll::DynArray<T>::Iterator find(const T& value)
         {

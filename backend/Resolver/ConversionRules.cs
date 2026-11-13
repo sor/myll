@@ -919,12 +919,18 @@ namespace Myll.Resolver
 			Pointer.Kind srcOuter = source.ptrs[ ^1 ].kind;
 			Pointer.Kind tgtOuter = target.ptrs[ ^1 ].kind;
 
-			bool srcIsArray     = srcOuter == Pointer.Kind.RawArray;
-			bool srcIsPtrToAry  = srcOuter == Pointer.Kind.PtrToAry;
-			bool tgtIsPtrToAry  = tgtOuter == Pointer.Kind.PtrToAry;
-			bool tgtIsRawPtr    = tgtOuter == Pointer.Kind.RawPtr;
+			bool srcIsArray    = srcOuter == Pointer.Kind.RawArray;
+			bool srcIsPtrToAry = srcOuter == Pointer.Kind.PtrToAry;
+			bool srcIsRawPtr   = srcOuter == Pointer.Kind.RawPtr;
+			bool tgtIsPtrToAry = tgtOuter == Pointer.Kind.PtrToAry;
+			bool tgtIsRawPtr   = tgtOuter == Pointer.Kind.RawPtr;
 
-			if( !(( srcIsArray && tgtIsPtrToAry ) || ( srcIsPtrToAry && tgtIsRawPtr )) )
+			// T[N] decays to T[*], and T[*] is interchangeable with T* at the C++
+			// ABI level (they lower to the same type), so every direction along
+			// that chain converts: T[N] -> T[*] -> T* and T* -> T[*].
+			if( !(( srcIsArray    && tgtIsPtrToAry )
+			   || ( srcIsPtrToAry && tgtIsRawPtr )
+			   || ( srcIsRawPtr   && tgtIsPtrToAry )) )
 				return false;
 
 			// Normalize the outer pointer to RawPtr so exact-match/qualifier logic applies

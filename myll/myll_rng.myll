@@ -1,0 +1,62 @@
+module myll_rng;
+
+namespace Myll {
+
+class Rng {
+field {
+	u64 _state;
+}
+
+[pub]:
+	ctor( u64 seed ) { _state = seed; }
+
+	ctor move /*other*/ {
+		_state      = other._state;
+		other._state = 1;
+	}
+
+	operator move = /*other*/ {
+		if( &self == &other )
+			return self;
+		_state       = other._state;
+		other._state = 1;
+		return self;
+	}
+
+	// xorshift64: one step of the generator state. Do not seed with zero.
+	method next() -> u64 {
+		_state ^= _state >> 12;
+		_state ^= _state << 25;
+		_state ^= _state >> 27;
+		return _state;
+	}
+
+	method nextU32() -> u32 {
+		var u64 value = next();
+		return (u32)( value >> 32 );
+	}
+
+	method nextF32() -> f32 {
+		var u64 value = next();
+		return (f32)( ( value >> 40 ) & 0xFFFFFF ) / 16777216.0;
+	}
+
+	method nextF64() -> f64 {
+		var u64 value = next();
+		return (f64)( value >> 11 ) / 9007199254740992.0;
+	}
+
+	// Inclusive on both ends: range( 0, 9 ) covers ten values.
+	method range( usize min, usize max ) -> usize {
+		if( max < min )
+			return min;
+		var usize span = max - min + 1;
+		var u64 value = next();
+		return min + (usize)( value % span );
+	}
+
+	[pure]
+	method state() -> u64 => _state;
+}
+
+} // namespace Myll

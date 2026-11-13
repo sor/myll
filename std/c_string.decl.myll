@@ -1,0 +1,6 @@
+module c_string;
+import <cstring>;
+
+namespace std {
+	func strlen( const char* s ) -> usize;
+}

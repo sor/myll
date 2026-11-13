@@ -2215,6 +2215,15 @@ namespace Myll.Resolver
 						? TemplateInference.SubstituteTemplateParams( paras[i].type, combinedParams, combinedArgs, result )
 						: paras[i].type;
 
+					// Dependent positions (a template parameter of an enclosing
+					// class or function, on either side) cannot be ranked before
+					// instantiation; C++ re-checks the conversion there.
+					if( ( argTypes[i]!.IsDependentType() ) || paramType.IsDependentType() ) {
+						if( worst < ConversionRank.Exact )
+							worst = ConversionRank.Exact;
+						continue;
+					}
+
 					ConversionRank rank = ConversionRules.GetRank(
 						argTypes[i]!,
 						paramType,
@@ -2325,6 +2334,13 @@ namespace Myll.Resolver
 
 			if( viable.Count > 1 ) {
 				LogOverloadResolution( "  ambiguous" );
+				// Dependent arguments: the tie is an artifact of the deferral,
+				// not a real ambiguity; C++ re-runs the resolution at
+				// instantiation (with ADL), so leave the call unresolved.
+				if( argTypes.Any( t => t != null && t.IsDependentType() ) ) {
+					LogOverloadResolution( "  deferring dependent-argument tie to C++" );
+					return (null, false, false);
+				}
 				return (null, true, false);
 			}
 
@@ -2335,6 +2351,12 @@ namespace Myll.Resolver
 			}
 
 			LogOverloadResolution( "  no viable candidate" );
+			// Same deferral for hard rejections: dependent arguments hide the
+			// real conversion C++ will check at instantiation.
+			if( argTypes.Any( t => t != null && t.IsDependentType() ) ) {
+				LogOverloadResolution( "  deferring dependent-argument rejection to C++" );
+				return (null, false, false);
+			}
 			return (null, false, true);
 		}
 

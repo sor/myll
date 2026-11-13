@@ -1,5 +1,7 @@
 module myll_dyn_array;
 
+import myll_option;
+
 namespace Myll {
 
 [ct] const usize DefaultCapacity = 8;
@@ -144,6 +146,61 @@ field {
 			_data[i] = value;
 			++i;
 		}
+	}
+
+	[chain]
+	method insert( usize index, const T& value ) {
+		if( index > _size )
+			index = _size;
+		if( _size >= _capacity )
+			grow();
+		var usize i = _size;
+		while( i > index ) {
+			_data[i] = _data[i - 1];
+			--i;
+		}
+		_data[index] = value;
+		++_size;
+	}
+
+	[chain]
+	method erase( usize index ) {
+		if( index >= _size )
+			return self;
+		var usize i = index;
+		while( i < _size - 1 ) {
+			_data[i] = _data[i + 1];
+			++i;
+		}
+		--_size;
+	}
+
+	method remove( const T& value ) -> bool {
+		var Myll::Option<usize> first = indexOf( value );
+		if( !first.has() )
+			return false;
+		erase( first.value() );
+		return true;
+	}
+
+	method indexOf( const T& value ) -> Myll::Option<usize> {
+		var usize i = 0;
+		while( i < _size ) {
+			if( _data[i] == value )
+				return Myll::Option<usize>::some( i );
+			++i;
+		}
+		return Myll::Option<usize>::none();
+	}
+
+	method contains( const T& value ) -> bool {
+		var usize i = 0;
+		while( i < _size ) {
+			if( _data[i] == value )
+				return true;
+			++i;
+		}
+		return false;
 	}
 
 	method find( const T& value ) -> Iterator {

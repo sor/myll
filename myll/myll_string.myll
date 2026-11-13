@@ -1,0 +1,331 @@
+module myll_string;
+
+import c_string, myll_option;
+
+namespace Myll {
+
+struct StringView {
+[pub]:
+	field const char[*] _data;
+	field usize        _len = 0;
+
+	[implicit] ctor convert <- const char* {
+		_data = other;
+		_len  = other == null ? 0 : std::strlen( other );
+	}
+
+	ctor( const char[*] data, usize len ) {
+		_data = data;
+		_len  = len;
+	}
+
+	[pure]
+	method len() -> usize => _len;
+
+	[pure]
+	method isEmpty() -> bool => _len == 0;
+
+	method at( usize index ) -> const char& => _data[ index ];
+
+	operator [] ( usize index ) -> const char& => _data[ index ];
+
+	[pure]
+	method equals( StringView other ) -> bool {
+		if( _len != other._len )
+			return false;
+		var usize i = 0;
+		while( i < _len ) {
+			if( _data[ i ] != other._data[ i ] )
+				return false;
+			++i;
+		}
+		return true;
+	}
+
+	[pure]
+	method startsWith( StringView other ) -> bool {
+		if( other._len > _len )
+			return false;
+		var usize i = 0;
+		while( i < other._len ) {
+			if( _data[ i ] != other._data[ i ] )
+				return false;
+			++i;
+		}
+		return true;
+	}
+
+	[pure]
+	method endsWith( StringView other ) -> bool {
+		if( other._len > _len )
+			return false;
+		var usize i = 0;
+		while( i < other._len ) {
+			if( _data[ _len - other._len + i ] != other._data[ i ] )
+				return false;
+			++i;
+		}
+		return true;
+	}
+
+	[pure]
+	method contains( StringView other ) -> bool {
+		if( other._len == 0 )
+			return true;
+		if( other._len > _len )
+			return false;
+		var usize i = 0;
+		while( i <= _len - other._len ) {
+			var bool same = true;
+			var usize j = 0;
+			while( j < other._len ) {
+				if( _data[ i + j ] != other._data[ j ] ) {
+					same = false;
+					break;
+				}
+				++j;
+			}
+			if( same )
+				return true;
+			++i;
+		}
+		return false;
+	}
+
+	[pure]
+	method contains( const char* cstr ) -> bool => contains( StringView( cstr ) );
+}
+
+class String {
+field {
+	char[]! _data;
+	usize   _len      = 0;
+	usize   _capacity = 0;
+}
+
+[pub]:
+	ctor() {}
+
+	ctor( StringView view ) {
+		reserve( view.len() );
+		do view.len() times i {
+			pushBack( view.at( i ) );
+		}
+	}
+
+	[implicit] ctor convert <- const char* {
+		append( StringView( other ) );
+	}
+
+	ctor( const String& other ) {
+		reserve( other._len );
+		do other._len times i {
+			pushBack( other._data[ i ] );
+		}
+	}
+
+	ctor move /*other*/ {
+		_data         = (move)other._data;
+		_len          = other._len;
+		_capacity     = other._capacity;
+		other._data   = null;
+		other._len    = 0;
+		other._capacity = 0;
+	}
+
+	operator move = /*other*/ {
+		if( &self == &other )
+			return self;
+		_data         = (move)other._data;
+		_len          = other._len;
+		_capacity     = other._capacity;
+		other._data   = null;
+		other._len    = 0;
+		other._capacity = 0;
+		return self;
+	}
+
+	operator = ( const String& other ) {
+		if( &self == &other )
+			return self;
+		clear();
+		reserve( other._len );
+		do other._len times i {
+			pushBack( other._data[ i ] );
+		}
+		return self;
+	}
+
+	[pure]
+	method len() -> usize => _len;
+
+	[pure]
+	method isEmpty() -> bool => _len == 0;
+
+	method at( usize index ) -> char& => _data[ index ];
+
+	operator [] ( usize index ) -> char& => _data[ index ];
+
+	[chain]
+	method reserve( usize newCapacity ) {
+		if( newCapacity > _capacity ) {
+			var char[]! newData = new char[newCapacity]!;
+			do _len times i {
+				newData[ i ] = _data[ i ];
+			}
+			_capacity = newCapacity;
+			_data     = (move)newData;
+		}
+	}
+
+	[chain]
+	method pushBack( char value ) {
+		if( _len >= _capacity )
+			grow();
+		_data[ _len ] = value;
+		++_len;
+	}
+
+	[chain]
+	method append( StringView view ) {
+		do view.len() times i {
+			pushBack( view.at( i ) );
+		}
+	}
+
+	[chain]
+	method append( const char* cstr ) {
+		append( StringView( cstr ) );
+	}
+
+	[chain]
+	method append( String other ) {
+		append( other.view() );
+	}
+
+	[chain]
+	method appendRepeat( char value, usize count ) {
+		do count times {
+			pushBack( value );
+		}
+	}
+
+	[chain]
+	method clear() {
+		_len = 0;
+	}
+
+	[pure]
+	method view() -> StringView {
+		if( _len == 0 )
+			return StringView( null, 0 );
+		return StringView( &_data[ 0 ], _len );
+	}
+
+	method find( char value ) -> Myll::Option<usize> {
+		var usize i = 0;
+		while( i < _len ) {
+			if( _data[ i ] == value )
+				return Myll::Option<usize>::some( i );
+			++i;
+		}
+		return Myll::Option<usize>::none();
+	}
+
+	method find( StringView view ) -> Myll::Option<usize> {
+		if( view.len() == 0 )
+			return Myll::Option<usize>::some( 0 );
+		if( view.len() > _len )
+			return Myll::Option<usize>::none();
+		var usize i = 0;
+		while( i <= _len - view.len() ) {
+			var bool same = true;
+			do view.len() times j {
+				if( _data[ i + j ] != view.at( j ) ) {
+					same = false;
+					break;
+				}
+			}
+			if( same )
+				return Myll::Option<usize>::some( i );
+			++i;
+		}
+		return Myll::Option<usize>::none();
+	}
+
+	method find( const char* cstr ) -> Myll::Option<usize> => find( StringView( cstr ) );
+
+	method contains( char value ) -> bool {
+		var Myll::Option<usize> hit = find( value );
+		return hit.has();
+	}
+
+	method contains( StringView view ) -> bool {
+		var Myll::Option<usize> hit = find( view );
+		return hit.has();
+	}
+
+	method contains( const char* cstr ) -> bool => contains( StringView( cstr ) );
+
+	method startsWith( StringView prefix ) -> bool => view().startsWith( prefix );
+
+	method startsWith( const char* cstr ) -> bool => view().startsWith( StringView( cstr ) );
+
+	method endsWith( StringView suffix ) -> bool => view().endsWith( suffix );
+
+	method endsWith( const char* cstr ) -> bool => view().endsWith( StringView( cstr ) );
+
+	method substring( usize start, usize end ) -> String {
+		if( end > _len )
+			end = _len;
+		if( start > end )
+			start = end;
+		var String result;
+		do end - start times i {
+			result.pushBack( _data[ start + i ] );
+		}
+		return result;
+	}
+
+	operator == ( StringView other ) -> bool {
+		if( _len != other.len() )
+			return false;
+		do _len times i {
+			if( _data[ i ] != other.at( i ) )
+				return false;
+		}
+		return true;
+	}
+
+	operator == ( const char* cstr ) -> bool => self == StringView( cstr );
+
+	operator == ( const String& other ) -> bool => self == other.view();
+
+	operator != ( StringView other ) -> bool => !( self == other );
+
+	operator != ( const char* cstr ) -> bool => !( self == StringView( cstr ) );
+
+	operator != ( const String& other ) -> bool => !( self == other.view() );
+
+	operator < ( StringView other ) -> bool {
+		var usize shortest = _len < other.len() ? _len : other.len();
+		do shortest times i {
+			if( _data[ i ] < other.at( i ) )
+				return true;
+			if( _data[ i ] > other.at( i ) )
+				return false;
+		}
+		return _len < other.len();
+	}
+
+	operator < ( const char* cstr ) -> bool => self < StringView( cstr );
+
+	operator < ( const String& other ) -> bool => self < other.view();
+
+[priv]:
+	method grow() {
+		reserve( _capacity == 0 ? 16 : _capacity * 2 );
+	}
+}
+
+} // namespace Myll

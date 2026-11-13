@@ -1,0 +1,197 @@
+module myll_map;
+
+import myll_dyn_array, myll_hash;
+
+namespace Myll {
+
+class Map<K, V> {
+field {
+	K[]!    _keys;
+	V[]!    _values;
+	u8[]!   _state; // 0 empty, 1 live, 2 tombstone
+	usize   _size     = 0; // live entries
+	usize   _tomb     = 0; // tombstones
+	usize   _capacity = 0;
+}
+
+[pub]:
+	ctor() {}
+
+	ctor( usize initialCapacity ) {
+		if( initialCapacity < 8 )
+			initialCapacity = 8;
+		rehashTo( nextPowerOfTwo( initialCapacity ) );
+	}
+
+	ctor( const Map& other ) {
+		rehashTo( other._capacity );
+		var usize slot = 0;
+		while( slot < other._capacity ) {
+			if( other._state[ slot ] == 1 ) {
+				put( other._keys[ slot ], other._values[ slot ] );
+			}
+			++slot;
+		}
+	}
+
+	ctor move /*other*/ {
+		_keys     = (move)other._keys;
+		_values   = (move)other._values;
+		_state    = (move)other._state;
+		_size     = other._size;
+		_tomb     = other._tomb;
+		_capacity = other._capacity;
+		other._size     = 0;
+		other._tomb     = 0;
+		other._capacity = 0;
+	}
+
+	operator move = /*other*/ {
+		if( &self == &other )
+			return self;
+		_keys     = (move)other._keys;
+		_values   = (move)other._values;
+		_state    = (move)other._state;
+		_size     = other._size;
+		_tomb     = other._tomb;
+		_capacity = other._capacity;
+		other._size     = 0;
+		other._tomb     = 0;
+		other._capacity = 0;
+		return self;
+	}
+
+	[pure]
+	method size() -> usize => _size;
+
+	[pure]
+	method isEmpty() -> bool => _size == 0;
+
+	[chain]
+	method clear() {
+		var usize slot = 0;
+		while( slot < _capacity ) {
+			_state[ slot ] = 0;
+			++slot;
+		}
+		_size = 0;
+		_tomb = 0;
+	}
+
+	[chain]
+	method put( K key, V value ) {
+		if( _capacity == 0 )
+			rehashTo( 8 );
+		else if( ( _size + _tomb ) * 4 >= _capacity * 3 )
+			rehashTo( _capacity * 2 );
+
+		var u64 h = hash( key );
+		var usize slot = (usize)( h & (u64)( _capacity - 1 ) );
+		while( _state[ slot ] == 1 ) {
+			if( _keys[ slot ] == key ) {
+				_values[ slot ] = value;
+				return self;
+			}
+			slot = ( slot + 1 ) & ( _capacity - 1 );
+		}
+		// slot is empty or a tombstone: place the entry there.
+		if( _state[ slot ] == 2 )
+			--_tomb;
+		_state[ slot ]  = 1;
+		_keys[ slot ]   = key;
+		_values[ slot ] = value;
+		++_size;
+	}
+
+	method at( K key ) -> V* {
+		if( _capacity == 0 )
+			return null;
+		var u64 h = hash( key );
+		var usize slot = (usize)( h & (u64)( _capacity - 1 ) );
+		while( _state[ slot ] != 0 ) {
+			if( _state[ slot ] == 1 && _keys[ slot ] == key )
+				return &_values[ slot ];
+			slot = ( slot + 1 ) & ( _capacity - 1 );
+		}
+		return null;
+	}
+
+	method getOr( K key, V fallback ) -> V {
+		var V* found = at( key );
+		if( found != null )
+			return *found;
+		return fallback;
+	}
+
+	method has( K key ) -> bool => at( key ) != null;
+
+	method remove( K key ) -> bool {
+		if( _capacity == 0 )
+			return false;
+		var u64 h = hash( key );
+		var usize slot = (usize)( h & (u64)( _capacity - 1 ) );
+		while( _state[ slot ] != 0 ) {
+			if( _state[ slot ] == 1 && _keys[ slot ] == key ) {
+				_state[ slot ] = 2;
+				--_size;
+				++_tomb;
+				return true;
+			}
+			slot = ( slot + 1 ) & ( _capacity - 1 );
+		}
+		return false;
+	}
+
+	method keys() -> Myll::DynArray<K> {
+		var Myll::DynArray<K> result;
+		var usize slot = 0;
+		while( slot < _capacity ) {
+			if( _state[ slot ] == 1 )
+				result.pushBack( _keys[ slot ] );
+			++slot;
+		}
+		return result;
+	}
+
+	method values() -> Myll::DynArray<V> {
+		var Myll::DynArray<V> result;
+		var usize slot = 0;
+		while( slot < _capacity ) {
+			if( _state[ slot ] == 1 )
+				result.pushBack( _values[ slot ] );
+			++slot;
+		}
+		return result;
+	}
+
+[priv]:
+	method rehashTo( usize newCapacity ) {
+		var K[]!  oldKeys   = (move)_keys;
+		var V[]!  oldValues = (move)_values;
+		var u8[]! oldState  = (move)_state;
+		var usize oldCap    = _capacity;
+
+		_keys   = new K[newCapacity]!;
+		_values = new V[newCapacity]!;
+		_state  = new u8[newCapacity]!;
+		_capacity = newCapacity;
+		_size     = 0;
+		_tomb     = 0;
+
+		var usize slot = 0;
+		while( slot < oldCap ) {
+			if( oldState[ slot ] == 1 )
+				put( oldKeys[ slot ], oldValues[ slot ] );
+			++slot;
+		}
+	}
+
+	method nextPowerOfTwo( usize value ) -> usize {
+		var usize result = 8;
+		while( result < value )
+			result = result * 2;
+		return result;
+	}
+}
+
+} // namespace Myll
