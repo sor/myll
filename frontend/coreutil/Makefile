@@ -24,6 +24,10 @@ TOOLS       := $(filter-out $(SPLIT_TOOLS),$(basename $(filter-out coreutil_%.my
 BINS        := $(addprefix gen/,$(TOOLS))
 ALL_BINS    := $(BINS) $(addprefix gen/,$(SPLIT_TOOLS)) gen/coreutil
 
+# The Myll standard library contributes non-template .cpp files too
+# (Myll::String, ...); every link needs them.
+MYLL_LIB_SRCS := $(wildcard gen/myll_*.cpp)
+
 .PHONY: all clean release debug
 
 all: $(ALL_BINS)
@@ -31,7 +35,9 @@ all: $(ALL_BINS)
 # Generate C++ sources for all .myll files in one Myll invocation.
 # Local helper headers are copied next to the generated files so the compiler
 # finds them without needing the source directory on the include path.
-gen/.stamp: $(wildcard *.myll) $(wildcard *.hpp)
+# The std/myll library sources are dependencies too: a library change must
+# regenerate the utilities.
+gen/.stamp: $(wildcard *.myll) $(wildcard *.hpp) $(wildcard $(MYLL_ROOT)/myll/*.myll) $(wildcard $(MYLL_ROOT)/std/*.decl.myll)
 	@mkdir -p gen
 	$(MYLL)
 	@for h in $(wildcard *.hpp); do cp -f "$$h" gen/; done
@@ -39,17 +45,17 @@ gen/.stamp: $(wildcard *.myll) $(wildcard *.hpp)
 
 # Split tools: wrapper + logic + shared library.
 $(addprefix gen/,$(SPLIT_TOOLS)): gen/%: gen/.stamp
-	$(CXX) $(CXXFLAGS) gen/$*.cpp gen/coreutil_$*.cpp gen/coreutil_lib.cpp -o $@
+	$(CXX) $(CXXFLAGS) gen/$*.cpp gen/coreutil_$*.cpp gen/coreutil_lib.cpp $(MYLL_LIB_SRCS) -o $@
 
 # Combined multi-call binary: dispatcher + all tool logics + shared library.
 COREUTIL_SRCS := coreutil.cpp $(foreach t,$(SPLIT_TOOLS),coreutil_$(t).cpp) coreutil_lib.cpp
 
 gen/coreutil: gen/.stamp
-	$(CXX) $(CXXFLAGS) $(addprefix gen/,$(COREUTIL_SRCS)) -o $@
+	$(CXX) $(CXXFLAGS) $(addprefix gen/,$(COREUTIL_SRCS)) $(MYLL_LIB_SRCS) -o $@
 
 # Trivial tools still compile from a single generated .cpp.
 $(BINS): gen/.stamp
-	$(CXX) $(CXXFLAGS) gen/$(@F).cpp -o $@
+	$(CXX) $(CXXFLAGS) gen/$(@F).cpp $(MYLL_LIB_SRCS) -o $@
 
 release:
 	$(MAKE) CXXFLAGS="$(CXXFLAGS) $(RELEASE_FLAGS)"

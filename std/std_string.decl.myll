@@ -11,6 +11,7 @@ namespace std {
 		[implicit] convert <- const char*;
 
 		[pure,ct,nodiscard,noexcept] func length() -> usize;
+	[pure,ct,nodiscard,noexcept] func c_str() -> const char*;
 		[pure,ct,nodiscard] func substr( usize pos, usize len ) -> std::string;
 		[pure,ct,nodiscard] func compare( usize pos, usize len, const std::string & str ) -> int;
 

@@ -1,6 +1,7 @@
 module coreutil_grep;
 
 import std_iostream, std_fstream, std_string, std_vector, c_ctype, cxxopts;
+import myll_string;
 
 namespace JanSordid::Coreutil:
 
@@ -14,7 +15,7 @@ struct GrepOptions
 	field bool whole_line;
 	field bool no_filename;
 	field bool with_filename;
-	field string pattern;
+	field Myll::String pattern;
 };
 
 func grepUsage() -> int
@@ -31,13 +32,13 @@ func grepCharEquals( const char a, const char b, const bool ignore_case ) -> boo
 	return std::tolower( a ) == std::tolower( b );
 }
 
-func grepStringEquals( const string & a, const string & b, const bool ignore_case ) -> bool
+func grepStringEquals( const Myll::StringView a, const Myll::StringView b, const bool ignore_case ) -> bool
 {
-	if( a.length() != b.length() )
+	if( a.len() != b.len() )
 		return false;
 
 	var usize i = 0;
-	while( i < a.length() ) {
+	while( i < a.len() ) {
 		if( !grepCharEquals( a[i], b[i], ignore_case ) )
 			return false;
 		++i;
@@ -45,30 +46,30 @@ func grepStringEquals( const string & a, const string & b, const bool ignore_cas
 	return true;
 }
 
-func grepContains( const string & haystack, const string & needle, const bool ignore_case ) -> bool
+func grepContains( const Myll::StringView haystack, const Myll::StringView needle, const bool ignore_case ) -> bool
 {
-	if( needle.length() == 0 )
+	if( needle.len() == 0 )
 		return true;
-	if( needle.length() > haystack.length() )
+	if( needle.len() > haystack.len() )
 		return false;
 
-	const usize last = haystack.length() - needle.length();
+	const usize last = haystack.len() - needle.len();
 	var usize i = 0;
 	while( i <= last ) {
 		var usize j = 0;
-		while( j < needle.length() ) {
+		while( j < needle.len() ) {
 			if( !grepCharEquals( haystack[i + j], needle[j], ignore_case ) )
 				break;
 			++j;
 		}
-		if( j == needle.length() )
+		if( j == needle.len() )
 			return true;
 		++i;
 	}
 	return false;
 }
 
-func grepMatches( const string & line, const string & pattern, const bool whole_line,
+func grepMatches( const Myll::StringView line, const Myll::StringView pattern, const bool whole_line,
 	const bool ignore_case ) -> bool
 {
 	if( whole_line )
@@ -83,9 +84,12 @@ func grepStream( const string & file_name, std::istream & in, const GrepOptions 
 	var int line_no = 0;
 	var int match_count = 0;
 
+	const Myll::StringView pattern = opts.pattern.view();
+
 	while( std::getline( in, line ) ) {
 		++line_no;
-		var bool matched = grepMatches( line, opts.pattern, opts.whole_line, opts.ignore_case );
+		const Myll::StringView text( line.c_str(), line.length() );
+		var bool matched = grepMatches( text, pattern, opts.whole_line, opts.ignore_case );
 		if( opts.invert )
 			matched = !matched;
 
@@ -146,16 +150,18 @@ func grep( int argc, const char *[] argv ) -> int
 	opts.no_filename = result["no-filename"].as<bool>();
 
 	if( result.count( "regexp" ) != 0 ) {
-		opts.pattern = result["regexp"].as<string>();
+		var string pat = result["regexp"].as<string>();
+		opts.pattern = Myll::String( pat.c_str() );
 	}
 
 	const std::vector<string> positional = result.unmatched();
 	var usize pos = 0;
 
-	if( opts.pattern == "" ) {
+	if( opts.pattern.isEmpty() ) {
 		if( positional.size() == 0 )
 			return grepUsage();
-		opts.pattern = positional[pos];
+		var string first = positional[pos];
+		opts.pattern = Myll::String( first.c_str() );
 		++pos;
 	}
 
