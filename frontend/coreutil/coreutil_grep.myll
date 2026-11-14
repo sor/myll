@@ -150,8 +150,7 @@ func grep( int argc, const char *[] argv ) -> int
 	opts.no_filename = result["no-filename"].as<bool>();
 
 	if( result.count( "regexp" ) != 0 ) {
-		var string pat = result["regexp"].as<string>();
-		opts.pattern = Myll::String( pat.c_str() );
+		opts.pattern = Myll::String( result["regexp"].as<string>().c_str() );
 	}
 
 	const std::vector<string> positional = result.unmatched();

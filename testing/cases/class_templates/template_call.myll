@@ -1,5 +1,7 @@
 module class_templates;
 
+import std_string;
+
 namespace template_call {
 
 class Wrapper<T>
@@ -19,10 +21,30 @@ class Wrapper<T>
 	}
 }
 
+class Carrier
+{
+[pub]:
+	method toType<T>( T v ) -> T => v;
+
+	field int _marker;
+}
+
 func run() -> int
 {
 	var Wrapper<int> w;
-	return w.bar();
+	var int r = w.bar();
+
+	// Chaining a member call on the return of an explicitly instantiated
+	// template method: the return type substitutes, then the member resolves.
+	var Carrier carrier;
+	var usize n = carrier.toType<string>( "hi" ).length();
+	if( n != 2 )
+		return 1;
+	var char c = carrier.toType<string>( "abc" )[ 0 ];
+	if( c != 'a' )
+		return 2;
+
+	return r;
 }
 
 } // namespace template_call

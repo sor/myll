@@ -235,7 +235,17 @@ int static_member::run()
 int template_call::run()
 {
     template_call::Wrapper<int> w{};
-    return w.bar();
+    int r = w.bar();
+    template_call::Carrier carrier{};
+    std::uint64_t n = carrier.toType<std::string>( "hi" ).length();
+    if( n != 2 ) {
+        return 1;
+    }
+    char c = carrier.toType<std::string>( "abc" )[0];
+    if( c != 'a' ) {
+        return 2;
+    }
+    return r;
 }
 int main()
 {

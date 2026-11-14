@@ -500,6 +500,7 @@ namespace template_call
 {
     template <typename T>
     class Wrapper;
+    class Carrier;
     template <typename T>
     class Wrapper
     {
@@ -513,6 +514,16 @@ namespace template_call
         inline int bar()
         {
             return (*this).template foo<int>();
+        }
+    };
+    class Carrier
+    {
+    public:
+        int _marker{};
+        template <typename T>
+        inline T toType(T v)
+        {
+            return v;
         }
     };
     int run();

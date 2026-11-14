@@ -1369,7 +1369,7 @@ namespace Myll.Resolver
 				if( result.Members.ContainsKey( member ) )
 					continue;
 
-			if( !TryGetMemberAccessBaseType(
+if( !TryGetMemberAccessBaseType(
 					unresolved.Node.left,
 					unresolved.Scope,
 					module,
@@ -1378,7 +1378,7 @@ namespace Myll.Resolver
 				continue;
 
 			Decl? resolved = LookupMember( member.idTplArgs.id, (Structural) baseType!, module );
-				if( resolved != null ) {
+			if( resolved != null ) {
 					result.ResolveMember( member, resolved );
 					progress = true;
 				}
@@ -2855,12 +2855,11 @@ namespace Myll.Resolver
 								type = vd.type;
 								break;
 							case Func f:
-								type = f.retType;
-								if( TryGetReceiverType( calleeBin.left, out Typespec receiverType ) ) {
-									Typespec? substituted = OperatorResolver.SubstituteMethodReturnType( f, receiverType, result );
-									if( substituted != null )
-										type = substituted;
-								}
+								// SubstituteCallTemplateArgs covers the method's
+								// own template arguments (explicit <T> spelling)
+								// and the receiver's class arguments alike.
+								Typespec? substituted = typeResolver.SubstituteCallTemplateArgs( f, calleeBin );
+								type = substituted ?? f.retType;
 								break;
 						}
 					}
