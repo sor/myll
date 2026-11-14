@@ -1,5 +1,7 @@
 module ct_array_size;
 
+import ct_array_size_ctlib, ct_array_size_lib;
+
 [ct] const int SIZE = 4;
 
 struct S {
@@ -23,6 +25,16 @@ func main() -> int {
 	local[0] = 3;
 	if( local[0] != 3 )
 		return 3;
+
+	// a constexpr function from another module as a constant size
+	var int[dbl( 4 )] imported;
+	imported[7] = 4;
+	if( imported[7] != 4 )
+		return 4;
+
+	// plain imported function (runtime)
+	if( triple( 6 ) != 18 )
+		return 5;
 
 	return 0;
 }

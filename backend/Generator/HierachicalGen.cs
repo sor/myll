@@ -973,9 +973,13 @@ bool isInsideStruct   = obj.IsInStruct;
 			}
 
 			// TODO: move inlines to bottom of header
-			if( isInlined || isExternal || hasTpl || isSpec ) {
+			// A compile-time free function is a header entity: constexpr
+			// functions are implicitly inline, and their definition must be
+			// visible in every TU that uses them in a constant expression.
+			bool isCtFreeFunc = obj.IsCompileTime && !isInsideStruct;
+			if( isInlined || isExternal || hasTpl || isSpec || isCtFreeFunc ) {
 				if( !isInsideStruct ) {
-					if( emitPrototype ) {
+					if( emitPrototype && !isCtFreeFunc ) {
 						int mark = targetProto.Count;
 						if( hasTpl || isSpec )
 							targetProto.Add( tplDecl );

@@ -1,0 +1,3 @@
+module ct_array_size_lib;
+
+func triple( int x ) -> int => x * 3;

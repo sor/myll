@@ -1,0 +1,6 @@
+module ct_array_size_ctlib;
+
+// A compile-time free function is a header entity: the constexpr definition
+// is visible to every importing module, so constant contexts like array
+// sizes work cross-module.
+[ct] func dbl( int x ) -> int => x * 2;

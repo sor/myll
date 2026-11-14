@@ -11,37 +11,37 @@ namespace Myll {
 // type (same namespace, or found by ADL).
 
 
-func hash( bool key ) -> u64 => key ? 1 : 0;
+[ct] func hash( bool key ) -> u64 => key ? 1 : 0;
 
 
-func hash( char key ) -> u64 => (u64)key;
+[ct] func hash( char key ) -> u64 => (u64)key;
 
 
-func hash( u8 key ) -> u64 => (u64)key;
+[ct] func hash( u8 key ) -> u64 => (u64)key;
 
 
-func hash( u16 key ) -> u64 => (u64)key;
+[ct] func hash( u16 key ) -> u64 => (u64)key;
 
 
-func hash( u32 key ) -> u64 => (u64)key;
+[ct] func hash( u32 key ) -> u64 => (u64)key;
 
 
-func hash( u64 key ) -> u64 => key;
+[ct] func hash( u64 key ) -> u64 => key;
 
 
-func hash( i8 key ) -> u64 => (u64)(u8)key;
+[ct] func hash( i8 key ) -> u64 => (u64)(u8)key;
 
 
-func hash( i16 key ) -> u64 => (u64)(u16)key;
+[ct] func hash( i16 key ) -> u64 => (u64)(u16)key;
 
 
-func hash( i32 key ) -> u64 => (u64)(u32)key;
+[ct] func hash( i32 key ) -> u64 => (u64)(u32)key;
 
 
-func hash( i64 key ) -> u64 => (u64)key;
+[ct] func hash( i64 key ) -> u64 => (u64)key;
 
 // FNV-1a over the bytes.
-func hash( Myll::StringView view ) -> u64 {
+[ct] func hash( Myll::StringView view ) -> u64 {
 	var u64 result = 14695981039346656037;
 	do view.len() times i {
 		result = result ^ (u64)view.at( i );
@@ -50,6 +50,6 @@ func hash( Myll::StringView view ) -> u64 {
 	return result;
 }
 
-func hash( Myll::String str ) -> u64 => Myll::hash( str.view() );
+[ct] func hash( Myll::String str ) -> u64 => Myll::hash( str.view() );
 
 } // namespace Myll

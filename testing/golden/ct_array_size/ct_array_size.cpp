@@ -15,5 +15,13 @@ int main()
     if( local[0] != 3 ) {
         return 3;
     }
+    int imported[dbl( 4 )]{};
+    imported[7] = 4;
+    if( imported[7] != 4 ) {
+        return 4;
+    }
+    if( triple( 6 ) != 18 ) {
+        return 5;
+    }
     return 0;
 }
