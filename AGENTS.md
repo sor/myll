@@ -252,6 +252,9 @@ TMPDIR=/opt/podman/tmp podman system prune -a
 
 ## Known Pitfalls
 
+**Quiet lexer keywords.** These common words are lexer keywords; using them as identifiers fails with "mismatched input ... expecting ID" or "expecting ID":
+`get`, `set`, `refget` (property accessor blocks), `copy`, `move`, `conv`/`convert`, `forw`/`forward` (special ctor/convert spellings), `string` (the std::string type keyword), `meth`/`method`, `field`, `times`, `ilist`/`initlist`, `this`/`self`, `nan`, `inf`, `not`, `look`, `edit`, `share`, `weakshare`, `consume`, `produce`, `replace`, `fall`, `is`. The obvious ones (`class`, `func`, `var`, ...) are not listed here. Getters/setters: use the accessor blocks (`get { }` / `set { }`) for property syntax; for method-style names use `value()`/`at()`/`put()` or `fetch`/`store` (the myll std library uses `value`/`at`/`put`).
+
 Commented out code does not always mean that it is old or obsolete. Maybe it just does not compile yet. It possibly is the goal.
 
 Before making changes, read these in `docs/analysis/`:

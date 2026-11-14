@@ -22,6 +22,9 @@ are marked inline.
 - Types are PascalCase (`Map`, `StringView`); methods are PascalCase (`pushBack`); private fields are lowerCamel with a `_` prefix (`_size`), in a `field { ... }` block. This follows the existing `DynArray` conventions.
 - Sizes and indices are `usize`. Hash results are `u64`.
 - Smart arrays (`T[]!`) back all storage; raw `T*` only where C++ ABI demands it.
+- API naming: `get`/`set`/`copy` are lexer keywords (`AGENTS.md`, quiet
+  keywords). Getters are `value()`/`at()`, setters are `put()`;
+  `fetch`/`store` are the Rust-flavored alternatives.
 
 ## Policies
 

@@ -6,6 +6,19 @@ specialization series through phase F is complete (see `plan/template-specializa
 
 ## Immediate
 
+- **Concepts for Myll — design first.** The `concept` and `aspect` keywords
+   already parse (`REASONS.md` lists them as "not finalized"). Decide the
+   model: Myll-side checking of requirements, emitting C++ `requires`
+   clauses for the rest, or the mix (check what Myll can see, emit
+   `requires` for template-tail constraints). Motivating cases: the
+   Map/Set hash protocol collapses into a constrained
+   `func hash<K: Hashable>( K key ) -> u64;` instead of free ADL overloads
+   (today `usize`/`u64` style ABI-aliases cannot share one overload set
+   without exactly that — C++ solves it with `std::unsigned_integral`
+   templates). An interim, pre-concepts step: warn in Myll when two
+   overloads lower to the same C++ signature (the redefinition today only
+   surfaces in the C++ compiler).
+
 - ~~Myll standard library (`myll/`)~~ — **done 2026-11-14** (`plan/myll-std.md`):
    DynArray extension, Option, Result, Rng, String/StringView, and the
    hash/Map/Set trio, plus the grep consumer port and the compiler fixes
