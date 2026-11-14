@@ -1,6 +1,8 @@
 # Myll Standard Library — v1
 
-Status: **design settled 2026-11-14** (big-bang pass, decisions below); implementation in progress.
+Status: **implemented 2026-11-14** (design settled in the same pass); the
+notes below describe the shipped v1. Deviations from the original design
+are marked inline.
 
 ## Goals
 
@@ -27,29 +29,38 @@ Status: **design settled 2026-11-14** (big-bang pass, decisions below); implemen
 - **Bounds**: no checked bounds in v1 (matching C++ `std::` semantics); unchecked access stays `operator[]`, `at()` matches `std::` `at` spelling (also unchecked for now).
 - **Iteration**: explicit `Iterator` classes following the `DynArray` model (`begin()`/`end()`, `++`, `*`, `==`, `!=`). There are no concepts/aspects (`REASONS.md`), so generic algorithms over containers are not possible in v1; iteration plus raw-pointer spans cover the common cases. `std::` algorithm bindings keep working on raw data.
 - **Missing-key reads** return raw nullable pointers (`get(k) -> V*`, null when absent) plus `getOr` fallbacks. `Option<T>` exists for value-shaped results (see below); the raw-pointer form exists because `Option<T&>`/`Option<V&>` (references as template arguments) is not settled.
-
 ## Hash protocol (myll_hash)
 
 - `func hash( K key ) -> u64` is a free function, overloaded per key type.
-- `myll_hash` ships overloads for the built-in scalars (identity for integers) and `StringView` (FNV-1a over the bytes).
-- `Map`/`Set` bodies call `hash(key)` unqualified; resolution is finished by C++ at instantiation (same mechanism as the external templated algorithms, `testing/cases/external_algorithms/`).
-- User key types: define `func hash( MyType x ) -> u64` next to the type (same namespace, found by ADL). Documented requirement for now.
+- `myll_hash` ships overloads for the built-in scalars (identity for
+  integers) and `StringView`/`String` (FNV-1a over the bytes).
+- `Map`/`Set` bodies call `hash(key)` unqualified; overload resolution with
+  dependent arguments defers to C++ (`Resolver.TryResolveOverload` leaves
+  the call unresolved, the emission writes the raw name), so instantiation
+  picks the concrete overload through ordinary lookup plus ADL.
+- User key types: define `func hash( MyType x ) -> u64` next to the type
+  (its namespace; found by ADL) and an `operator ==` overload on the type.
+  The built-in overloads are found through the definition context
+  (`myll_map.hpp` includes `myll_hash.hpp`), so no `Myll::` qualification
+  is needed from users.
 
 ## Modules
 
 ### myll_option — `Option<T>`
 
 - Storage: `T _value; bool _has;` (class, not union — tagged unions are not expressible yet; see Deferred).
-- `ctor()` is none; `ctor(T)` is some; copy and move ctors; `operator move =`.
-- `has() -> bool`, `get() -> T&`, `getOr( T fallback ) -> T`, `set(T)` and `reset()` (both `[chain]`).
-- `[static]` factories `some(T)` / `none()` when static methods are available.
+- `ctor()` is none; `ctor(T)` is some; copy and move ctors; `operator move =` and `operator =`.
+- `has()`, `value() -> T&`, `valueOr(T)`, `put(T)` and `reset()` (both `[chain]`).
+- `[static]` factories `some(T)` / `none()` (shipped; `[static] method` works).
 
 ### myll_result — `Result<T,E>`
 
 - Storage: `T _value; E _error; bool _ok;`.
-- Factories `ok(T)` and `fail(E)` (static), copy/move ctors, `operator move =`.
-- `isOk()`, `get() -> T&`, `error() -> E&`, `getOr(T)`, `errorOr(E)`.
-- No exceptions thrown by the library in v1.
+- Factories `ok(T)` and `fail(E)` (static), copy/move ctors, `operator move =`, `operator =`.
+- `isOk()`, `isFail()`, `value() -> T&`, `error() -> E&`, `valueOr(T)`, `errorOr(E)`.
+- No exceptions thrown by the library in v1. Same-type `Result<int, int>`
+  works because only the static factories construct values (plain ctor
+  overloads would be ambiguous there).
 
 ### myll_rng — `Rng`
 
@@ -76,7 +87,7 @@ Status: **design settled 2026-11-14** (big-bang pass, decisions below); implemen
 ### myll_map — `Map<K,V>` (hash table)
 
 - Open addressing with linear probing; parallel arrays `K[]! _keys`, `V[]! _values`, `u8[]! _state` (empty/live/tombstone), power-of-two capacity, rehash at load factor 0.75.
-- `put(K,V)` `[chain]` (insert or overwrite), `get(K) -> V*` (null when absent), `getOr(K, V)`, `has(K) -> bool`, `remove(K) -> bool`, `size()`, `isEmpty()`, `clear()` `[chain]`, `keys() -> DynArray<K>`, `values() -> DynArray<V>`.
+- `put(K,V)` `[chain]` (insert or overwrite), `at(K) -> V*` (null when absent; `get`/`set` are lexer keywords), `getOr(K, V)`, `has(K) -> bool`, `remove(K) -> bool`, `size()`, `isEmpty()`, `clear()` `[chain]`, `keys() -> DynArray<K>`, `values() -> DynArray<V>`.
 - Key requirements (documented): K is default-constructible, has `operator ==`, and a visible `hash` (see the hash protocol).
 - Copy semantics like the other containers; `operator move =` plus copy.
 
@@ -86,25 +97,55 @@ Status: **design settled 2026-11-14** (big-bang pass, decisions below); implemen
 
 ## Testing
 
-- `testing/cases/myll_std/`: one case, `main.my` plus per-module check functions (`runOption`, `runResult`, `runRng`, `runString`, `runMap`, `runSet`, `runDynArray`), run depth, golden baseline.
-- Every fix to the compiler that a module needs lands with a regression check inside the same case where possible.
+- `testing/cases/myll_std/` (module `std_lib` — the `myll_` prefix is
+  reserved for compiler-owned modules): per-module check functions
+  (`runOption` … `runSet`), run depth, golden baseline.
 - Bugs found but not fixed during the milestone get `plan/bug-*.md` entries.
 
 ## Consumer milestone
 
-- Port one coreutil onto the library: `wc` (chars/words/lines over `String` reads) or `grep` (lines, `contains`, `Map` of matches). Pick for string coverage at execution time — leaning `grep`.
-- The port must keep the same CLI behavior (golden output parity with the current implementation).
+- **Done**: `grep` ported onto the library (`frontend/coreutil/coreutil_grep.myll`).
+  The matching core runs over `Myll::StringView` (zero-copy line views via
+  `std::string::c_str()` + length; the pattern is a `Myll::String` viewed
+  once per stream). CLI behavior is unchanged (spot-checked against the
+  previous implementation: `-i`, `-c`, `-x`, `-v`, `-n`).
+- The coreutil `Makefile` links the generated `myll_*.cpp` files and
+  regenerates when `myll/` or `std/` sources change.
+
+## Compiler changes the library needed
+
+These shipped with the library; they are the "grow the compiler" part of
+the goal.
+
+- `GetAllTemplateParams` reversed the per-class parameter list (only
+  single-parameter classes hid it) — levels now reverse, per-level order is
+  kept.
+- `T*` now converts to `T[*]` (both lower to the same C++ type); the decay
+  chain accepts both directions.
+- `myll/` auto-discovery follows transitive imports (myll_dyn_array imports
+  myll_option).
+- Overload resolution with dependent arguments defers to C++: the ranking
+  skips dependent positions, and hard rejections or ties on dependent calls
+  leave the call unresolved so the emitted raw name re-runs overload
+  resolution at instantiation (ADL included). This is the mechanism the
+  hash protocol rides on.
+- `std::string::c_str()` binding (`std/std_string.decl.myll`).
 
 ## Deferred (v2+)
 
 - Tagged-union storage for `Option` (needs language support), `Option<T&>`.
 - `Result` monadic combinators and the interaction with the `except` axis.
-- Hash specialization for `String` keys via hashing hooks other than ADL.
-- Ordered map/set, iteration order guarantees, `Map`/`Set` iterators.
-- `StringBuilder`, UTF-8 views, `Rng` distributions, algorithm family over iterators.
+- Hash specialization hooks other than ADL.
+- Ordered map/set, iteration order guarantees, `Map`/`Set` iterators,
+  `[rule_of_3]`/`[rule_of_5]` attribute wiring on the containers.
+- `StringBuilder`, UTF-8 view, `Rng` distributions, algorithm family over
+  iterators, `String` interop with `std::unordered_map`.
 
-## Risks
+## Risks (realized)
 
-- Static factory methods (`[static]` method returning the enclosing type) are unproven; if unsupported, factories become plain ctors (`ctor okFrom(T)`-style) or free functions.
-- Unqualified `hash(k)` inside template bodies rides the external-algorithm precedent; if resolution proves flaky, `Map` falls back to a `ctor( hasherFunc )` injection for v1 and the protocol is revisited.
-- Reference-typed template arguments (`Option<T&>`) and `const` member reads of smart arrays may surface compiler gaps; file bugs, keep the library moving.
+- `[static]` factories work; `get`/`set`/`copy` are lexer keywords, so
+  `Option.get`/`Map.get` became `value()`/`at()`/`put()`.
+- Unqualified `hash(k)` inside template bodies needed the dependent-call
+  deferral (see above); the emission stays unqualified, so ADL applies.
+- The `[ct]` free-function hash overloads emitted mismatched constexpr
+  declarations across hpp/cpp; the scalar hashes are plain functions.

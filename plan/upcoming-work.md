@@ -6,6 +6,14 @@ specialization series through phase F is complete (see `plan/template-specializa
 
 ## Immediate
 
+- ~~Myll standard library (`myll/`)~~ — **done 2026-11-14** (`plan/myll-std.md`):
+   DynArray extension, Option, Result, Rng, String/StringView, and the
+   hash/Map/Set trio, plus the grep consumer port and the compiler fixes
+   the library needed (dependent-call deferral, T[*] conversions,
+   multi-param class ordering, transitive myll discovery). Follow-ups live
+   in the doc's Deferred list: tagged-union Option, ordered containers,
+   iterators, Rng distributions, Result combinators.
+
 - **Member variable template `[static]` requirement + const semantics unification**
   — ready to execute, full detail in `plan/member-var-static.md`.
   Require `[static]` on member var templates (primary and spec), reject missing,
@@ -143,7 +151,7 @@ specialization series through phase F is complete (see `plan/template-specializa
 
 ## Housekeeping
 
-- **CI/CD**: suite green at 158 cases; container image builds; the CI wiring
+- **CI/CD**: suite green at 159 cases; container image builds; the CI wiring
    itself remains (AGENTS Planned Work item 3).
 - **oldParser/oldCodeGen removal** (salvage notes: `plan/old-parser-salvage.md`,
   `plan/old-codegen-salvage.md`).
