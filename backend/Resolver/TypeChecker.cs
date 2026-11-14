@@ -1541,7 +1541,7 @@ case NewExpr newExpr: {
 				                       => "untyped float",
 				TypespecBasic basic when basic.kind == TypespecBasic.Kind.String
 				                       => "string literal",
-				_                      => type.Gen().Trim(),
+				_                      => type.GenDiagnostic().Trim(),
 			};
 		}
 	}

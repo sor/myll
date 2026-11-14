@@ -7,7 +7,7 @@ func test_pointer_to_array_initializer() -> void {
 	// Gaining array-view rights from a raw pointer is an explicit cast
 	// (const char[*]); it does not convert implicitly.
 	var const char* p = "abc";
-	var const char[*] q = p; // FAIL: Cannot convert 'const char*' to 'const char*'
+	var const char[*] q = p; // FAIL: Cannot convert 'const char*' to 'const char[*]'
 }
 
 func test_float_to_int_init() -> void {

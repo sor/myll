@@ -76,6 +76,12 @@ namespace Myll.Core
 		public virtual string Gen( string name = "" )
 			=> PointerizeName( GenQualifiers() + GenType(), name );
 
+		// Diagnostics render T[*] visibly (Gen prints the C++ 'T*'): the
+		// array-view pointer is a distinct Myll type, and messages like
+		// "cannot convert 'const char*' to 'const char*'" would mislead.
+		public string GenDiagnostic( string name = "" )
+			=> PointerizeName( GenQualifiers() + GenType(), name, diagnostic: true );
+
 
 		// r-padded qualifiers TODO: do properly
 		[Pure]
@@ -84,7 +90,7 @@ namespace Myll.Core
 				? ""
 				: qual.ToString().ToLower().Replace( ",", "" ) + " ";
 
-		protected string PointerizeName(string leftOfName, string name = "" )
+		protected string PointerizeName(string leftOfName, string name = "", bool diagnostic = false )
 		{
 			name = (" " + name).TrimEnd(); // empty name will result in empty string
 
@@ -106,7 +112,7 @@ namespace Myll.Core
 				}
 
 				wasArray = ptr.kind == Pointer.Kind.RawArray;
-				string tpl   = ptr.GetTemplate();
+				string tpl   = ptr.GetTemplate( diagnostic );
 				string index = ptr.expr?.Gen() ?? "";
 				if( wasArray ) {
 					rightOfName = Format( tpl, rightOfName, index );
@@ -422,8 +428,8 @@ namespace Myll.Core
 		/// </summary>
 		public Dialect Dialect { get; set; } = Myll.Core.Dialect.Default;
 
-		public string GetTemplate()
-			=> Dialect.GetPointerTemplate( kind );
+		public string GetTemplate( bool diagnostic = false )
+			=> Dialect.GetPointerTemplate( kind, diagnostic );
 
 		public Qualifier qual;
 		public Kind      kind;

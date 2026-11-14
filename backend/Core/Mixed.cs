@@ -55,6 +55,11 @@ namespace Myll.Core
 			=> IsPack
 				? Format( "{0}... {1}", type.Gen(), name ?? "" )
 				: type.Gen( name ?? "" );
+
+		public string GenDiagnostic()
+			=> IsPack
+				? Format( "{0}... {1}", type.GenDiagnostic(), name ?? "" )
+				: type.GenDiagnostic( name ?? "" );
 	}
 
 	// blah(  n:   1+2   )
@@ -162,6 +167,13 @@ namespace Myll.Core
 				? packArgs.Select( a => a.Gen() ).Join( ", " )
 			: lit?.Gen()
 			?? typespec?.Gen()
+			?? throw new InvalidOperationException( "TplArg has neither literal nor typespec" );
+
+		public string GenDiagnostic()
+			=> packArgs != null
+				? packArgs.Select( a => a.GenDiagnostic() ).Join( ", " )
+			: lit?.Gen()
+			?? typespec?.GenDiagnostic()
 			?? throw new InvalidOperationException( "TplArg has neither literal nor typespec" );
 	}
 

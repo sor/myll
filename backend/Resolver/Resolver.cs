@@ -436,7 +436,7 @@ namespace Myll.Resolver
 						validation.MismatchIndex!.Value,
 						validation.ParameterName,
 						validation.Expected,
-						useArgs[validation.MismatchIndex.Value].Gen(),
+						useArgs[validation.MismatchIndex.Value].GenDiagnostic(),
 						validation.Actual );
 				diagnostics.Add( new Diagnostic(
 					expr.srcPos,
@@ -674,7 +674,7 @@ namespace Myll.Resolver
 							typeValidation.MismatchIndex!.Value,
 							typeValidation.ParameterName,
 							typeValidation.Expected,
-							providedArgs[typeValidation.MismatchIndex.Value].Gen(),
+							providedArgs[typeValidation.MismatchIndex.Value].GenDiagnostic(),
 							typeValidation.Actual );
 					diagnostics.Add( new Diagnostic(
 						unresolved.Node.srcPos,
@@ -2429,7 +2429,7 @@ namespace Myll.Resolver
 					validation.MismatchIndex!.Value,
 					validation.ParameterName,
 					validation.Expected,
-					args[validation.MismatchIndex.Value].Gen(),
+					args[validation.MismatchIndex.Value].GenDiagnostic(),
 					validation.Actual );
 			}
 			else {

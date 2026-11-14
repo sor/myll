@@ -185,9 +185,14 @@ namespace Myll.Core
 		public DefaultTypeMode DefaultBint { get; init; } = DefaultTypeMode.SizeIndeterminate;
 
 		public string GetPointerTemplate( Pointer.Kind kind )
+			=> GetPointerTemplate( kind, diagnostic: false );
+
+		// Diagnostics print the array-view pointer as 'T[*]' so it never
+		// reads as a raw 'T*'.
+		public string GetPointerTemplate( Pointer.Kind kind, bool diagnostic )
 			=> kind switch {
 				Pointer.Kind.RawPtr      => "{0}*",
-				Pointer.Kind.PtrToAry    => "{0}*",
+				Pointer.Kind.PtrToAry    => diagnostic ? "{0}[*]" : "{0}*",
 				Pointer.Kind.LVRef       => "{0}&",
 				Pointer.Kind.RVRef       => "{0}&&",
 				Pointer.Kind.RawArray    => "{0}[{1}]",
