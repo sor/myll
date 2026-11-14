@@ -44,6 +44,30 @@ int run_array_subscript_ptr(int argc, const char* argv[])
     }
     return 0;
 }
+int run_string_literal_view()
+{
+    const char* p = "abc";
+    if( p[0] != 'a' || p[2] != 'c' ) {
+        return 1;
+    }
+    const char* q = "abc";
+    const char* r = q == nullptr ? "xyz" : "abc";
+    if( r[1] != 'b' ) {
+        return 2;
+    }
+    auto s = "auto";
+    if( s[1] != 'u' ) {
+        return 3;
+    }
+    if( stringLiteralChar( "xyz" ) != 'x' ) {
+        return 4;
+    }
+    return 0;
+}
+char stringLiteralChar(const char* view)
+{
+    return view[0];
+}
 int main(int argc, const char* argv[])
 {
     if( run_array_of_struct() != 0 ) {
@@ -51,6 +75,9 @@ int main(int argc, const char* argv[])
     }
     if( run_array_subscript_ptr( argc, argv ) != 0 ) {
         return 2;
+    }
+    if( run_string_literal_view() != 0 ) {
+        return 3;
     }
     return 0;
 }

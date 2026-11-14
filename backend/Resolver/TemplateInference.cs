@@ -715,7 +715,10 @@ public static List<TplParam> GetAllTemplateParams( Decl decl )
 					kind = TypespecBasic.Kind.Char,
 					size = 1,
 					qual = Qualifier.Const,
-					ptrs = new List<Pointer> { new() { kind = Pointer.Kind.RawPtr } },
+					// A string literal is an array of chars of unknown length:
+					// the materialized type is the array-view pointer, which
+					// sheds to a raw const char* implicitly where needed.
+					ptrs = new List<Pointer> { new() { kind = Pointer.Kind.PtrToAry } },
 					srcPos = basic.srcPos,
 				};
 

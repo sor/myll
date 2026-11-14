@@ -18,3 +18,5 @@ void modify(Pos arr[4], int idx, int vx, int vy);
 int run_array_of_struct();
 bool takesArray(const char* args[]);
 int run_array_subscript_ptr(int argc, const char* argv[]);
+int run_string_literal_view();
+char stringLiteralChar(const char* view);

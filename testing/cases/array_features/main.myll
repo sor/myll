@@ -1,5 +1,33 @@
 module array_features;
 
+// String literals are arrays of chars: the materialized type is the
+// array-view pointer (const char[*]), with indexing rights; it sheds to a
+// raw const char* implicitly where needed.
+func run_string_literal_view() -> int
+{
+	var const char[*] p = "abc";
+	if( p[0] != 'a' || p[2] != 'c' )
+		return 1;
+
+	var const char* q = "abc";
+	var const char[*] r = q == null ? "xyz" : "abc";
+	if( r[1] != 'b' )
+		return 2;
+
+	// deduction (var auto) materializes the array view too
+	var auto s = "auto";
+	if( s[1] != 'u' )
+		return 3;
+
+	// literals convert to both pointer flavors in argument position
+	if( stringLiteralChar( "xyz" ) != 'x' )
+		return 4;
+
+	return 0;
+}
+
+func stringLiteralChar( const char[*] view ) -> char => view[0];
+
 func main( int argc, const char *[] argv ) -> int
 {
 	if( run_array_of_struct() != 0 )
@@ -7,6 +35,9 @@ func main( int argc, const char *[] argv ) -> int
 
 	if( run_array_subscript_ptr( argc, argv ) != 0 )
 		return 2;
+
+	if( run_string_literal_view() != 0 )
+		return 3;
 
 	return 0;
 }

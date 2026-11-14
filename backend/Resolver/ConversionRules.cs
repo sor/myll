@@ -596,7 +596,11 @@ namespace Myll.Resolver
 			if( type.ptrs == null || type.ptrs.Count != 1 )
 				return false;
 
-			if( type.ptrs[0].kind != Pointer.Kind.RawPtr )
+			// A string literal is an array of chars: converting to a char
+			// pointer of either flavor (raw or array-view) is a promotion.
+			// The raw direction sheds the array rights; the array-view
+			// direction keeps them, which a literal deserves.
+			if( type.ptrs[ 0 ].kind is not ( Pointer.Kind.RawPtr or Pointer.Kind.PtrToAry ) )
 				return false;
 
 			return type is TypespecBasic { kind: TypespecBasic.Kind.Char, size: 1 };
