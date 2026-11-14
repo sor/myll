@@ -120,8 +120,10 @@ the goal.
 - `GetAllTemplateParams` reversed the per-class parameter list (only
   single-parameter classes hid it) — levels now reverse, per-level order is
   kept.
-- `T*` now converts to `T[*]` (both lower to the same C++ type); the decay
-  chain accepts both directions.
+- `T*` → `T[*]` stays an **explicit cast only** (gaining array-view rights
+  is an opt-in; the decay chain `T[N] → T[*] → T*` is one-directional as
+  designed). `StringView`'s pointer ctor performs the one internal cast,
+  so library users pass raw `const char*` freely.
 - `myll/` auto-discovery follows transitive imports (myll_dyn_array imports
   myll_option).
 - Overload resolution with dependent arguments defers to C++: the ranking

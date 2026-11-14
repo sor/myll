@@ -1,12 +1,12 @@
 #include "myll_string.hpp"
 Myll::StringView::StringView(const char* other)
 {
-    _data = other;
+    _data = static_cast<const char*>( other );
     _len = other == nullptr ? 0 : std::strlen( other );
 }
 Myll::StringView::StringView(const char* data, std::uint64_t len)
 {
-    _data = data;
+    _data = static_cast<const char*>( data );
     _len = len;
 }
 std::uint64_t Myll::StringView::len() const

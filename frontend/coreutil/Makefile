@@ -25,8 +25,9 @@ BINS        := $(addprefix gen/,$(TOOLS))
 ALL_BINS    := $(BINS) $(addprefix gen/,$(SPLIT_TOOLS)) gen/coreutil
 
 # The Myll standard library contributes non-template .cpp files too
-# (Myll::String, ...); every link needs them.
-MYLL_LIB_SRCS := $(wildcard gen/myll_*.cpp)
+# (Myll::String, ...); every link needs them. Deferred expansion: after a
+# clean, gen/ only exists once the .stamp rule ran.
+MYLL_LIB_SRCS = $(wildcard gen/myll_*.cpp)
 
 .PHONY: all clean release debug
 

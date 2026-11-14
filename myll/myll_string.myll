@@ -10,12 +10,14 @@ struct StringView {
 	field usize        _len = 0;
 
 	[implicit] ctor convert <- const char* {
-		_data = other;
+		_data = (const char[*])other;
 		_len  = other == null ? 0 : std::strlen( other );
 	}
 
-	ctor( const char[*] data, usize len ) {
-		_data = data;
+	// A raw pointer is fine here: gaining array-view rights over the bytes is
+	// this type's whole job, so the explicit cast lives here once.
+	ctor( const char* data, usize len ) {
+		_data = (const char[*])data;
 		_len  = len;
 	}
 
@@ -25,8 +27,10 @@ struct StringView {
 	[pure]
 	method isEmpty() -> bool => _len == 0;
 
+	[pure]
 	method at( usize index ) -> const char& => _data[ index ];
 
+	[pure]
 	operator [] ( usize index ) -> const char& => _data[ index ];
 
 	[pure]
