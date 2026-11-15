@@ -35,9 +35,7 @@ namespace Myll
         E _error{};
         bool _ok = false;
     public:
-        Result()
-        {
-        }
+        Result() = default;
         Result(const Myll::Result<T, E>& other)
         {
             _value = other._value;
@@ -51,6 +49,7 @@ namespace Myll
             _ok = other._ok;
             other._ok = false;
         }
+        ~Result() = default;
         inline Myll::Result<T, E>& operator=(Myll::Result<T, E>&& other)
         {
             if( &(*this) == &other ) {

@@ -160,6 +160,17 @@ int runDynArray()
     if( a.size() != 3 || a[2] != 1 ) {
         return 1;
     }
+    Myll::DynArray<int> copied = a;
+    copied.pushBack( 8 );
+    if( copied.size() != 4 || a.size() != 3 ) {
+        return 14;
+    }
+    Myll::DynArray<int> assigned{};
+    assigned = a;
+    assigned.pushBack( 8 );
+    if( assigned.size() != 4 || a.size() != 3 ) {
+        return 15;
+    }
     return 0;
 }
 int runString()
@@ -374,6 +385,13 @@ int runMap()
     if( ms.size() != 62 ) {
         return 1;
     }
+    Myll::Map<Myll::String, int> ma{};
+    ma.put( "k", 1 );
+    ma = ms;
+    ma.put( "v", 2 );
+    if( ma.size() != 63 || ms.size() != 62 ) {
+        return 16;
+    }
     return 0;
 }
 std::uint64_t hash(Vec2 v)
@@ -439,11 +457,17 @@ int runSet()
     }
     Myll::Set<int> sc = s;
     if( sc.size() != 50 ) {
-        return 1;
+        return 14;
     }
     Myll::Set<int> sm = std::move( s );
     if( sm.size() != 50 ) {
-        return 1;
+        return 15;
+    }
+    Myll::Set<int> sa{};
+    sa = sm;
+    sa.add( 4242 );
+    if( sa.size() != 51 || sm.size() != 50 ) {
+        return 16;
     }
     Myll::Map<Vec2, int> vm{};
     vm.put( Vec2( 1, 2 ), 10 );

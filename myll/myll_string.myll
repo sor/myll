@@ -100,6 +100,7 @@ struct StringView {
 	method contains( const char* cstr ) -> bool => contains( StringView( cstr ) );
 }
 
+[rule_of_5]
 class String {
 field {
 	char[]! _data;
@@ -108,7 +109,7 @@ field {
 }
 
 [pub]:
-	ctor() {}
+	[default] ctor;
 
 	ctor( StringView view ) {
 		reserve( view.len() );
@@ -121,14 +122,14 @@ field {
 		append( StringView( other ) );
 	}
 
-	ctor( const String& other ) {
+	ctor copy {
 		reserve( other._len );
 		do other._len times i {
 			pushBack( other._data[ i ] );
 		}
 	}
 
-	ctor move /*other*/ {
+	ctor move {
 		_data         = (move)other._data;
 		_len          = other._len;
 		_capacity     = other._capacity;
@@ -137,7 +138,9 @@ field {
 		other._capacity = 0;
 	}
 
-	operator move = /*other*/ {
+	[default] dtor;
+
+	operator move = {
 		if( &self == &other )
 			return self;
 		_data         = (move)other._data;
@@ -149,7 +152,7 @@ field {
 		return self;
 	}
 
-	operator = ( const String& other ) {
+	operator copy = {
 		if( &self == &other )
 			return self;
 		clear();

@@ -79,6 +79,12 @@ namespace Myll.Transform
 			if( structural.IsAttrib( "rule_of_n", "0" ) )
 				fromAttrib |= RuleOf.Zero;
 
+			// The bare spelling accepts any rule: 0, 3 or 5. (Value forms carry their
+			// values, so a valueless list means bare.)
+			bool hasValueForm = structural.AttribValues( "rule_of_n" ).Count > 0;
+			if( structural.HasAttrib( "rule_of_n" ) && !hasValueForm )
+				fromAttrib |= RuleOf.Any;
+
 			return fromAttrib;
 		}
 

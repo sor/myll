@@ -23,9 +23,7 @@ namespace Myll
         std::uint64_t _tomb = 0;
         std::uint64_t _capacity = 0;
     public:
-        Set()
-        {
-        }
+        Set() = default;
         explicit Set(std::uint64_t initialCapacity)
         {
             if( initialCapacity < 8 ) {
@@ -55,6 +53,7 @@ namespace Myll
             other._tomb = 0;
             other._capacity = 0;
         }
+        ~Set() = default;
     private:
         inline void rehashTo(std::uint64_t newCapacity)
         {
@@ -83,6 +82,21 @@ namespace Myll
             return result;
         }
     public:
+        inline Myll::Set<K>& operator=(const Myll::Set<K>& other)
+        {
+            if( &(*this) == &other ) {
+                return (*this);
+            }
+            clear();
+            std::uint64_t slot = 0;
+            while( slot < other._capacity ) {
+                if( other._state[slot] == 1 ) {
+                    add( other._keys[slot] );
+                }
+                ++slot;
+            }
+            return (*this);
+        }
         inline Myll::Set<K>& operator=(Myll::Set<K>&& other)
         {
             if( &(*this) == &other ) {

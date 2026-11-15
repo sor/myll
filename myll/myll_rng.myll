@@ -2,6 +2,9 @@ module myll_rng;
 
 namespace Myll {
 
+// Rule of zero: the u64 state copies and moves implicitly, which is the
+// right behavior for a stateful generator.
+[rule_of_0]
 class Rng {
 field {
 	u64 _state;
@@ -9,19 +12,6 @@ field {
 
 [pub]:
 	ctor( u64 seed ) { _state = seed; }
-
-	ctor move /*other*/ {
-		_state      = other._state;
-		other._state = 1;
-	}
-
-	operator move = /*other*/ {
-		if( &self == &other )
-			return self;
-		_state       = other._state;
-		other._state = 1;
-		return self;
-	}
 
 	// xorshift64: one step of the generator state. Do not seed with zero.
 	method next() -> u64 {

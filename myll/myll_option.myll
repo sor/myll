@@ -2,6 +2,7 @@ module myll_option;
 
 namespace Myll {
 
+[rule_of_5]
 class Option<T> {
 field {
 	T    _value;
@@ -9,25 +10,27 @@ field {
 }
 
 [pub]:
-	ctor() {}
+	[default] ctor;
 
 	ctor( const T& value ) {
 		_value = value;
 		_has   = true;
 	}
 
-	ctor( const Option& other ) {
+	ctor copy {
 		_value = other._value;
 		_has   = other._has;
 	}
 
-	ctor move /*other*/ {
+	ctor move {
 		_value   = (move)other._value;
 		_has     = other._has;
 		other._has = false;
 	}
 
-	operator move = /*other*/ {
+	[default] dtor;
+
+	operator move = {
 		if( &self == &other )
 			return self;
 		_value     = (move)other._value;
@@ -36,7 +39,7 @@ field {
 		return self;
 	}
 
-	operator = ( const Option& other ) {
+	operator copy = {
 		if( &self == &other )
 			return self;
 		_value = other._value;

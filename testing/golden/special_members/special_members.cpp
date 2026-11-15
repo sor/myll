@@ -2,6 +2,30 @@
 RuleZero::RuleZero()
 {
 }
+RuleAnyBuffer::RuleAnyBuffer(const RuleAnyBuffer& other)
+{
+    _size = other._size;
+    _data = std::make_unique<int[]>(_size);
+    std::uint64_t i = 0;
+    while( i < _size ) {
+        _data[i] = other._data[i];
+        ++i;
+    }
+}
+RuleAnyBuffer& RuleAnyBuffer::operator=(const RuleAnyBuffer& other)
+{
+    if( &(*this) == &other ) {
+        return (*this);
+    }
+    _size = other._size;
+    _data = std::make_unique<int[]>(_size);
+    std::uint64_t i = 0;
+    while( i < _size ) {
+        _data[i] = other._data[i];
+        ++i;
+    }
+    return (*this);
+}
 RuleBuffer::RuleBuffer()
 {
 }
@@ -241,6 +265,14 @@ int run_rule_of_n()
     z.value = 42;
     if( z.value != 42 ) {
         return 4;
+    }
+    RuleAnyBuffer ab{};
+    if( ab._size != 0 ) {
+        return 5;
+    }
+    RuleAnyBuffer abCopy = ab;
+    if( abCopy._size != 0 ) {
+        return 6;
     }
     return 0;
 }

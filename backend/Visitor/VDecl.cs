@@ -947,13 +947,16 @@ namespace Myll
 				throw new Exception( "parent of dtor has no decl or is not a structural" );
 
 			PushScope();
+			MultiStmt dtorBody = c.funcBody().Visit( Context );
 			Structor ret = new() {
 				srcPos = c.ToSrcPos(),
 				name   = "~" + structuralParent.name,
 				access = curAccess,
 				kind   = Structor.Kind.Destructor,
 				paras  = new(),
-				body   = c.funcBody().Visit( Context ),
+				// A bare `dtor;` is a declaration (bodies need braces), so
+				// [default] dtor; works like [default] ctor copy;
+				body   = IsEmptyFunctionBody( dtorBody ) ? null : dtorBody,
 			};
 			PopScope();
 			AddChild( ret );

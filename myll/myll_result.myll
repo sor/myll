@@ -2,6 +2,7 @@ module myll_result;
 
 namespace Myll {
 
+[rule_of_5]
 class Result<T, E> {
 field {
 	T    _value;
@@ -10,22 +11,24 @@ field {
 }
 
 [pub]:
-	ctor() {}
+	[default] ctor;
 
-	ctor( const Result& other ) {
+	ctor copy {
 		_value = other._value;
 		_error = other._error;
 		_ok    = other._ok;
 	}
 
-	ctor move /*other*/ {
+	ctor move {
 		_value     = (move)other._value;
 		_error     = (move)other._error;
 		_ok        = other._ok;
 		other._ok  = false;
 	}
 
-	operator move = /*other*/ {
+	[default] dtor;
+
+	operator move = {
 		if( &self == &other )
 			return self;
 		_value     = (move)other._value;
@@ -35,7 +38,7 @@ field {
 		return self;
 	}
 
-	operator = ( const Result& other ) {
+	operator copy = {
 		if( &self == &other )
 			return self;
 		_value = other._value;

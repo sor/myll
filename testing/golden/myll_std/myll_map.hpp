@@ -24,9 +24,7 @@ namespace Myll
         std::uint64_t _tomb = 0;
         std::uint64_t _capacity = 0;
     public:
-        Map()
-        {
-        }
+        Map() = default;
         explicit Map(std::uint64_t initialCapacity)
         {
             if( initialCapacity < 8 ) {
@@ -57,6 +55,7 @@ namespace Myll
             other._tomb = 0;
             other._capacity = 0;
         }
+        ~Map() = default;
     private:
         inline void rehashTo(std::uint64_t newCapacity)
         {
@@ -87,6 +86,21 @@ namespace Myll
             return result;
         }
     public:
+        inline Myll::Map<K, V>& operator=(const Myll::Map<K, V>& other)
+        {
+            if( &(*this) == &other ) {
+                return (*this);
+            }
+            clear();
+            std::uint64_t slot = 0;
+            while( slot < other._capacity ) {
+                if( other._state[slot] == 1 ) {
+                    put( other._keys[slot], other._values[slot] );
+                }
+                ++slot;
+            }
+            return (*this);
+        }
         inline Myll::Map<K, V>& operator=(Myll::Map<K, V>&& other)
         {
             if( &(*this) == &other ) {

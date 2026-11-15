@@ -16,8 +16,6 @@ namespace Myll
         std::uint64_t _state{};
     public:
         explicit Rng(std::uint64_t seed);
-        Rng(Myll::Rng&& other);
-        Myll::Rng& operator=(Myll::Rng&& other);
         std::uint64_t next();
         std::uint32_t nextU32();
         float nextF32();

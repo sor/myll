@@ -3,20 +3,6 @@ Myll::Rng::Rng(std::uint64_t seed)
 {
     _state = seed;
 }
-Myll::Rng::Rng(Myll::Rng&& other)
-{
-    _state = other._state;
-    other._state = 1;
-}
-Myll::Rng& Myll::Rng::operator=(Myll::Rng&& other)
-{
-    if( &(*this) == &other ) {
-        return (*this);
-    }
-    _state = other._state;
-    other._state = 1;
-    return (*this);
-}
 std::uint64_t Myll::Rng::next()
 {
     _state ^= _state >> 12;

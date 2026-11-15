@@ -106,6 +106,15 @@ func runDynArray() -> int
 	a.insert( 99, 1 );
 	if( a.size() != 3 || a[2] != 1 ) return 1;
 
+	// deep-copy semantics (rule_of_5 wired): copies are independent
+	var Myll::DynArray<int> copied = a;
+	copied.pushBack( 8 );
+	if( copied.size() != 4 || a.size() != 3 ) return 14;
+	var Myll::DynArray<int> assigned;
+	assigned = a;
+	assigned.pushBack( 8 );
+	if( assigned.size() != 4 || a.size() != 3 ) return 15;
+
 	return 0;
 }
 
@@ -244,6 +253,13 @@ func runMap() -> int
 	}
 	if( ms.size() != 62 ) return 1;
 
+	// rule_of_5 copy assign: independent after assignment
+	var Myll::Map<Myll::String, int> ma;
+	ma.put( "k", 1 );
+	ma = ms;
+	ma.put( "v", 2 );
+	if( ma.size() != 63 || ms.size() != 62 ) return 16;
+
 	return 0;
 }
 
@@ -300,9 +316,14 @@ func runSet() -> int
 	if( vals.size() != 50 ) return 1;
 
 	var Myll::Set<int> sc = s;
-	if( sc.size() != 50 ) return 1;
+	if( sc.size() != 50 ) return 14;
 	var Myll::Set<int> sm = (move)s;
-	if( sm.size() != 50 ) return 1;
+	if( sm.size() != 50 ) return 15;
+
+	var Myll::Set<int> sa;
+	sa = sm;
+	sa.add( 4242 );
+	if( sa.size() != 51 || sm.size() != 50 ) return 16;
 
 	// user key type via the hash protocol
 	var Myll::Map<Vec2, int> vm;

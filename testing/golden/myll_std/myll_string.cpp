@@ -97,9 +97,6 @@ bool Myll::StringView::contains(const char* cstr) const
 {
     return contains( StringView( cstr ) );
 }
-Myll::String::String()
-{
-}
 Myll::String::String(Myll::StringView view)
 {
     reserve( view.len() );

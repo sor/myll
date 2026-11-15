@@ -36,11 +36,12 @@ namespace Myll
         std::uint64_t _len = 0;
         std::uint64_t _capacity = 0;
     public:
-        String();
+        String() = default;
         explicit String(Myll::StringView view);
         String(const char* other);
         String(const Myll::String& other);
         String(Myll::String&& other);
+        ~String() = default;
     private:
         void grow();
     public:

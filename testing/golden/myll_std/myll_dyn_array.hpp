@@ -92,6 +92,14 @@ namespace Myll
             other._size = 0;
             other._capacity = 0;
         }
+        DynArray(const Myll::DynArray<T>& other)
+        {
+            reserve( other._size );
+            for( int i = 0; i < (other._size)+0; ++i ) {
+                pushBack( other._data[i] );
+            }
+        }
+        ~DynArray() = default;
     private:
         inline void grow()
         {
@@ -130,6 +138,17 @@ namespace Myll
             return i;
         }
     public:
+        inline Myll::DynArray<T>& operator=(const Myll::DynArray<T>& other)
+        {
+            if( &(*this) == &other ) {
+                return (*this);
+            }
+            clear();
+            for( int i = 0; i < (other._size)+0; ++i ) {
+                pushBack( other._data[i] );
+            }
+            return (*this);
+        }
         inline Myll::DynArray<T>& operator=(Myll::DynArray<T>&& other)
         {
             if( &(*this) == &other ) {

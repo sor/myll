@@ -6,6 +6,7 @@ namespace Myll {
 
 [ct] const usize DefaultCapacity = 8;
 
+[rule_of_5]
 class DynArray<T> {
 field {
 	T[]!	_data;
@@ -32,7 +33,7 @@ field {
 		}
 	}
 
-	ctor move /*other*/ { // other is the default name
+	ctor move {
 		_data     = (move)other._data;
 		_size     = other._size;
 		_capacity = other._capacity;
@@ -41,7 +42,26 @@ field {
 		other._capacity = 0;
 	}
 
-	operator move = /*other*/ { // other is the default name
+	ctor copy {
+		reserve( other._size );
+		do other._size times i {
+			pushBack( other._data[ i ] );
+		}
+	}
+
+	[default] dtor;
+
+	operator copy = {
+		if( &self == &other )
+			return self;
+		clear();
+		do other._size times i {
+			pushBack( other._data[ i ] );
+		}
+		return self;
+	}
+
+	operator move = {
 		if( &self == &other )
 			return self;
 		_data     = (move)other._data;

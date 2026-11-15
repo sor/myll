@@ -4,6 +4,7 @@ import myll_dyn_array, myll_hash;
 
 namespace Myll {
 
+[rule_of_5]
 class Set<K> {
 field {
 	K[]!  _keys;
@@ -14,7 +15,7 @@ field {
 }
 
 [pub]:
-	ctor() {}
+	[default] ctor;
 
 	ctor( usize initialCapacity ) {
 		if( initialCapacity < 8 )
@@ -22,7 +23,7 @@ field {
 		rehashTo( nextPowerOfTwo( initialCapacity ) );
 	}
 
-	ctor( const Set& other ) {
+	ctor copy {
 		rehashTo( other._capacity );
 		var usize slot = 0;
 		while( slot < other._capacity ) {
@@ -32,7 +33,7 @@ field {
 		}
 	}
 
-	ctor move /*other*/ {
+	ctor move {
 		_keys     = (move)other._keys;
 		_state    = (move)other._state;
 		_size     = other._size;
@@ -43,7 +44,22 @@ field {
 		other._capacity = 0;
 	}
 
-	operator move = /*other*/ {
+	[default] dtor;
+
+	operator copy = {
+		if( &self == &other )
+			return self;
+		clear();
+		var usize slot = 0;
+		while( slot < other._capacity ) {
+			if( other._state[ slot ] == 1 )
+				add( other._keys[ slot ] );
+			++slot;
+		}
+		return self;
+	}
+
+	operator move = {
 		if( &self == &other )
 			return self;
 		_keys     = (move)other._keys;

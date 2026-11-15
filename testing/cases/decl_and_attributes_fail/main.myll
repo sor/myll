@@ -33,6 +33,18 @@ struct RuleOfBad { // FAIL: does not satisfy the required rule-of-N
 	}
 }
 
+// The bare spelling still requires one of the rules to hold.
+[rule_of_n]
+struct RuleOfAnyBad { // FAIL: does not satisfy the required rule-of-N
+[pub]:
+	field { int[]! _data; }
+
+	ctor copy {
+		_data = new int[1]!;
+		_data[0] = other._data[0];
+	}
+}
+
 func main() -> int {
 	return 0;
 }

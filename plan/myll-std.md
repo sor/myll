@@ -28,7 +28,7 @@ are marked inline.
 
 ## Policies
 
-- **Value semantics**: every container is deep-copy on copy, move on move, with the matching assignment operators. Classes declare the `[rule_of_3]` / `[rule_of_5]` attributes where the checker allows, so the compiler enforces the rule on each class.
+- **Value semantics**: every container is deep-copy on copy, move on move, with the matching assignment operators. All classes carry a `[rule_of_n]` attribute so the checker enforces it: `[rule_of_5]` on DynArray/String/Option/Result/Map/Set (landed 2026-11-14 with the deep copies and copy-assigns they needed), `[rule_of_0]` on Rng (user move ops removed). Defaulted members use the shorthand spellings: `[default] ctor;`, `[default] dtor;`, `ctor copy`, `operator copy =` / `operator move =`.
 - **Bounds**: no checked bounds in v1 (matching C++ `std::` semantics); unchecked access stays `operator[]`, `at()` matches `std::` `at` spelling (also unchecked for now).
 - **Iteration**: explicit `Iterator` classes following the `DynArray` model (`begin()`/`end()`, `++`, `*`, `==`, `!=`). There are no concepts/aspects (`REASONS.md`), so generic algorithms over containers are not possible in v1; iteration plus raw-pointer spans cover the common cases. `std::` algorithm bindings keep working on raw data.
 - **Missing-key reads** return raw nullable pointers (`get(k) -> V*`, null when absent) plus `getOr` fallbacks. `Option<T>` exists for value-shaped results (see below); the raw-pointer form exists because `Option<T&>`/`Option<V&>` (references as template arguments) is not settled.
@@ -141,8 +141,7 @@ the goal.
 - Tagged-union storage for `Option` (needs language support), `Option<T&>`.
 - `Result` monadic combinators and the interaction with the `except` axis.
 - Hash specialization hooks other than ADL.
-- Ordered map/set, iteration order guarantees, `Map`/`Set` iterators,
-  `[rule_of_3]`/`[rule_of_5]` attribute wiring on the containers.
+- Ordered map/set, iteration order guarantees, `Map`/`Set` iterators.
 - `StringBuilder`, UTF-8 view, `Rng` distributions, algorithm family over
   iterators, `String` interop with `std::unordered_map`.
 

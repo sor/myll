@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <utility>
 struct RuleZero;
+struct RuleAnyBuffer;
 struct RuleBuffer;
 struct Buffer;
 struct Handle;
@@ -25,6 +26,15 @@ struct RuleZero
 {
     int value = 0;
     RuleZero();
+};
+struct RuleAnyBuffer
+{
+    std::unique_ptr<int[]> _data{};
+    std::uint64_t _size = 0;
+    RuleAnyBuffer() = default;
+    RuleAnyBuffer(const RuleAnyBuffer& other);
+    ~RuleAnyBuffer() = default;
+    RuleAnyBuffer& operator=(const RuleAnyBuffer& other);
 };
 struct RuleBuffer
 {

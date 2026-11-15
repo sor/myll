@@ -28,9 +28,7 @@ namespace Myll
         T _value{};
         bool _has = false;
     public:
-        Option()
-        {
-        }
+        Option() = default;
         explicit Option(const T& value)
         {
             _value = value;
@@ -47,6 +45,7 @@ namespace Myll
             _has = other._has;
             other._has = false;
         }
+        ~Option() = default;
         inline Myll::Option<T>& operator=(Myll::Option<T>&& other)
         {
             if( &(*this) == &other ) {

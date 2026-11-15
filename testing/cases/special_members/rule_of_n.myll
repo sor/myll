@@ -6,6 +6,44 @@ struct RuleZero {
 	ctor() {}
 }
 
+// The bare [rule_of_n] spelling accepts any rule; this one satisfies rule
+// of three (dtor, copy ctor, copy assign, no moves).
+[rule_of_n]
+struct RuleAnyBuffer {
+[pub]:
+	field {
+		int[]! _data;
+		usize _size = 0;
+	}
+
+	[default] ctor;
+
+	[default] dtor;
+
+	ctor copy {
+		_size = other._size;
+		_data = new int[_size]!;
+		var usize i = 0;
+		while( i < _size ) {
+			_data[i] = other._data[i];
+			++i;
+		}
+	}
+
+	operator copy = {
+		if( &self == &other )
+			return self;
+		_size = other._size;
+		_data = new int[_size]!;
+		var usize i = 0;
+		while( i < _size ) {
+			_data[i] = other._data[i];
+			++i;
+		}
+		return self;
+	}
+}
+
 [rule_of_3]
 struct RuleBuffer {
 [pub]:
@@ -65,6 +103,11 @@ func run_rule_of_n() -> int {
 	var RuleZero z;
 	z.value = 42;
 	if( z.value != 42 ) return 4;
+
+	var RuleAnyBuffer ab;
+	if( ab._size != 0 ) return 5;
+	var RuleAnyBuffer abCopy = ab;
+	if( abCopy._size != 0 ) return 6;
 
 	return 0;
 }
